@@ -1,0 +1,706 @@
+**30-PROMPT PACK - PROMPT 02: Cart API - Create & Item Management**
+
+Create cart management endpoints with intent capture, weather awareness, and V3.3.1 pricing integration.
+
+## Create server/services/cartService.ts
+```typescript
+// server/services/cartService.ts
+
+import { db } from '../db';
+import { nanoid } from 'nanoid';
+import { calculateQuote } from './pricingService';
+import { checkAvailability } from './allocationService';
+
+// ============ TYPES ============
+
+interface CreateCartRequest {
+  portalId?: string;
+  portalSlug?: string;
+  tenantId?: string;
+  tripId?: string;
+  source?: 'portal' | 'trip' | 'direct' | 'partner' | 'ai_agent';
+  sourceRef?: string;
+  entryPoint?: string;
+  currency?: string;
+  primaryGuestName?: string;
+  primaryGuestEmail?: string;
+  primaryGuestPhone?: string;
+  partyAdults?: number;
+  partyChildren?: number;
+  partyInfants?: number;
+  intent?: Record<string, any>;
+  needs?: Record<string, any>;
+  payment?: Record<string, any>;
+  travel?: Record<string, any>;
+}
+
+interface CartResult {
+  cart: any;
+  cartToken: string;
+  items: any[];
+  adjustments: any[];
+  totals: CartTotals;
+}
+
+interface CartTotals {
+  itemsSubtotalCents: number;
+  itemsTaxesCents: number;
+  adjustmentsCents: number;
+  grandTotalCents: number;
+  depositRequiredCents: number;
+  itemCount: number;
+}
+
+interface AddItemRequest {
+  cartId: string;
+  itemType: 'parking' | 'accommodation' | 'charter' | 'activity' | 'meal' | 'rental' | 'equipment' | 'service' | 'transport' | 'venue' | 'other';
+  title: string;
+  description?: string;
+  reservationMode: 'internal' | 'external' | 'public';
+  
+  // Internal mode (V3.3.1 integration)
+  facilityId?: string;
+  offerId?: string;
+  unitId?: string;
+  providerTenantId?: string;
+  
+  // External mode
+  externalUrl?: string;
+  providerName?: string;
+  providerEmail?: string;
+  providerPhone?: string;
+  
+  // Scheduling
+  startAt: Date;
+  endAt: Date;
+  preferredTime?: string;
+  flexibleWindowMinutes?: number;
+  
+  // Quantity
+  quantity?: number;
+  partySize?: number;
+  
+  // For pricing (marina/parking)
+  vesselLengthFt?: number;
+  vehicleLengthFt?: number;
+  
+  // Needs
+  dietaryRequirements?: string[];
+  specialRequests?: string;
+  needsJson?: Record<string, any>;
+  
+  // Intent
+  intentJson?: Record<string, any>;
+}
+
+interface UpdateItemRequest {
+  itemId: string;
+  startAt?: Date;
+  endAt?: Date;
+  quantity?: number;
+  partySize?: number;
+  specialRequests?: string;
+}
+
+// ============ HELPERS ============
+
+function generateCartToken(prefix: string): string {
+  return `${prefix.toUpperCase().substring(0, 8)}-${nanoid(12)}`.toUpperCase();
+}
+
+function inferIntent(source: string, partySize: number): Record<string, any> {
+  return {
+    discovered_via: source,
+    confidence: 'exploratory',
+    archetype: partySize >= 12 ? 'group' : partySize >= 4 ? 'family' : 'solo',
+    timeline_days: 30
+  };
+}
+
+async function getWeatherContext(locationCode: string, date: Date): Promise<any> {
+  const month = date.getMonth() + 1;
+  const result = await db.query.ccWeatherTrends.findFirst({
+    where: and(
+      eq(ccWeatherTrends.locationCode, locationCode),
+      eq(ccWeatherTrends.month, month)
+    )
+  });
+  return result ? { source: 'trend', ...result } : null;
+}
+
+function computeTotals(items: any[], adjustments: any[]): CartTotals {
+  const itemsSubtotalCents = items.reduce((s, it) => s + (it.subtotalCents || 0), 0);
+  const itemsTaxesCents = items.reduce((s, it) => s + (it.taxesCents || 0), 0);
+  const itemsTotal = items.reduce((s, it) => s + (it.totalCents || 0), 0);
+  const adjustmentsCents = adjustments.reduce((s, a) => s + (a.amountCents || 0), 0);
+  const depositRequiredCents = items.reduce((s, it) => s + (it.depositRequiredCents || 0), 0);
+  
+  return {
+    itemsSubtotalCents,
+    itemsTaxesCents,
+    adjustmentsCents,
+    grandTotalCents: itemsTotal + adjustmentsCents,
+    depositRequiredCents,
+    itemCount: items.length
+  };
+}
+
+// ============ CORE FUNCTIONS ============
+
+export async function createCart(req: CreateCartRequest): Promise<CartResult> {
+  // Resolve portal if slug provided
+  let portalId = req.portalId;
+  let tenantId = req.tenantId;
+  
+  if (req.portalSlug && !portalId) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) {
+      portalId = portal.id;
+      tenantId = tenantId || portal.tenantId;
+    }
+  }
+  
+  const partySize = (req.partyAdults || 1) + (req.partyChildren || 0);
+  const token = generateCartToken(req.portalSlug || req.source || 'CART');
+  
+  const [cart] = await db.insert(ccReservationCarts).values({
+    portalId,
+    tenantId,
+    tripId: req.tripId,
+    accessToken: token,
+    currency: req.currency || 'CAD',
+    source: req.source || 'portal',
+    sourceRef: req.sourceRef,
+    entryPoint: req.entryPoint,
+    primaryGuestName: req.primaryGuestName,
+    primaryGuestEmail: req.primaryGuestEmail,
+    primaryGuestPhone: req.primaryGuestPhone,
+    partyAdults: req.partyAdults || 1,
+    partyChildren: req.partyChildren || 0,
+    partyInfants: req.partyInfants || 0,
+    intentJson: req.intent || inferIntent(req.source || 'portal', partySize),
+    needsJson: req.needs || {},
+    paymentJson: req.payment || { method_preference: 'card' },
+    travelJson: req.travel || {},
+    viralJson: { source: req.source || 'portal' },
+    expiresAt: new Date(Date.now() + 45 * 60 * 1000) // 45 minutes
+  }).returning();
+  
+  return {
+    cart,
+    cartToken: token,
+    items: [],
+    adjustments: [],
+    totals: computeTotals([], [])
+  };
+}
+
+export async function getCart(cartId: string, accessToken?: string): Promise<CartResult | null> {
+  const whereClause = accessToken 
+    ? and(eq(ccReservationCarts.id, cartId), eq(ccReservationCarts.accessToken, accessToken))
+    : eq(ccReservationCarts.id, cartId);
+    
+  const cart = await db.query.ccReservationCarts.findFirst({
+    where: whereClause
+  });
+  
+  if (!cart) return null;
+  
+  const items = await db.query.ccReservationCartItems.findMany({
+    where: eq(ccReservationCartItems.cartId, cartId),
+    orderBy: [asc(ccReservationCartItems.createdAt)]
+  });
+  
+  const adjustments = await db.query.ccReservationCartAdjustments.findMany({
+    where: eq(ccReservationCartAdjustments.cartId, cartId),
+    orderBy: [asc(ccReservationCartAdjustments.createdAt)]
+  });
+  
+  return {
+    cart,
+    cartToken: cart.accessToken,
+    items,
+    adjustments,
+    totals: computeTotals(items, adjustments)
+  };
+}
+
+export async function addItem(req: AddItemRequest): Promise<{ item: any; cart: CartResult }> {
+  let subtotalCents = 0;
+  let taxesCents = 0;
+  let totalCents = 0;
+  let pricingSnapshot: Record<string, any> = {};
+  let holdJson: Record<string, any> = { status: 'none' };
+  
+  // For internal mode, use V3.3.1 pricing service
+  if (req.reservationMode === 'internal' && req.offerId && req.facilityId) {
+    try {
+      const quote = await calculateQuote({
+        facilityId: req.facilityId,
+        offerId: req.offerId,
+        startAt: req.startAt,
+        endAt: req.endAt,
+        vesselLengthFt: req.vesselLengthFt,
+        vehicleLengthFt: req.vehicleLengthFt
+      });
+      
+      subtotalCents = quote.subtotalCents;
+      taxesCents = quote.taxes.reduce((s, t) => s + t.amountCents, 0);
+      totalCents = quote.totalCents;
+      pricingSnapshot = quote;
+      
+      // Check availability (preview mode)
+      const availability = await checkAvailability(
+        req.facilityId,
+        req.offerId ? 'offer' : 'facility',
+        req.startAt,
+        req.endAt
+      );
+      
+      if (availability.available) {
+        holdJson = { status: 'soft', expiresAt: new Date(Date.now() + 15 * 60 * 1000) };
+      }
+    } catch (e) {
+      console.error('Pricing/availability error:', e);
+      // Continue without pricing if service fails
+    }
+  }
+  
+  // Get weather context for the item dates
+  let weatherJson: Record<string, any> = {};
+  try {
+    const weather = await getWeatherContext('BAMFIELD', req.startAt);
+    if (weather) {
+      weatherJson = {
+        month: req.startAt.getMonth() + 1,
+        rainProb: weather.rainProbPercent,
+        bestFor: weather.bestFor,
+        avoidFor: weather.avoidFor
+      };
+    }
+  } catch (e) {
+    // Weather is optional
+  }
+  
+  const [item] = await db.insert(ccReservationCartItems).values({
+    cartId: req.cartId,
+    itemType: req.itemType,
+    title: req.title,
+    description: req.description,
+    reservationMode: req.reservationMode,
+    facilityId: req.facilityId,
+    offerId: req.offerId,
+    unitId: req.unitId,
+    providerTenantId: req.providerTenantId,
+    externalUrl: req.externalUrl,
+    providerName: req.providerName,
+    providerEmail: req.providerEmail,
+    providerPhone: req.providerPhone,
+    startAt: req.startAt,
+    endAt: req.endAt,
+    preferredTime: req.preferredTime,
+    flexibleWindowMinutes: req.flexibleWindowMinutes,
+    quantity: req.quantity || 1,
+    partySize: req.partySize,
+    subtotalCents,
+    taxesCents,
+    totalCents,
+    depositRequiredCents: Math.round(totalCents * 0.25), // 25% deposit default
+    pricingSnapshot,
+    holdJson,
+    intentJson: req.intentJson || {},
+    needsJson: req.needsJson || {},
+    dietaryRequirements: req.dietaryRequirements,
+    specialRequests: req.specialRequests,
+    weatherJson,
+    status: 'pending'
+  }).returning();
+  
+  // Extend cart expiry when item added
+  await db.update(ccReservationCarts)
+    .set({ 
+      expiresAt: new Date(Date.now() + 45 * 60 * 1000),
+      updatedAt: new Date()
+    })
+    .where(eq(ccReservationCarts.id, req.cartId));
+  
+  const cart = await getCart(req.cartId);
+  
+  return { item, cart: cart! };
+}
+
+export async function updateItem(req: UpdateItemRequest): Promise<{ item: any; cart: CartResult }> {
+  const updates: Record<string, any> = { updatedAt: new Date() };
+  
+  if (req.startAt) updates.startAt = req.startAt;
+  if (req.endAt) updates.endAt = req.endAt;
+  if (req.quantity) updates.quantity = req.quantity;
+  if (req.partySize) updates.partySize = req.partySize;
+  if (req.specialRequests !== undefined) updates.specialRequests = req.specialRequests;
+  
+  // Get existing item to check if we need to reprice
+  const existingItem = await db.query.ccReservationCartItems.findFirst({
+    where: eq(ccReservationCartItems.id, req.itemId)
+  });
+  
+  if (!existingItem) {
+    throw new Error('Item not found');
+  }
+  
+  // Reprice if dates changed and internal mode
+  if ((req.startAt || req.endAt) && existingItem.reservationMode === 'internal' && existingItem.offerId) {
+    try {
+      const quote = await calculateQuote({
+        facilityId: existingItem.facilityId,
+        offerId: existingItem.offerId,
+        startAt: req.startAt || existingItem.startAt,
+        endAt: req.endAt || existingItem.endAt
+      });
+      
+      updates.subtotalCents = quote.subtotalCents;
+      updates.taxesCents = quote.taxes.reduce((s, t) => s + t.amountCents, 0);
+      updates.totalCents = quote.totalCents;
+      updates.pricingSnapshot = quote;
+    } catch (e) {
+      console.error('Reprice error:', e);
+    }
+  }
+  
+  const [item] = await db.update(ccReservationCartItems)
+    .set(updates)
+    .where(eq(ccReservationCartItems.id, req.itemId))
+    .returning();
+  
+  const cart = await getCart(existingItem.cartId);
+  
+  return { item, cart: cart! };
+}
+
+export async function removeItem(itemId: string): Promise<CartResult | null> {
+  const existingItem = await db.query.ccReservationCartItems.findFirst({
+    where: eq(ccReservationCartItems.id, itemId)
+  });
+  
+  if (!existingItem) return null;
+  
+  await db.delete(ccReservationCartItems)
+    .where(eq(ccReservationCartItems.id, itemId));
+  
+  return getCart(existingItem.cartId);
+}
+
+export async function addAdjustment(
+  cartId: string,
+  label: string,
+  adjustmentType: string,
+  amountCents: number,
+  itemId?: string
+): Promise<CartResult> {
+  await db.insert(ccReservationCartAdjustments).values({
+    cartId,
+    label,
+    adjustmentType,
+    amountCents,
+    scope: itemId ? 'item' : 'cart',
+    itemId
+  });
+  
+  return (await getCart(cartId))!;
+}
+
+export async function expireStaleCartsJob(): Promise<number> {
+  const result = await db.update(ccReservationCarts)
+    .set({ status: 'expired', updatedAt: new Date() })
+    .where(and(
+      eq(ccReservationCarts.status, 'draft'),
+      lt(ccReservationCarts.expiresAt, new Date())
+    ))
+    .returning();
+  
+  return result.length;
+}
+```
+
+## Create Cart API Routes
+
+### In server/routes/public-portal.ts (add these endpoints)
+```typescript
+import { 
+  createCart, getCart, addItem, updateItem, removeItem, addAdjustment 
+} from '../services/cartService';
+
+// ============ CART ENDPOINTS ============
+
+// POST /api/public/portals/:slug/carts - Create cart from portal
+router.post('/portals/:slug/carts', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const result = await createCart({
+      portalSlug: slug,
+      source: 'portal',
+      sourceRef: slug,
+      entryPoint: b.entryPoint || slug,
+      primaryGuestName: b.primaryGuestName,
+      primaryGuestEmail: b.primaryGuestEmail,
+      primaryGuestPhone: b.primaryGuestPhone,
+      partyAdults: b.partyAdults,
+      partyChildren: b.partyChildren,
+      partyInfants: b.partyInfants,
+      intent: b.intent,
+      needs: b.needs,
+      payment: b.payment,
+      travel: b.travel
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create cart error:', e);
+    res.status(500).json({ error: 'Failed to create cart' });
+  }
+});
+
+// GET /api/public/carts/:cartId - Get cart by ID
+router.get('/carts/:cartId', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  try {
+    const result = await getCart(cartId, token);
+    if (!result) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get cart error:', e);
+    res.status(500).json({ error: 'Failed to get cart' });
+  }
+});
+
+// POST /api/public/carts/:cartId/items - Add item to cart
+router.post('/carts/:cartId/items', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  try {
+    // Verify cart access
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+    
+    if (cart.cart.status !== 'draft') {
+      return res.status(400).json({ error: 'Cart is not in draft status' });
+    }
+    
+    const result = await addItem({
+      cartId,
+      itemType: b.itemType,
+      title: b.title,
+      description: b.description,
+      reservationMode: b.reservationMode || 'internal',
+      facilityId: b.facilityId,
+      offerId: b.offerId,
+      unitId: b.unitId,
+      providerTenantId: b.providerTenantId,
+      externalUrl: b.externalUrl,
+      providerName: b.providerName,
+      providerEmail: b.providerEmail,
+      providerPhone: b.providerPhone,
+      startAt: new Date(b.startAt),
+      endAt: new Date(b.endAt),
+      preferredTime: b.preferredTime,
+      flexibleWindowMinutes: b.flexibleWindowMinutes,
+      quantity: b.quantity,
+      partySize: b.partySize,
+      vesselLengthFt: b.vesselLengthFt,
+      vehicleLengthFt: b.vehicleLengthFt,
+      dietaryRequirements: b.dietaryRequirements,
+      specialRequests: b.specialRequests,
+      needsJson: b.needs,
+      intentJson: b.intent
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Add item error:', e);
+    res.status(500).json({ error: 'Failed to add item' });
+  }
+});
+
+// PATCH /api/public/carts/:cartId/items/:itemId - Update item
+router.patch('/carts/:cartId/items/:itemId', async (req, res) => {
+  const { cartId, itemId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+    
+    const result = await updateItem({
+      itemId,
+      startAt: b.startAt ? new Date(b.startAt) : undefined,
+      endAt: b.endAt ? new Date(b.endAt) : undefined,
+      quantity: b.quantity,
+      partySize: b.partySize,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Update item error:', e);
+    res.status(500).json({ error: 'Failed to update item' });
+  }
+});
+
+// DELETE /api/public/carts/:cartId/items/:itemId - Remove item
+router.delete('/carts/:cartId/items/:itemId', async (req, res) => {
+  const { cartId, itemId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+    
+    const result = await removeItem(itemId);
+    res.json(result);
+  } catch (e: any) {
+    console.error('Remove item error:', e);
+    res.status(500).json({ error: 'Failed to remove item' });
+  }
+});
+
+// POST /api/public/carts/:cartId/adjustments - Add adjustment (discount/fee)
+router.post('/carts/:cartId/adjustments', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+    
+    const result = await addAdjustment(
+      cartId,
+      b.label,
+      b.adjustmentType || 'discount',
+      b.amountCents,
+      b.itemId
+    );
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Add adjustment error:', e);
+    res.status(500).json({ error: 'Failed to add adjustment' });
+  }
+});
+
+// POST /api/public/carts/:cartId/update-guest - Update guest info
+router.post('/carts/:cartId/update-guest', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+    
+    await db.update(ccReservationCarts)
+      .set({
+        primaryGuestName: b.primaryGuestName,
+        primaryGuestEmail: b.primaryGuestEmail,
+        primaryGuestPhone: b.primaryGuestPhone,
+        partyAdults: b.partyAdults,
+        partyChildren: b.partyChildren,
+        partyInfants: b.partyInfants,
+        needsJson: b.needs || cart.cart.needsJson,
+        updatedAt: new Date()
+      })
+      .where(eq(ccReservationCarts.id, cartId));
+    
+    const updated = await getCart(cartId);
+    res.json(updated);
+  } catch (e: any) {
+    console.error('Update guest error:', e);
+    res.status(500).json({ error: 'Failed to update guest info' });
+  }
+});
+```
+
+## Test Script
+
+Create a quick test to verify:
+```typescript
+// Test: Create cart → add parking item → verify pricing
+async function testCartFlow() {
+  // 1. Create cart
+  const createRes = await fetch('/api/public/portals/bamfield/carts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      primaryGuestName: 'Test User',
+      partyAdults: 2
+    })
+  });
+  const { cart, cartToken } = await createRes.json();
+  console.log('Cart created:', cart.id, cartToken);
+  
+  // 2. Add parking item (uses V3.3.1 pricing)
+  const addRes = await fetch(`/api/public/carts/${cart.id}/items`, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'X-Cart-Token': cartToken
+    },
+    body: JSON.stringify({
+      itemType: 'parking',
+      title: 'Day Pass',
+      reservationMode: 'internal',
+      facilityId: '<save_paradise_facility_id>',
+      offerId: '<day_pass_offer_id>',
+      startAt: '2026-08-12T00:00:00Z',
+      endAt: '2026-08-13T00:00:00Z'
+    })
+  });
+  const { item, cart: updatedCart } = await addRes.json();
+  console.log('Item added:', item.title, item.totalCents);
+  console.log('Cart totals:', updatedCart.totals);
+  
+  // 3. Get cart to verify
+  const getRes = await fetch(`/api/public/carts/${cart.id}`, {
+    headers: { 'X-Cart-Token': cartToken }
+  });
+  const finalCart = await getRes.json();
+  console.log('Final cart:', finalCart.totals.itemCount, 'items');
+}
+```
+
+## Deliverables
+- [ ] server/services/cartService.ts with all functions
+- [ ] Cart routes in server/routes/public-portal.ts:
+  - POST /api/public/portals/:slug/carts
+  - GET /api/public/carts/:cartId
+  - POST /api/public/carts/:cartId/items
+  - PATCH /api/public/carts/:cartId/items/:itemId
+  - DELETE /api/public/carts/:cartId/items/:itemId
+  - POST /api/public/carts/:cartId/adjustments
+  - POST /api/public/carts/:cartId/update-guest
+- [ ] Integration with V3.3.1 pricingService for internal items
+- [ ] Weather context attached to items
+- [ ] Cart expiry extension on item add
+- [ ] Test: Create cart → add item → verify pricing populated
+
+Report with test result showing cart with priced item.

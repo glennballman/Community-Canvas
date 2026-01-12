@@ -1,6 +1,9 @@
 import express, { Request, Response } from 'express';
 import { serviceQuery, publicQuery } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
+import { 
+  createCart, getCart, addItem, updateItem, removeItem, addAdjustment, updateCartGuest
+} from '../services/cartService';
 
 const router = express.Router();
 
@@ -1916,6 +1919,233 @@ router.delete('/trips/:accessCode/itinerary/:itemId', async (req: Request, res: 
   } catch (error) {
     console.error('Error deleting itinerary item:', error);
     return res.status(500).json({ error: 'Failed to delete item' });
+  }
+});
+
+// ============ CART ENDPOINTS ============
+
+// POST /api/public/portals/:slug/carts - Create cart from portal
+router.post('/portals/:slug/carts', async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const result = await createCart({
+      portalSlug: slug,
+      source: 'portal',
+      sourceRef: slug,
+      entryPoint: b.entryPoint || slug,
+      primaryGuestName: b.primaryGuestName,
+      primaryGuestEmail: b.primaryGuestEmail,
+      primaryGuestPhone: b.primaryGuestPhone,
+      partyAdults: b.partyAdults,
+      partyChildren: b.partyChildren,
+      partyInfants: b.partyInfants,
+      intent: b.intent,
+      needs: b.needs,
+      payment: b.payment,
+      travel: b.travel
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create cart error:', e);
+    res.status(500).json({ error: 'Failed to create cart' });
+  }
+});
+
+// GET /api/public/carts/:cartId - Get cart by ID (requires X-Cart-Token)
+router.get('/carts/:cartId', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'X-Cart-Token header required' });
+  }
+  
+  try {
+    const result = await getCart(cartId, token);
+    if (!result) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get cart error:', e);
+    res.status(500).json({ error: 'Failed to get cart' });
+  }
+});
+
+// POST /api/public/carts/:cartId/items - Add item to cart (requires X-Cart-Token)
+router.post('/carts/:cartId/items', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  if (!token) {
+    return res.status(401).json({ error: 'X-Cart-Token header required' });
+  }
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    if (cart.cart.status !== 'draft') {
+      return res.status(400).json({ error: 'Cart is not in draft status' });
+    }
+    
+    const result = await addItem({
+      cartId,
+      itemType: b.itemType,
+      title: b.title,
+      description: b.description,
+      reservationMode: b.reservationMode || 'internal',
+      facilityId: b.facilityId,
+      offerId: b.offerId,
+      unitId: b.unitId,
+      providerTenantId: b.providerTenantId,
+      externalUrl: b.externalUrl,
+      providerName: b.providerName,
+      providerEmail: b.providerEmail,
+      providerPhone: b.providerPhone,
+      startAt: new Date(b.startAt),
+      endAt: new Date(b.endAt),
+      preferredTime: b.preferredTime,
+      flexibleWindowMinutes: b.flexibleWindowMinutes,
+      quantity: b.quantity,
+      partySize: b.partySize,
+      vesselLengthFt: b.vesselLengthFt,
+      vehicleLengthFt: b.vehicleLengthFt,
+      dietaryRequirements: b.dietaryRequirements,
+      specialRequests: b.specialRequests,
+      needsJson: b.needs,
+      intentJson: b.intent
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Add item error:', e);
+    res.status(500).json({ error: 'Failed to add item' });
+  }
+});
+
+// PATCH /api/public/carts/:cartId/items/:itemId - Update item (requires X-Cart-Token)
+router.patch('/carts/:cartId/items/:itemId', async (req: Request, res: Response) => {
+  const { cartId, itemId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  if (!token) {
+    return res.status(401).json({ error: 'X-Cart-Token header required' });
+  }
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    const result = await updateItem({
+      itemId,
+      startAt: b.startAt ? new Date(b.startAt) : undefined,
+      endAt: b.endAt ? new Date(b.endAt) : undefined,
+      quantity: b.quantity,
+      partySize: b.partySize,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Update item error:', e);
+    res.status(500).json({ error: 'Failed to update item' });
+  }
+});
+
+// DELETE /api/public/carts/:cartId/items/:itemId - Remove item (requires X-Cart-Token)
+router.delete('/carts/:cartId/items/:itemId', async (req: Request, res: Response) => {
+  const { cartId, itemId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'X-Cart-Token header required' });
+  }
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    const result = await removeItem(itemId);
+    res.json(result);
+  } catch (e: any) {
+    console.error('Remove item error:', e);
+    res.status(500).json({ error: 'Failed to remove item' });
+  }
+});
+
+// POST /api/public/carts/:cartId/adjustments - Add adjustment (requires X-Cart-Token)
+router.post('/carts/:cartId/adjustments', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  if (!token) {
+    return res.status(401).json({ error: 'X-Cart-Token header required' });
+  }
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    const result = await addAdjustment(
+      cartId,
+      b.label,
+      b.adjustmentType || 'discount',
+      b.amountCents,
+      b.itemId
+    );
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Add adjustment error:', e);
+    res.status(500).json({ error: 'Failed to add adjustment' });
+  }
+});
+
+// POST /api/public/carts/:cartId/update-guest - Update guest info (requires X-Cart-Token)
+router.post('/carts/:cartId/update-guest', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  if (!token) {
+    return res.status(401).json({ error: 'X-Cart-Token header required' });
+  }
+  
+  try {
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    const result = await updateCartGuest(cartId, {
+      primaryGuestName: b.primaryGuestName,
+      primaryGuestEmail: b.primaryGuestEmail,
+      primaryGuestPhone: b.primaryGuestPhone,
+      partyAdults: b.partyAdults,
+      partyChildren: b.partyChildren,
+      partyInfants: b.partyInfants,
+      needs: b.needs
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Update guest error:', e);
+    res.status(500).json({ error: 'Failed to update guest info' });
   }
 });
 
