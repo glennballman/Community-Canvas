@@ -1533,3 +1533,102 @@ export const ccTransportAssets = pgTable('cc_transport_assets', {
 export const insertTransportAssetSchema = createInsertSchema(ccTransportAssets).omit({ id: true, createdAt: true, updatedAt: true });
 export type TransportAsset = typeof ccTransportAssets.$inferSelect;
 export type InsertTransportAsset = z.infer<typeof insertTransportAssetSchema>;
+
+// Sailing Schedules - recurring patterns for scheduled services
+export const ccSailingSchedules = pgTable('cc_sailing_schedules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  operatorId: uuid('operator_id').notNull(),
+  
+  routeName: text('route_name').notNull(),
+  routeCode: varchar('route_code', { length: 20 }),
+  
+  originLocationId: uuid('origin_location_id'),
+  destinationLocationId: uuid('destination_location_id'),
+  
+  daysOfWeek: integer('days_of_week').array().notNull(),
+  departureTime: time('departure_time').notNull(),
+  
+  seasonalJson: jsonb('seasonal_json').default({}),
+  
+  baseFareCad: numeric('base_fare_cad', { precision: 10, scale: 2 }),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  effectiveFrom: date('effective_from'),
+  effectiveTo: date('effective_to'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertSailingScheduleSchema = createInsertSchema(ccSailingSchedules).omit({ id: true, createdAt: true, updatedAt: true });
+export type SailingSchedule = typeof ccSailingSchedules.$inferSelect;
+export type InsertSailingSchedule = z.infer<typeof insertSailingScheduleSchema>;
+
+// Sailings - individual sailing instances
+export const ccSailings = pgTable('cc_sailings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  scheduleId: uuid('schedule_id'),
+  operatorId: uuid('operator_id').notNull(),
+  assetId: uuid('asset_id'),
+  
+  sailingNumber: varchar('sailing_number', { length: 30 }),
+  
+  sailingDate: date('sailing_date').notNull(),
+  scheduledDeparture: time('scheduled_departure').notNull(),
+  scheduledArrival: time('scheduled_arrival'),
+  
+  actualDepartureAt: timestamp('actual_departure_at', { withTimezone: true }),
+  actualArrivalAt: timestamp('actual_arrival_at', { withTimezone: true }),
+  
+  originLocationId: uuid('origin_location_id'),
+  destinationLocationId: uuid('destination_location_id'),
+  
+  capacityJson: jsonb('capacity_json').default({}),
+  
+  status: varchar('status', { length: 50 }).default('scheduled').notNull(),
+  
+  delayMinutes: integer('delay_minutes'),
+  delayReason: text('delay_reason'),
+  cancellationReason: text('cancellation_reason'),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  
+  weatherJson: jsonb('weather_json').default({}),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertSailingSchema = createInsertSchema(ccSailings).omit({ id: true, createdAt: true, updatedAt: true });
+export type Sailing = typeof ccSailings.$inferSelect;
+export type InsertSailing = z.infer<typeof insertSailingSchema>;
+
+// Port Calls - intermediate stops on a sailing
+export const ccPortCalls = pgTable('cc_port_calls', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sailingId: uuid('sailing_id').notNull(),
+  locationId: uuid('location_id').notNull(),
+  
+  stopSequence: integer('stop_sequence').notNull(),
+  
+  scheduledArrival: time('scheduled_arrival'),
+  scheduledDeparture: time('scheduled_departure'),
+  dwellMinutes: integer('dwell_minutes').default(15),
+  
+  actualArrivalAt: timestamp('actual_arrival_at', { withTimezone: true }),
+  actualDepartureAt: timestamp('actual_departure_at', { withTimezone: true }),
+  
+  operationsJson: jsonb('operations_json').default({}),
+  
+  status: varchar('status', { length: 50 }).default('scheduled'),
+  
+  skipReason: text('skip_reason'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertPortCallSchema = createInsertSchema(ccPortCalls).omit({ id: true, createdAt: true });
+export type PortCall = typeof ccPortCalls.$inferSelect;
+export type InsertPortCall = z.infer<typeof insertPortCallSchema>;

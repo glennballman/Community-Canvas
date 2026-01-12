@@ -7,6 +7,12 @@ import {
   getOperators, getOperatorByCode, getOperatorById,
   getAssets, getAssetById, getOperatorRoutes, findOperatorsForRoute
 } from '../services/operatorService';
+import {
+  getSchedules, getActiveScheduleForDate,
+  getSailings, getSailingById, getSailingByNumber,
+  updateSailingStatus, updatePortCallStatus,
+  checkSailingAvailability
+} from '../services/sailingService';
 
 const router = Router();
 
@@ -197,6 +203,158 @@ router.get('/portals/:slug/route-options', async (req, res) => {
   } catch (e: any) {
     console.error('Find route options error:', e);
     res.status(500).json({ error: 'Failed to find route options' });
+  }
+});
+
+// ============ SCHEDULE ENDPOINTS ============
+
+router.get('/operators/:id/schedules', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const schedules = await getSchedules(id);
+    res.json({ schedules });
+  } catch (e: any) {
+    console.error('Get schedules error:', e);
+    res.status(500).json({ error: 'Failed to get schedules' });
+  }
+});
+
+router.get('/operators/:id/schedules/for-date', async (req, res) => {
+  const { id } = req.params;
+  const { date } = req.query;
+  
+  try {
+    const targetDate = date ? new Date(date as string) : new Date();
+    const schedules = await getActiveScheduleForDate(id, targetDate);
+    res.json({ date: targetDate.toISOString().split('T')[0], schedules });
+  } catch (e: any) {
+    console.error('Get schedules for date error:', e);
+    res.status(500).json({ error: 'Failed to get schedules' });
+  }
+});
+
+// ============ SAILING ENDPOINTS ============
+
+router.get('/sailings', async (req, res) => {
+  const { operator, from, to, origin, destination, status, limit } = req.query;
+  
+  try {
+    const result = await getSailings({
+      operatorId: operator as string,
+      fromDate: from ? new Date(from as string) : undefined,
+      toDate: to ? new Date(to as string) : undefined,
+      originLocationId: origin as string,
+      destinationLocationId: destination as string,
+      status: status as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get sailings error:', e);
+    res.status(500).json({ error: 'Failed to get sailings' });
+  }
+});
+
+router.get('/portals/:slug/sailings', async (req, res) => {
+  const { slug } = req.params;
+  const { operator, from, to, limit } = req.query;
+  
+  try {
+    const result = await getSailings({
+      portalSlug: slug,
+      operatorCode: operator as string,
+      fromDate: from ? new Date(from as string) : new Date(),
+      toDate: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : 20
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get portal sailings error:', e);
+    res.status(500).json({ error: 'Failed to get sailings' });
+  }
+});
+
+router.get('/sailings/by-number/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const result = await getSailingByNumber(number);
+    if (!result) {
+      return res.status(404).json({ error: 'Sailing not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get sailing error:', e);
+    res.status(500).json({ error: 'Failed to get sailing' });
+  }
+});
+
+router.get('/sailings/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await getSailingById(id);
+    if (!result) {
+      return res.status(404).json({ error: 'Sailing not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get sailing error:', e);
+    res.status(500).json({ error: 'Failed to get sailing' });
+  }
+});
+
+router.post('/sailings/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status, delayMinutes, reason } = req.body;
+  
+  if (!status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const updated = await updateSailingStatus(id, status, { delayMinutes, reason });
+    res.json({ sailing: updated });
+  } catch (e: any) {
+    console.error('Update sailing status error:', e);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+router.post('/sailings/:id/port-calls/:callId/status', async (req, res) => {
+  const { callId } = req.params;
+  const { status, operations } = req.body;
+  
+  if (!status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const updated = await updatePortCallStatus(callId, status, operations);
+    res.json({ portCall: updated });
+  } catch (e: any) {
+    console.error('Update port call status error:', e);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+router.get('/sailings/:id/availability', async (req, res) => {
+  const { id } = req.params;
+  const { passengers, freight, kayaks } = req.query;
+  
+  try {
+    const result = await checkSailingAvailability(id, {
+      passengers: passengers ? parseInt(passengers as string) : undefined,
+      freightLbs: freight ? parseInt(freight as string) : undefined,
+      kayaks: kayaks ? parseInt(kayaks as string) : undefined
+    });
+    res.json(result);
+  } catch (e: any) {
+    console.error('Check availability error:', e);
+    res.status(500).json({ error: 'Failed to check availability' });
   }
 });
 
