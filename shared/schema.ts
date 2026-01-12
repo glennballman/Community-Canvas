@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey, char } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -528,3 +528,82 @@ export const cc_disclosure_surface_sets = pgTable('cc_disclosure_surface_sets', 
 export const insertDisclosureSurfaceSetSchema = createInsertSchema(cc_disclosure_surface_sets).omit({ id: true, computedAt: true });
 export type DisclosureSurfaceSet = typeof cc_disclosure_surface_sets.$inferSelect;
 export type InsertDisclosureSurfaceSet = z.infer<typeof insertDisclosureSurfaceSetSchema>;
+
+// ============================================================================
+// V3.3.1 BLOCK 02 - Payment Abstraction + Federation
+// ============================================================================
+
+// Payment References - external payment tracking (CC never processes payments)
+export const cc_payment_references = pgTable('cc_payment_references', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  reservationId: uuid('reservation_id').notNull(),
+  
+  providerName: text('provider_name').notNull(),
+  externalReference: text('external_reference'),
+  
+  amountCents: integer('amount_cents').notNull(),
+  currency: char('currency', { length: 3 }).default('CAD'),
+  
+  status: text('status').notNull().default('recorded'),
+  
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  recordedBy: uuid('recorded_by'),
+  notes: text('notes'),
+});
+
+export const insertPaymentReferenceSchema = createInsertSchema(cc_payment_references).omit({ id: true, recordedAt: true });
+export type PaymentReference = typeof cc_payment_references.$inferSelect;
+export type InsertPaymentReference = z.infer<typeof insertPaymentReferenceSchema>;
+
+// Federation Agreements - cross-tenant resource sharing
+export const cc_federation_agreements = pgTable('cc_federation_agreements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  providerTenantId: uuid('provider_tenant_id').notNull(),
+  communityId: uuid('community_id').notNull(),
+  consumerTenantId: uuid('consumer_tenant_id'),
+  
+  scopes: text('scopes').array().notNull().default([]),
+  
+  shareAvailability: boolean('share_availability').default(false),
+  allowBookingRequests: boolean('allow_booking_requests').default(true),
+  allowIncidentOps: boolean('allow_incident_ops').default(false),
+  anonymizePublic: boolean('anonymize_public').default(true),
+  requiresProviderConfirmation: boolean('requires_provider_confirmation').default(true),
+  
+  status: text('status').notNull().default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertFederationAgreementSchema = createInsertSchema(cc_federation_agreements).omit({ id: true, createdAt: true, updatedAt: true });
+export type FederationAgreement = typeof cc_federation_agreements.$inferSelect;
+export type InsertFederationAgreement = z.infer<typeof insertFederationAgreementSchema>;
+
+// Activity Ledger - audit trail for all significant actions
+export const cc_activity_ledger = pgTable('cc_activity_ledger', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  tenantId: uuid('tenant_id'),
+  communityId: uuid('community_id'),
+  
+  actorIdentityId: uuid('actor_identity_id'),
+  actorTenantId: uuid('actor_tenant_id'),
+  
+  action: varchar('action', { length: 128 }).notNull(),
+  
+  entityType: varchar('entity_type', { length: 64 }).notNull(),
+  entityId: uuid('entity_id').notNull(),
+  
+  correlationId: uuid('correlation_id'),
+  
+  payload: jsonb('payload').default({}),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertActivityLedgerSchema = createInsertSchema(cc_activity_ledger).omit({ id: true, createdAt: true });
+export type ActivityLedger = typeof cc_activity_ledger.$inferSelect;
+export type InsertActivityLedger = z.infer<typeof insertActivityLedgerSchema>;

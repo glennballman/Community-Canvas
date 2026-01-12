@@ -1,0 +1,121 @@
+**V3.3.1 BLOCK 02: Participation Mode + Payment Abstraction**
+
+This block adds participation_mode to control how tenants engage, and creates payment reference tracking (NO payment processing).
+
+## Step 1: Create cc_payment_references table
+```typescript
+export const cc_payment_references = pgTable('cc_payment_references', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => cc_tenants.id),
+  reservationId: uuid('reservation_id').notNull().references(() => cc_reservations.id, { onDelete: 'cascade' }),
+  
+  providerName: text('provider_name').notNull(), // 'Square', 'Moneris', 'Cash', 'E-Transfer', 'Invoice'
+  externalReference: text('external_reference'), // receipt #, confirmation id
+  
+  amountCents: integer('amount_cents').notNull(),
+  currency: char('currency', { length: 3 }).default('CAD'),
+  
+  status: text('status').notNull().default('recorded'), // 'recorded', 'void'
+  
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  recordedBy: uuid('recorded_by').references(() => cc_individuals.id),
+  notes: text('notes'),
+});
+```
+
+## Step 2: Create cc_federation_agreements table
+```typescript
+export const cc_federation_agreements = pgTable('cc_federation_agreements', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  providerTenantId: uuid('provider_tenant_id').notNull().references(() => cc_tenants.id),
+  communityId: uuid('community_id').notNull().references(() => cc_tenants.id),
+  consumerTenantId: uuid('consumer_tenant_id').references(() => cc_tenants.id), // null = community-wide
+  
+  scopes: text('scopes').array().notNull().default([]), // 'availability:read', 'reservation:create', 'incident:create', 'incident:dispatch'
+  
+  shareAvailability: boolean('share_availability').default(false),
+  allowBookingRequests: boolean('allow_booking_requests').default(true),
+  allowIncidentOps: boolean('allow_incident_ops').default(false),
+  anonymizePublic: boolean('anonymize_public').default(true),
+  requiresProviderConfirmation: boolean('requires_provider_confirmation').default(true),
+  
+  status: text('status').notNull().default('active'), // 'pending', 'active', 'suspended', 'revoked'
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+## Step 3: Add participation_mode to cc_offers (if exists) or cc_assets
+
+Check if cc_offers table exists. If not, add to cc_assets:
+```typescript
+// ALTER cc_assets to add participation_mode
+participationMode: ccParticipationModeEnum('participation_mode').notNull().default('requests_only'),
+```
+
+## Step 4: Extend cc_reservations with payment tracking
+```sql
+ALTER TABLE cc_reservations 
+  ADD COLUMN IF NOT EXISTS payment_status varchar DEFAULT 'unknown'
+    CHECK (payment_status IN ('not_applicable', 'unknown', 'pending', 'paid_external', 'invoiced', 'refunded_external')),
+  ADD COLUMN IF NOT EXISTS external_payment_ref text,
+  ADD COLUMN IF NOT EXISTS hold_expires_at timestamptz,
+  ADD COLUMN IF NOT EXISTS bundle_id uuid,
+  ADD COLUMN IF NOT EXISTS community_id uuid REFERENCES cc_tenants(id);
+```
+
+## Step 5: Create cc_activity_ledger table
+```typescript
+export const cc_activity_ledger = pgTable('cc_activity_ledger', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  tenantId: uuid('tenant_id').references(() => cc_tenants.id),
+  communityId: uuid('community_id').references(() => cc_tenants.id),
+  
+  actorIdentityId: uuid('actor_identity_id').references(() => cc_individuals.id),
+  actorTenantId: uuid('actor_tenant_id').references(() => cc_tenants.id),
+  
+  action: varchar('action', { length: 128 }).notNull(), // 'reservation.create', 'federation.read', 'incident.dispatch'
+  
+  entityType: varchar('entity_type', { length: 64 }).notNull(), // 'reservation', 'incident', 'credential'
+  entityId: uuid('entity_id').notNull(),
+  
+  correlationId: uuid('correlation_id'), // links related events
+  
+  payload: jsonb('payload').default({}),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+## Step 6: Generate migration and enable RLS
+```bash
+npx drizzle-kit generate
+npx drizzle-kit migrate
+```
+
+Enable RLS on:
+- cc_payment_references
+- cc_federation_agreements  
+- cc_activity_ledger
+
+## Step 7: Export Drizzle types
+
+Add to shared/schema.ts:
+- PaymentReference, InsertPaymentReference
+- FederationAgreement, InsertFederationAgreement
+- ActivityLedger, InsertActivityLedger
+
+## Deliverables
+- [ ] cc_payment_references table created
+- [ ] cc_federation_agreements table created
+- [ ] cc_activity_ledger table created
+- [ ] cc_reservations extended (5 new columns)
+- [ ] cc_assets extended with participation_mode
+- [ ] RLS enabled on all new tables
+- [ ] Migration applied successfully
+- [ ] Drizzle types exported
+
+Report completion with column counts for extended tables.
