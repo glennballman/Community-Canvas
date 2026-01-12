@@ -1,0 +1,618 @@
+**30-PROMPT PACK - PROMPT 04: Checkout - Three Fulfillment Modes**
+
+Create checkout flow that handles all three reservation modes:
+- **internal**: Creates cc_reservations using V3.3.1 infrastructure
+- **external**: Creates cc_partner_reservation_requests for partner fulfillment
+- **public**: Adds to itinerary only (no inventory hold)
+
+## Create server/services/checkoutService.ts
+```typescript
+// server/services/checkoutService.ts
+
+import { db } from '../db';
+import { eq, and } from 'drizzle-orm';
+import { createReservation, confirmReservation } from './reservationService';
+import { allocateUnit } from './allocationService';
+import { issueCredentialsForReservation } from './accessService';
+import { logActivity } from './activityService';
+import { nanoid } from 'nanoid';
+
+// ============ TYPES ============
+
+interface CheckoutRequest {
+  cartId: string;
+  accessToken: string;
+  
+  // Guest info (can override cart values)
+  primaryGuestName?: string;
+  primaryGuestEmail?: string;
+  primaryGuestPhone?: string;
+  
+  // Payment intent (no actual processing - just record method)
+  paymentMethod?: 'card' | 'cash' | 'etransfer' | 'invoice' | 'bond';
+  paymentReference?: string;
+  
+  // For quotes/groups
+  isQuote?: boolean;
+  quoteValidDays?: number;
+  
+  // Actor
+  actorId?: string;
+}
+
+interface CheckoutResult {
+  success: boolean;
+  cartId: string;
+  bundleId: string;
+  
+  // Results by mode
+  reservations: Array<{
+    itemId: string;
+    reservationId: string;
+    confirmationNumber: string;
+    status: string;
+    credentialsIssued: boolean;
+  }>;
+  
+  partnerRequests: Array<{
+    itemId: string;
+    requestId: string;
+    providerName: string;
+    status: string;
+  }>;
+  
+  itineraryItems: Array<{
+    itemId: string;
+    title: string;
+    startAt: Date;
+  }>;
+  
+  // Totals
+  totals: {
+    subtotalCents: number;
+    taxesCents: number;
+    adjustmentsCents: number;
+    grandTotalCents: number;
+    depositRequiredCents: number;
+  };
+  
+  // Quote info (if applicable)
+  quote?: {
+    quoteNumber: string;
+    validUntil: Date;
+  };
+  
+  errors: Array<{
+    itemId: string;
+    error: string;
+  }>;
+}
+
+// ============ HELPERS ============
+
+function generateBundleId(): string {
+  return `BND-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${nanoid(6).toUpperCase()}`;
+}
+
+function generateQuoteNumber(): string {
+  return `Q-${new Date().getFullYear()}-${nanoid(6).toUpperCase()}`;
+}
+
+// ============ CHECKOUT FUNCTIONS ============
+
+export async function checkout(req: CheckoutRequest): Promise<CheckoutResult> {
+  // 1. Load and validate cart
+  const cart = await db.query.ccReservationCarts.findFirst({
+    where: and(
+      eq(ccReservationCarts.id, req.cartId),
+      eq(ccReservationCarts.accessToken, req.accessToken)
+    )
+  });
+  
+  if (!cart) {
+    throw new Error('Cart not found or invalid token');
+  }
+  
+  if (cart.status !== 'draft' && cart.status !== 'quote') {
+    throw new Error(`Cart is in ${cart.status} status and cannot be checked out`);
+  }
+  
+  // 2. Load cart items
+  const items = await db.query.ccReservationCartItems.findMany({
+    where: eq(ccReservationCartItems.cartId, req.cartId),
+    orderBy: [asc(ccReservationCartItems.createdAt)]
+  });
+  
+  if (items.length === 0) {
+    throw new Error('Cart is empty');
+  }
+  
+  // 3. Load adjustments
+  const adjustments = await db.query.ccReservationCartAdjustments.findMany({
+    where: eq(ccReservationCartAdjustments.cartId, req.cartId)
+  });
+  
+  // 4. Update cart status to checking_out
+  await db.update(ccReservationCarts)
+    .set({ 
+      status: 'checking_out',
+      primaryGuestName: req.primaryGuestName || cart.primaryGuestName,
+      primaryGuestEmail: req.primaryGuestEmail || cart.primaryGuestEmail,
+      primaryGuestPhone: req.primaryGuestPhone || cart.primaryGuestPhone,
+      paymentJson: {
+        ...cart.paymentJson,
+        method: req.paymentMethod || 'card',
+        reference: req.paymentReference
+      },
+      updatedAt: new Date()
+    })
+    .where(eq(ccReservationCarts.id, req.cartId));
+  
+  const bundleId = generateBundleId();
+  const guestName = req.primaryGuestName || cart.primaryGuestName || 'Guest';
+  const guestEmail = req.primaryGuestEmail || cart.primaryGuestEmail;
+  const guestPhone = req.primaryGuestPhone || cart.primaryGuestPhone;
+  
+  const result: CheckoutResult = {
+    success: true,
+    cartId: req.cartId,
+    bundleId,
+    reservations: [],
+    partnerRequests: [],
+    itineraryItems: [],
+    totals: {
+      subtotalCents: 0,
+      taxesCents: 0,
+      adjustmentsCents: 0,
+      grandTotalCents: 0,
+      depositRequiredCents: 0
+    },
+    errors: []
+  };
+  
+  // 5. Process each item based on reservation_mode
+  for (const item of items) {
+    try {
+      if (item.reservationMode === 'internal') {
+        // ========== INTERNAL MODE ==========
+        // Creates cc_reservations using V3.3.1 infrastructure
+        
+        if (!item.facilityId || !item.offerId) {
+          throw new Error('Internal items require facilityId and offerId');
+        }
+        
+        const reservation = await createReservation({
+          tenantId: item.providerTenantId!,
+          facilityId: item.facilityId,
+          offerId: item.offerId,
+          customerName: guestName,
+          customerEmail: guestEmail,
+          customerPhone: guestPhone,
+          startAt: item.startAt!,
+          endAt: item.endAt!,
+          partySize: item.partySize || cart.partyAdults + cart.partyChildren,
+          source: 'cart',
+          bundleId,
+          idempotencyKey: `cart-${req.cartId}-${item.id}`,
+          needsJson: item.needsJson,
+          intentJson: item.intentJson
+        });
+        
+        // Link reservation to cart item
+        await db.update(ccReservationCartItems)
+          .set({ 
+            reservationId: reservation.reservationId,
+            status: reservation.status === 'confirmed' ? 'confirmed' : 'reserved',
+            updatedAt: new Date()
+          })
+          .where(eq(ccReservationCartItems.id, item.id));
+        
+        // Issue credentials if confirmed
+        let credentialsIssued = false;
+        if (reservation.status === 'confirmed') {
+          try {
+            await issueCredentialsForReservation(reservation.reservationId);
+            credentialsIssued = true;
+          } catch (e) {
+            console.error('Credential issuance error:', e);
+          }
+        }
+        
+        result.reservations.push({
+          itemId: item.id,
+          reservationId: reservation.reservationId,
+          confirmationNumber: reservation.confirmationNumber,
+          status: reservation.status,
+          credentialsIssued
+        });
+        
+        result.totals.subtotalCents += item.subtotalCents || 0;
+        result.totals.taxesCents += item.taxesCents || 0;
+        result.totals.depositRequiredCents += item.depositRequiredCents || 0;
+        
+      } else if (item.reservationMode === 'external') {
+        // ========== EXTERNAL MODE ==========
+        // Creates cc_partner_reservation_requests
+        
+        const [partnerRequest] = await db.insert(ccPartnerReservationRequests).values({
+          cartId: req.cartId,
+          cartItemId: item.id,
+          portalId: cart.portalId,
+          providerTenantId: item.providerTenantId,
+          providerName: item.providerName,
+          providerEmail: item.providerEmail,
+          providerPhone: item.providerPhone,
+          requestType: 'reservation',
+          status: 'requested',
+          itemType: item.itemType,
+          title: item.title,
+          requestedStart: item.startAt,
+          requestedEnd: item.endAt,
+          preferredTime: item.preferredTime,
+          partySize: item.partySize || cart.partyAdults + cart.partyChildren,
+          contactName: guestName,
+          contactEmail: guestEmail,
+          contactPhone: guestPhone,
+          needsJson: item.needsJson,
+          dietaryRequirements: item.dietaryRequirements,
+          specialAccommodations: item.specialRequests,
+          notes: `Booking via Community Canvas cart ${req.cartId}`,
+          expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours
+        }).returning();
+        
+        // Link request to cart item
+        await db.update(ccReservationCartItems)
+          .set({ 
+            partnerRequestId: partnerRequest.id,
+            status: 'pending_confirmation',
+            updatedAt: new Date()
+          })
+          .where(eq(ccReservationCartItems.id, item.id));
+        
+        result.partnerRequests.push({
+          itemId: item.id,
+          requestId: partnerRequest.id,
+          providerName: item.providerName || 'Partner',
+          status: 'requested'
+        });
+        
+        // Log activity for partner outreach
+        await logActivity({
+          tenantId: cart.tenantId || 'system',
+          actorId: req.actorId || 'system',
+          action: 'partner_request.created',
+          resourceType: 'partner_request',
+          resourceId: partnerRequest.id,
+          metadata: { 
+            bundleId, 
+            providerName: item.providerName,
+            itemType: item.itemType
+          }
+        });
+        
+      } else if (item.reservationMode === 'public') {
+        // ========== PUBLIC MODE ==========
+        // Itinerary only - no inventory, no hold
+        
+        result.itineraryItems.push({
+          itemId: item.id,
+          title: item.title,
+          startAt: item.startAt!
+        });
+        
+        // Update item status
+        await db.update(ccReservationCartItems)
+          .set({ 
+            status: 'confirmed', // Always confirmed for public items
+            updatedAt: new Date()
+          })
+          .where(eq(ccReservationCartItems.id, item.id));
+      }
+      
+    } catch (e: any) {
+      console.error(`Checkout error for item ${item.id}:`, e);
+      result.errors.push({
+        itemId: item.id,
+        error: e.message
+      });
+    }
+  }
+  
+  // 6. Calculate adjustments
+  result.totals.adjustmentsCents = adjustments.reduce((s, a) => s + (a.amountCents || 0), 0);
+  result.totals.grandTotalCents = result.totals.subtotalCents + result.totals.taxesCents + result.totals.adjustmentsCents;
+  
+  // 7. Handle quote mode
+  if (req.isQuote) {
+    const quoteNumber = generateQuoteNumber();
+    const validUntil = new Date(Date.now() + (req.quoteValidDays || 7) * 24 * 60 * 60 * 1000);
+    
+    await db.update(ccReservationCarts)
+      .set({
+        status: 'quote',
+        quoteJson: {
+          isQuote: true,
+          quoteNumber,
+          validUntil: validUntil.toISOString(),
+          createdAt: new Date().toISOString()
+        },
+        updatedAt: new Date()
+      })
+      .where(eq(ccReservationCarts.id, req.cartId));
+    
+    result.quote = { quoteNumber, validUntil };
+  } else {
+    // 8. Mark cart as submitted/completed
+    const finalStatus = result.errors.length > 0 ? 'submitted' : 'completed';
+    
+    await db.update(ccReservationCarts)
+      .set({
+        status: finalStatus,
+        submittedAt: new Date(),
+        completedAt: result.errors.length === 0 ? new Date() : null,
+        updatedAt: new Date()
+      })
+      .where(eq(ccReservationCarts.id, req.cartId));
+  }
+  
+  // 9. Log checkout activity
+  await logActivity({
+    tenantId: cart.tenantId || 'system',
+    actorId: req.actorId || 'guest',
+    action: 'cart.checkout',
+    resourceType: 'cart',
+    resourceId: req.cartId,
+    metadata: {
+      bundleId,
+      itemCount: items.length,
+      reservationCount: result.reservations.length,
+      partnerRequestCount: result.partnerRequests.length,
+      itineraryCount: result.itineraryItems.length,
+      errorCount: result.errors.length,
+      grandTotalCents: result.totals.grandTotalCents
+    },
+    correlationId: bundleId
+  });
+  
+  result.success = result.errors.length === 0;
+  
+  return result;
+}
+
+// Convert quote to confirmed booking
+export async function confirmQuote(
+  cartId: string, 
+  accessToken: string
+): Promise<CheckoutResult> {
+  const cart = await db.query.ccReservationCarts.findFirst({
+    where: and(
+      eq(ccReservationCarts.id, cartId),
+      eq(ccReservationCarts.accessToken, accessToken)
+    )
+  });
+  
+  if (!cart) {
+    throw new Error('Cart not found or invalid token');
+  }
+  
+  if (cart.status !== 'quote') {
+    throw new Error('Cart is not a quote');
+  }
+  
+  const quoteJson = cart.quoteJson as any;
+  if (quoteJson?.validUntil && new Date(quoteJson.validUntil) < new Date()) {
+    throw new Error('Quote has expired');
+  }
+  
+  // Reset to draft and re-checkout
+  await db.update(ccReservationCarts)
+    .set({ status: 'draft', updatedAt: new Date() })
+    .where(eq(ccReservationCarts.id, cartId));
+  
+  return checkout({
+    cartId,
+    accessToken,
+    isQuote: false
+  });
+}
+
+// Cancel checkout / abandon cart
+export async function abandonCart(
+  cartId: string, 
+  accessToken: string,
+  reason?: string
+): Promise<void> {
+  const cart = await db.query.ccReservationCarts.findFirst({
+    where: and(
+      eq(ccReservationCarts.id, cartId),
+      eq(ccReservationCarts.accessToken, accessToken)
+    )
+  });
+  
+  if (!cart) {
+    throw new Error('Cart not found or invalid token');
+  }
+  
+  // Cancel any pending reservations
+  const items = await db.query.ccReservationCartItems.findMany({
+    where: eq(ccReservationCartItems.cartId, cartId)
+  });
+  
+  for (const item of items) {
+    if (item.reservationId) {
+      try {
+        await db.update(ccReservations)
+          .set({ status: 'cancelled', updatedAt: new Date() })
+          .where(eq(ccReservations.id, item.reservationId));
+      } catch (e) {
+        console.error('Error cancelling reservation:', e);
+      }
+    }
+    
+    if (item.partnerRequestId) {
+      try {
+        await db.update(ccPartnerReservationRequests)
+          .set({ status: 'cancelled', updatedAt: new Date() })
+          .where(eq(ccPartnerReservationRequests.id, item.partnerRequestId));
+      } catch (e) {
+        console.error('Error cancelling partner request:', e);
+      }
+    }
+  }
+  
+  await db.update(ccReservationCarts)
+    .set({
+      status: 'cancelled',
+      notes: reason ? `Abandoned: ${reason}` : 'Abandoned by user',
+      updatedAt: new Date()
+    })
+    .where(eq(ccReservationCarts.id, cartId));
+}
+```
+
+## Add Checkout Routes
+
+### In server/routes/public-portal.ts
+```typescript
+import { checkout, confirmQuote, abandonCart } from '../services/checkoutService';
+
+// POST /api/public/carts/:cartId/checkout
+router.post('/carts/:cartId/checkout', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  const b = req.body || {};
+  
+  try {
+    const result = await checkout({
+      cartId,
+      accessToken: token,
+      primaryGuestName: b.primaryGuestName,
+      primaryGuestEmail: b.primaryGuestEmail,
+      primaryGuestPhone: b.primaryGuestPhone,
+      paymentMethod: b.paymentMethod,
+      paymentReference: b.paymentReference,
+      isQuote: b.isQuote,
+      quoteValidDays: b.quoteValidDays
+    });
+    
+    if (result.errors.length > 0 && result.reservations.length === 0) {
+      return res.status(400).json(result);
+    }
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Checkout error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/public/carts/:cartId/confirm-quote
+router.post('/carts/:cartId/confirm-quote', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  try {
+    const result = await confirmQuote(cartId, token);
+    res.json(result);
+  } catch (e: any) {
+    console.error('Confirm quote error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/public/carts/:cartId/abandon
+router.post('/carts/:cartId/abandon', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  try {
+    await abandonCart(cartId, token, req.body?.reason);
+    res.json({ success: true, status: 'cancelled' });
+  } catch (e: any) {
+    console.error('Abandon cart error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/public/carts/:cartId/receipt
+router.get('/carts/:cartId/receipt', async (req, res) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  try {
+    const cartResult = await getCart(cartId, token);
+    if (!cartResult) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    if (cartResult.cart.status !== 'completed' && cartResult.cart.status !== 'submitted') {
+      return res.status(400).json({ error: 'Cart has not been checked out' });
+    }
+    
+    // Load reservations for items
+    const reservationDetails = [];
+    for (const item of cartResult.items) {
+      if (item.reservationId) {
+        const reservation = await db.query.ccReservations.findFirst({
+          where: eq(ccReservations.id, item.reservationId)
+        });
+        if (reservation) {
+          reservationDetails.push({
+            itemTitle: item.title,
+            confirmationNumber: reservation.confirmationNumber,
+            status: reservation.status,
+            startAt: item.startAt,
+            endAt: item.endAt
+          });
+        }
+      }
+    }
+    
+    res.json({
+      cart: cartResult.cart,
+      items: cartResult.items,
+      adjustments: cartResult.adjustments,
+      totals: cartResult.totals,
+      reservations: reservationDetails
+    });
+  } catch (e: any) {
+    console.error('Receipt error:', e);
+    res.status(500).json({ error: 'Failed to get receipt' });
+  }
+});
+```
+
+## Deliverables
+- [ ] server/services/checkoutService.ts
+  - checkout() - Process all three modes
+  - confirmQuote() - Convert quote to booking
+  - abandonCart() - Cancel cart and related items
+- [ ] Routes in server/routes/public-portal.ts:
+  - POST /api/public/carts/:cartId/checkout
+  - POST /api/public/carts/:cartId/confirm-quote
+  - POST /api/public/carts/:cartId/abandon
+  - GET /api/public/carts/:cartId/receipt
+- [ ] Internal mode: Creates cc_reservations, issues credentials
+- [ ] External mode: Creates cc_partner_reservation_requests
+- [ ] Public mode: Marks items confirmed (itinerary only)
+- [ ] Quote mode: Saves quote with validity period
+- [ ] Test: Full checkout flow with internal parking item → reservation created
+
+Report with checkout result showing bundleId, reservation confirmation numbers, and totals.
