@@ -1,0 +1,826 @@
+**BAMFIELD OPS - PROMPT 07: Freight Manifests**
+
+Create the freight manifest system for tracking cargo shipments on sailings.
+
+## Migration 084_freight_manifests.sql
+```sql
+BEGIN;
+
+-- ============ FREIGHT MANIFESTS ============
+-- Container for a sailing's freight cargo
+
+CREATE TABLE IF NOT EXISTS cc_freight_manifests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  operator_id uuid NOT NULL REFERENCES cc_transport_operators(id),
+  sailing_id uuid REFERENCES cc_sailings(id) ON DELETE SET NULL,
+  
+  -- Identity
+  manifest_number varchar(30) NOT NULL UNIQUE,
+  -- Format: FRT-YYMMDD-XXXX (e.g., FRT-260115-A7K9)
+  
+  -- Route
+  origin_location_id uuid REFERENCES cc_locations(id),
+  destination_location_id uuid REFERENCES cc_locations(id),
+  
+  -- Timing
+  manifest_date date NOT NULL,
+  scheduled_departure time,
+  
+  -- Totals (calculated from items)
+  total_items integer DEFAULT 0,
+  total_weight_lbs numeric(10,2) DEFAULT 0,
+  total_value_cad numeric(10,2) DEFAULT 0,
+  
+  -- Status
+  status varchar DEFAULT 'draft' CHECK (status IN (
+    'draft',        -- Being assembled
+    'submitted',    -- Submitted for sailing
+    'accepted',     -- Accepted by operator
+    'loaded',       -- Loaded on vessel
+    'in_transit',   -- On the water
+    'arrived',      -- At destination
+    'delivered',    -- All items delivered
+    'partial',      -- Some items delivered
+    'held',         -- Held for inspection/issues
+    'cancelled'     -- Cancelled
+  )),
+  
+  loaded_at timestamptz,
+  departed_at timestamptz,
+  arrived_at timestamptz,
+  
+  -- Shipper info
+  shipper_name text,
+  shipper_phone text,
+  shipper_email text,
+  shipper_business text,
+  
+  -- Consignee info (recipient)
+  consignee_name text,
+  consignee_phone text,
+  consignee_email text,
+  consignee_business text,
+  consignee_location_id uuid REFERENCES cc_locations(id),
+  
+  -- Billing
+  billing_method varchar DEFAULT 'prepaid' CHECK (billing_method IN (
+    'prepaid', 'collect', 'third_party', 'account'
+  )),
+  billing_account_id uuid,
+  freight_charges_cad numeric(10,2) DEFAULT 0,
+  payment_status varchar DEFAULT 'pending',
+  
+  -- Notes
+  special_instructions text,
+  internal_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_freight_manifests_sailing ON cc_freight_manifests(sailing_id) WHERE sailing_id IS NOT NULL;
+CREATE INDEX idx_freight_manifests_date ON cc_freight_manifests(manifest_date, status);
+CREATE INDEX idx_freight_manifests_operator ON cc_freight_manifests(operator_id, status);
+CREATE INDEX idx_freight_manifests_number ON cc_freight_manifests(manifest_number);
+
+ALTER TABLE cc_freight_manifests ENABLE ROW LEVEL SECURITY;
+
+-- ============ FREIGHT ITEMS ============
+-- Individual items/packages on a manifest
+
+CREATE TABLE IF NOT EXISTS cc_freight_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  manifest_id uuid NOT NULL REFERENCES cc_freight_manifests(id) ON DELETE CASCADE,
+  
+  -- Identity
+  item_number integer NOT NULL, -- Sequence on manifest (1, 2, 3...)
+  tracking_code varchar(20), -- Optional barcode/tracking
+  
+  -- Description
+  description text NOT NULL,
+  category varchar CHECK (category IN (
+    'general',       -- General cargo
+    'construction',  -- Building materials
+    'groceries',     -- Food/supplies
+    'equipment',     -- Tools/machinery
+    'household',     -- Personal/household items
+    'medical',       -- Medical supplies
+    'hazmat',        -- Hazardous materials
+    'refrigerated',  -- Cold chain
+    'livestock',     -- Animals
+    'vehicle',       -- Vehicles/ATVs
+    'other'
+  )),
+  
+  -- Dimensions
+  quantity integer DEFAULT 1,
+  weight_lbs numeric(10,2),
+  length_in numeric(10,2),
+  width_in numeric(10,2),
+  height_in numeric(10,2),
+  
+  -- Value & Insurance
+  declared_value_cad numeric(10,2),
+  insured boolean DEFAULT false,
+  insurance_value_cad numeric(10,2),
+  
+  -- Special handling
+  special_handling text[],
+  -- ['fragile', 'this_side_up', 'keep_dry', 'refrigerate', 'hazmat', 'oversized', 'heavy_lift']
+  
+  handling_instructions text,
+  
+  -- Status
+  status varchar DEFAULT 'pending' CHECK (status IN (
+    'pending',       -- Not yet loaded
+    'loaded',        -- On vessel
+    'in_transit',    -- On the water
+    'offloaded',     -- Removed from vessel
+    'delivered',     -- Delivered to consignee
+    'held',          -- Held for issues
+    'damaged',       -- Damaged in transit
+    'lost',          -- Lost
+    'returned'       -- Returned to shipper
+  )),
+  
+  loaded_at timestamptz,
+  offloaded_at timestamptz,
+  delivered_at timestamptz,
+  
+  -- Delivery details
+  received_by text,
+  delivery_signature text,
+  delivery_notes text,
+  
+  -- Pricing
+  item_charge_cad numeric(10,2) DEFAULT 0,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(manifest_id, item_number)
+);
+
+CREATE INDEX idx_freight_items_manifest ON cc_freight_items(manifest_id, status);
+CREATE INDEX idx_freight_items_tracking ON cc_freight_items(tracking_code) WHERE tracking_code IS NOT NULL;
+
+ALTER TABLE cc_freight_items ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/freightService.ts
+```typescript
+// server/services/freightService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateManifestRequest {
+  portalSlug: string;
+  operatorId: string;
+  sailingId?: string;
+  originLocationId?: string;
+  destinationLocationId?: string;
+  manifestDate: Date;
+  scheduledDeparture?: string;
+  shipperName?: string;
+  shipperPhone?: string;
+  shipperEmail?: string;
+  shipperBusiness?: string;
+  consigneeName?: string;
+  consigneePhone?: string;
+  consigneeEmail?: string;
+  consigneeBusiness?: string;
+  consigneeLocationId?: string;
+  billingMethod?: string;
+  specialInstructions?: string;
+}
+
+interface AddItemRequest {
+  manifestId: string;
+  description: string;
+  category?: string;
+  quantity?: number;
+  weightLbs?: number;
+  lengthIn?: number;
+  widthIn?: number;
+  heightIn?: number;
+  declaredValueCad?: number;
+  insured?: boolean;
+  insuranceValueCad?: number;
+  specialHandling?: string[];
+  handlingInstructions?: string;
+}
+
+// ============ HELPERS ============
+
+function generateManifestNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `FRT-${dateStr}-${suffix}`;
+}
+
+function generateTrackingCode(): string {
+  return `TRK${nanoid(8).toUpperCase()}`;
+}
+
+function calculateFreightCharge(weightLbs: number): number {
+  // Base rate: $0.15/lb, minimum $15
+  const baseCharge = weightLbs * 0.15;
+  return Math.max(baseCharge, 15);
+}
+
+// ============ MANIFEST FUNCTIONS ============
+
+export async function createManifest(req: CreateManifestRequest): Promise<any> {
+  // Resolve portal
+  let portalId: string | undefined;
+  if (req.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) portalId = portal.id;
+  }
+  
+  // Validate operator belongs to portal
+  const operator = await db.query.ccTransportOperators.findFirst({
+    where: eq(ccTransportOperators.id, req.operatorId)
+  });
+  
+  if (!operator) throw new Error('Operator not found');
+  if (portalId && operator.portalId !== portalId) {
+    throw new Error('Operator does not belong to this portal');
+  }
+  
+  const manifestNumber = generateManifestNumber();
+  
+  const [manifest] = await db.insert(ccFreightManifests).values({
+    portalId,
+    operatorId: req.operatorId,
+    sailingId: req.sailingId,
+    manifestNumber,
+    originLocationId: req.originLocationId,
+    destinationLocationId: req.destinationLocationId,
+    manifestDate: req.manifestDate,
+    scheduledDeparture: req.scheduledDeparture,
+    shipperName: req.shipperName,
+    shipperPhone: req.shipperPhone,
+    shipperEmail: req.shipperEmail,
+    shipperBusiness: req.shipperBusiness,
+    consigneeName: req.consigneeName,
+    consigneePhone: req.consigneePhone,
+    consigneeEmail: req.consigneeEmail,
+    consigneeBusiness: req.consigneeBusiness,
+    consigneeLocationId: req.consigneeLocationId,
+    billingMethod: req.billingMethod || 'prepaid',
+    specialInstructions: req.specialInstructions,
+    status: 'draft'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'freight_manifest.created',
+    resourceType: 'freight_manifest',
+    resourceId: manifest.id,
+    metadata: { manifestNumber }
+  });
+  
+  return manifest;
+}
+
+export async function getManifest(manifestId: string): Promise<{
+  manifest: any;
+  items: any[];
+} | null> {
+  const manifest = await db.query.ccFreightManifests.findFirst({
+    where: eq(ccFreightManifests.id, manifestId)
+  });
+  
+  if (!manifest) return null;
+  
+  const items = await db.query.ccFreightItems.findMany({
+    where: eq(ccFreightItems.manifestId, manifestId),
+    orderBy: [asc(ccFreightItems.itemNumber)]
+  });
+  
+  return { manifest, items };
+}
+
+export async function getManifestByNumber(manifestNumber: string): Promise<{
+  manifest: any;
+  items: any[];
+} | null> {
+  const manifest = await db.query.ccFreightManifests.findFirst({
+    where: eq(ccFreightManifests.manifestNumber, manifestNumber)
+  });
+  
+  if (!manifest) return null;
+  
+  return getManifest(manifest.id);
+}
+
+export async function getManifestsForSailing(sailingId: string): Promise<any[]> {
+  return db.query.ccFreightManifests.findMany({
+    where: eq(ccFreightManifests.sailingId, sailingId),
+    orderBy: [asc(ccFreightManifests.createdAt)]
+  });
+}
+
+export async function searchManifests(options: {
+  portalSlug?: string;
+  operatorId?: string;
+  fromDate?: Date;
+  toDate?: Date;
+  status?: string;
+  limit?: number;
+}): Promise<any[]> {
+  const conditions: any[] = [];
+  
+  if (options.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, options.portalSlug)
+    });
+    if (portal) {
+      conditions.push(eq(ccFreightManifests.portalId, portal.id));
+    }
+  }
+  
+  if (options.operatorId) {
+    conditions.push(eq(ccFreightManifests.operatorId, options.operatorId));
+  }
+  
+  if (options.fromDate) {
+    conditions.push(gte(ccFreightManifests.manifestDate, options.fromDate));
+  }
+  
+  if (options.toDate) {
+    conditions.push(lte(ccFreightManifests.manifestDate, options.toDate));
+  }
+  
+  if (options.status) {
+    conditions.push(eq(ccFreightManifests.status, options.status));
+  }
+  
+  return db.query.ccFreightManifests.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    orderBy: [desc(ccFreightManifests.manifestDate)],
+    limit: options.limit || 50
+  });
+}
+
+// ============ ITEM FUNCTIONS ============
+
+export async function addItem(req: AddItemRequest): Promise<any> {
+  // Get next item number
+  const existing = await db.query.ccFreightItems.findMany({
+    where: eq(ccFreightItems.manifestId, req.manifestId)
+  });
+  
+  const itemNumber = existing.length + 1;
+  const trackingCode = generateTrackingCode();
+  
+  // Calculate item charge
+  const itemCharge = calculateFreightCharge(req.weightLbs || 0);
+  
+  const [item] = await db.insert(ccFreightItems).values({
+    manifestId: req.manifestId,
+    itemNumber,
+    trackingCode,
+    description: req.description,
+    category: req.category || 'general',
+    quantity: req.quantity || 1,
+    weightLbs: req.weightLbs,
+    lengthIn: req.lengthIn,
+    widthIn: req.widthIn,
+    heightIn: req.heightIn,
+    declaredValueCad: req.declaredValueCad,
+    insured: req.insured || false,
+    insuranceValueCad: req.insuranceValueCad,
+    specialHandling: req.specialHandling,
+    handlingInstructions: req.handlingInstructions,
+    itemChargeCad: itemCharge,
+    status: 'pending'
+  }).returning();
+  
+  // Update manifest totals
+  await updateManifestTotals(req.manifestId);
+  
+  return item;
+}
+
+export async function updateManifestTotals(manifestId: string): Promise<void> {
+  const items = await db.query.ccFreightItems.findMany({
+    where: eq(ccFreightItems.manifestId, manifestId)
+  });
+  
+  let totalItems = 0;
+  let totalWeight = 0;
+  let totalValue = 0;
+  let freightCharges = 0;
+  
+  for (const item of items) {
+    totalItems += item.quantity || 1;
+    totalWeight += Number(item.weightLbs) || 0;
+    totalValue += Number(item.declaredValueCad) || 0;
+    freightCharges += Number(item.itemChargeCad) || 0;
+  }
+  
+  await db.update(ccFreightManifests)
+    .set({
+      totalItems,
+      totalWeightLbs: totalWeight,
+      totalValueCad: totalValue,
+      freightChargesCad: freightCharges,
+      updatedAt: new Date()
+    })
+    .where(eq(ccFreightManifests.id, manifestId));
+}
+
+export async function getItemByTracking(trackingCode: string): Promise<{
+  item: any;
+  manifest: any;
+} | null> {
+  const item = await db.query.ccFreightItems.findFirst({
+    where: eq(ccFreightItems.trackingCode, trackingCode)
+  });
+  
+  if (!item) return null;
+  
+  const manifest = await db.query.ccFreightManifests.findFirst({
+    where: eq(ccFreightManifests.id, item.manifestId)
+  });
+  
+  return { item, manifest };
+}
+
+// ============ STATUS TRANSITIONS ============
+
+export async function submitManifest(manifestId: string): Promise<any> {
+  const [updated] = await db.update(ccFreightManifests)
+    .set({ status: 'submitted', updatedAt: new Date() })
+    .where(eq(ccFreightManifests.id, manifestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function acceptManifest(manifestId: string): Promise<any> {
+  const [updated] = await db.update(ccFreightManifests)
+    .set({ status: 'accepted', updatedAt: new Date() })
+    .where(eq(ccFreightManifests.id, manifestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function markManifestLoaded(manifestId: string): Promise<any> {
+  // Update all items to loaded
+  await db.update(ccFreightItems)
+    .set({ status: 'loaded', loadedAt: new Date(), updatedAt: new Date() })
+    .where(eq(ccFreightItems.manifestId, manifestId));
+  
+  const [updated] = await db.update(ccFreightManifests)
+    .set({ status: 'loaded', loadedAt: new Date(), updatedAt: new Date() })
+    .where(eq(ccFreightManifests.id, manifestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function markManifestInTransit(manifestId: string): Promise<any> {
+  await db.update(ccFreightItems)
+    .set({ status: 'in_transit', updatedAt: new Date() })
+    .where(eq(ccFreightItems.manifestId, manifestId));
+  
+  const [updated] = await db.update(ccFreightManifests)
+    .set({ status: 'in_transit', departedAt: new Date(), updatedAt: new Date() })
+    .where(eq(ccFreightManifests.id, manifestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function markManifestArrived(manifestId: string): Promise<any> {
+  const [updated] = await db.update(ccFreightManifests)
+    .set({ status: 'arrived', arrivedAt: new Date(), updatedAt: new Date() })
+    .where(eq(ccFreightManifests.id, manifestId))
+    .returning();
+  
+  return updated;
+}
+
+export async function markItemDelivered(
+  itemId: string,
+  receivedBy?: string,
+  notes?: string
+): Promise<any> {
+  const [updated] = await db.update(ccFreightItems)
+    .set({
+      status: 'delivered',
+      deliveredAt: new Date(),
+      receivedBy,
+      deliveryNotes: notes,
+      updatedAt: new Date()
+    })
+    .where(eq(ccFreightItems.id, itemId))
+    .returning();
+  
+  // Check if all items delivered
+  const item = await db.query.ccFreightItems.findFirst({
+    where: eq(ccFreightItems.id, itemId)
+  });
+  
+  if (item) {
+    const allItems = await db.query.ccFreightItems.findMany({
+      where: eq(ccFreightItems.manifestId, item.manifestId)
+    });
+    
+    const allDelivered = allItems.every(i => i.status === 'delivered');
+    const someDelivered = allItems.some(i => i.status === 'delivered');
+    
+    if (allDelivered) {
+      await db.update(ccFreightManifests)
+        .set({ status: 'delivered', updatedAt: new Date() })
+        .where(eq(ccFreightManifests.id, item.manifestId));
+    } else if (someDelivered) {
+      await db.update(ccFreightManifests)
+        .set({ status: 'partial', updatedAt: new Date() })
+        .where(eq(ccFreightManifests.id, item.manifestId));
+    }
+  }
+  
+  return updated;
+}
+```
+
+## Add Freight Routes to transport.ts
+```typescript
+// Add to server/routes/transport.ts
+
+import {
+  createManifest, getManifest, getManifestByNumber, getManifestsForSailing,
+  searchManifests, addItem, getItemByTracking,
+  submitManifest, acceptManifest, markManifestLoaded, markManifestInTransit,
+  markManifestArrived, markItemDelivered
+} from '../services/freightService';
+
+// ============ FREIGHT MANIFEST ENDPOINTS ============
+
+// POST /api/transport/freight/manifests - Create manifest
+router.post('/freight/manifests', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.portalSlug || !b.operatorId || !b.manifestDate) {
+    return res.status(400).json({ error: 'portalSlug, operatorId, manifestDate required' });
+  }
+  
+  try {
+    const manifest = await createManifest({
+      portalSlug: b.portalSlug,
+      operatorId: b.operatorId,
+      sailingId: b.sailingId,
+      originLocationId: b.originLocationId,
+      destinationLocationId: b.destinationLocationId,
+      manifestDate: new Date(b.manifestDate),
+      scheduledDeparture: b.scheduledDeparture,
+      shipperName: b.shipperName,
+      shipperPhone: b.shipperPhone,
+      shipperEmail: b.shipperEmail,
+      shipperBusiness: b.shipperBusiness,
+      consigneeName: b.consigneeName,
+      consigneePhone: b.consigneePhone,
+      consigneeEmail: b.consigneeEmail,
+      consigneeBusiness: b.consigneeBusiness,
+      consigneeLocationId: b.consigneeLocationId,
+      billingMethod: b.billingMethod,
+      specialInstructions: b.specialInstructions
+    });
+    
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Create manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/transport/freight/manifests/:id - Get manifest with items
+router.get('/freight/manifests/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await getManifest(id);
+    if (!result) {
+      return res.status(404).json({ error: 'Manifest not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get manifest error:', e);
+    res.status(500).json({ error: 'Failed to get manifest' });
+  }
+});
+
+// GET /api/transport/freight/manifests/by-number/:number - Get by manifest number
+router.get('/freight/manifests/by-number/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const result = await getManifestByNumber(number);
+    if (!result) {
+      return res.status(404).json({ error: 'Manifest not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get manifest error:', e);
+    res.status(500).json({ error: 'Failed to get manifest' });
+  }
+});
+
+// GET /api/transport/freight/manifests - Search manifests
+router.get('/freight/manifests', async (req, res) => {
+  const { portal, operator, from, to, status, limit } = req.query;
+  
+  try {
+    const manifests = await searchManifests({
+      portalSlug: portal as string,
+      operatorId: operator as string,
+      fromDate: from ? new Date(from as string) : undefined,
+      toDate: to ? new Date(to as string) : undefined,
+      status: status as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ manifests, count: manifests.length });
+  } catch (e: any) {
+    console.error('Search manifests error:', e);
+    res.status(500).json({ error: 'Failed to search manifests' });
+  }
+});
+
+// GET /api/transport/sailings/:id/freight - Get manifests for sailing
+router.get('/sailings/:id/freight', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const manifests = await getManifestsForSailing(id);
+    res.json({ manifests, count: manifests.length });
+  } catch (e: any) {
+    console.error('Get sailing freight error:', e);
+    res.status(500).json({ error: 'Failed to get freight' });
+  }
+});
+
+// POST /api/transport/freight/manifests/:id/items - Add item to manifest
+router.post('/freight/manifests/:id/items', async (req, res) => {
+  const { id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.description) {
+    return res.status(400).json({ error: 'description required' });
+  }
+  
+  try {
+    const item = await addItem({
+      manifestId: id,
+      description: b.description,
+      category: b.category,
+      quantity: b.quantity,
+      weightLbs: b.weightLbs,
+      lengthIn: b.lengthIn,
+      widthIn: b.widthIn,
+      heightIn: b.heightIn,
+      declaredValueCad: b.declaredValueCad,
+      insured: b.insured,
+      insuranceValueCad: b.insuranceValueCad,
+      specialHandling: b.specialHandling,
+      handlingInstructions: b.handlingInstructions
+    });
+    
+    res.json({ item });
+  } catch (e: any) {
+    console.error('Add item error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/transport/freight/track/:code - Track by tracking code
+router.get('/freight/track/:code', async (req, res) => {
+  const { code } = req.params;
+  
+  try {
+    const result = await getItemByTracking(code);
+    if (!result) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Track item error:', e);
+    res.status(500).json({ error: 'Failed to track item' });
+  }
+});
+
+// POST /api/transport/freight/manifests/:id/submit - Submit manifest
+router.post('/freight/manifests/:id/submit', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await submitManifest(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to submit manifest' });
+  }
+});
+
+// POST /api/transport/freight/manifests/:id/accept - Accept manifest
+router.post('/freight/manifests/:id/accept', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await acceptManifest(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to accept manifest' });
+  }
+});
+
+// POST /api/transport/freight/manifests/:id/loaded - Mark loaded
+router.post('/freight/manifests/:id/loaded', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await markManifestLoaded(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to mark loaded' });
+  }
+});
+
+// POST /api/transport/freight/manifests/:id/in-transit - Mark in transit
+router.post('/freight/manifests/:id/in-transit', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await markManifestInTransit(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to mark in transit' });
+  }
+});
+
+// POST /api/transport/freight/manifests/:id/arrived - Mark arrived
+router.post('/freight/manifests/:id/arrived', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await markManifestArrived(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to mark arrived' });
+  }
+});
+
+// POST /api/transport/freight/items/:id/delivered - Mark item delivered
+router.post('/freight/items/:id/delivered', async (req, res) => {
+  const { id } = req.params;
+  const { receivedBy, notes } = req.body || {};
+  try {
+    const item = await markItemDelivered(id, receivedBy, notes);
+    res.json({ item });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to mark delivered' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- FreightManifest, InsertFreightManifest
+- FreightItem, InsertFreightItem
+
+## Deliverables
+- [ ] Migration 084_freight_manifests.sql
+- [ ] cc_freight_manifests table with RLS
+- [ ] cc_freight_items table with RLS
+- [ ] server/services/freightService.ts
+- [ ] Routes added to server/routes/transport.ts:
+  - POST /api/transport/freight/manifests
+  - GET /api/transport/freight/manifests/:id
+  - GET /api/transport/freight/manifests/by-number/:number
+  - GET /api/transport/freight/manifests
+  - GET /api/transport/sailings/:id/freight
+  - POST /api/transport/freight/manifests/:id/items
+  - GET /api/transport/freight/track/:code
+  - Status transitions: submit, accept, loaded, in-transit, arrived
+  - POST /api/transport/freight/items/:id/delivered
+- [ ] Tracking codes auto-generated (TRKxxxxxxxx)
+- [ ] Manifest totals auto-calculated on item add
+- [ ] Item pricing: $0.15/lb, $15 minimum
+- [ ] Test: Create manifest → add 2 items → totals update
+- [ ] Test: GET /api/transport/freight/track/:code returns item + manifest
+
+Report with manifest showing items, totals, and tracking code lookup result.

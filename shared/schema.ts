@@ -1802,3 +1802,104 @@ export const insertTransportConfirmationSchema = createInsertSchema(ccTransportC
 });
 export type TransportConfirmation = typeof ccTransportConfirmations.$inferSelect;
 export type InsertTransportConfirmation = z.infer<typeof insertTransportConfirmationSchema>;
+
+// ============ FREIGHT MANIFESTS ============
+export const ccFreightManifests = pgTable('cc_freight_manifests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  operatorId: uuid('operator_id').notNull(),
+  sailingId: uuid('sailing_id'),
+  
+  manifestNumber: varchar('manifest_number', { length: 30 }).notNull().unique(),
+  
+  originLocationId: uuid('origin_location_id'),
+  destinationLocationId: uuid('destination_location_id'),
+  
+  manifestDate: date('manifest_date').notNull(),
+  scheduledDeparture: time('scheduled_departure'),
+  
+  totalItems: integer('total_items').default(0),
+  totalWeightLbs: numeric('total_weight_lbs', { precision: 10, scale: 2 }).default('0'),
+  totalValueCad: numeric('total_value_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  status: varchar('status', { length: 50 }).default('draft'),
+  
+  loadedAt: timestamp('loaded_at', { withTimezone: true }),
+  departedAt: timestamp('departed_at', { withTimezone: true }),
+  arrivedAt: timestamp('arrived_at', { withTimezone: true }),
+  
+  shipperName: text('shipper_name'),
+  shipperPhone: text('shipper_phone'),
+  shipperEmail: text('shipper_email'),
+  shipperBusiness: text('shipper_business'),
+  
+  consigneeName: text('consignee_name'),
+  consigneePhone: text('consignee_phone'),
+  consigneeEmail: text('consignee_email'),
+  consigneeBusiness: text('consignee_business'),
+  consigneeLocationId: uuid('consignee_location_id'),
+  
+  billingMethod: varchar('billing_method', { length: 50 }).default('prepaid'),
+  billingAccountId: uuid('billing_account_id'),
+  freightChargesCad: numeric('freight_charges_cad', { precision: 10, scale: 2 }).default('0'),
+  paymentStatus: varchar('payment_status', { length: 50 }).default('pending'),
+  
+  specialInstructions: text('special_instructions'),
+  internalNotes: text('internal_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertFreightManifestSchema = createInsertSchema(ccFreightManifests).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type FreightManifest = typeof ccFreightManifests.$inferSelect;
+export type InsertFreightManifest = z.infer<typeof insertFreightManifestSchema>;
+
+// ============ FREIGHT ITEMS ============
+export const ccFreightItems = pgTable('cc_freight_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  manifestId: uuid('manifest_id').notNull(),
+  
+  itemNumber: integer('item_number').notNull(),
+  trackingCode: varchar('tracking_code', { length: 20 }),
+  
+  description: text('description').notNull(),
+  category: varchar('category', { length: 50 }).default('general'),
+  
+  quantity: integer('quantity').default(1),
+  weightLbs: numeric('weight_lbs', { precision: 10, scale: 2 }),
+  lengthIn: numeric('length_in', { precision: 10, scale: 2 }),
+  widthIn: numeric('width_in', { precision: 10, scale: 2 }),
+  heightIn: numeric('height_in', { precision: 10, scale: 2 }),
+  
+  declaredValueCad: numeric('declared_value_cad', { precision: 10, scale: 2 }),
+  insured: boolean('insured').default(false),
+  insuranceValueCad: numeric('insurance_value_cad', { precision: 10, scale: 2 }),
+  
+  specialHandling: text('special_handling').array(),
+  handlingInstructions: text('handling_instructions'),
+  
+  status: varchar('status', { length: 50 }).default('pending'),
+  
+  loadedAt: timestamp('loaded_at', { withTimezone: true }),
+  offloadedAt: timestamp('offloaded_at', { withTimezone: true }),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  
+  receivedBy: text('received_by'),
+  deliverySignature: text('delivery_signature'),
+  deliveryNotes: text('delivery_notes'),
+  
+  itemChargeCad: numeric('item_charge_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertFreightItemSchema = createInsertSchema(ccFreightItems).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type FreightItem = typeof ccFreightItems.$inferSelect;
+export type InsertFreightItem = z.infer<typeof insertFreightItemSchema>;

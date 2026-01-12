@@ -31,6 +31,12 @@ import {
   getConfirmationsForTrip,
   checkInByQR
 } from '../services/transportIntegrationService';
+import {
+  createManifest, getManifest, getManifestByNumber, getManifestsForSailing,
+  searchManifests, addItem, getItemByTracking,
+  submitManifest, acceptManifest, markManifestLoaded, markManifestInTransit,
+  markManifestArrived, markItemDelivered, cancelManifest
+} from '../services/freightService';
 
 const router = Router();
 
@@ -803,6 +809,232 @@ router.post('/check-in/qr', async (req, res) => {
     res.json(result);
   } catch (e: any) {
     console.error('QR check-in error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ FREIGHT MANIFEST ENDPOINTS ============
+
+router.post('/freight/manifests', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.portalSlug || !b.operatorId || !b.manifestDate) {
+    return res.status(400).json({ error: 'portalSlug, operatorId, manifestDate required' });
+  }
+  
+  try {
+    const manifest = await createManifest({
+      portalSlug: b.portalSlug,
+      operatorId: b.operatorId,
+      sailingId: b.sailingId,
+      originLocationId: b.originLocationId,
+      destinationLocationId: b.destinationLocationId,
+      manifestDate: new Date(b.manifestDate),
+      scheduledDeparture: b.scheduledDeparture,
+      shipperName: b.shipperName,
+      shipperPhone: b.shipperPhone,
+      shipperEmail: b.shipperEmail,
+      shipperBusiness: b.shipperBusiness,
+      consigneeName: b.consigneeName,
+      consigneePhone: b.consigneePhone,
+      consigneeEmail: b.consigneeEmail,
+      consigneeBusiness: b.consigneeBusiness,
+      consigneeLocationId: b.consigneeLocationId,
+      billingMethod: b.billingMethod,
+      specialInstructions: b.specialInstructions
+    });
+    
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Create manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/freight/manifests/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await getManifest(id);
+    if (!result) {
+      return res.status(404).json({ error: 'Manifest not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get manifest error:', e);
+    res.status(500).json({ error: 'Failed to get manifest' });
+  }
+});
+
+router.get('/freight/manifests/by-number/:number', async (req, res) => {
+  const { number } = req.params;
+  
+  try {
+    const result = await getManifestByNumber(number);
+    if (!result) {
+      return res.status(404).json({ error: 'Manifest not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get manifest error:', e);
+    res.status(500).json({ error: 'Failed to get manifest' });
+  }
+});
+
+router.get('/freight/manifests', async (req, res) => {
+  const { portal, operator, from, to, status, limit } = req.query;
+  
+  try {
+    const manifests = await searchManifests({
+      portalSlug: portal as string,
+      operatorId: operator as string,
+      fromDate: from ? new Date(from as string) : undefined,
+      toDate: to ? new Date(to as string) : undefined,
+      status: status as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ manifests, count: manifests.length });
+  } catch (e: any) {
+    console.error('Search manifests error:', e);
+    res.status(500).json({ error: 'Failed to search manifests' });
+  }
+});
+
+router.get('/sailings/:id/freight', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const manifests = await getManifestsForSailing(id);
+    res.json({ manifests, count: manifests.length });
+  } catch (e: any) {
+    console.error('Get sailing freight error:', e);
+    res.status(500).json({ error: 'Failed to get freight' });
+  }
+});
+
+router.post('/freight/manifests/:id/items', async (req, res) => {
+  const { id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.description) {
+    return res.status(400).json({ error: 'description required' });
+  }
+  
+  try {
+    const item = await addItem({
+      manifestId: id,
+      description: b.description,
+      category: b.category,
+      quantity: b.quantity,
+      weightLbs: b.weightLbs,
+      lengthIn: b.lengthIn,
+      widthIn: b.widthIn,
+      heightIn: b.heightIn,
+      declaredValueCad: b.declaredValueCad,
+      insured: b.insured,
+      insuranceValueCad: b.insuranceValueCad,
+      specialHandling: b.specialHandling,
+      handlingInstructions: b.handlingInstructions
+    });
+    
+    res.json({ item });
+  } catch (e: any) {
+    console.error('Add item error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/freight/track/:code', async (req, res) => {
+  const { code } = req.params;
+  
+  try {
+    const result = await getItemByTracking(code);
+    if (!result) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Track item error:', e);
+    res.status(500).json({ error: 'Failed to track item' });
+  }
+});
+
+router.post('/freight/manifests/:id/submit', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await submitManifest(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Submit manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/freight/manifests/:id/accept', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await acceptManifest(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Accept manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/freight/manifests/:id/load', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await markManifestLoaded(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Load manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/freight/manifests/:id/depart', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await markManifestInTransit(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Depart manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/freight/manifests/:id/arrive', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await markManifestArrived(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Arrive manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/freight/manifests/:id/cancel', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const manifest = await cancelManifest(id);
+    res.json({ manifest });
+  } catch (e: any) {
+    console.error('Cancel manifest error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/freight/items/:id/deliver', async (req, res) => {
+  const { id } = req.params;
+  const { receivedBy, notes } = req.body || {};
+  
+  try {
+    const item = await markItemDelivered(id, receivedBy, notes);
+    res.json({ item });
+  } catch (e: any) {
+    console.error('Deliver item error:', e);
     res.status(400).json({ error: e.message });
   }
 });
