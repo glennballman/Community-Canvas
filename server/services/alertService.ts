@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { eq, and, desc, lte } from 'drizzle-orm';
+import { eq, and, desc, lte, sql } from 'drizzle-orm';
 import { ccTripAlerts, cc_weather_trends } from '@shared/schema';
 import { getTrip } from './tripService';
 
@@ -56,10 +56,17 @@ export async function getTripAlerts(
     conditions.push(eq(ccTripAlerts.severity, options.severity));
   }
   
+  const severityOrder = sql`CASE 
+    WHEN ${ccTripAlerts.severity} = 'emergency' THEN 0
+    WHEN ${ccTripAlerts.severity} = 'critical' THEN 1
+    WHEN ${ccTripAlerts.severity} = 'warning' THEN 2
+    WHEN ${ccTripAlerts.severity} = 'info' THEN 3
+    ELSE 4 END`;
+  
   return db.select()
     .from(ccTripAlerts)
     .where(and(...conditions))
-    .orderBy(desc(ccTripAlerts.createdAt));
+    .orderBy(severityOrder, desc(ccTripAlerts.createdAt));
 }
 
 export async function acknowledgeAlert(

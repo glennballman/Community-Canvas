@@ -39,8 +39,13 @@ export async function createHandoff(req: CreateHandoffRequest): Promise<HandoffR
   
   let needsSnapshot: Record<string, any> = {};
   
-  if (req.consentShareDietary || req.consentShareAccessibility || req.consentShareMedical) {
+  const hasAnyConsent = req.consentShareDietary || req.consentShareAccessibility || 
+                        req.consentShareMedical || req.consentSharePreferences;
+  
+  if (hasAnyConsent) {
     const aggregated = await aggregateNeeds(trip.id);
+    
+    needsSnapshot.partyComposition = aggregated.partyComposition;
     
     if (req.consentShareDietary) {
       needsSnapshot.dietary = aggregated.dietary;
@@ -53,8 +58,12 @@ export async function createHandoff(req: CreateHandoffRequest): Promise<HandoffR
         powerCritical: aggregated.medical.powerCritical,
       };
     }
-    
-    needsSnapshot.partyComposition = aggregated.partyComposition;
+    if (req.consentSharePreferences) {
+      needsSnapshot.preferences = {
+        lowestSwimmingAbility: aggregated.lowestSwimmingAbility,
+        lowestPhysicalFitness: aggregated.lowestPhysicalFitness,
+      };
+    }
   }
   
   const [handoff] = await db.insert(ccTripHandoffs).values({

@@ -2832,4 +2832,197 @@ router.get('/dietary-terms', async (req: Request, res: Response) => {
   }
 });
 
+// ============ HANDOFF ENDPOINTS ============
+
+import { 
+  createHandoff, getTripHandoffs, 
+  acknowledgeHandoff, completeHandoff 
+} from '../services/handoffService';
+import { 
+  createAlert, getTripAlerts, acknowledgeAlert, 
+  dismissAlert, checkWeatherAlerts 
+} from '../services/alertService';
+
+router.get('/trips/:accessCode/handoff', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const handoffs = await getTripHandoffs(trip.id);
+    
+    res.json({ 
+      trip, 
+      handoff: handoffs[0] || null,
+      allHandoffs: handoffs
+    });
+  } catch (e: any) {
+    console.error('Get handoff error:', e);
+    res.status(500).json({ error: 'Failed to get handoff' });
+  }
+});
+
+router.post('/trips/:accessCode/handoff', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.nextDestinationName) {
+    return res.status(400).json({ error: 'nextDestinationName required' });
+  }
+  
+  try {
+    const result = await createHandoff({
+      tripAccessCode: accessCode,
+      nextDestinationName: b.nextDestinationName,
+      nextDestinationAddress: b.nextDestinationAddress,
+      nextDestinationPhone: b.nextDestinationPhone,
+      nextDestinationEmail: b.nextDestinationEmail,
+      nextDestinationPortalId: b.nextDestinationPortalId,
+      plannedDepartureDate: b.plannedDepartureDate ? new Date(b.plannedDepartureDate) : undefined,
+      plannedDepartureTime: b.plannedDepartureTime,
+      transportMode: b.transportMode,
+      transportDetails: b.transportDetails,
+      transportBookingRef: b.transportBookingRef,
+      consentShareDietary: b.consentShareDietary,
+      consentShareAccessibility: b.consentShareAccessibility,
+      consentShareMedical: b.consentShareMedical,
+      consentSharePreferences: b.consentSharePreferences,
+      notesForNext: b.notesForNext,
+      specialArrangements: b.specialArrangements,
+      notifyNextProperty: b.notifyNextProperty
+    });
+    
+    res.json({
+      handoff: result.handoff,
+      invitation: result.invitation,
+      inviteUrl: result.inviteUrl,
+      message: result.inviteUrl 
+        ? 'Handoff created and invitation sent to next property!'
+        : 'Handoff saved'
+    });
+  } catch (e: any) {
+    console.error('Create handoff error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/trips/:accessCode/handoff/:handoffId/acknowledge', async (req: Request, res: Response) => {
+  const { handoffId } = req.params;
+  
+  try {
+    const updated = await acknowledgeHandoff(handoffId);
+    res.json({ handoff: updated });
+  } catch (e: any) {
+    console.error('Acknowledge handoff error:', e);
+    res.status(500).json({ error: 'Failed to acknowledge handoff' });
+  }
+});
+
+router.post('/trips/:accessCode/handoff/:handoffId/complete', async (req: Request, res: Response) => {
+  const { handoffId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await completeHandoff(
+      handoffId, 
+      b.actualDepartureAt ? new Date(b.actualDepartureAt) : undefined
+    );
+    res.json({ handoff: updated });
+  } catch (e: any) {
+    console.error('Complete handoff error:', e);
+    res.status(500).json({ error: 'Failed to complete handoff' });
+  }
+});
+
+// ============ ALERT ENDPOINTS ============
+
+router.get('/trips/:accessCode/alerts', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const { active, severity } = req.query;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    await checkWeatherAlerts(accessCode);
+    
+    const alerts = await getTripAlerts(trip.id, {
+      activeOnly: active === 'true',
+      severity: severity as string
+    });
+    
+    res.json({ alerts });
+  } catch (e: any) {
+    console.error('Get alerts error:', e);
+    res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+router.post('/trips/:accessCode/alerts', async (req: Request, res: Response) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.alertType || !b.title || !b.message) {
+    return res.status(400).json({ error: 'alertType, title, and message required' });
+  }
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const alert = await createAlert({
+      tripId: trip.id,
+      alertType: b.alertType,
+      severity: b.severity || 'info',
+      title: b.title,
+      message: b.message,
+      actionRequired: b.actionRequired,
+      actionUrl: b.actionUrl,
+      actionLabel: b.actionLabel,
+      relatedItemId: b.relatedItemId,
+      relatedItemType: b.relatedItemType,
+      affectedDate: b.affectedDate ? new Date(b.affectedDate) : undefined,
+      source: b.source || 'provider',
+      expiresAt: b.expiresAt ? new Date(b.expiresAt) : undefined
+    });
+    
+    res.json({ alert });
+  } catch (e: any) {
+    console.error('Create alert error:', e);
+    res.status(500).json({ error: 'Failed to create alert' });
+  }
+});
+
+router.post('/trips/:accessCode/alerts/:alertId/acknowledge', async (req: Request, res: Response) => {
+  const { alertId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await acknowledgeAlert(alertId, b.acknowledgedBy);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Acknowledge alert error:', e);
+    res.status(500).json({ error: 'Failed to acknowledge alert' });
+  }
+});
+
+router.post('/trips/:accessCode/alerts/:alertId/dismiss', async (req: Request, res: Response) => {
+  const { alertId } = req.params;
+  
+  try {
+    const updated = await dismissAlert(alertId);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Dismiss alert error:', e);
+    res.status(500).json({ error: 'Failed to dismiss alert' });
+  }
+});
+
 export default router;
