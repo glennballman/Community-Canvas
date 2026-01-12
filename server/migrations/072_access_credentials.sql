@@ -90,3 +90,7 @@ CREATE POLICY cc_access_events_tenant_isolation ON cc_access_events
     current_setting('app.tenant_id', true) = '__SERVICE__'
     OR tenant_id::text = current_setting('app.tenant_id', true)
   );
+
+-- Add vehicle_plate column to cc_reservations for plate-based validation
+ALTER TABLE cc_reservations ADD COLUMN IF NOT EXISTS vehicle_plate varchar(20);
+CREATE INDEX IF NOT EXISTS idx_cc_reservations_vehicle_plate ON cc_reservations(vehicle_plate) WHERE vehicle_plate IS NOT NULL;
