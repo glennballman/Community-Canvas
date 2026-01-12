@@ -41,6 +41,11 @@ import {
   recordHandling, getHandlingHistory, getChainOfCustody,
   createException, getExceptions, resolveException
 } from '../services/proofOfHandlingService';
+import {
+  getFreightBoardSummary, getFreightBoard,
+  getPendingPickups, getPendingDeliveries, getOpenExceptionsBoard,
+  getSailingFreightSummary
+} from '../services/freightBoardService';
 
 const router = Router();
 
@@ -1272,6 +1277,91 @@ router.post('/freight/exceptions/:id/resolve', async (req, res) => {
   } catch (e: any) {
     console.error('Resolve exception error:', e);
     res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/portals/:slug/freight/board', async (req, res) => {
+  const { slug } = req.params;
+  const { date, status, operator, sailing, limit } = req.query;
+  
+  try {
+    const result = await getFreightBoard(slug, {
+      date: date ? new Date(date as string) : undefined,
+      status: status as string,
+      operatorId: operator as string,
+      sailingId: sailing as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get freight board error:', e);
+    res.status(500).json({ error: 'Failed to get freight board' });
+  }
+});
+
+router.get('/portals/:slug/freight/summary', async (req, res) => {
+  const { slug } = req.params;
+  const { date } = req.query;
+  
+  try {
+    const summary = await getFreightBoardSummary(
+      slug,
+      date ? new Date(date as string) : undefined
+    );
+    
+    res.json({ summary });
+  } catch (e: any) {
+    console.error('Get freight summary error:', e);
+    res.status(500).json({ error: 'Failed to get summary' });
+  }
+});
+
+router.get('/portals/:slug/freight/pending-pickups', async (req, res) => {
+  const { slug } = req.params;
+  
+  try {
+    const pickups = await getPendingPickups(slug);
+    res.json({ pickups, count: pickups.length });
+  } catch (e: any) {
+    console.error('Get pending pickups error:', e);
+    res.status(500).json({ error: 'Failed to get pickups' });
+  }
+});
+
+router.get('/portals/:slug/freight/pending-deliveries', async (req, res) => {
+  const { slug } = req.params;
+  
+  try {
+    const deliveries = await getPendingDeliveries(slug);
+    res.json({ deliveries, count: deliveries.length });
+  } catch (e: any) {
+    console.error('Get pending deliveries error:', e);
+    res.status(500).json({ error: 'Failed to get deliveries' });
+  }
+});
+
+router.get('/portals/:slug/freight/exceptions-board', async (req, res) => {
+  const { slug } = req.params;
+  
+  try {
+    const exceptions = await getOpenExceptionsBoard(slug);
+    res.json({ exceptions, count: exceptions.length });
+  } catch (e: any) {
+    console.error('Get exceptions board error:', e);
+    res.status(500).json({ error: 'Failed to get exceptions' });
+  }
+});
+
+router.get('/portals/:slug/sailings/:sailingId/freight-summary', async (req, res) => {
+  const { slug, sailingId } = req.params;
+  
+  try {
+    const result = await getSailingFreightSummary(slug, sailingId);
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get sailing freight summary error:', e);
+    res.status(500).json({ error: 'Failed to get freight summary' });
   }
 });
 
