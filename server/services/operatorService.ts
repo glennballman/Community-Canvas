@@ -21,7 +21,11 @@ export async function getOperators(req: OperatorSearchRequest): Promise<{
       .from(ccPortals)
       .where(eq(ccPortals.slug, req.portalSlug))
       .limit(1);
-    if (portal) portalId = portal.id;
+    if (portal) {
+      portalId = portal.id;
+    } else {
+      return { operators: [], total: 0 };
+    }
   }
   
   const conditions: any[] = [];
@@ -147,7 +151,7 @@ export async function findOperatorsForRoute(
     .where(eq(ccPortals.slug, portalSlug))
     .limit(1);
   
-  if (!portal) return [];
+  if (!portal) return []; // Portal isolation: invalid slug returns empty
   
   const operators = await db.select()
     .from(ccTransportOperators)
