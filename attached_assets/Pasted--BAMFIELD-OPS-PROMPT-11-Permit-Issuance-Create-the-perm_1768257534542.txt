@@ -1,0 +1,950 @@
+**BAMFIELD OPS - PROMPT 11: Permit Issuance**
+
+Create the permit application and issuance system for guests to obtain required permits.
+
+## Migration 087_permits.sql
+```sql
+BEGIN;
+
+-- ============ PERMITS ============
+-- Individual permits issued to guests
+
+CREATE TABLE IF NOT EXISTS cc_permits (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  authority_id uuid NOT NULL REFERENCES cc_authorities(id),
+  permit_type_id uuid NOT NULL REFERENCES cc_permit_types(id),
+  
+  -- Cart/trip integration
+  cart_id uuid REFERENCES cc_reservation_carts(id) ON DELETE SET NULL,
+  cart_item_id uuid REFERENCES cc_reservation_cart_items(id) ON DELETE SET NULL,
+  trip_id uuid REFERENCES cc_trips(id) ON DELETE SET NULL,
+  
+  -- Identity
+  permit_number varchar(30) NOT NULL UNIQUE,
+  -- Format: PRM-AUTHORITY-YYMMDD-XXXX (e.g., PRM-PRNPR-260115-A7K9)
+  
+  -- Applicant
+  applicant_name text NOT NULL,
+  applicant_email text,
+  applicant_phone text,
+  applicant_address text,
+  
+  -- Group (for group permits)
+  party_size integer DEFAULT 1,
+  party_members text[], -- Names of all party members
+  
+  -- Validity
+  valid_from date NOT NULL,
+  valid_to date NOT NULL,
+  
+  -- Location/activity specifics
+  location_id uuid REFERENCES cc_locations(id),
+  activity_description text,
+  entry_point text,
+  exit_point text,
+  
+  -- Vessel (for moorage/anchoring permits)
+  vessel_name text,
+  vessel_registration text,
+  vessel_length_ft numeric(6,2),
+  
+  -- Fees
+  base_fee_cad numeric(10,2) DEFAULT 0,
+  person_fee_cad numeric(10,2) DEFAULT 0,
+  day_fee_cad numeric(10,2) DEFAULT 0,
+  night_fee_cad numeric(10,2) DEFAULT 0,
+  total_fee_cad numeric(10,2) DEFAULT 0,
+  
+  -- Payment
+  payment_status varchar DEFAULT 'pending' CHECK (payment_status IN (
+    'pending', 'paid', 'waived', 'refunded', 'failed'
+  )),
+  payment_reference text,
+  paid_at timestamptz,
+  
+  -- Status
+  status varchar NOT NULL DEFAULT 'draft' CHECK (status IN (
+    'draft',        -- Started but not submitted
+    'submitted',    -- Submitted for review
+    'pending',      -- Awaiting authority approval
+    'approved',     -- Approved, awaiting payment
+    'issued',       -- Paid and issued
+    'active',       -- Currently valid
+    'used',         -- Single-use permit used
+    'expired',      -- Past valid_to date
+    'cancelled',    -- Cancelled by applicant
+    'revoked',      -- Revoked by authority
+    'rejected'      -- Application rejected
+  )),
+  
+  -- Approval tracking
+  submitted_at timestamptz,
+  approved_at timestamptz,
+  approved_by text,
+  issued_at timestamptz,
+  
+  -- Rejection/revocation
+  rejection_reason text,
+  revocation_reason text,
+  
+  -- Document
+  qr_code_token varchar(30) UNIQUE,
+  document_url text,
+  
+  -- Conditions/notes
+  special_conditions text,
+  authority_notes text,
+  applicant_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_permits_authority ON cc_permits(authority_id, status);
+CREATE INDEX idx_permits_type ON cc_permits(permit_type_id, status);
+CREATE INDEX idx_permits_dates ON cc_permits(valid_from, valid_to, status);
+CREATE INDEX idx_permits_applicant ON cc_permits(applicant_email) WHERE applicant_email IS NOT NULL;
+CREATE INDEX idx_permits_trip ON cc_permits(trip_id) WHERE trip_id IS NOT NULL;
+CREATE INDEX idx_permits_number ON cc_permits(permit_number);
+CREATE INDEX idx_permits_qr ON cc_permits(qr_code_token) WHERE qr_code_token IS NOT NULL;
+
+ALTER TABLE cc_permits ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/permitService.ts
+```typescript
+// server/services/permitService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, or, asc, desc } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { calculatePermitFee } from './authorityService';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreatePermitRequest {
+  portalSlug: string;
+  permitTypeId: string;
+  cartId?: string;
+  tripId?: string;
+  
+  applicantName: string;
+  applicantEmail?: string;
+  applicantPhone?: string;
+  applicantAddress?: string;
+  
+  partySize?: number;
+  partyMembers?: string[];
+  
+  validFrom: Date;
+  validTo: Date;
+  
+  locationId?: string;
+  activityDescription?: string;
+  entryPoint?: string;
+  exitPoint?: string;
+  
+  vesselName?: string;
+  vesselRegistration?: string;
+  vesselLengthFt?: number;
+  
+  applicantNotes?: string;
+}
+
+// ============ HELPERS ============
+
+function generatePermitNumber(authorityCode: string): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `PRM-${authorityCode}-${dateStr}-${suffix}`;
+}
+
+function generateQRToken(): string {
+  return nanoid(24);
+}
+
+function calculateDays(from: Date, to: Date): number {
+  const diffTime = Math.abs(to.getTime() - from.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+}
+
+function calculateNights(from: Date, to: Date): number {
+  const diffTime = Math.abs(to.getTime() - from.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// ============ PERMIT FUNCTIONS ============
+
+export async function createPermit(req: CreatePermitRequest): Promise<any> {
+  // Resolve portal
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Get permit type
+  const permitType = await db.query.ccPermitTypes.findFirst({
+    where: eq(ccPermitTypes.id, req.permitTypeId)
+  });
+  
+  if (!permitType) throw new Error('Permit type not found');
+  
+  // Get authority
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: eq(ccAuthorities.id, permitType.authorityId)
+  });
+  
+  if (!authority) throw new Error('Authority not found');
+  
+  // Validate authority belongs to portal
+  if (authority.portalId !== portal.id) {
+    throw new Error('Permit type does not belong to this portal');
+  }
+  
+  // Calculate fees
+  const days = calculateDays(req.validFrom, req.validTo);
+  const nights = calculateNights(req.validFrom, req.validTo);
+  
+  const feeCalc = await calculatePermitFee(req.permitTypeId, {
+    persons: req.partySize || 1,
+    days,
+    nights
+  });
+  
+  const permitNumber = generatePermitNumber(authority.code || 'GEN');
+  const qrToken = generateQRToken();
+  
+  const [permit] = await db.insert(ccPermits).values({
+    portalId: portal.id,
+    authorityId: authority.id,
+    permitTypeId: req.permitTypeId,
+    cartId: req.cartId,
+    tripId: req.tripId,
+    permitNumber,
+    applicantName: req.applicantName,
+    applicantEmail: req.applicantEmail,
+    applicantPhone: req.applicantPhone,
+    applicantAddress: req.applicantAddress,
+    partySize: req.partySize || 1,
+    partyMembers: req.partyMembers,
+    validFrom: req.validFrom,
+    validTo: req.validTo,
+    locationId: req.locationId,
+    activityDescription: req.activityDescription,
+    entryPoint: req.entryPoint,
+    exitPoint: req.exitPoint,
+    vesselName: req.vesselName,
+    vesselRegistration: req.vesselRegistration,
+    vesselLengthFt: req.vesselLengthFt,
+    baseFeeCad: feeCalc.baseFee,
+    personFeeCad: feeCalc.personFee,
+    dayFeeCad: feeCalc.dayFee,
+    nightFeeCad: feeCalc.nightFee,
+    totalFeeCad: feeCalc.totalFee,
+    applicantNotes: req.applicantNotes,
+    qrCodeToken: qrToken,
+    status: 'draft'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.applicantEmail || 'guest',
+    action: 'permit.created',
+    resourceType: 'permit',
+    resourceId: permit.id,
+    metadata: { 
+      permitNumber, 
+      permitType: permitType.name,
+      authority: authority.name 
+    }
+  });
+  
+  return {
+    permit,
+    permitType,
+    authority,
+    feeBreakdown: feeCalc
+  };
+}
+
+export async function getPermit(
+  portalSlug: string,
+  permitId: string
+): Promise<{
+  permit: any;
+  permitType: any;
+  authority: any;
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const permit = await db.query.ccPermits.findFirst({
+    where: and(
+      eq(ccPermits.id, permitId),
+      eq(ccPermits.portalId, portal.id)
+    )
+  });
+  
+  if (!permit) return null;
+  
+  const permitType = await db.query.ccPermitTypes.findFirst({
+    where: eq(ccPermitTypes.id, permit.permitTypeId)
+  });
+  
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: eq(ccAuthorities.id, permit.authorityId)
+  });
+  
+  return { permit, permitType, authority };
+}
+
+export async function getPermitByNumber(
+  portalSlug: string,
+  permitNumber: string
+): Promise<{
+  permit: any;
+  permitType: any;
+  authority: any;
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const permit = await db.query.ccPermits.findFirst({
+    where: and(
+      eq(ccPermits.permitNumber, permitNumber),
+      eq(ccPermits.portalId, portal.id)
+    )
+  });
+  
+  if (!permit) return null;
+  
+  return getPermit(portalSlug, permit.id);
+}
+
+export async function getPermitByQR(
+  portalSlug: string,
+  qrToken: string
+): Promise<{
+  permit: any;
+  permitType: any;
+  authority: any;
+  valid: boolean;
+  message: string;
+} | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const permit = await db.query.ccPermits.findFirst({
+    where: and(
+      eq(ccPermits.qrCodeToken, qrToken),
+      eq(ccPermits.portalId, portal.id)
+    )
+  });
+  
+  if (!permit) return null;
+  
+  const permitType = await db.query.ccPermitTypes.findFirst({
+    where: eq(ccPermitTypes.id, permit.permitTypeId)
+  });
+  
+  const authority = await db.query.ccAuthorities.findFirst({
+    where: eq(ccAuthorities.id, permit.authorityId)
+  });
+  
+  // Validate permit
+  const now = new Date();
+  const validFrom = new Date(permit.validFrom);
+  const validTo = new Date(permit.validTo);
+  validTo.setHours(23, 59, 59, 999);
+  
+  let valid = false;
+  let message = '';
+  
+  if (!['issued', 'active'].includes(permit.status)) {
+    message = `Permit status: ${permit.status}`;
+  } else if (now < validFrom) {
+    message = `Permit not yet valid (starts ${permit.validFrom})`;
+  } else if (now > validTo) {
+    message = `Permit expired (ended ${permit.validTo})`;
+  } else {
+    valid = true;
+    message = 'Permit is valid';
+  }
+  
+  return { permit, permitType, authority, valid, message };
+}
+
+export async function searchPermits(
+  portalSlug: string,
+  options?: {
+    authorityId?: string;
+    permitTypeId?: string;
+    status?: string;
+    applicantEmail?: string;
+    validOn?: Date;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccPermits.portalId, portal.id)];
+  
+  if (options?.authorityId) {
+    conditions.push(eq(ccPermits.authorityId, options.authorityId));
+  }
+  
+  if (options?.permitTypeId) {
+    conditions.push(eq(ccPermits.permitTypeId, options.permitTypeId));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccPermits.status, options.status));
+  }
+  
+  if (options?.applicantEmail) {
+    conditions.push(eq(ccPermits.applicantEmail, options.applicantEmail));
+  }
+  
+  if (options?.validOn) {
+    const dateStr = options.validOn.toISOString().split('T')[0];
+    conditions.push(lte(ccPermits.validFrom, dateStr));
+    conditions.push(gte(ccPermits.validTo, dateStr));
+  }
+  
+  return db.query.ccPermits.findMany({
+    where: and(...conditions),
+    orderBy: [desc(ccPermits.createdAt)],
+    limit: options?.limit || 50
+  });
+}
+
+export async function getPermitsForTrip(
+  portalSlug: string,
+  tripId: string
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  return db.query.ccPermits.findMany({
+    where: and(
+      eq(ccPermits.portalId, portal.id),
+      eq(ccPermits.tripId, tripId)
+    ),
+    orderBy: [asc(ccPermits.validFrom)]
+  });
+}
+
+// ============ STATUS TRANSITIONS ============
+
+export async function submitPermit(
+  portalSlug: string,
+  permitId: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPermits)
+    .set({
+      status: 'submitted',
+      submittedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPermits.id, permitId),
+      eq(ccPermits.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function approvePermit(
+  portalSlug: string,
+  permitId: string,
+  approvedBy: string,
+  conditions?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const updates: Record<string, any> = {
+    status: 'approved',
+    approvedAt: new Date(),
+    approvedBy,
+    updatedAt: new Date()
+  };
+  
+  if (conditions) {
+    updates.specialConditions = conditions;
+  }
+  
+  const [updated] = await db.update(ccPermits)
+    .set(updates)
+    .where(and(
+      eq(ccPermits.id, permitId),
+      eq(ccPermits.portalId, portal.id)
+    ))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: approvedBy,
+    action: 'permit.approved',
+    resourceType: 'permit',
+    resourceId: permitId,
+    metadata: { permitNumber: updated.permitNumber }
+  });
+  
+  return updated;
+}
+
+export async function issuePermit(
+  portalSlug: string,
+  permitId: string,
+  paymentReference?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const permit = await db.query.ccPermits.findFirst({
+    where: and(
+      eq(ccPermits.id, permitId),
+      eq(ccPermits.portalId, portal.id)
+    )
+  });
+  
+  if (!permit) throw new Error('Permit not found');
+  
+  // Determine if payment required
+  const requiresPayment = Number(permit.totalFeeCad) > 0;
+  
+  const updates: Record<string, any> = {
+    status: 'issued',
+    issuedAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  if (requiresPayment) {
+    updates.paymentStatus = 'paid';
+    updates.paidAt = new Date();
+    updates.paymentReference = paymentReference;
+  } else {
+    updates.paymentStatus = 'waived';
+  }
+  
+  const [updated] = await db.update(ccPermits)
+    .set(updates)
+    .where(eq(ccPermits.id, permitId))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'permit.issued',
+    resourceType: 'permit',
+    resourceId: permitId,
+    metadata: { permitNumber: updated.permitNumber, paymentReference }
+  });
+  
+  return updated;
+}
+
+export async function activatePermit(
+  portalSlug: string,
+  permitId: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPermits)
+    .set({
+      status: 'active',
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPermits.id, permitId),
+      eq(ccPermits.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function cancelPermit(
+  portalSlug: string,
+  permitId: string,
+  reason?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPermits)
+    .set({
+      status: 'cancelled',
+      rejectionReason: reason,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPermits.id, permitId),
+      eq(ccPermits.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function rejectPermit(
+  portalSlug: string,
+  permitId: string,
+  reason: string,
+  rejectedBy: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccPermits)
+    .set({
+      status: 'rejected',
+      rejectionReason: reason,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccPermits.id, permitId),
+      eq(ccPermits.portalId, portal.id)
+    ))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: rejectedBy,
+    action: 'permit.rejected',
+    resourceType: 'permit',
+    resourceId: permitId,
+    metadata: { reason }
+  });
+  
+  return updated;
+}
+
+// ============ EXPIRY MANAGEMENT ============
+
+export async function expirePermits(): Promise<number> {
+  const today = new Date().toISOString().split('T')[0];
+  
+  const result = await db.update(ccPermits)
+    .set({ status: 'expired', updatedAt: new Date() })
+    .where(and(
+      or(
+        eq(ccPermits.status, 'issued'),
+        eq(ccPermits.status, 'active')
+      ),
+      lte(ccPermits.validTo, today)
+    ))
+    .returning();
+  
+  return result.length;
+}
+```
+
+## Add Permit Routes to permits.ts
+```typescript
+// Add to server/routes/permits.ts
+
+import {
+  createPermit, getPermit, getPermitByNumber, getPermitByQR,
+  searchPermits, getPermitsForTrip,
+  submitPermit, approvePermit, issuePermit, activatePermit,
+  cancelPermit, rejectPermit
+} from '../services/permitService';
+
+// ============ PERMIT ENDPOINTS ============
+
+// POST /api/permits/portals/:slug/permits - Create permit
+router.post('/portals/:slug/permits', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.permitTypeId || !b.applicantName || !b.validFrom || !b.validTo) {
+    return res.status(400).json({ 
+      error: 'permitTypeId, applicantName, validFrom, validTo required' 
+    });
+  }
+  
+  try {
+    const result = await createPermit({
+      portalSlug: slug,
+      permitTypeId: b.permitTypeId,
+      cartId: b.cartId,
+      tripId: b.tripId,
+      applicantName: b.applicantName,
+      applicantEmail: b.applicantEmail,
+      applicantPhone: b.applicantPhone,
+      applicantAddress: b.applicantAddress,
+      partySize: b.partySize,
+      partyMembers: b.partyMembers,
+      validFrom: new Date(b.validFrom),
+      validTo: new Date(b.validTo),
+      locationId: b.locationId,
+      activityDescription: b.activityDescription,
+      entryPoint: b.entryPoint,
+      exitPoint: b.exitPoint,
+      vesselName: b.vesselName,
+      vesselRegistration: b.vesselRegistration,
+      vesselLengthFt: b.vesselLengthFt,
+      applicantNotes: b.applicantNotes
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/permits/portals/:slug/permits - Search permits
+router.get('/portals/:slug/permits', async (req, res) => {
+  const { slug } = req.params;
+  const { authority, type, status, email, validOn, limit } = req.query;
+  
+  try {
+    const permits = await searchPermits(slug, {
+      authorityId: authority as string,
+      permitTypeId: type as string,
+      status: status as string,
+      applicantEmail: email as string,
+      validOn: validOn ? new Date(validOn as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ permits, count: permits.length });
+  } catch (e: any) {
+    console.error('Search permits error:', e);
+    res.status(500).json({ error: 'Failed to search permits' });
+  }
+});
+
+// GET /api/permits/portals/:slug/permits/:id - Get permit
+router.get('/portals/:slug/permits/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getPermit(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Permit not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get permit error:', e);
+    res.status(500).json({ error: 'Failed to get permit' });
+  }
+});
+
+// GET /api/permits/portals/:slug/permits/by-number/:number - Get by number
+router.get('/portals/:slug/permits/by-number/:number', async (req, res) => {
+  const { slug, number } = req.params;
+  
+  try {
+    const result = await getPermitByNumber(slug, number);
+    if (!result) {
+      return res.status(404).json({ error: 'Permit not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get permit error:', e);
+    res.status(500).json({ error: 'Failed to get permit' });
+  }
+});
+
+// GET /api/permits/portals/:slug/permits/verify/:qrToken - Verify by QR
+router.get('/portals/:slug/permits/verify/:qrToken', async (req, res) => {
+  const { slug, qrToken } = req.params;
+  
+  try {
+    const result = await getPermitByQR(slug, qrToken);
+    if (!result) {
+      return res.status(404).json({ error: 'Permit not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Verify permit error:', e);
+    res.status(500).json({ error: 'Failed to verify permit' });
+  }
+});
+
+// GET /api/permits/portals/:slug/trips/:tripId/permits - Get permits for trip
+router.get('/portals/:slug/trips/:tripId/permits', async (req, res) => {
+  const { slug, tripId } = req.params;
+  
+  try {
+    const permits = await getPermitsForTrip(slug, tripId);
+    res.json({ permits, count: permits.length });
+  } catch (e: any) {
+    console.error('Get trip permits error:', e);
+    res.status(500).json({ error: 'Failed to get permits' });
+  }
+});
+
+// POST /api/permits/portals/:slug/permits/:id/submit - Submit permit
+router.post('/portals/:slug/permits/:id/submit', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const permit = await submitPermit(slug, id);
+    res.json({ permit });
+  } catch (e: any) {
+    console.error('Submit permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/permits/:id/approve - Approve permit
+router.post('/portals/:slug/permits/:id/approve', async (req, res) => {
+  const { slug, id } = req.params;
+  const { approvedBy, conditions } = req.body || {};
+  
+  if (!approvedBy) {
+    return res.status(400).json({ error: 'approvedBy required' });
+  }
+  
+  try {
+    const permit = await approvePermit(slug, id, approvedBy, conditions);
+    res.json({ permit });
+  } catch (e: any) {
+    console.error('Approve permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/permits/:id/issue - Issue permit
+router.post('/portals/:slug/permits/:id/issue', async (req, res) => {
+  const { slug, id } = req.params;
+  const { paymentReference } = req.body || {};
+  
+  try {
+    const permit = await issuePermit(slug, id, paymentReference);
+    res.json({ permit });
+  } catch (e: any) {
+    console.error('Issue permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/permits/:id/activate - Activate permit
+router.post('/portals/:slug/permits/:id/activate', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const permit = await activatePermit(slug, id);
+    res.json({ permit });
+  } catch (e: any) {
+    console.error('Activate permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/permits/:id/cancel - Cancel permit
+router.post('/portals/:slug/permits/:id/cancel', async (req, res) => {
+  const { slug, id } = req.params;
+  const { reason } = req.body || {};
+  
+  try {
+    const permit = await cancelPermit(slug, id, reason);
+    res.json({ permit });
+  } catch (e: any) {
+    console.error('Cancel permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/permits/:id/reject - Reject permit
+router.post('/portals/:slug/permits/:id/reject', async (req, res) => {
+  const { slug, id } = req.params;
+  const { reason, rejectedBy } = req.body || {};
+  
+  if (!reason || !rejectedBy) {
+    return res.status(400).json({ error: 'reason and rejectedBy required' });
+  }
+  
+  try {
+    const permit = await rejectPermit(slug, id, reason, rejectedBy);
+    res.json({ permit });
+  } catch (e: any) {
+    console.error('Reject permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+```
+
+## Drizzle Schema Export
+
+Add to shared/schema.ts:
+- Permit, InsertPermit
+
+## Deliverables
+- [ ] Migration 087_permits.sql
+- [ ] cc_permits table with RLS
+- [ ] server/services/permitService.ts
+- [ ] Routes added to server/routes/permits.ts:
+  - POST /portals/:slug/permits (create)
+  - GET /portals/:slug/permits (search)
+  - GET /portals/:slug/permits/:id (get)
+  - GET /portals/:slug/permits/by-number/:number
+  - GET /portals/:slug/permits/verify/:qrToken
+  - GET /portals/:slug/trips/:tripId/permits
+  - POST /portals/:slug/permits/:id/submit
+  - POST /portals/:slug/permits/:id/approve
+  - POST /portals/:slug/permits/:id/issue
+  - POST /portals/:slug/permits/:id/activate
+  - POST /portals/:slug/permits/:id/cancel
+  - POST /portals/:slug/permits/:id/reject
+- [ ] Permit number format: PRM-AUTHORITY-YYMMDD-XXXX
+- [ ] Auto fee calculation from permit type
+- [ ] QR verification with validity check
+- [ ] Status flow: draft → submitted → approved → issued → active
+- [ ] Test: Create WCT permit for 4 people, 7 days → fee $534.50
+- [ ] Test: Issue permit → status changes, payment recorded
+- [ ] Test: QR verify returns valid/invalid with message
+
+Report with permit showing fee breakdown and QR verification result.

@@ -2075,3 +2075,75 @@ export const insertPermitTypeSchema = createInsertSchema(ccPermitTypes).omit({
 });
 export type PermitType = typeof ccPermitTypes.$inferSelect;
 export type InsertPermitType = z.infer<typeof insertPermitTypeSchema>;
+
+// ============ VISITOR PERMITS ============
+// Individual permits issued to guests (not to be confused with cc_permits which is for work order compliance)
+export const ccVisitorPermits = pgTable('cc_visitor_permits', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  authorityId: uuid('authority_id').notNull(),
+  permitTypeId: uuid('permit_type_id').notNull(),
+  
+  cartId: uuid('cart_id'),
+  cartItemId: uuid('cart_item_id'),
+  tripId: uuid('trip_id'),
+  
+  permitNumber: varchar('permit_number', { length: 30 }).notNull().unique(),
+  
+  applicantName: text('applicant_name').notNull(),
+  applicantEmail: text('applicant_email'),
+  applicantPhone: text('applicant_phone'),
+  applicantAddress: text('applicant_address'),
+  
+  partySize: integer('party_size').default(1),
+  partyMembers: text('party_members').array(),
+  
+  validFrom: date('valid_from').notNull(),
+  validTo: date('valid_to').notNull(),
+  
+  locationId: uuid('location_id'),
+  activityDescription: text('activity_description'),
+  entryPoint: text('entry_point'),
+  exitPoint: text('exit_point'),
+  
+  vesselName: text('vessel_name'),
+  vesselRegistration: text('vessel_registration'),
+  vesselLengthFt: numeric('vessel_length_ft', { precision: 6, scale: 2 }),
+  
+  baseFeeCad: numeric('base_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  personFeeCad: numeric('person_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  dayFeeCad: numeric('day_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  nightFeeCad: numeric('night_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  totalFeeCad: numeric('total_fee_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  paymentStatus: varchar('payment_status', { length: 50 }).default('pending'),
+  paymentReference: text('payment_reference'),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
+  
+  status: varchar('status', { length: 50 }).notNull().default('draft'),
+  
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  approvedBy: text('approved_by'),
+  issuedAt: timestamp('issued_at', { withTimezone: true }),
+  
+  rejectionReason: text('rejection_reason'),
+  revocationReason: text('revocation_reason'),
+  
+  qrCodeToken: varchar('qr_code_token', { length: 30 }).unique(),
+  documentUrl: text('document_url'),
+  
+  specialConditions: text('special_conditions'),
+  authorityNotes: text('authority_notes'),
+  applicantNotes: text('applicant_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertVisitorPermitSchema = createInsertSchema(ccVisitorPermits).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type VisitorPermit = typeof ccVisitorPermits.$inferSelect;
+export type InsertVisitorPermit = z.infer<typeof insertVisitorPermitSchema>;
