@@ -5,6 +5,7 @@ import {
   createCart, getCart, addItem, updateItem, removeItem, addAdjustment, updateCartGuest
 } from '../services/cartService';
 import { getRecommendations, getWeatherSummary } from '../services/recommendationService';
+import { checkout, confirmQuote, abandonCart } from '../services/checkoutService';
 
 const router = express.Router();
 
@@ -2018,6 +2019,10 @@ router.post('/carts/:cartId/items', async (req: Request, res: Response) => {
       partySize: b.partySize,
       vesselLengthFt: b.vesselLengthFt,
       vehicleLengthFt: b.vehicleLengthFt,
+      subtotalCents: b.subtotalCents,
+      taxesCents: b.taxesCents,
+      totalCents: b.totalCents,
+      depositRequiredCents: b.depositRequiredCents,
       dietaryRequirements: b.dietaryRequirements,
       specialRequests: b.specialRequests,
       needsJson: b.needs,
@@ -2255,6 +2260,133 @@ router.post('/carts/:cartId/recommend', async (req: Request, res: Response) => {
   } catch (e: any) {
     console.error('Cart recommend error:', e);
     res.status(500).json({ error: 'Failed to get recommendations' });
+  }
+});
+
+// ============ CHECKOUT ROUTES ============
+
+// POST /api/public/carts/:cartId/checkout - Process cart checkout
+router.post('/carts/:cartId/checkout', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  const b = req.body || {};
+  
+  try {
+    const result = await checkout({
+      cartId,
+      accessToken: token,
+      primaryGuestName: b.primaryGuestName,
+      primaryGuestEmail: b.primaryGuestEmail,
+      primaryGuestPhone: b.primaryGuestPhone,
+      paymentMethod: b.paymentMethod,
+      paymentReference: b.paymentReference,
+      isQuote: b.isQuote,
+      quoteValidDays: b.quoteValidDays
+    });
+    
+    if (result.errors.length > 0 && result.reservations.length === 0) {
+      return res.status(400).json(result);
+    }
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Checkout error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/public/carts/:cartId/confirm-quote - Convert quote to booking
+router.post('/carts/:cartId/confirm-quote', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  try {
+    const result = await confirmQuote(cartId, token);
+    res.json(result);
+  } catch (e: any) {
+    console.error('Confirm quote error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/public/carts/:cartId/abandon - Cancel/abandon cart
+router.post('/carts/:cartId/abandon', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  try {
+    await abandonCart(cartId, token, req.body?.reason);
+    res.json({ success: true, status: 'cancelled' });
+  } catch (e: any) {
+    console.error('Abandon cart error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/public/carts/:cartId/receipt - Get receipt for completed cart
+router.get('/carts/:cartId/receipt', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  try {
+    const cartResult = await getCart(cartId, token);
+    if (!cartResult) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    if (cartResult.cart.status !== 'completed' && cartResult.cart.status !== 'submitted') {
+      return res.status(400).json({ error: 'Cart has not been checked out' });
+    }
+    
+    // Load reservation details for items
+    const reservationDetails = [];
+    for (const item of cartResult.items) {
+      if (item.reservationId) {
+        const resResult = await serviceQuery(`
+          SELECT id, confirmation_number, status, start_date, end_date
+          FROM cc_reservations WHERE id = $1
+        `, [item.reservationId]);
+        
+        if (resResult.rows[0]) {
+          const r = resResult.rows[0];
+          reservationDetails.push({
+            itemTitle: item.title,
+            confirmationNumber: r.confirmation_number,
+            status: r.status,
+            startAt: r.start_date,
+            endAt: r.end_date
+          });
+        }
+      }
+    }
+    
+    res.json({
+      cart: cartResult.cart,
+      items: cartResult.items,
+      adjustments: cartResult.adjustments,
+      totals: cartResult.totals,
+      reservations: reservationDetails
+    });
+  } catch (e: any) {
+    console.error('Receipt error:', e);
+    res.status(500).json({ error: 'Failed to get receipt' });
   }
 });
 

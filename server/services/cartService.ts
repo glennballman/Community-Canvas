@@ -82,6 +82,11 @@ export interface AddItemRequest {
   vesselLengthFt?: number;
   vehicleLengthFt?: number;
   
+  subtotalCents?: number;
+  taxesCents?: number;
+  totalCents?: number;
+  depositRequiredCents?: number;
+  
   dietaryRequirements?: string[];
   specialRequests?: string;
   needsJson?: Record<string, any>;
@@ -238,9 +243,10 @@ export async function getCart(cartId: string, accessToken?: string): Promise<Car
 }
 
 export async function addItem(req: AddItemRequest): Promise<{ item: any; cart: CartResult }> {
-  let subtotalCents = 0;
-  let taxesCents = 0;
-  let totalCents = 0;
+  let subtotalCents = req.subtotalCents || 0;
+  let taxesCents = req.taxesCents || 0;
+  let totalCents = req.totalCents || (subtotalCents + taxesCents);
+  let depositRequiredCents = req.depositRequiredCents || Math.round(totalCents * 0.25);
   let pricingSnapshot: Record<string, any> = {};
   let holdJson: Record<string, any> = { status: 'none' };
   
@@ -258,6 +264,7 @@ export async function addItem(req: AddItemRequest): Promise<{ item: any; cart: C
       subtotalCents = quote.subtotalCents;
       taxesCents = quote.taxes.reduce((s, t) => s + t.amountCents, 0);
       totalCents = quote.totalCents;
+      depositRequiredCents = Math.round(totalCents * 0.25);
       pricingSnapshot = quote;
       
       holdJson = { status: 'soft', expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString() };
@@ -304,7 +311,7 @@ export async function addItem(req: AddItemRequest): Promise<{ item: any; cart: C
     subtotalCents,
     taxesCents,
     totalCents,
-    depositRequiredCents: Math.round(totalCents * 0.25),
+    depositRequiredCents,
     pricingSnapshot,
     holdJson,
     intentJson: req.intentJson || {},

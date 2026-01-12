@@ -264,10 +264,15 @@ export async function checkout(req: CheckoutRequest): Promise<CheckoutResult> {
           status: 'requested'
         });
         
+        // Accumulate totals
+        result.totals.subtotalCents += item.subtotal_cents || 0;
+        result.totals.taxesCents += item.taxes_cents || 0;
+        result.totals.depositRequiredCents += item.deposit_required_cents || 0;
+        
         // Log activity
         await logActivity({
-          tenantId: cart.tenant_id || 'system',
-          actorId: req.actorId || 'system',
+          tenantId: cart.tenant_id || 'e0000000-0000-0000-0000-000000000001',
+          actorId: req.actorId || undefined,
           action: 'partner_request.created',
           resourceType: 'partner_request',
           resourceId: requestId,
@@ -291,6 +296,11 @@ export async function checkout(req: CheckoutRequest): Promise<CheckoutResult> {
             updated_at = now()
           WHERE id = $1
         `, [item.id]);
+        
+        // Accumulate totals
+        result.totals.subtotalCents += item.subtotal_cents || 0;
+        result.totals.taxesCents += item.taxes_cents || 0;
+        result.totals.depositRequiredCents += item.deposit_required_cents || 0;
       }
       
     } catch (e: any) {
@@ -343,8 +353,8 @@ export async function checkout(req: CheckoutRequest): Promise<CheckoutResult> {
   
   // 9. Log checkout activity
   await logActivity({
-    tenantId: cart.tenant_id || 'system',
-    actorId: req.actorId || 'guest',
+    tenantId: cart.tenant_id || 'e0000000-0000-0000-0000-000000000001',
+    actorId: req.actorId || undefined,
     action: 'cart.checkout',
     resourceType: 'cart',
     resourceId: req.cartId,
@@ -356,8 +366,7 @@ export async function checkout(req: CheckoutRequest): Promise<CheckoutResult> {
       itineraryCount: result.itineraryItems.length,
       errorCount: result.errors.length,
       grandTotalCents: result.totals.grandTotalCents
-    },
-    correlationId: bundleId
+    }
   });
   
   result.success = result.errors.length === 0;
