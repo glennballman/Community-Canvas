@@ -460,6 +460,60 @@ export const insertMomentAvailabilitySchema = createInsertSchema(ccMomentAvailab
 export type MomentAvailability = typeof ccMomentAvailability.$inferSelect;
 export type InsertMomentAvailability = z.infer<typeof insertMomentAvailabilitySchema>;
 
+// Trip Party Profiles (individual members with needs)
+export const ccTripPartyProfiles = pgTable('cc_trip_party_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tripId: uuid('trip_id').notNull().references(() => ccTrips.id, { onDelete: 'cascade' }),
+  
+  displayName: varchar('display_name').notNull(),
+  role: varchar('role').default('guest'),
+  
+  ageGroup: varchar('age_group'),
+  birthDate: date('birth_date'),
+  
+  email: varchar('email'),
+  phone: varchar('phone'),
+  
+  invitationId: uuid('invitation_id'),
+  
+  dietaryRestrictions: text('dietary_restrictions').array(),
+  dietaryPreferences: text('dietary_preferences').array(),
+  dietarySeverity: varchar('dietary_severity').default('preference'),
+  dietaryNotes: text('dietary_notes'),
+  
+  accessibilityJson: jsonb('accessibility_json').default({}),
+  medicalJson: jsonb('medical_json').default({}),
+  needsJson: jsonb('needs_json').default({}),
+  preferencesJson: jsonb('preferences_json').default({}),
+  surprisesJson: jsonb('surprises_json').default({}),
+  
+  isActive: boolean('is_active').default(true),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertTripPartyProfileSchema = createInsertSchema(ccTripPartyProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type TripPartyProfile = typeof ccTripPartyProfiles.$inferSelect;
+export type InsertTripPartyProfile = z.infer<typeof insertTripPartyProfileSchema>;
+
+// Dietary Lookup (common dietary terms for autocomplete)
+export const ccDietaryLookup = pgTable('cc_dietary_lookup', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  term: varchar('term').notNull().unique(),
+  category: varchar('category').notNull(),
+  severityDefault: varchar('severity_default').default('preference'),
+  description: text('description'),
+  commonIn: text('common_in').array(),
+  
+  displayOrder: integer('display_order').default(0),
+});
+
+export const insertDietaryLookupSchema = createInsertSchema(ccDietaryLookup).omit({ id: true });
+export type DietaryLookup = typeof ccDietaryLookup.$inferSelect;
+export type InsertDietaryLookup = z.infer<typeof insertDietaryLookupSchema>;
+
 // ============================================================================
 // V3.3.1 TRUTH/DISCLOSURE LAYER - Visibility System
 // ============================================================================

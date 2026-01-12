@@ -1,0 +1,620 @@
+**30-PROMPT PACK - PROMPT 07: Party Profiles + Aggregated Needs**
+
+Create party member profiles with dietary, accessibility, and medical needs that aggregate to trip level.
+
+## Create Party Profile Tables
+
+### Migration 076_party_profiles.sql
+```sql
+BEGIN;
+
+-- ============ TRIP PARTY PROFILES ============
+-- Individual members of a trip party with their needs
+
+CREATE TABLE IF NOT EXISTS cc_trip_party_profiles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id uuid NOT NULL REFERENCES cc_trips(id) ON DELETE CASCADE,
+  
+  -- Identity
+  display_name varchar NOT NULL,
+  role varchar DEFAULT 'guest' CHECK (role IN (
+    'primary', 'co_planner', 'adult', 'child', 'infant', 'guest'
+  )),
+  
+  -- Demographics
+  age_group varchar CHECK (age_group IN ('adult', 'teen', 'child', 'infant')),
+  birth_date date,
+  
+  -- Contact (optional - for co-planners)
+  email varchar,
+  phone varchar,
+  
+  -- Linked invitation (if they joined via invite)
+  invitation_id uuid REFERENCES cc_trip_invitations(id) ON DELETE SET NULL,
+  
+  -- DIETARY NEEDS
+  dietary_restrictions text[], -- allergies: ['peanuts', 'shellfish']
+  dietary_preferences text[],  -- preferences: ['vegetarian', 'halal']
+  dietary_severity varchar DEFAULT 'preference' CHECK (dietary_severity IN (
+    'life_threatening', 'allergy', 'intolerance', 'preference'
+  )),
+  dietary_notes text,
+  
+  -- ACCESSIBILITY NEEDS
+  accessibility_json jsonb DEFAULT '{}'::jsonb,
+  -- {wheelchair: true, limited_mobility: true, stairs_ok: false,
+  --  visual_impairment: false, hearing_impairment: false,
+  --  service_animal: {type: 'dog', name: 'Max'}}
+  
+  -- MEDICAL NEEDS
+  medical_json jsonb DEFAULT '{}'::jsonb,
+  -- {conditions: ['asthma'], medications: ['inhaler'],
+  --  power_critical: [{type: 'cpap', outlet_required: true}],
+  --  emergency_contact: {name: 'Jane', phone: '555-1234'}}
+  
+  -- GENERAL NEEDS
+  needs_json jsonb DEFAULT '{}'::jsonb,
+  -- {swimming_ability: 'none'|'beginner'|'comfortable'|'strong',
+  --  physical_fitness: 'limited'|'moderate'|'active'|'athletic',
+  --  pets: [{type: 'dog', name: 'Buddy', weight_lbs: 45}],
+  --  languages: ['en', 'fr'],
+  --  lift_limit_lbs: 25}
+  
+  -- PREFERENCES
+  preferences_json jsonb DEFAULT '{}'::jsonb,
+  -- {room_type: 'king'|'double'|'accessible',
+  --  floor_preference: 'low'|'high'|'any',
+  --  bed_firmness: 'soft'|'medium'|'firm',
+  --  temperature: 'cool'|'warm',
+  --  quiet_hours: true}
+  
+  -- SURPRISES (staff-only visible)
+  surprises_json jsonb DEFAULT '{}'::jsonb,
+  -- {type: 'birthday'|'anniversary'|'proposal'|'other',
+  --  date: '2026-08-14', details: 'Planning to propose at sunset',
+  --  visibility: 'staff_only'}
+  
+  -- Status
+  is_active boolean DEFAULT true,
+  
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_party_profiles_trip ON cc_trip_party_profiles(trip_id);
+CREATE INDEX IF NOT EXISTS idx_party_profiles_invitation ON cc_trip_party_profiles(invitation_id) WHERE invitation_id IS NOT NULL;
+
+ALTER TABLE cc_trip_party_profiles ENABLE ROW LEVEL SECURITY;
+
+-- ============ DIETARY LOOKUP ============
+-- Common dietary restrictions for autocomplete
+
+CREATE TABLE IF NOT EXISTS cc_dietary_lookup (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  term varchar NOT NULL UNIQUE,
+  category varchar NOT NULL CHECK (category IN ('allergy', 'intolerance', 'preference', 'religious', 'medical')),
+  severity_default varchar DEFAULT 'preference',
+  description text,
+  common_in text[], -- cuisines where this is common
+  
+  display_order integer DEFAULT 0
+);
+
+-- Seed common dietary terms
+INSERT INTO cc_dietary_lookup (term, category, severity_default, description, common_in, display_order) VALUES
+  ('peanuts', 'allergy', 'life_threatening', 'Peanut allergy', ARRAY['asian', 'thai'], 1),
+  ('tree nuts', 'allergy', 'life_threatening', 'Tree nut allergy (almonds, walnuts, etc.)', ARRAY['desserts', 'asian'], 2),
+  ('shellfish', 'allergy', 'life_threatening', 'Shellfish allergy (shrimp, crab, lobster)', ARRAY['seafood'], 3),
+  ('fish', 'allergy', 'allergy', 'Fish allergy', ARRAY['seafood', 'asian'], 4),
+  ('eggs', 'allergy', 'allergy', 'Egg allergy', ARRAY['breakfast', 'baking'], 5),
+  ('dairy', 'allergy', 'intolerance', 'Dairy/lactose', ARRAY['western'], 6),
+  ('gluten', 'intolerance', 'intolerance', 'Gluten intolerance/celiac', ARRAY['bread', 'pasta'], 7),
+  ('soy', 'allergy', 'allergy', 'Soy allergy', ARRAY['asian'], 8),
+  ('sesame', 'allergy', 'allergy', 'Sesame allergy', ARRAY['asian', 'middle_eastern'], 9),
+  ('vegetarian', 'preference', 'preference', 'No meat', NULL, 10),
+  ('vegan', 'preference', 'preference', 'No animal products', NULL, 11),
+  ('pescatarian', 'preference', 'preference', 'Fish but no meat', NULL, 12),
+  ('halal', 'religious', 'preference', 'Halal dietary requirements', NULL, 13),
+  ('kosher', 'religious', 'preference', 'Kosher dietary requirements', NULL, 14),
+  ('low sodium', 'medical', 'preference', 'Low sodium diet', NULL, 15),
+  ('diabetic', 'medical', 'preference', 'Diabetic-friendly', NULL, 16)
+ON CONFLICT (term) DO NOTHING;
+
+COMMIT;
+```
+
+## Create server/services/partyService.ts
+```typescript
+// server/services/partyService.ts
+
+import { db } from '../db';
+import { eq, and, desc } from 'drizzle-orm';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateProfileRequest {
+  tripId: string;
+  displayName: string;
+  role?: 'primary' | 'co_planner' | 'adult' | 'child' | 'infant' | 'guest';
+  ageGroup?: 'adult' | 'teen' | 'child' | 'infant';
+  birthDate?: Date;
+  email?: string;
+  phone?: string;
+  invitationId?: string;
+  dietaryRestrictions?: string[];
+  dietaryPreferences?: string[];
+  dietarySeverity?: 'life_threatening' | 'allergy' | 'intolerance' | 'preference';
+  dietaryNotes?: string;
+  accessibility?: Record<string, any>;
+  medical?: Record<string, any>;
+  needs?: Record<string, any>;
+  preferences?: Record<string, any>;
+  surprises?: Record<string, any>;
+}
+
+interface AggregatedNeeds {
+  dietary: {
+    lifeThreateningAllergies: string[];
+    allergies: string[];
+    intolerances: string[];
+    preferences: string[];
+    notes: string[];
+  };
+  accessibility: {
+    wheelchairRequired: boolean;
+    limitedMobility: boolean;
+    stairsOk: boolean;
+    serviceAnimals: any[];
+    other: string[];
+  };
+  medical: {
+    powerCritical: any[];
+    conditions: string[];
+    emergencyContacts: any[];
+  };
+  partyComposition: {
+    adults: number;
+    teens: number;
+    children: number;
+    infants: number;
+    total: number;
+  };
+  pets: any[];
+  lowestSwimmingAbility: string;
+  lowestPhysicalFitness: string;
+  languages: string[];
+}
+
+// ============ PROFILE FUNCTIONS ============
+
+export async function createProfile(req: CreateProfileRequest): Promise<any> {
+  const [profile] = await db.insert(ccTripPartyProfiles).values({
+    tripId: req.tripId,
+    displayName: req.displayName,
+    role: req.role || 'guest',
+    ageGroup: req.ageGroup,
+    birthDate: req.birthDate,
+    email: req.email,
+    phone: req.phone,
+    invitationId: req.invitationId,
+    dietaryRestrictions: req.dietaryRestrictions,
+    dietaryPreferences: req.dietaryPreferences,
+    dietarySeverity: req.dietarySeverity || 'preference',
+    dietaryNotes: req.dietaryNotes,
+    accessibilityJson: req.accessibility || {},
+    medicalJson: req.medical || {},
+    needsJson: req.needs || {},
+    preferencesJson: req.preferences || {},
+    surprisesJson: req.surprises || {}
+  }).returning();
+  
+  // Update aggregated needs on trip
+  await updateTripAggregatedNeeds(req.tripId);
+  
+  return profile;
+}
+
+export async function getProfile(profileId: string): Promise<any | null> {
+  return db.query.ccTripPartyProfiles.findFirst({
+    where: eq(ccTripPartyProfiles.id, profileId)
+  });
+}
+
+export async function getTripProfiles(tripId: string): Promise<any[]> {
+  return db.query.ccTripPartyProfiles.findMany({
+    where: and(
+      eq(ccTripPartyProfiles.tripId, tripId),
+      eq(ccTripPartyProfiles.isActive, true)
+    ),
+    orderBy: [desc(ccTripPartyProfiles.role), asc(ccTripPartyProfiles.displayName)]
+  });
+}
+
+export async function updateProfile(
+  profileId: string,
+  updates: Partial<CreateProfileRequest>
+): Promise<any> {
+  const existing = await getProfile(profileId);
+  if (!existing) throw new Error('Profile not found');
+  
+  const [updated] = await db.update(ccTripPartyProfiles)
+    .set({
+      displayName: updates.displayName,
+      role: updates.role,
+      ageGroup: updates.ageGroup,
+      birthDate: updates.birthDate,
+      email: updates.email,
+      phone: updates.phone,
+      dietaryRestrictions: updates.dietaryRestrictions,
+      dietaryPreferences: updates.dietaryPreferences,
+      dietarySeverity: updates.dietarySeverity,
+      dietaryNotes: updates.dietaryNotes,
+      accessibilityJson: updates.accessibility,
+      medicalJson: updates.medical,
+      needsJson: updates.needs,
+      preferencesJson: updates.preferences,
+      surprisesJson: updates.surprises,
+      updatedAt: new Date()
+    })
+    .where(eq(ccTripPartyProfiles.id, profileId))
+    .returning();
+  
+  // Update aggregated needs on trip
+  await updateTripAggregatedNeeds(existing.tripId);
+  
+  return updated;
+}
+
+export async function deleteProfile(profileId: string): Promise<void> {
+  const existing = await getProfile(profileId);
+  if (!existing) return;
+  
+  await db.update(ccTripPartyProfiles)
+    .set({ isActive: false, updatedAt: new Date() })
+    .where(eq(ccTripPartyProfiles.id, profileId));
+  
+  await updateTripAggregatedNeeds(existing.tripId);
+}
+
+// ============ AGGREGATION ============
+
+export async function aggregateNeeds(tripId: string): Promise<AggregatedNeeds> {
+  const profiles = await getTripProfiles(tripId);
+  
+  const result: AggregatedNeeds = {
+    dietary: {
+      lifeThreateningAllergies: [],
+      allergies: [],
+      intolerances: [],
+      preferences: [],
+      notes: []
+    },
+    accessibility: {
+      wheelchairRequired: false,
+      limitedMobility: false,
+      stairsOk: true,
+      serviceAnimals: [],
+      other: []
+    },
+    medical: {
+      powerCritical: [],
+      conditions: [],
+      emergencyContacts: []
+    },
+    partyComposition: {
+      adults: 0,
+      teens: 0,
+      children: 0,
+      infants: 0,
+      total: 0
+    },
+    pets: [],
+    lowestSwimmingAbility: 'strong',
+    lowestPhysicalFitness: 'athletic',
+    languages: []
+  };
+  
+  const swimmingLevels = ['none', 'beginner', 'comfortable', 'strong'];
+  const fitnessLevels = ['limited', 'moderate', 'active', 'athletic'];
+  
+  for (const profile of profiles) {
+    // Party composition
+    switch (profile.ageGroup) {
+      case 'adult': result.partyComposition.adults++; break;
+      case 'teen': result.partyComposition.teens++; break;
+      case 'child': result.partyComposition.children++; break;
+      case 'infant': result.partyComposition.infants++; break;
+      default: result.partyComposition.adults++; // Default to adult
+    }
+    result.partyComposition.total++;
+    
+    // Dietary - categorize by severity
+    if (profile.dietaryRestrictions?.length) {
+      if (profile.dietarySeverity === 'life_threatening') {
+        result.dietary.lifeThreateningAllergies.push(...profile.dietaryRestrictions);
+      } else if (profile.dietarySeverity === 'allergy') {
+        result.dietary.allergies.push(...profile.dietaryRestrictions);
+      } else if (profile.dietarySeverity === 'intolerance') {
+        result.dietary.intolerances.push(...profile.dietaryRestrictions);
+      }
+    }
+    if (profile.dietaryPreferences?.length) {
+      result.dietary.preferences.push(...profile.dietaryPreferences);
+    }
+    if (profile.dietaryNotes) {
+      result.dietary.notes.push(`${profile.displayName}: ${profile.dietaryNotes}`);
+    }
+    
+    // Accessibility
+    const access = profile.accessibilityJson || {};
+    if (access.wheelchair) result.accessibility.wheelchairRequired = true;
+    if (access.limitedMobility) result.accessibility.limitedMobility = true;
+    if (access.stairsOk === false) result.accessibility.stairsOk = false;
+    if (access.serviceAnimal) {
+      result.accessibility.serviceAnimals.push({
+        ...access.serviceAnimal,
+        belongsTo: profile.displayName
+      });
+    }
+    
+    // Medical
+    const medical = profile.medicalJson || {};
+    if (medical.powerCritical?.length) {
+      result.medical.powerCritical.push(...medical.powerCritical.map((p: any) => ({
+        ...p,
+        belongsTo: profile.displayName
+      })));
+    }
+    if (medical.conditions?.length) {
+      result.medical.conditions.push(...medical.conditions);
+    }
+    if (medical.emergencyContact) {
+      result.medical.emergencyContacts.push({
+        ...medical.emergencyContact,
+        forPerson: profile.displayName
+      });
+    }
+    
+    // General needs
+    const needs = profile.needsJson || {};
+    if (needs.pets?.length) {
+      result.pets.push(...needs.pets.map((p: any) => ({
+        ...p,
+        belongsTo: profile.displayName
+      })));
+    }
+    if (needs.languages?.length) {
+      result.languages.push(...needs.languages);
+    }
+    
+    // Track lowest swimming/fitness
+    if (needs.swimmingAbility) {
+      const level = swimmingLevels.indexOf(needs.swimmingAbility);
+      const current = swimmingLevels.indexOf(result.lowestSwimmingAbility);
+      if (level < current) result.lowestSwimmingAbility = needs.swimmingAbility;
+    }
+    if (needs.physicalFitness) {
+      const level = fitnessLevels.indexOf(needs.physicalFitness);
+      const current = fitnessLevels.indexOf(result.lowestPhysicalFitness);
+      if (level < current) result.lowestPhysicalFitness = needs.physicalFitness;
+    }
+  }
+  
+  // Deduplicate arrays
+  result.dietary.lifeThreateningAllergies = [...new Set(result.dietary.lifeThreateningAllergies)];
+  result.dietary.allergies = [...new Set(result.dietary.allergies)];
+  result.dietary.intolerances = [...new Set(result.dietary.intolerances)];
+  result.dietary.preferences = [...new Set(result.dietary.preferences)];
+  result.medical.conditions = [...new Set(result.medical.conditions)];
+  result.languages = [...new Set(result.languages)];
+  
+  return result;
+}
+
+async function updateTripAggregatedNeeds(tripId: string): Promise<void> {
+  const aggregated = await aggregateNeeds(tripId);
+  
+  await db.update(ccTrips)
+    .set({
+      needsJson: aggregated,
+      expectedAdults: aggregated.partyComposition.adults,
+      expectedChildren: aggregated.partyComposition.children + aggregated.partyComposition.teens,
+      expectedInfants: aggregated.partyComposition.infants,
+      updatedAt: new Date()
+    })
+    .where(eq(ccTrips.id, tripId));
+}
+
+// ============ DIETARY LOOKUP ============
+
+export async function getDietaryTerms(): Promise<any[]> {
+  return db.query.ccDietaryLookup.findMany({
+    orderBy: [asc(ccDietaryLookup.displayOrder)]
+  });
+}
+```
+
+## Add Party Routes
+
+### In server/routes/public-portal.ts
+```typescript
+import { 
+  createProfile, getProfile, getTripProfiles, updateProfile, deleteProfile,
+  aggregateNeeds, getDietaryTerms
+} from '../services/partyService';
+
+// ============ PARTY PROFILE ENDPOINTS ============
+
+// GET /api/public/trips/:accessCode/party - List party members
+router.get('/trips/:accessCode/party', async (req, res) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const profiles = await getTripProfiles(trip.id);
+    const aggregated = await aggregateNeeds(trip.id);
+    
+    res.json({ profiles, aggregatedNeeds: aggregated });
+  } catch (e: any) {
+    console.error('Get party error:', e);
+    res.status(500).json({ error: 'Failed to get party' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/party - Add party member
+router.post('/trips/:accessCode/party', async (req, res) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.displayName) {
+    return res.status(400).json({ error: 'displayName required' });
+  }
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const profile = await createProfile({
+      tripId: trip.id,
+      displayName: b.displayName,
+      role: b.role,
+      ageGroup: b.ageGroup,
+      birthDate: b.birthDate ? new Date(b.birthDate) : undefined,
+      email: b.email,
+      phone: b.phone,
+      dietaryRestrictions: b.dietaryRestrictions,
+      dietaryPreferences: b.dietaryPreferences,
+      dietarySeverity: b.dietarySeverity,
+      dietaryNotes: b.dietaryNotes,
+      accessibility: b.accessibility,
+      medical: b.medical,
+      needs: b.needs,
+      preferences: b.preferences,
+      surprises: b.surprises
+    });
+    
+    res.json({ profile });
+  } catch (e: any) {
+    console.error('Create profile error:', e);
+    res.status(500).json({ error: 'Failed to create profile' });
+  }
+});
+
+// GET /api/public/trips/:accessCode/party/:profileId - Get single profile
+router.get('/trips/:accessCode/party/:profileId', async (req, res) => {
+  const { profileId } = req.params;
+  
+  try {
+    const profile = await getProfile(profileId);
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+    res.json({ profile });
+  } catch (e: any) {
+    console.error('Get profile error:', e);
+    res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// PATCH /api/public/trips/:accessCode/party/:profileId - Update profile
+router.patch('/trips/:accessCode/party/:profileId', async (req, res) => {
+  const { profileId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await updateProfile(profileId, {
+      displayName: b.displayName,
+      role: b.role,
+      ageGroup: b.ageGroup,
+      birthDate: b.birthDate ? new Date(b.birthDate) : undefined,
+      dietaryRestrictions: b.dietaryRestrictions,
+      dietaryPreferences: b.dietaryPreferences,
+      dietarySeverity: b.dietarySeverity,
+      dietaryNotes: b.dietaryNotes,
+      accessibility: b.accessibility,
+      medical: b.medical,
+      needs: b.needs,
+      preferences: b.preferences
+    });
+    
+    res.json({ profile: updated });
+  } catch (e: any) {
+    console.error('Update profile error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// DELETE /api/public/trips/:accessCode/party/:profileId - Remove profile
+router.delete('/trips/:accessCode/party/:profileId', async (req, res) => {
+  const { profileId } = req.params;
+  
+  try {
+    await deleteProfile(profileId);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('Delete profile error:', e);
+    res.status(500).json({ error: 'Failed to delete profile' });
+  }
+});
+
+// GET /api/public/trips/:accessCode/needs - Get aggregated needs only
+router.get('/trips/:accessCode/needs', async (req, res) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const aggregated = await aggregateNeeds(trip.id);
+    res.json(aggregated);
+  } catch (e: any) {
+    console.error('Get needs error:', e);
+    res.status(500).json({ error: 'Failed to get needs' });
+  }
+});
+
+// GET /api/public/dietary-terms - Autocomplete for dietary restrictions
+router.get('/dietary-terms', async (req, res) => {
+  try {
+    const terms = await getDietaryTerms();
+    res.json({ terms });
+  } catch (e: any) {
+    console.error('Get dietary terms error:', e);
+    res.status(500).json({ error: 'Failed to get dietary terms' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- TripPartyProfile, InsertTripPartyProfile
+- DietaryLookup, InsertDietaryLookup
+
+## Deliverables
+- [ ] Migration 076_party_profiles.sql
+- [ ] cc_trip_party_profiles table with RLS
+- [ ] cc_dietary_lookup table with 16 common terms seeded
+- [ ] server/services/partyService.ts
+- [ ] Party routes:
+  - GET /api/public/trips/:accessCode/party
+  - POST /api/public/trips/:accessCode/party
+  - GET /api/public/trips/:accessCode/party/:profileId
+  - PATCH /api/public/trips/:accessCode/party/:profileId
+  - DELETE /api/public/trips/:accessCode/party/:profileId
+  - GET /api/public/trips/:accessCode/needs
+  - GET /api/public/dietary-terms
+- [ ] Aggregation auto-updates trip.needs_json
+- [ ] Test: Create trip → add 2 profiles with allergies → verify aggregated needs
+
+Report with sample aggregated needs showing dietary and party composition.
