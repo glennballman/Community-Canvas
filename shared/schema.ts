@@ -2147,3 +2147,36 @@ export const insertVisitorPermitSchema = createInsertSchema(ccVisitorPermits).om
 });
 export type VisitorPermit = typeof ccVisitorPermits.$inferSelect;
 export type InsertVisitorPermit = z.infer<typeof insertVisitorPermitSchema>;
+
+// ============ TRIP PERMITS ============
+// Links permits to trips and tracks permit requirements for trip itinerary
+export const ccTripPermits = pgTable('cc_trip_permits', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  tripId: uuid('trip_id').notNull(),
+  permitId: uuid('permit_id'),
+  permitTypeId: uuid('permit_type_id').notNull(),
+  authorityId: uuid('authority_id').notNull(),
+  
+  requirementSource: varchar('requirement_source', { length: 50 }).notNull(),
+  sourceLocationId: uuid('source_location_id'),
+  sourceDescription: text('source_description'),
+  
+  status: varchar('status', { length: 50 }).default('required'),
+  
+  requiredBy: date('required_by'),
+  obtainedAt: timestamp('obtained_at', { withTimezone: true }),
+  
+  notes: text('notes'),
+  waiverReason: text('waiver_reason'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTripPermitSchema = createInsertSchema(ccTripPermits).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type TripPermit = typeof ccTripPermits.$inferSelect;
+export type InsertTripPermit = z.infer<typeof insertTripPermitSchema>;

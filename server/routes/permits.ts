@@ -10,6 +10,13 @@ import {
   submitPermit, approvePermit, issuePermit, activatePermit,
   cancelPermit, rejectPermit
 } from '../services/permitService';
+import {
+  analyzeTripPermitRequirements,
+  createTripPermitRequirements,
+  getTripPermitSummary,
+  obtainPermitForTrip,
+  waiveTripPermit
+} from '../services/tripPermitService';
 
 const router = Router();
 
@@ -340,6 +347,106 @@ router.post('/portals/:slug/permits/:id/reject', async (req, res) => {
     res.json(result);
   } catch (e: any) {
     console.error('Reject permit error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ TRIP PERMIT ENDPOINTS ============
+
+// GET /api/permits/portals/:slug/trips/:tripId/requirements - Analyze permit requirements
+router.get('/portals/:slug/trips/:tripId/requirements', async (req, res) => {
+  const { slug, tripId } = req.params;
+  
+  try {
+    const requirements = await analyzeTripPermitRequirements(slug, tripId);
+    res.json({
+      tripId,
+      requirements,
+      count: requirements.length,
+      totalEstimatedFees: requirements.reduce((sum, r) => sum + r.estimatedFee, 0)
+    });
+  } catch (e: any) {
+    console.error('Analyze trip requirements error:', e);
+    res.status(500).json({ error: 'Failed to analyze permit requirements' });
+  }
+});
+
+// POST /api/permits/portals/:slug/trips/:tripId/requirements - Create trip permit records
+router.post('/portals/:slug/trips/:tripId/requirements', async (req, res) => {
+  const { slug, tripId } = req.params;
+  
+  try {
+    const created = await createTripPermitRequirements(slug, tripId);
+    res.json({
+      tripId,
+      created,
+      count: created.length
+    });
+  } catch (e: any) {
+    console.error('Create trip requirements error:', e);
+    res.status(500).json({ error: 'Failed to create permit requirements' });
+  }
+});
+
+// GET /api/permits/portals/:slug/trips/:tripId/summary - Get trip permit summary
+router.get('/portals/:slug/trips/:tripId/summary', async (req, res) => {
+  const { slug, tripId } = req.params;
+  
+  try {
+    const summary = await getTripPermitSummary(slug, tripId);
+    if (!summary) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    res.json(summary);
+  } catch (e: any) {
+    console.error('Get trip permit summary error:', e);
+    res.status(500).json({ error: 'Failed to get permit summary' });
+  }
+});
+
+// POST /api/permits/portals/:slug/trips/:tripId/obtain - Obtain permit for trip
+router.post('/portals/:slug/trips/:tripId/obtain', async (req, res) => {
+  const { slug, tripId } = req.params;
+  const { permitTypeId, applicant, validFrom, validTo } = req.body;
+  
+  if (!permitTypeId || !applicant?.name || !validFrom || !validTo) {
+    return res.status(400).json({ 
+      error: 'permitTypeId, applicant.name, validFrom, validTo required' 
+    });
+  }
+  
+  try {
+    const result = await obtainPermitForTrip(
+      slug,
+      tripId,
+      permitTypeId,
+      applicant,
+      {
+        validFrom: new Date(validFrom),
+        validTo: new Date(validTo)
+      }
+    );
+    res.json(result);
+  } catch (e: any) {
+    console.error('Obtain permit for trip error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/permits/portals/:slug/trip-permits/:id/waive - Waive trip permit requirement
+router.post('/portals/:slug/trip-permits/:id/waive', async (req, res) => {
+  const { slug, id } = req.params;
+  const { reason } = req.body || {};
+  
+  if (!reason) {
+    return res.status(400).json({ error: 'reason required' });
+  }
+  
+  try {
+    const result = await waiveTripPermit(slug, id, reason);
+    res.json(result);
+  } catch (e: any) {
+    console.error('Waive trip permit error:', e);
     res.status(400).json({ error: e.message });
   }
 });
