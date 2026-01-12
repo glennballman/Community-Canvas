@@ -1,0 +1,424 @@
+**V3.3.1 BLOCK 10: Global Dashboard + Zod Contracts**
+
+Build the operator dashboard availability endpoint with Zod schema validation and the no-counts guard. This is critical for the Chamber Lady scenario.
+
+## Create Zod Schemas
+
+### shared/types/availability.ts
+```typescript
+import { z } from 'zod';
+
+// Core enums
+export const AvailabilitySignalSchema = z.enum([
+  'available', 'limited', 'waitlist', 'call_to_confirm', 'unavailable'
+]);
+
+export const ScarcityBandSchema = z.enum([
+  'available', 'limited', 'scarce', 'call_to_confirm', 'unavailable'
+]);
+
+export const NextActionSchema = z.enum([
+  'book_request', 'call_provider', 'waitlist', 'unavailable'
+]);
+
+export const SourceVisibilitySchema = z.enum(['disclosed', 'truth_only']);
+
+export const ParticipationModeSchema = z.enum([
+  'inventory_hidden', 'requests_only', 'manual_confirm', 'instant_confirm'
+]);
+
+export type AvailabilitySignal = z.infer<typeof AvailabilitySignalSchema>;
+export type ScarcityBand = z.infer<typeof ScarcityBandSchema>;
+export type NextAction = z.infer<typeof NextActionSchema>;
+export type SourceVisibility = z.infer<typeof SourceVisibilitySchema>;
+export type ParticipationMode = z.infer<typeof ParticipationModeSchema>;
+```
+
+### shared/types/operatorDashboardAvailability.ts
+```typescript
+import { z } from 'zod';
+import { 
+  AvailabilitySignalSchema, 
+  ScarcityBandSchema, 
+  NextActionSchema,
+  SourceVisibilitySchema 
+} from './availability';
+
+const LocationSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number()
+});
+
+const WebcamSchema = z.object({
+  entityId: z.number(),
+  title: z.string(),
+  availability: AvailabilitySignalSchema.optional()
+});
+
+const CellSchema = z.object({
+  date: z.string(),
+  availability: AvailabilitySignalSchema,
+  scarcityBand: ScarcityBandSchema,
+  truthAvailability: AvailabilitySignalSchema.optional(),
+  nextAction: NextActionSchema,
+  reasons: z.array(z.string()).optional()
+});
+
+const ItemSchema = z.object({
+  assetId: z.string().uuid(),
+  assetType: z.enum(['lodging', 'slip', 'parking', 'segment', 'room']),
+  title: z.string(),
+  location: LocationSchema.optional(),
+  
+  // Disclosure signals
+  availability: AvailabilitySignalSchema,
+  scarcityBand: ScarcityBandSchema,
+  confidence: z.number().min(0).max(1),
+  nextAction: NextActionSchema,
+  
+  // Operator-only fields
+  sourceVisibility: SourceVisibilitySchema.optional(),
+  truthAvailability: AvailabilitySignalSchema.optional(),
+  reasons: z.array(z.string()).optional(),
+  operatorNotes: z.array(z.string()).optional(),
+  
+  // Calendar cells
+  cells: z.array(CellSchema).optional(),
+  
+  // Webcams
+  webcams: z.array(WebcamSchema).optional()
+});
+
+const RowSchema = z.object({
+  rowId: z.string(),
+  rowType: z.enum(['provider', 'category', 'facility']),
+  providerTenantId: z.string().uuid(),
+  providerDisplayName: z.string(),
+  category: z.string(),
+  items: z.array(ItemSchema)
+});
+
+const MapMarkerSchema = z.object({
+  markerId: z.string(),
+  providerTenantId: z.string().uuid(),
+  label: z.string(),
+  latitude: z.number(),
+  longitude: z.number(),
+  categorySignals: z.array(z.object({
+    category: z.string(),
+    availability: AvailabilitySignalSchema,
+    scarcityBand: ScarcityBandSchema
+  }))
+});
+
+const IncidentSummarySchema = z.object({
+  id: z.string().uuid(),
+  incidentNumber: z.string(),
+  status: z.string(),
+  incidentType: z.string(),
+  severity: z.string(),
+  location: LocationSchema.optional(),
+  createdAt: z.string()
+});
+
+const DisclosurePolicySchema = z.object({
+  mode: z.string(),
+  neverExposeCounts: z.literal(true)
+});
+
+export const OperatorDashboardAvailabilityResponseSchema = z.object({
+  apiVersion: z.literal('3.3'),
+  traceId: z.string(),
+  portal: z.object({
+    id: z.string().uuid(),
+    slug: z.string(),
+    communityId: z.string().uuid()
+  }),
+  window: z.object({
+    start: z.string(),
+    end: z.string()
+  }),
+  filtersEcho: z.object({
+    types: z.array(z.string()).optional(),
+    view: z.string().optional(),
+    includeTruthOnly: z.boolean().optional()
+  }).optional(),
+  granularityMinutes: z.number().default(1440),
+  rows: z.array(RowSchema),
+  map: z.object({
+    markers: z.array(MapMarkerSchema)
+  }).optional(),
+  incidents: z.array(IncidentSummarySchema).optional(),
+  disclosurePolicy: DisclosurePolicySchema
+});
+
+export type OperatorDashboardAvailabilityResponse = z.infer<typeof OperatorDashboardAvailabilityResponseSchema>;
+```
+
+### shared/types/publicPortalAvailability.ts
+```typescript
+import { z } from 'zod';
+import { AvailabilitySignalSchema, ScarcityBandSchema, NextActionSchema } from './availability';
+
+const PublicItemSchema = z.object({
+  assetId: z.string().uuid(),
+  assetType: z.enum(['lodging', 'slip', 'parking']),
+  providerTenantId: z.string().uuid(),
+  providerDisplayName: z.string(),
+  title: z.string(),
+  availability: AvailabilitySignalSchema,
+  scarcityBand: ScarcityBandSchema,
+  confidence: z.number().min(0).max(1),
+  nextAction: NextActionSchema,
+  location: z.object({
+    latitude: z.number(),
+    longitude: z.number()
+  }).optional()
+});
+
+// NOTE: Public schema MUST NOT include:
+// - truthAvailability
+// - sourceVisibility
+// - operatorNotes
+// - reasons
+// - any count-like fields
+
+const PublicCellSchema = z.object({
+  date: z.string(),
+  availability: AvailabilitySignalSchema,
+  scarcityBand: ScarcityBandSchema
+});
+
+const PublicRowSchema = z.object({
+  rowId: z.string(),
+  rowType: z.enum(['provider', 'category']),
+  providerTenantId: z.string().uuid(),
+  providerDisplayName: z.string(),
+  category: z.string(),
+  items: z.array(z.object({
+    assetId: z.string().uuid(),
+    title: z.string(),
+    cells: z.array(PublicCellSchema)
+  }))
+});
+
+export const PublicPortalAvailabilityResponseSchema = z.object({
+  apiVersion: z.literal('3.3'),
+  portal: z.object({
+    id: z.string().uuid(),
+    slug: z.string()
+  }),
+  window: z.object({
+    start: z.string(),
+    end: z.string()
+  }),
+  results: z.array(PublicItemSchema).optional(),
+  rows: z.array(PublicRowSchema).optional(),
+  granularityMinutes: z.number().default(1440),
+  disclosurePolicy: z.object({
+    mode: z.string(),
+    neverExposeCounts: z.literal(true)
+  })
+});
+
+export type PublicPortalAvailabilityResponse = z.infer<typeof PublicPortalAvailabilityResponseSchema>;
+```
+
+## Create Availability Service
+
+### server/services/availabilityService.ts
+```typescript
+import { getDisclosureSignal } from './visibilityService';
+import { checkAvailability } from './allocationService';
+
+interface AvailabilityQuery {
+  portalSlug: string;
+  communityId: string;
+  startDate: Date;
+  endDate: Date;
+  channel: 'internal_ops' | 'chamber_desk' | 'public';
+  includeTruthOnly?: boolean;
+  includeWebcams?: boolean;
+  includeIncidents?: boolean;
+  requirements?: {
+    partySize?: number;
+    boatLengthFt?: number;
+    combinedLengthFt?: number;
+  };
+}
+
+export async function getOperatorAvailability(query: AvailabilityQuery): Promise<OperatorDashboardAvailabilityResponse>
+
+export async function getPublicAvailability(query: AvailabilityQuery): Promise<PublicPortalAvailabilityResponse>
+
+// Internal helper: compute truth availability for a facility
+async function computeTruthSignal(
+  facilityId: string,
+  unitType: string,
+  startDate: Date,
+  endDate: Date
+): Promise<AvailabilitySignal> {
+  const result = await checkAvailability(facilityId, unitType, startDate, endDate);
+  
+  if (result.units.length === 0) return 'unavailable';
+  if (result.units.length < 3) return 'limited';
+  return 'available';
+}
+```
+
+## Implement Operator Dashboard Endpoint
+
+### In server/routes/operator.ts
+```typescript
+import { OperatorDashboardAvailabilityResponseSchema } from '../../shared/types/operatorDashboardAvailability';
+import { assertNoCountLikeKeysDeep } from '../../shared/types/noCountsGuard';
+import { getOperatorAvailability } from '../services/availabilityService';
+
+// GET /api/operator/dashboard/availability
+router.get('/dashboard/availability', requireAuth, async (req, res) => {
+  const { portalSlug, start, end, view, includeTruthOnly, includeWebcams, includeIncidents } = req.query;
+  
+  const result = await getOperatorAvailability({
+    portalSlug: portalSlug as string,
+    communityId: req.ctx.tenantId,
+    startDate: new Date(start as string),
+    endDate: new Date(end as string),
+    channel: 'chamber_desk',
+    includeTruthOnly: includeTruthOnly === 'true',
+    includeWebcams: includeWebcams === 'true',
+    includeIncidents: includeIncidents === 'true'
+  });
+  
+  // HARD GATE: Validate contract
+  const parsed = OperatorDashboardAvailabilityResponseSchema.parse(result);
+  
+  // HARD GATE: No counts leaked
+  const violations = assertNoCountLikeKeysDeep(parsed);
+  if (violations.length > 0) {
+    console.error('COUNT LEAK DETECTED:', violations);
+    return res.status(500).json({ error: 'Internal contract violation' });
+  }
+  
+  res.json(parsed);
+});
+```
+
+## Implement Bundle Reservation Endpoint
+
+### In server/routes/operator.ts
+```typescript
+// POST /api/operator/reservations/bundle
+router.post('/reservations/bundle', requireAuth, async (req, res) => {
+  const { portalSlug, windowStart, windowEnd, caller, requirements, items, mode } = req.body;
+  
+  const bundleId = crypto.randomUUID();
+  const reservations = [];
+  
+  for (const item of items) {
+    // Verify federation scope
+    const hasScope = await federationService.hasScope(
+      { actorTenantId: req.ctx.tenantId, actorIndividualId: req.ctx.individualId, communityId: req.ctx.tenantId },
+      item.providerTenantId,
+      'reservation:create'
+    );
+    
+    if (!hasScope) {
+      return res.status(403).json({ error: `No federation scope for tenant ${item.providerTenantId}` });
+    }
+    
+    // Create reservation using truth layer (not disclosure)
+    const reservation = await reservationService.createReservation({
+      tenantId: item.providerTenantId,
+      facilityId: item.facilityId,
+      offerId: item.offerId,
+      customerName: caller.name,
+      customerEmail: caller.email,
+      customerPhone: caller.telephone,
+      startAt: new Date(windowStart),
+      endAt: new Date(windowEnd),
+      vesselLengthFt: requirements?.boatLengthFt,
+      vehicleLengthFt: requirements?.combinedVehicleLengthFt,
+      idempotencyKey: `bundle-${bundleId}-${item.assetId}`,
+      source: 'chamber',
+      bundleId
+    });
+    
+    reservations.push({
+      reservationId: reservation.reservationId,
+      confirmationNumber: reservation.confirmationNumber,
+      assetId: item.assetId,
+      providerTenantId: item.providerTenantId,
+      status: reservation.status
+    });
+    
+    // Log federation access
+    await logActivity({
+      tenantId: req.ctx.tenantId,
+      actorId: req.ctx.individualId,
+      action: 'federation.booking',
+      resourceType: 'reservation',
+      resourceId: reservation.reservationId,
+      metadata: { bundleId, providerTenantId: item.providerTenantId },
+      correlationId: bundleId
+    });
+  }
+  
+  res.json({
+    traceId: crypto.randomUUID(),
+    bundleId,
+    reservations
+  });
+});
+```
+
+## Update Public Portal Endpoint
+
+### In server/routes/public-portal.ts
+```typescript
+import { PublicPortalAvailabilityResponseSchema } from '../../shared/types/publicPortalAvailability';
+import { assertNoCountLikeKeysDeep } from '../../shared/types/noCountsGuard';
+
+// GET /api/public/cc_portals/:slug/availability
+router.get('/:slug/availability', async (req, res) => {
+  const result = await getPublicAvailability({
+    portalSlug: req.params.slug,
+    startDate: new Date(req.query.start as string),
+    endDate: new Date(req.query.end as string),
+    channel: 'public'
+  });
+  
+  // HARD GATE: Validate contract
+  const parsed = PublicPortalAvailabilityResponseSchema.parse(result);
+  
+  // HARD GATE: No counts AND no truth fields
+  const violations = assertNoCountLikeKeysDeep(parsed);
+  if (violations.length > 0) {
+    console.error('COUNT LEAK DETECTED:', violations);
+    return res.status(500).json({ error: 'Internal contract violation' });
+  }
+  
+  // Additional check: ensure no truth fields in public response
+  const jsonStr = JSON.stringify(parsed).toLowerCase();
+  const forbiddenStrings = ['truthavailability', 'truth_only', 'sourcevisibility', 'operatornotes', 'reasons'];
+  const hit = forbiddenStrings.find(s => jsonStr.includes(s));
+  if (hit) {
+    console.error('TRUTH LEAK DETECTED:', hit);
+    return res.status(500).json({ error: 'Internal contract violation' });
+  }
+  
+  res.json(parsed);
+});
+```
+
+## Deliverables
+- [ ] shared/types/availability.ts
+- [ ] shared/types/operatorDashboardAvailability.ts
+- [ ] shared/types/publicPortalAvailability.ts
+- [ ] server/services/availabilityService.ts
+- [ ] GET /api/operator/dashboard/availability with Zod + no-counts guard
+- [ ] POST /api/operator/reservations/bundle with federation scope checks
+- [ ] Updated public portal endpoint with Zod + no-counts + no-truth guards
+- [ ] Test: Operator dashboard returns truthAvailability, public does NOT
+- [ ] Test: Bundle creates 3 reservations across providers
+
+Report with sample operator response (showing truthAvailability) and public response (confirming no truth fields).
