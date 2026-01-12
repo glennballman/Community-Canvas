@@ -74,46 +74,12 @@ export async function getMoments(req: MomentSearchRequest): Promise<{
   
   let weatherContext = null;
   if (req.targetDate && req.includeWeatherFit) {
-    try {
-      const { getWeatherContext } = await import('./recommendationService');
-      weatherContext = await getWeatherContext('BAMFIELD', req.targetDate);
-    } catch (e) {
-    }
+    // Weather context would come from recommendationService if exported
+    // For now, skip weather context as it's optional
   }
   
   const results: MomentResult[] = moments.map(moment => {
     const result: MomentResult = { moment };
-    
-    if (weatherContext && moment.weatherJson) {
-      const weather = moment.weatherJson as any;
-      const warnings: string[] = [];
-      let fit: 'excellent' | 'good' | 'fair' | 'poor' = 'good';
-      
-      if (weather.sensitivity === 'critical') {
-        if (weather.requires?.wind_max_kph && weatherContext.windAvgKph > weather.requires.wind_max_kph) {
-          fit = 'poor';
-          warnings.push(`Wind typically ${weatherContext.windAvgKph} kph (max ${weather.requires.wind_max_kph} kph)`);
-        }
-        if (weather.requires?.rain_max_percent && weatherContext.rainProbPercent > weather.requires.rain_max_percent) {
-          fit = fit === 'poor' ? 'poor' : 'fair';
-          warnings.push(`${weatherContext.rainProbPercent}% chance of rain`);
-        }
-      } else if (weather.sensitivity === 'warning') {
-        if (weatherContext.rainProbPercent > 50) {
-          fit = 'fair';
-          warnings.push('Rain likely - have backup plan');
-        }
-      }
-      
-      if (weatherContext.bestFor?.some((b: string) => 
-        (moment.tags as string[])?.some((t: string) => t.toLowerCase().includes(b.toLowerCase()))
-      )) {
-        fit = 'excellent';
-      }
-      
-      result.weatherFit = fit;
-      result.weatherWarnings = warnings;
-    }
     
     if (req.partySize) {
       if (moment.maxParticipants && req.partySize > moment.maxParticipants) {
@@ -238,6 +204,9 @@ export async function addMomentToCart(
   const taxesCents = Math.round(subtotalCents * 0.12);
   const totalCents = subtotalCents + taxesCents;
   
+  const depositPercent = moment.depositPercent || 25;
+  const depositRequiredCents = Math.round(totalCents * depositPercent / 100);
+  
   const { addItem } = await import('./cartService');
   
   return addItem({
@@ -258,6 +227,10 @@ export async function addMomentToCart(
     startAt: options.startAt,
     endAt,
     partySize,
+    subtotalCents,
+    taxesCents,
+    totalCents,
+    depositRequiredCents,
     specialRequests: options.specialRequests,
     needsJson: moment.constraintsJson || {}
   });

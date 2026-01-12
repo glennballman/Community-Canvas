@@ -1694,37 +1694,8 @@ router.get('/trips/:accessCode', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/public/portals/:portalId/moments - Get curated moments for a portal
-router.get('/portals/:portalId/moments', async (req: Request, res: Response) => {
-  const { portalId } = req.params;
-  
-  try {
-    const momentsResult = await serviceQuery(`
-      SELECT 
-        id, portal_id, title, description, moment_type, best_time_of_day,
-        best_weather, location_name, location_lat, location_lng, kid_friendly,
-        pro_tip, safety_note, photo_moment, suggested_caption, image_url,
-        icon, sort_order, is_active
-      FROM cc_portal_moments
-      WHERE portal_id = $1 AND is_active = true
-      ORDER BY moment_type, sort_order
-    `, [portalId]);
-    
-    const moments = momentsResult.rows;
-    
-    const grouped = moments.reduce((acc: Record<string, any[]>, moment: any) => {
-      const type = moment.moment_type;
-      if (!acc[type]) acc[type] = [];
-      acc[type].push(moment);
-      return acc;
-    }, {});
-    
-    return res.json({ moments, grouped });
-  } catch (error) {
-    console.error('Error fetching moments:', error);
-    return res.status(500).json({ error: 'Failed to fetch moments' });
-  }
-});
+// GET /api/public/portals/:portalSlug/moments - Get curated moments for a portal
+// NOTE: Handled by new momentService routes below - this route replaced
 
 // POST /api/public/trips/:accessCode/itinerary - Add itinerary item
 router.post('/trips/:accessCode/itinerary', async (req: Request, res: Response) => {
@@ -2387,6 +2358,120 @@ router.get('/carts/:cartId/receipt', async (req: Request, res: Response) => {
   } catch (e: any) {
     console.error('Receipt error:', e);
     res.status(500).json({ error: 'Failed to get receipt' });
+  }
+});
+
+// ============ MOMENT ENDPOINTS ============
+
+import { 
+  getMoments, getMomentBySlug, getMomentAvailability, 
+  getCategories, addMomentToCart 
+} from '../services/momentService';
+
+router.get('/portals/:slug/moments', async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  const { type, category, date, partySize, featured, limit, offset } = req.query;
+  
+  try {
+    const result = await getMoments({
+      portalSlug: slug,
+      momentType: type as string,
+      category: category as string,
+      targetDate: date ? new Date(date as string) : undefined,
+      partySize: partySize ? parseInt(partySize as string) : undefined,
+      includeWeatherFit: !!date,
+      featuredOnly: featured === 'true',
+      limit: limit ? parseInt(limit as string) : 20,
+      offset: offset ? parseInt(offset as string) : 0
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get moments error:', e);
+    res.status(500).json({ error: 'Failed to get moments' });
+  }
+});
+
+router.get('/portals/:slug/moments/categories', async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  
+  try {
+    const categories = await getCategories(slug);
+    res.json({ categories });
+  } catch (e: any) {
+    console.error('Get categories error:', e);
+    res.status(500).json({ error: 'Failed to get categories' });
+  }
+});
+
+router.get('/portals/:slug/moments/:momentSlug', async (req: Request, res: Response) => {
+  const { slug, momentSlug } = req.params;
+  
+  try {
+    const result = await getMomentBySlug(slug, momentSlug);
+    if (!result) {
+      return res.status(404).json({ error: 'Moment not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get moment error:', e);
+    res.status(500).json({ error: 'Failed to get moment' });
+  }
+});
+
+router.get('/portals/:slug/moments/:momentSlug/availability', async (req: Request, res: Response) => {
+  const { slug, momentSlug } = req.params;
+  const { start, end } = req.query;
+  
+  try {
+    const momentResult = await getMomentBySlug(slug, momentSlug);
+    if (!momentResult) {
+      return res.status(404).json({ error: 'Moment not found' });
+    }
+    
+    const startDate = start ? new Date(start as string) : new Date();
+    const endDate = end ? new Date(end as string) : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    const availability = await getMomentAvailability(momentResult.moment.id, startDate, endDate);
+    
+    res.json({ moment: momentResult.moment, availability });
+  } catch (e: any) {
+    console.error('Get availability error:', e);
+    res.status(500).json({ error: 'Failed to get availability' });
+  }
+});
+
+router.post('/carts/:cartId/moments', async (req: Request, res: Response) => {
+  const { cartId } = req.params;
+  const token = req.headers['x-cart-token'] as string;
+  const b = req.body || {};
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Cart token required' });
+  }
+  
+  if (!b.momentId || !b.startAt) {
+    return res.status(400).json({ error: 'momentId and startAt required' });
+  }
+  
+  try {
+    const { getCart } = await import('../services/cartService');
+    const cart = await getCart(cartId, token);
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found or invalid token' });
+    }
+    
+    const result = await addMomentToCart(cartId, b.momentId, {
+      startAt: new Date(b.startAt),
+      endAt: b.endAt ? new Date(b.endAt) : undefined,
+      partySize: b.partySize,
+      specialRequests: b.specialRequests
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Add moment to cart error:', e);
+    res.status(400).json({ error: e.message });
   }
 });
 
