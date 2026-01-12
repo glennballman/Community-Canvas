@@ -673,3 +673,88 @@ export const cc_inventory_units = pgTable('cc_inventory_units', {
 export const insertInventoryUnitSchema = createInsertSchema(cc_inventory_units).omit({ id: true, createdAt: true, updatedAt: true });
 export type InventoryUnit = typeof cc_inventory_units.$inferSelect;
 export type InsertInventoryUnit = z.infer<typeof insertInventoryUnitSchema>;
+
+// ============================================================================
+// V3.3.1 BLOCK 04 - Offers + Rate Rules + Tax Integration
+// ============================================================================
+
+// Offers - pricing products for facilities
+export const cc_offers = pgTable('cc_offers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  facilityId: uuid('facility_id').notNull(),
+  
+  code: varchar('code', { length: 64 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  
+  offerType: varchar('offer_type', { length: 32 }).notNull(),
+  participationMode: ccParticipationModeEnum('participation_mode').notNull().default('requests_only'),
+  
+  priceCents: integer('price_cents').notNull(),
+  currency: char('currency', { length: 3 }).default('CAD'),
+  
+  durationType: varchar('duration_type', { length: 16 }),
+  durationValue: integer('duration_value').default(1),
+  
+  taxCategoryCode: varchar('tax_category_code', { length: 64 }).notNull(),
+  
+  appliesToUnitTypes: varchar('applies_to_unit_types', { length: 32 }).array(),
+  constraints: jsonb('constraints').default({}),
+  
+  isAddon: boolean('is_addon').default(false),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertOfferSchema = createInsertSchema(cc_offers).omit({ id: true, createdAt: true, updatedAt: true });
+export type Offer = typeof cc_offers.$inferSelect;
+export type InsertOffer = z.infer<typeof insertOfferSchema>;
+
+// Rate Rules - dynamic pricing adjustments
+export const cc_rate_rules = pgTable('cc_rate_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  offerId: uuid('offer_id').notNull(),
+  
+  ruleName: varchar('rule_name', { length: 100 }).notNull(),
+  ruleType: varchar('rule_type', { length: 32 }).notNull(),
+  
+  conditions: jsonb('conditions').notNull().default({}),
+  
+  adjustmentType: varchar('adjustment_type', { length: 16 }).notNull(),
+  adjustmentValue: numeric('adjustment_value', { precision: 10, scale: 4 }).notNull(),
+  
+  priority: integer('priority').notNull().default(100),
+  
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertRateRuleSchema = createInsertSchema(cc_rate_rules).omit({ id: true, createdAt: true });
+export type RateRule = typeof cc_rate_rules.$inferSelect;
+export type InsertRateRule = z.infer<typeof insertRateRuleSchema>;
+
+// Tax Rules - tax configuration by category
+export const cc_tax_rules = pgTable('cc_tax_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  
+  taxCategoryCode: varchar('tax_category_code', { length: 64 }).notNull(),
+  taxName: varchar('tax_name', { length: 32 }).notNull(),
+  
+  ratePercent: numeric('rate_percent', { precision: 6, scale: 4 }).notNull(),
+  
+  appliesAfter: timestamp('applies_after', { withTimezone: true }),
+  minNights: integer('min_nights'),
+  
+  isCompound: boolean('is_compound').default(false),
+  
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTaxRuleSchema = createInsertSchema(cc_tax_rules).omit({ id: true, createdAt: true });
+export type TaxRule = typeof cc_tax_rules.$inferSelect;
+export type InsertTaxRule = z.infer<typeof insertTaxRuleSchema>;

@@ -1,0 +1,169 @@
+**V3.3.1 BLOCK 04: Offers + Rate Rules + Tax Integration**
+
+Create the unified pricing stack: offers → rate_rules → tax_rules
+
+## Create cc_offers
+```sql
+CREATE TABLE cc_offers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  facility_id uuid NOT NULL REFERENCES cc_facilities(id),
+  
+  code varchar NOT NULL,
+  name varchar NOT NULL,
+  description text,
+  
+  offer_type varchar NOT NULL, -- 'day_pass', 'overnight', 'slip_overnight', 'power_addon', 'moorage_monthly'
+  participation_mode cc_participation_mode NOT NULL DEFAULT 'requests_only',
+  
+  -- Base pricing
+  price_cents integer NOT NULL,
+  currency char(3) DEFAULT 'CAD',
+  
+  -- Time rules
+  duration_type varchar, -- 'day', 'night', 'hour', 'month'
+  duration_value integer DEFAULT 1,
+  
+  -- Tax category (for BC taxes)
+  tax_category_code varchar NOT NULL, -- 'PARKING_FEE', 'MOORAGE_FEE', 'LODGING_SHORT_TERM'
+  
+  -- Applicability
+  applies_to_unit_types varchar[], -- ['stall', 'slip']
+  constraints jsonb DEFAULT '{}'::jsonb, -- {"min_length_ft": 20, "max_length_ft": 30}
+  
+  is_addon boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(tenant_id, facility_id, code)
+);
+
+ALTER TABLE cc_offers ENABLE ROW LEVEL SECURITY;
+```
+
+## Create cc_rate_rules
+```sql
+CREATE TABLE cc_rate_rules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  offer_id uuid NOT NULL REFERENCES cc_offers(id) ON DELETE CASCADE,
+  
+  rule_name varchar NOT NULL,
+  rule_type varchar NOT NULL CHECK (rule_type IN ('seasonal', 'length_tier', 'weekday', 'early_bird', 'last_minute', 'duration_discount')),
+  
+  -- Conditions (when does this rule apply?)
+  conditions jsonb NOT NULL DEFAULT '{}'::jsonb,
+  -- Examples:
+  -- Seasonal: {"start_date": "2026-06-01", "end_date": "2026-09-15"}
+  -- Length tier: {"min_length_ft": 30, "max_length_ft": 40}
+  -- Weekday: {"days": ["friday", "saturday"]}
+  
+  -- Adjustment
+  adjustment_type varchar NOT NULL CHECK (adjustment_type IN ('multiply', 'add_cents', 'replace_cents')),
+  adjustment_value numeric NOT NULL,
+  -- multiply: 1.25 = 25% increase, 0.8 = 20% discount
+  -- add_cents: 500 = add $5
+  -- replace_cents: 2500 = flat $25
+  
+  priority integer NOT NULL DEFAULT 100, -- Lower = applied first
+  
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE cc_rate_rules ENABLE ROW LEVEL SECURITY;
+```
+
+## Create cc_tax_rules
+```sql
+CREATE TABLE cc_tax_rules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  
+  tax_category_code varchar NOT NULL, -- 'PARKING_FEE', 'MOORAGE_FEE', 'LODGING_SHORT_TERM'
+  tax_name varchar NOT NULL, -- 'GST', 'PST', 'MRDT'
+  
+  rate_percent numeric NOT NULL, -- 5.0 for 5%
+  
+  -- Applicability
+  applies_after timestamptz, -- for tax changes
+  min_nights integer, -- MRDT only applies to stays < 27 nights
+  
+  is_compound boolean DEFAULT false, -- applied on top of other taxes?
+  
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE cc_tax_rules ENABLE ROW LEVEL SECURITY;
+```
+
+## Seed Bamfield Offers
+
+| Tenant | Facility | Code | Name | Price | Type | Participation |
+|--------|----------|------|------|-------|------|---------------|
+| Save Paradise | Main Lot | DAY_PASS | Day Pass | $15 | day_pass | instant_confirm |
+| Save Paradise | Main Lot | OVERNIGHT | Overnight | $25 | overnight | instant_confirm |
+| Save Paradise | Main Lot | OVERSIZE_DAY | Oversize Day | $25 | day_pass | instant_confirm |
+| Woods End Marina | Main Dock | SLIP_NIGHT | Transient Moorage | $2.50/ft | slip_overnight | instant_confirm |
+| Woods End Marina | Main Dock | POWER_30A | 30A Shore Power | $15/night | power_addon | instant_confirm |
+| Woods End Marina | Main Dock | MONTHLY | Monthly Moorage | $12/ft | moorage_monthly | manual_confirm |
+| HFN Marina | HFN Dock | SLIP_NIGHT | Transient Moorage | $2.00/ft | slip_overnight | manual_confirm |
+| Woods End Landing | Main Lodge | CABIN_NIGHT | Cabin Nightly | $250 | overnight | instant_confirm |
+
+## Seed Rate Rules
+
+| Offer | Rule | Type | Conditions | Adjustment |
+|-------|------|------|------------|------------|
+| Save Paradise DAY_PASS | Peak Season | seasonal | Jun 1 - Sep 15 | multiply 1.5 |
+| Woods End Marina SLIP_NIGHT | Large Vessel | length_tier | 40+ ft | multiply 1.25 |
+| Woods End Marina SLIP_NIGHT | Peak Season | seasonal | Jun 1 - Sep 15 | multiply 1.5 |
+| Woods End Landing CABIN_NIGHT | Weekend | weekday | Fri, Sat | multiply 1.2 |
+| Woods End Landing CABIN_NIGHT | Peak Season | seasonal | Jun 1 - Sep 15 | multiply 1.75 |
+
+## Seed BC Tax Rules
+
+| Category | Tax | Rate |
+|----------|-----|------|
+| PARKING_FEE | GST | 5% |
+| MOORAGE_FEE | GST | 5% |
+| LODGING_SHORT_TERM | GST | 5% |
+| LODGING_SHORT_TERM | PST | 8% |
+| LODGING_SHORT_TERM | MRDT | 3% |
+
+Note: MRDT (Municipal Regional District Tax) applies to stays < 27 nights only.
+
+## Create pricingService.ts
+
+Implement calculateQuote():
+```typescript
+interface QuoteRequest {
+  facilityId: string;
+  offerId: string;
+  startAt: Date;
+  endAt: Date;
+  vesselLengthFt?: number;
+  vehicleLengthFt?: number;
+}
+
+interface QuoteResult {
+  baseAmountCents: number;
+  adjustments: { ruleName: string; amountCents: number }[];
+  subtotalCents: number;
+  taxes: { taxName: string; amountCents: number }[];
+  totalCents: number;
+  breakdown: string; // Human-readable
+}
+```
+
+## Deliverables
+- [ ] Migration file (067_offers_rate_rules_taxes.sql)
+- [ ] cc_offers table with RLS + seed data
+- [ ] cc_rate_rules table with RLS + seed data
+- [ ] cc_tax_rules table with RLS + seed data
+- [ ] Drizzle schema exports (Offer, RateRule, TaxRule types)
+- [ ] server/services/pricingService.ts with calculateQuote()
+- [ ] Basic test: Quote $15 day pass in July = $15 × 1.5 peak + 5% GST = $23.63
+
+Report completion with offer count, rule count, tax count, and sample quote output.
