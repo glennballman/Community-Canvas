@@ -368,14 +368,11 @@ router.post('/qa/seed-go-no-go', async (req, res) => {
     let operator = operatorResult.rows?.[0] as any;
     
     if (!operator) {
-      const bcrypt = await import('bcryptjs');
-      const passwordHash = await bcrypt.hash('Password123!', 10);
-      
       const newOperatorResult = await serviceQuery(`
-        INSERT INTO cc_individuals (email, full_name, password_hash)
-        VALUES ('qa.operator@communitycanvas.local', 'QA Operator', $1)
+        INSERT INTO cc_individuals (email, full_name)
+        VALUES ('qa.operator@communitycanvas.local', 'QA Operator')
         RETURNING id, email
-      `, [passwordHash]);
+      `);
       operator = newOperatorResult.rows?.[0];
     }
     

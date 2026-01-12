@@ -5,10 +5,8 @@
  * 1. Chamber Lady Call (multi-tenant bundle: lodging + slip + parking)
  * 2. Firetruck Blockage (incident → dispatch → resolve)
  * 
- * Run: npm run qa:go-no-go
+ * Run: npx tsx scripts/qa-go-no-go.ts
  */
-
-import 'dotenv/config';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
 const PORTAL_SLUG = 'bamfield';
