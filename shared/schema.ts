@@ -1701,3 +1701,49 @@ export const insertTransportRequestSchema = createInsertSchema(ccTransportReques
 });
 export type TransportRequest = typeof ccTransportRequests.$inferSelect;
 export type InsertTransportRequest = z.infer<typeof insertTransportRequestSchema>;
+
+// Transport Alerts - delays, cancellations, weather holds, operational notices
+export const ccTransportAlerts = pgTable('cc_transport_alerts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  operatorId: uuid('operator_id'),
+  sailingId: uuid('sailing_id'),
+  locationId: uuid('location_id'),
+  
+  alertType: varchar('alert_type', { length: 50 }).notNull(),
+  severity: varchar('severity', { length: 50 }).notNull().default('info'),
+  
+  title: varchar('title', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  
+  affectedDate: date('affected_date'),
+  affectedSailings: uuid('affected_sailings').array(),
+  delayMinutes: integer('delay_minutes'),
+  
+  actionRequired: boolean('action_required').default(false),
+  actionUrl: text('action_url'),
+  actionLabel: varchar('action_label', { length: 255 }),
+  
+  source: varchar('source', { length: 50 }).default('operator'),
+  sourceRef: varchar('source_ref', { length: 255 }),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  
+  acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  
+  notificationsSent: boolean('notifications_sent').default(false),
+  notificationsSentAt: timestamp('notifications_sent_at', { withTimezone: true }),
+  affectedRequestCount: integer('affected_request_count').default(0),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertTransportAlertSchema = createInsertSchema(ccTransportAlerts).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type TransportAlert = typeof ccTransportAlerts.$inferSelect;
+export type InsertTransportAlert = z.infer<typeof insertTransportAlertSchema>;

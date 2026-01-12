@@ -19,6 +19,10 @@ import {
   confirmRequest, checkInRequest, boardRequest, completeRequest, cancelRequest,
   markNoShow, getSailingManifest
 } from '../services/transportRequestService';
+import {
+  createTransportAlert, getActiveAlerts, resolveAlert, acknowledgeAlert,
+  getLiveDepartureBoard, checkCapacityAlerts
+} from '../services/transportAlertService';
 
 const router = Router();
 
@@ -546,6 +550,136 @@ router.post('/requests/:id/no-show', async (req, res) => {
   } catch (e: any) {
     console.error('No-show request error:', e);
     res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ ALERT ENDPOINTS ============
+
+router.post('/alerts', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.operatorId || !b.alertType || !b.title || !b.message) {
+    return res.status(400).json({ error: 'operatorId, alertType, title, message required' });
+  }
+  
+  try {
+    const alert = await createTransportAlert({
+      portalSlug: b.portalSlug,
+      operatorId: b.operatorId,
+      sailingId: b.sailingId,
+      locationId: b.locationId,
+      alertType: b.alertType,
+      severity: b.severity || 'info',
+      title: b.title,
+      message: b.message,
+      affectedDate: b.affectedDate ? new Date(b.affectedDate) : undefined,
+      affectedSailings: b.affectedSailings,
+      delayMinutes: b.delayMinutes,
+      actionRequired: b.actionRequired,
+      actionUrl: b.actionUrl,
+      actionLabel: b.actionLabel,
+      source: b.source,
+      sourceRef: b.sourceRef,
+      expiresAt: b.expiresAt ? new Date(b.expiresAt) : undefined
+    });
+    
+    res.json({ alert });
+  } catch (e: any) {
+    console.error('Create alert error:', e);
+    res.status(500).json({ error: 'Failed to create alert' });
+  }
+});
+
+router.get('/alerts', async (req, res) => {
+  const { portal, operator, sailing, severity } = req.query;
+  
+  try {
+    const alerts = await getActiveAlerts({
+      portalSlug: portal as string,
+      operatorId: operator as string,
+      sailingId: sailing as string,
+      severity: severity as string
+    });
+    
+    res.json({ alerts, count: alerts.length });
+  } catch (e: any) {
+    console.error('Get alerts error:', e);
+    res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+router.get('/portals/:slug/alerts', async (req, res) => {
+  const { slug } = req.params;
+  const { severity } = req.query;
+  
+  try {
+    const alerts = await getActiveAlerts({
+      portalSlug: slug,
+      severity: severity as string
+    });
+    
+    res.json({ alerts, count: alerts.length });
+  } catch (e: any) {
+    console.error('Get portal alerts error:', e);
+    res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+router.post('/alerts/:id/resolve', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await resolveAlert(id);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Resolve alert error:', e);
+    res.status(500).json({ error: 'Failed to resolve alert' });
+  }
+});
+
+router.post('/alerts/:id/acknowledge', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await acknowledgeAlert(id);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Acknowledge alert error:', e);
+    res.status(500).json({ error: 'Failed to acknowledge alert' });
+  }
+});
+
+// ============ LIVE DEPARTURE BOARD ============
+
+router.get('/portals/:slug/departures', async (req, res) => {
+  const { slug } = req.params;
+  const { date, limit } = req.query;
+  
+  try {
+    const board = await getLiveDepartureBoard(slug, {
+      date: date ? new Date(date as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json(board);
+  } catch (e: any) {
+    console.error('Get departure board error:', e);
+    res.status(500).json({ error: 'Failed to get departure board' });
+  }
+});
+
+router.post('/sailings/:id/check-capacity', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const alert = await checkCapacityAlerts(id);
+    res.json({ 
+      alert,
+      message: alert ? 'Capacity alert created' : 'No alert needed'
+    });
+  } catch (e: any) {
+    console.error('Check capacity error:', e);
+    res.status(500).json({ error: 'Failed to check capacity' });
   }
 });
 

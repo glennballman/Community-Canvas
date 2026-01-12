@@ -1,0 +1,687 @@
+**BAMFIELD OPS - PROMPT 05: Transport Alerts & Live Departure Board**
+
+Create the alert system for delays/cancellations and a live departure board API.
+
+## Migration 082_transport_alerts.sql
+```sql
+BEGIN;
+
+-- ============ TRANSPORT ALERTS ============
+-- Delays, cancellations, weather holds, and operational notices
+
+CREATE TABLE IF NOT EXISTS cc_transport_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Scope
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  operator_id uuid REFERENCES cc_transport_operators(id) ON DELETE CASCADE,
+  sailing_id uuid REFERENCES cc_sailings(id) ON DELETE CASCADE,
+  location_id uuid REFERENCES cc_locations(id) ON DELETE SET NULL,
+  
+  -- Alert type
+  alert_type varchar NOT NULL CHECK (alert_type IN (
+    'delay',           -- Sailing delayed
+    'cancellation',    -- Sailing cancelled
+    'weather_hold',    -- Weather-related hold
+    'schedule_change', -- Schedule modification
+    'capacity',        -- Capacity warning (almost full)
+    'operational',     -- General operational notice
+    'emergency',       -- Emergency situation
+    'maintenance'      -- Vessel/dock maintenance
+  )),
+  
+  -- Severity
+  severity varchar NOT NULL DEFAULT 'info' CHECK (severity IN (
+    'info',      -- Informational
+    'warning',   -- Attention needed
+    'critical',  -- Significant impact
+    'emergency'  -- Immediate action required
+  )),
+  
+  -- Content
+  title varchar NOT NULL,
+  message text NOT NULL,
+  
+  -- Impact
+  affected_date date,
+  affected_sailings uuid[], -- Multiple sailings can be affected
+  delay_minutes integer,
+  
+  -- Actions
+  action_required boolean DEFAULT false,
+  action_url text,
+  action_label varchar,
+  
+  -- Source
+  source varchar DEFAULT 'operator' CHECK (source IN (
+    'operator', 'system', 'weather_service', 'coast_guard', 'port_authority'
+  )),
+  source_ref varchar,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active', 'acknowledged', 'resolved', 'expired'
+  )),
+  
+  acknowledged_at timestamptz,
+  resolved_at timestamptz,
+  expires_at timestamptz,
+  
+  -- Notification tracking
+  notifications_sent boolean DEFAULT false,
+  notifications_sent_at timestamptz,
+  affected_request_count integer DEFAULT 0,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_transport_alerts_sailing ON cc_transport_alerts(sailing_id) WHERE sailing_id IS NOT NULL;
+CREATE INDEX idx_transport_alerts_operator ON cc_transport_alerts(operator_id, status);
+CREATE INDEX idx_transport_alerts_active ON cc_transport_alerts(status, severity) WHERE status = 'active';
+CREATE INDEX idx_transport_alerts_date ON cc_transport_alerts(affected_date) WHERE affected_date IS NOT NULL;
+
+ALTER TABLE cc_transport_alerts ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/transportAlertService.ts
+```typescript
+// server/services/transportAlertService.ts
+
+import { db } from '../db';
+import { eq, and, or, gte, lte, desc, asc, sql } from 'drizzle-orm';
+import { getRequestsForSailing, getSailingById } from './sailingService';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateAlertRequest {
+  portalSlug?: string;
+  operatorId: string;
+  sailingId?: string;
+  locationId?: string;
+  alertType: 'delay' | 'cancellation' | 'weather_hold' | 'schedule_change' | 'capacity' | 'operational' | 'emergency' | 'maintenance';
+  severity: 'info' | 'warning' | 'critical' | 'emergency';
+  title: string;
+  message: string;
+  affectedDate?: Date;
+  affectedSailings?: string[];
+  delayMinutes?: number;
+  actionRequired?: boolean;
+  actionUrl?: string;
+  actionLabel?: string;
+  source?: string;
+  sourceRef?: string;
+  expiresAt?: Date;
+}
+
+// ============ ALERT FUNCTIONS ============
+
+export async function createTransportAlert(req: CreateAlertRequest): Promise<any> {
+  // Resolve portal
+  let portalId: string | undefined;
+  if (req.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) portalId = portal.id;
+  }
+  
+  // Count affected requests if sailing specified
+  let affectedRequestCount = 0;
+  if (req.sailingId) {
+    const requests = await getRequestsForSailing(req.sailingId);
+    affectedRequestCount = requests.length;
+  }
+  
+  const [alert] = await db.insert(ccTransportAlerts).values({
+    portalId,
+    operatorId: req.operatorId,
+    sailingId: req.sailingId,
+    locationId: req.locationId,
+    alertType: req.alertType,
+    severity: req.severity,
+    title: req.title,
+    message: req.message,
+    affectedDate: req.affectedDate,
+    affectedSailings: req.affectedSailings,
+    delayMinutes: req.delayMinutes,
+    actionRequired: req.actionRequired || false,
+    actionUrl: req.actionUrl,
+    actionLabel: req.actionLabel,
+    source: req.source || 'operator',
+    sourceRef: req.sourceRef,
+    status: 'active',
+    affectedRequestCount,
+    expiresAt: req.expiresAt
+  }).returning();
+  
+  // If delay or cancellation, update the sailing status
+  if (req.sailingId) {
+    if (req.alertType === 'delay' && req.delayMinutes) {
+      await db.update(ccSailings)
+        .set({
+          status: 'delayed',
+          delayMinutes: req.delayMinutes,
+          delayReason: req.message,
+          updatedAt: new Date()
+        })
+        .where(eq(ccSailings.id, req.sailingId));
+    } else if (req.alertType === 'cancellation') {
+      await db.update(ccSailings)
+        .set({
+          status: 'cancelled',
+          cancellationReason: req.message,
+          cancelledAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(ccSailings.id, req.sailingId));
+    }
+  }
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'operator',
+    action: 'transport_alert.created',
+    resourceType: 'transport_alert',
+    resourceId: alert.id,
+    metadata: {
+      alertType: req.alertType,
+      severity: req.severity,
+      sailingId: req.sailingId,
+      affectedRequests: affectedRequestCount
+    }
+  });
+  
+  return alert;
+}
+
+export async function getActiveAlerts(options?: {
+  portalSlug?: string;
+  operatorId?: string;
+  sailingId?: string;
+  severity?: string;
+}): Promise<any[]> {
+  const conditions: any[] = [eq(ccTransportAlerts.status, 'active')];
+  
+  if (options?.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, options.portalSlug)
+    });
+    if (portal) {
+      conditions.push(eq(ccTransportAlerts.portalId, portal.id));
+    }
+  }
+  
+  if (options?.operatorId) {
+    conditions.push(eq(ccTransportAlerts.operatorId, options.operatorId));
+  }
+  
+  if (options?.sailingId) {
+    conditions.push(eq(ccTransportAlerts.sailingId, options.sailingId));
+  }
+  
+  if (options?.severity) {
+    conditions.push(eq(ccTransportAlerts.severity, options.severity));
+  }
+  
+  return db.query.ccTransportAlerts.findMany({
+    where: and(...conditions),
+    orderBy: [
+      desc(sql`CASE severity 
+        WHEN 'emergency' THEN 4 
+        WHEN 'critical' THEN 3 
+        WHEN 'warning' THEN 2 
+        ELSE 1 END`),
+      desc(ccTransportAlerts.createdAt)
+    ]
+  });
+}
+
+export async function resolveAlert(alertId: string): Promise<any> {
+  const [updated] = await db.update(ccTransportAlerts)
+    .set({
+      status: 'resolved',
+      resolvedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportAlerts.id, alertId))
+    .returning();
+  
+  return updated;
+}
+
+export async function acknowledgeAlert(alertId: string): Promise<any> {
+  const [updated] = await db.update(ccTransportAlerts)
+    .set({
+      status: 'acknowledged',
+      acknowledgedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTransportAlerts.id, alertId))
+    .returning();
+  
+  return updated;
+}
+
+// ============ LIVE DEPARTURE BOARD ============
+
+interface DepartureBoardEntry {
+  sailingId: string;
+  sailingNumber: string;
+  operatorName: string;
+  operatorCode: string;
+  vesselName?: string;
+  
+  route: {
+    origin: { code: string; name: string };
+    destination: { code: string; name: string };
+    stops: { code: string; name: string; arrivalTime?: string }[];
+  };
+  
+  scheduledDeparture: string;
+  estimatedDeparture?: string;
+  actualDeparture?: string;
+  
+  status: string;
+  statusDisplay: string;
+  
+  capacity: {
+    passengers: { available: number; total: number };
+    kayaks?: { available: number; total: number };
+  };
+  
+  alerts: {
+    type: string;
+    severity: string;
+    message: string;
+  }[];
+}
+
+export async function getLiveDepartureBoard(
+  portalSlug: string,
+  options?: { date?: Date; limit?: number }
+): Promise<{
+  board: DepartureBoardEntry[];
+  lastUpdated: Date;
+  activeAlerts: any[];
+}> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) {
+    return { board: [], lastUpdated: new Date(), activeAlerts: [] };
+  }
+  
+  const targetDate = options?.date || new Date();
+  const dateStr = targetDate.toISOString().split('T')[0];
+  
+  // Get sailings for today/specified date
+  const sailings = await db.query.ccSailings.findMany({
+    where: and(
+      eq(ccSailings.sailingDate, dateStr),
+      sql`${ccSailings.status} NOT IN ('completed', 'cancelled')`
+    ),
+    orderBy: [asc(ccSailings.scheduledDeparture)],
+    limit: options?.limit || 20
+  });
+  
+  // Get active alerts for the portal
+  const activeAlerts = await getActiveAlerts({ portalSlug });
+  
+  // Build board entries
+  const board: DepartureBoardEntry[] = [];
+  
+  for (const sailing of sailings) {
+    // Get operator
+    const operator = await db.query.ccTransportOperators.findFirst({
+      where: eq(ccTransportOperators.id, sailing.operatorId)
+    });
+    
+    if (!operator || operator.portalId !== portal.id) continue;
+    
+    // Get asset (vessel)
+    let vesselName: string | undefined;
+    if (sailing.assetId) {
+      const asset = await db.query.ccTransportAssets.findFirst({
+        where: eq(ccTransportAssets.id, sailing.assetId)
+      });
+      vesselName = asset?.name;
+    }
+    
+    // Get origin/destination locations
+    let origin = { code: '', name: 'TBD' };
+    let destination = { code: '', name: 'TBD' };
+    
+    if (sailing.originLocationId) {
+      const loc = await db.query.ccLocations.findFirst({
+        where: eq(ccLocations.id, sailing.originLocationId)
+      });
+      if (loc) origin = { code: loc.code || '', name: loc.name };
+    }
+    
+    if (sailing.destinationLocationId) {
+      const loc = await db.query.ccLocations.findFirst({
+        where: eq(ccLocations.id, sailing.destinationLocationId)
+      });
+      if (loc) destination = { code: loc.code || '', name: loc.name };
+    }
+    
+    // Get port calls
+    const portCalls = await db.query.ccPortCalls.findMany({
+      where: eq(ccPortCalls.sailingId, sailing.id),
+      orderBy: [asc(ccPortCalls.stopSequence)]
+    });
+    
+    const stops: { code: string; name: string; arrivalTime?: string }[] = [];
+    for (const call of portCalls) {
+      const loc = await db.query.ccLocations.findFirst({
+        where: eq(ccLocations.id, call.locationId)
+      });
+      if (loc) {
+        stops.push({
+          code: loc.code || '',
+          name: loc.name,
+          arrivalTime: call.scheduledArrival
+        });
+      }
+    }
+    
+    // Get alerts for this sailing
+    const sailingAlerts = activeAlerts
+      .filter(a => a.sailingId === sailing.id)
+      .map(a => ({
+        type: a.alertType,
+        severity: a.severity,
+        message: a.message
+      }));
+    
+    // Calculate estimated departure if delayed
+    let estimatedDeparture: string | undefined;
+    if (sailing.status === 'delayed' && sailing.delayMinutes) {
+      const scheduled = new Date(`${dateStr}T${sailing.scheduledDeparture}`);
+      scheduled.setMinutes(scheduled.getMinutes() + sailing.delayMinutes);
+      estimatedDeparture = scheduled.toTimeString().slice(0, 5);
+    }
+    
+    // Status display
+    const statusDisplay = getStatusDisplay(sailing.status, sailing.delayMinutes);
+    
+    // Capacity
+    const capacityJson = sailing.capacityJson as any || {};
+    
+    board.push({
+      sailingId: sailing.id,
+      sailingNumber: sailing.sailingNumber || '',
+      operatorName: operator.name,
+      operatorCode: operator.code || '',
+      vesselName,
+      route: { origin, destination, stops },
+      scheduledDeparture: sailing.scheduledDeparture,
+      estimatedDeparture,
+      actualDeparture: sailing.actualDepartureAt?.toTimeString().slice(0, 5),
+      status: sailing.status,
+      statusDisplay,
+      capacity: {
+        passengers: {
+          available: capacityJson.passengers?.available || 0,
+          total: capacityJson.passengers?.total || 0
+        },
+        kayaks: capacityJson.kayaks ? {
+          available: capacityJson.kayaks.available,
+          total: capacityJson.kayaks.total
+        } : undefined
+      },
+      alerts: sailingAlerts
+    });
+  }
+  
+  return {
+    board,
+    lastUpdated: new Date(),
+    activeAlerts: activeAlerts.filter(a => !a.sailingId) // General alerts only
+  };
+}
+
+function getStatusDisplay(status: string, delayMinutes?: number): string {
+  switch (status) {
+    case 'scheduled': return 'On Time';
+    case 'boarding': return 'Now Boarding';
+    case 'departed': return 'Departed';
+    case 'delayed': return delayMinutes ? `Delayed ${delayMinutes}min` : 'Delayed';
+    case 'cancelled': return 'Cancelled';
+    case 'in_transit': return 'In Transit';
+    case 'arrived': return 'Arrived';
+    default: return status;
+  }
+}
+
+// Auto-expire old alerts
+export async function expireOldAlerts(): Promise<number> {
+  const result = await db.update(ccTransportAlerts)
+    .set({ status: 'expired', updatedAt: new Date() })
+    .where(and(
+      eq(ccTransportAlerts.status, 'active'),
+      lte(ccTransportAlerts.expiresAt, new Date())
+    ))
+    .returning();
+  
+  return result.length;
+}
+
+// Check capacity and create alert if low
+export async function checkCapacityAlerts(sailingId: string): Promise<any | null> {
+  const sailing = await db.query.ccSailings.findFirst({
+    where: eq(ccSailings.id, sailingId)
+  });
+  
+  if (!sailing) return null;
+  
+  const capacity = sailing.capacityJson as any;
+  if (!capacity?.passengers) return null;
+  
+  const availablePercent = (capacity.passengers.available / capacity.passengers.total) * 100;
+  
+  // Alert if less than 20% available
+  if (availablePercent < 20 && availablePercent > 0) {
+    // Check if alert already exists
+    const existing = await db.query.ccTransportAlerts.findFirst({
+      where: and(
+        eq(ccTransportAlerts.sailingId, sailingId),
+        eq(ccTransportAlerts.alertType, 'capacity'),
+        eq(ccTransportAlerts.status, 'active')
+      )
+    });
+    
+    if (!existing) {
+      return createTransportAlert({
+        operatorId: sailing.operatorId,
+        sailingId,
+        alertType: 'capacity',
+        severity: availablePercent < 10 ? 'warning' : 'info',
+        title: 'Limited Availability',
+        message: `Only ${capacity.passengers.available} passenger spots remaining`,
+        affectedDate: sailing.sailingDate
+      });
+    }
+  }
+  
+  return null;
+}
+```
+
+## Add Alert & Board Routes to transport.ts
+```typescript
+// Add to server/routes/transport.ts
+
+import {
+  createTransportAlert, getActiveAlerts, resolveAlert, acknowledgeAlert,
+  getLiveDepartureBoard, checkCapacityAlerts
+} from '../services/transportAlertService';
+
+// ============ ALERT ENDPOINTS ============
+
+// POST /api/transport/alerts - Create alert
+router.post('/alerts', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.operatorId || !b.alertType || !b.title || !b.message) {
+    return res.status(400).json({ error: 'operatorId, alertType, title, message required' });
+  }
+  
+  try {
+    const alert = await createTransportAlert({
+      portalSlug: b.portalSlug,
+      operatorId: b.operatorId,
+      sailingId: b.sailingId,
+      locationId: b.locationId,
+      alertType: b.alertType,
+      severity: b.severity || 'info',
+      title: b.title,
+      message: b.message,
+      affectedDate: b.affectedDate ? new Date(b.affectedDate) : undefined,
+      affectedSailings: b.affectedSailings,
+      delayMinutes: b.delayMinutes,
+      actionRequired: b.actionRequired,
+      actionUrl: b.actionUrl,
+      actionLabel: b.actionLabel,
+      source: b.source,
+      sourceRef: b.sourceRef,
+      expiresAt: b.expiresAt ? new Date(b.expiresAt) : undefined
+    });
+    
+    res.json({ alert });
+  } catch (e: any) {
+    console.error('Create alert error:', e);
+    res.status(500).json({ error: 'Failed to create alert' });
+  }
+});
+
+// GET /api/transport/alerts - Get active alerts
+router.get('/alerts', async (req, res) => {
+  const { portal, operator, sailing, severity } = req.query;
+  
+  try {
+    const alerts = await getActiveAlerts({
+      portalSlug: portal as string,
+      operatorId: operator as string,
+      sailingId: sailing as string,
+      severity: severity as string
+    });
+    
+    res.json({ alerts, count: alerts.length });
+  } catch (e: any) {
+    console.error('Get alerts error:', e);
+    res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+// GET /api/transport/portals/:slug/alerts - Get alerts for portal
+router.get('/portals/:slug/alerts', async (req, res) => {
+  const { slug } = req.params;
+  const { severity } = req.query;
+  
+  try {
+    const alerts = await getActiveAlerts({
+      portalSlug: slug,
+      severity: severity as string
+    });
+    
+    res.json({ alerts, count: alerts.length });
+  } catch (e: any) {
+    console.error('Get portal alerts error:', e);
+    res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+// POST /api/transport/alerts/:id/resolve - Resolve alert
+router.post('/alerts/:id/resolve', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await resolveAlert(id);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Resolve alert error:', e);
+    res.status(500).json({ error: 'Failed to resolve alert' });
+  }
+});
+
+// POST /api/transport/alerts/:id/acknowledge - Acknowledge alert
+router.post('/alerts/:id/acknowledge', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const updated = await acknowledgeAlert(id);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Acknowledge alert error:', e);
+    res.status(500).json({ error: 'Failed to acknowledge alert' });
+  }
+});
+
+// ============ LIVE DEPARTURE BOARD ============
+
+// GET /api/transport/portals/:slug/departures - Live departure board
+router.get('/portals/:slug/departures', async (req, res) => {
+  const { slug } = req.params;
+  const { date, limit } = req.query;
+  
+  try {
+    const board = await getLiveDepartureBoard(slug, {
+      date: date ? new Date(date as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json(board);
+  } catch (e: any) {
+    console.error('Get departure board error:', e);
+    res.status(500).json({ error: 'Failed to get departure board' });
+  }
+});
+
+// POST /api/transport/sailings/:id/check-capacity - Check and create capacity alert if needed
+router.post('/sailings/:id/check-capacity', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const alert = await checkCapacityAlerts(id);
+    res.json({ 
+      alert,
+      message: alert ? 'Capacity alert created' : 'No alert needed'
+    });
+  } catch (e: any) {
+    console.error('Check capacity error:', e);
+    res.status(500).json({ error: 'Failed to check capacity' });
+  }
+});
+```
+
+## Drizzle Schema Export
+
+Add to shared/schema.ts:
+- TransportAlert, InsertTransportAlert
+
+## Deliverables
+- [ ] Migration 082_transport_alerts.sql
+- [ ] cc_transport_alerts table with RLS
+- [ ] server/services/transportAlertService.ts
+- [ ] Routes added to server/routes/transport.ts:
+  - POST /api/transport/alerts
+  - GET /api/transport/alerts
+  - GET /api/transport/portals/:slug/alerts
+  - POST /api/transport/alerts/:id/resolve
+  - POST /api/transport/alerts/:id/acknowledge
+  - GET /api/transport/portals/:slug/departures
+  - POST /api/transport/sailings/:id/check-capacity
+- [ ] Creating delay alert auto-updates sailing status to 'delayed'
+- [ ] Creating cancellation alert auto-updates sailing status to 'cancelled'
+- [ ] Departure board shows status display ("On Time", "Delayed 30min", "Now Boarding")
+- [ ] Test: POST /api/transport/alerts with delay type → sailing status changes
+- [ ] Test: GET /api/transport/portals/bamfield/departures returns board with capacity
+- [ ] Test: Capacity alert auto-creates when < 20% available
+
+Report with departure board response showing sailing status, capacity, and any alerts.
