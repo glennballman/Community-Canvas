@@ -1,0 +1,196 @@
+**V3.3.1 BLOCK 07: Allocation Engine**
+
+Build the conflict-free unit allocation engine supporting both discrete (stalls, slips, rooms) and continuous (dock segments) allocation.
+
+## Create server/services/allocationService.ts
+```typescript
+// server/services/allocationService.ts
+
+interface AllocationRequest {
+  tenantId: string;
+  facilityId: string;
+  unitType: string; // 'stall', 'slip', 'room', 'segment'
+  startAt: Date;
+  endAt: Date;
+  
+  // For continuous allocation (marina)
+  requiredLengthFt?: number;
+  requiredBeamFt?: number;
+  requiredDraftFt?: number;
+  
+  // For discrete allocation (parking)
+  isOversize?: boolean;
+  requiresPullThrough?: boolean;
+  requiresAccessible?: boolean;
+  
+  // Hold type
+  holdType: 'soft' | 'hard';
+  holdDurationMinutes?: number; // For soft holds, default 1440 (24 hours)
+  
+  // Preference
+  preferredUnitId?: string; // If customer requests specific unit
+}
+
+interface AllocationResult {
+  success: boolean;
+  allocation?: {
+    id: string;
+    inventoryUnitId: string;
+    displayLabel: string;
+    allocatedLengthFt?: number;
+    positionStartFt?: number;
+    holdType: 'soft' | 'hard';
+    holdExpiresAt?: Date;
+  };
+  reason?: string; // If failed: 'no_availability', 'constraints_not_met', 'conflict'
+  alternatives?: string[]; // Suggested alternative units if preferred unavailable
+}
+
+// Core allocation function
+export async function allocateUnit(req: AllocationRequest): Promise<AllocationResult>
+
+// Check availability without allocating
+export async function checkAvailability(
+  facilityId: string,
+  unitType: string,
+  startAt: Date,
+  endAt: Date,
+  constraints?: Record<string, any>
+): Promise<{ available: boolean; units: InventoryUnit[] }>
+
+// Release allocation (for cancellations or expirations)
+export async function releaseAllocation(allocationId: string): Promise<void>
+
+// Override allocation (dockmaster reassigns)
+export async function overrideAllocation(
+  allocationId: string,
+  newUnitId: string,
+  reason: string,
+  actorId: string
+): Promise<AllocationResult>
+```
+
+## Discrete Allocation Logic (Parking, Lodging, Named Slips)
+```typescript
+async function allocateDiscrete(req: AllocationRequest): Promise<AllocationResult> {
+  // 1. Get all units of requested type in facility
+  // 2. Filter by constraints (oversize, accessible, etc.)
+  // 3. Exclude units with overlapping allocations in time window
+  // 4. If preferredUnitId specified and available, use it
+  // 5. Otherwise, select first available by sort_order
+  // 6. Create allocation record
+  // 7. Return with display_label from unit
+  
+  const conflictQuery = `
+    SELECT DISTINCT inventory_unit_id 
+    FROM cc_reservation_allocations ra
+    JOIN cc_reservation_items ri ON ra.reservation_item_id = ri.id
+    JOIN cc_reservations r ON ri.reservation_id = r.id
+    WHERE ra.inventory_unit_id = ANY($1)
+    AND r.status NOT IN ('cancelled', 'expired', 'no_show')
+    AND (
+      (r.start_at, r.end_at) OVERLAPS ($2::timestamptz, $3::timestamptz)
+    )
+  `;
+}
+```
+
+## Continuous Allocation Logic (Dock Segments)
+```typescript
+async function allocateContinuous(req: AllocationRequest): Promise<AllocationResult> {
+  // 1. Get all segments in facility
+  // 2. For each segment, calculate used capacity in time window
+  // 3. Find segment with enough remaining capacity (including buffer)
+  // 4. Use first-fit algorithm to find position_start_ft
+  // 5. Create allocation with calculated position
+  // 6. Generate display_label: "Segment A (32ft @ 10ft)"
+  
+  const usedCapacityQuery = `
+    SELECT 
+      ra.inventory_unit_id,
+      SUM(ra.allocated_length_ft) as used_ft
+    FROM cc_reservation_allocations ra
+    JOIN cc_reservation_items ri ON ra.reservation_item_id = ri.id
+    JOIN cc_reservations r ON ri.reservation_id = r.id
+    WHERE ra.inventory_unit_id = ANY($1)
+    AND r.status NOT IN ('cancelled', 'expired', 'no_show')
+    AND (r.start_at, r.end_at) OVERLAPS ($2::timestamptz, $3::timestamptz)
+    GROUP BY ra.inventory_unit_id
+  `;
+  
+  // First-fit position calculation
+  function findPosition(segmentLength: number, usedPositions: {start: number, length: number}[], requiredLength: number, buffer: number): number | null {
+    // Sort existing allocations by position
+    // Find first gap that fits requiredLength + buffer
+    // Return start position or null if no fit
+  }
+}
+```
+
+## Conflict Detection
+```typescript
+export async function hasConflict(
+  unitId: string,
+  startAt: Date,
+  endAt: Date,
+  excludeAllocationId?: string // For override checks
+): Promise<boolean> {
+  // Check for overlapping allocations
+  // Return true if conflict exists
+}
+```
+
+## Override with Audit
+```typescript
+export async function overrideAllocation(
+  allocationId: string,
+  newUnitId: string,
+  reason: string,
+  actorId: string
+): Promise<AllocationResult> {
+  // 1. Verify new unit is available
+  // 2. Update allocation to new unit
+  // 3. Log to activity_ledger with before/after
+  // 4. Return new assignment
+}
+```
+
+## Integration with reservationService
+
+Update reservationService.createReservation() to use allocationService:
+```typescript
+// In createReservation():
+const allocation = await allocateUnit({
+  tenantId,
+  facilityId,
+  unitType: getUnitTypeFromOffer(offer),
+  startAt,
+  endAt,
+  requiredLengthFt: vesselLengthFt || vehicleLengthFt,
+  holdType: offer.participation_mode === 'instant_confirm' ? 'hard' : 'soft',
+  holdDurationMinutes: 1440
+});
+
+if (!allocation.success) {
+  throw new Error(`No availability: ${allocation.reason}`);
+}
+```
+
+## Test Cases
+
+1. **Parking discrete**: Book Stall 1, try to book Stall 1 again same dates → conflict
+2. **Parking with constraint**: Request oversize → only get oversize stalls
+3. **Marina continuous**: Book 32ft boat on Segment C (170ft) → get position
+4. **Marina capacity**: Fill segment, try to book more → no availability
+5. **Override**: Dockmaster moves boat from C-2 to C-4 → audit logged
+
+## Deliverables
+- [ ] server/services/allocationService.ts with all functions
+- [ ] Discrete allocation working for parking/lodging
+- [ ] Continuous allocation working for marina segments
+- [ ] Conflict detection preventing double-booking
+- [ ] Override with audit trail
+- [ ] Integration with reservationService
+- [ ] Tests: discrete conflict, continuous capacity, override audit
+
+Report with test results for each scenario.
