@@ -888,3 +888,236 @@ export const cc_access_events = pgTable('cc_access_events', {
 export const insertAccessEventSchema = createInsertSchema(cc_access_events).omit({ id: true, recordedAt: true });
 export type AccessEvent = typeof cc_access_events.$inferSelect;
 export type InsertAccessEvent = z.infer<typeof insertAccessEventSchema>;
+
+// ============================================================================
+// 30-PROMPT PACK - PROMPT 01: Cart Foundation Tables
+// ============================================================================
+
+// Reservation Carts - shopping cart for multi-item bookings
+export const cc_reservation_carts = pgTable('cc_reservation_carts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  schemaType: varchar('schema_type', { length: 50 }).default('Order'),
+  
+  portalId: uuid('portal_id'),
+  tenantId: uuid('tenant_id'),
+  tripId: uuid('trip_id'),
+  
+  accessToken: varchar('access_token', { length: 255 }).notNull().unique(),
+  
+  status: varchar('status', { length: 20 }).notNull().default('draft'),
+  currency: varchar('currency', { length: 3 }).notNull().default('CAD'),
+  
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  
+  primaryGuestName: varchar('primary_guest_name', { length: 255 }),
+  primaryGuestEmail: varchar('primary_guest_email', { length: 255 }),
+  primaryGuestPhone: varchar('primary_guest_phone', { length: 50 }),
+  guestLanguage: varchar('guest_language', { length: 10 }).default('en'),
+  
+  partyAdults: integer('party_adults').default(1),
+  partyChildren: integer('party_children').default(0),
+  partyInfants: integer('party_infants').default(0),
+  
+  intentJson: jsonb('intent_json').default({}),
+  needsJson: jsonb('needs_json').default({}),
+  paymentJson: jsonb('payment_json').default({}),
+  travelJson: jsonb('travel_json').default({}),
+  viralJson: jsonb('viral_json').default({}),
+  quoteJson: jsonb('quote_json').default({}),
+  
+  source: varchar('source', { length: 50 }).default('public'),
+  sourceRef: varchar('source_ref', { length: 255 }),
+  entryPoint: varchar('entry_point', { length: 255 }),
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertReservationCartSchema = createInsertSchema(cc_reservation_carts).omit({ id: true, createdAt: true, updatedAt: true });
+export type ReservationCart = typeof cc_reservation_carts.$inferSelect;
+export type InsertReservationCart = z.infer<typeof insertReservationCartSchema>;
+
+// Reservation Cart Items - individual items within a cart
+export const cc_reservation_cart_items = pgTable('cc_reservation_cart_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  cartId: uuid('cart_id').notNull(),
+  
+  schemaType: varchar('schema_type', { length: 50 }).default('Offer'),
+  
+  itemType: varchar('item_type', { length: 30 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  
+  reservationMode: varchar('reservation_mode', { length: 20 }).notNull().default('internal'),
+  
+  facilityId: uuid('facility_id'),
+  offerId: uuid('offer_id'),
+  unitId: uuid('unit_id'),
+  assetId: uuid('asset_id'),
+  momentId: uuid('moment_id'),
+  providerTenantId: uuid('provider_tenant_id'),
+  portalId: uuid('portal_id'),
+  
+  externalUrl: text('external_url'),
+  externalReservationRef: varchar('external_reservation_ref', { length: 255 }),
+  providerName: varchar('provider_name', { length: 255 }),
+  providerEmail: varchar('provider_email', { length: 255 }),
+  providerPhone: varchar('provider_phone', { length: 50 }),
+  
+  startAt: timestamp('start_at', { withTimezone: true }),
+  endAt: timestamp('end_at', { withTimezone: true }),
+  preferredTime: time('preferred_time'),
+  flexibleWindowMinutes: integer('flexible_window_minutes'),
+  
+  quantity: integer('quantity').default(1),
+  partySize: integer('party_size'),
+  
+  requiresApproval: boolean('requires_approval').notNull().default(false),
+  approvalStatus: varchar('approval_status', { length: 20 }).notNull().default('not_required'),
+  
+  rateType: varchar('rate_type', { length: 50 }),
+  rateAmount: numeric('rate_amount', { precision: 12, scale: 2 }),
+  subtotalCents: integer('subtotal_cents'),
+  taxesCents: integer('taxes_cents').default(0),
+  totalCents: integer('total_cents'),
+  depositRequiredCents: integer('deposit_required_cents').default(0),
+  
+  pricingSnapshot: jsonb('pricing_snapshot').default({}),
+  holdJson: jsonb('hold_json').default({}),
+  intentJson: jsonb('intent_json').default({}),
+  needsJson: jsonb('needs_json').default({}),
+  dietaryRequirements: text('dietary_requirements').array(),
+  specialRequests: text('special_requests'),
+  weatherJson: jsonb('weather_json').default({}),
+  
+  reservationId: uuid('reservation_id'),
+  reservationItemId: uuid('reservation_item_id'),
+  partnerRequestId: uuid('partner_request_id'),
+  itineraryItemId: uuid('itinerary_item_id'),
+  
+  status: varchar('status', { length: 30 }).default('pending'),
+  
+  requirementsSnapshot: jsonb('requirements_snapshot').default({}),
+  detailsJson: jsonb('details_json').default({}),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertReservationCartItemSchema = createInsertSchema(cc_reservation_cart_items).omit({ id: true, createdAt: true, updatedAt: true });
+export type ReservationCartItem = typeof cc_reservation_cart_items.$inferSelect;
+export type InsertReservationCartItem = z.infer<typeof insertReservationCartItemSchema>;
+
+// Reservation Cart Adjustments - discounts, fees, credits
+export const cc_reservation_cart_adjustments = pgTable('cc_reservation_cart_adjustments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  cartId: uuid('cart_id').notNull(),
+  
+  label: varchar('label', { length: 255 }).notNull(),
+  adjustmentType: varchar('adjustment_type', { length: 30 }).notNull().default('discount'),
+  
+  amountCents: integer('amount_cents').notNull(),
+  scope: varchar('scope', { length: 20 }).notNull().default('cart'),
+  itemId: uuid('item_id'),
+  
+  ruleCode: varchar('rule_code', { length: 100 }),
+  rulesSnapshot: jsonb('rules_snapshot').default({}),
+  isTaxable: boolean('is_taxable').default(false),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertReservationCartAdjustmentSchema = createInsertSchema(cc_reservation_cart_adjustments).omit({ id: true, createdAt: true, updatedAt: true });
+export type ReservationCartAdjustment = typeof cc_reservation_cart_adjustments.$inferSelect;
+export type InsertReservationCartAdjustment = z.infer<typeof insertReservationCartAdjustmentSchema>;
+
+// Partner Reservation Requests - external partner coordination
+export const cc_partner_reservation_requests = pgTable('cc_partner_reservation_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  cartId: uuid('cart_id'),
+  cartItemId: uuid('cart_item_id'),
+  tripId: uuid('trip_id'),
+  portalId: uuid('portal_id'),
+  
+  providerTenantId: uuid('provider_tenant_id'),
+  providerName: varchar('provider_name', { length: 255 }),
+  providerEmail: varchar('provider_email', { length: 255 }),
+  providerPhone: varchar('provider_phone', { length: 50 }),
+  
+  requestType: varchar('request_type', { length: 30 }).notNull().default('reservation'),
+  status: varchar('status', { length: 30 }).notNull().default('requested'),
+  
+  itemType: varchar('item_type', { length: 30 }),
+  title: varchar('title', { length: 255 }),
+  requestedStart: timestamp('requested_start', { withTimezone: true }),
+  requestedEnd: timestamp('requested_end', { withTimezone: true }),
+  preferredTime: time('preferred_time'),
+  partySize: integer('party_size'),
+  
+  contactName: varchar('contact_name', { length: 255 }),
+  contactEmail: varchar('contact_email', { length: 255 }),
+  contactPhone: varchar('contact_phone', { length: 50 }),
+  
+  needsJson: jsonb('needs_json').default({}),
+  dietaryRequirements: text('dietary_requirements').array(),
+  specialAccommodations: text('special_accommodations'),
+  notes: text('notes'),
+  
+  providerConfirmationRef: varchar('provider_confirmation_ref', { length: 255 }),
+  providerNotes: text('provider_notes'),
+  respondedAt: timestamp('responded_at', { withTimezone: true }),
+  confirmedStart: timestamp('confirmed_start', { withTimezone: true }),
+  confirmedEnd: timestamp('confirmed_end', { withTimezone: true }),
+  
+  partnerInvitationSent: boolean('partner_invitation_sent').default(false),
+  partnerInvitationSentAt: timestamp('partner_invitation_sent_at', { withTimezone: true }),
+  partnerOnboarded: boolean('partner_onboarded').default(false),
+  
+  detailsJson: jsonb('details_json').default({}),
+  
+  requestSentAt: timestamp('request_sent_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertPartnerReservationRequestSchema = createInsertSchema(cc_partner_reservation_requests).omit({ id: true, createdAt: true, updatedAt: true });
+export type PartnerReservationRequest = typeof cc_partner_reservation_requests.$inferSelect;
+export type InsertPartnerReservationRequest = z.infer<typeof insertPartnerReservationRequestSchema>;
+
+// Weather Trends - historical weather data for planning
+export const cc_weather_trends = pgTable('cc_weather_trends', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  locationCode: varchar('location_code', { length: 50 }).notNull(),
+  locationName: varchar('location_name', { length: 255 }).notNull(),
+  region: varchar('region', { length: 100 }),
+  
+  month: integer('month').notNull(),
+  
+  avgHighC: numeric('avg_high_c', { precision: 5, scale: 2 }),
+  avgLowC: numeric('avg_low_c', { precision: 5, scale: 2 }),
+  precipDays: integer('precip_days'),
+  rainProbPercent: integer('rain_prob_percent'),
+  fogProbPercent: integer('fog_prob_percent'),
+  windAvgKph: numeric('wind_avg_kph', { precision: 5, scale: 2 }),
+  daylightHours: numeric('daylight_hours', { precision: 5, scale: 2 }),
+  
+  planningNotes: text('planning_notes'),
+  bestFor: text('best_for').array(),
+  avoidFor: text('avoid_for').array(),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertWeatherTrendSchema = createInsertSchema(cc_weather_trends).omit({ id: true, createdAt: true, updatedAt: true });
+export type WeatherTrend = typeof cc_weather_trends.$inferSelect;
+export type InsertWeatherTrend = z.infer<typeof insertWeatherTrendSchema>;
