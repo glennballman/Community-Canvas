@@ -39,6 +39,28 @@ export async function createTransportAlert(req: CreateAlertRequest): Promise<any
     if (portal) portalId = portal.id;
   }
   
+  // Validate operator belongs to portal if portal specified
+  if (portalId && req.operatorId) {
+    const [operator] = await db.select({ portalId: ccTransportOperators.portalId })
+      .from(ccTransportOperators)
+      .where(sql`${ccTransportOperators.id} = ${req.operatorId}`)
+      .limit(1);
+    if (!operator || operator.portalId !== portalId) {
+      throw new Error('Operator does not belong to this portal');
+    }
+  }
+  
+  // Validate sailing belongs to operator if sailing specified
+  if (req.sailingId && req.operatorId) {
+    const [sailing] = await db.select({ operatorId: ccSailings.operatorId })
+      .from(ccSailings)
+      .where(sql`${ccSailings.id} = ${req.sailingId}`)
+      .limit(1);
+    if (!sailing || sailing.operatorId !== req.operatorId) {
+      throw new Error('Sailing does not belong to this operator');
+    }
+  }
+  
   let affectedRequestCount = 0;
   if (req.sailingId) {
     const requests = await getRequestsForSailing(req.sailingId);
@@ -378,7 +400,24 @@ export async function checkCapacityAlerts(sailingId: string): Promise<any | null
       .limit(1);
     
     if (!existing) {
+      // Get operator's portalId to properly scope the alert
+      const [operator] = await db.select({ portalId: ccTransportOperators.portalId })
+        .from(ccTransportOperators)
+        .where(sql`${ccTransportOperators.id} = ${sailing.operatorId}`)
+        .limit(1);
+      
+      // Get portal slug for the alert creation
+      let portalSlug: string | undefined;
+      if (operator?.portalId) {
+        const [portal] = await db.select({ slug: ccPortals.slug })
+          .from(ccPortals)
+          .where(sql`${ccPortals.id} = ${operator.portalId}`)
+          .limit(1);
+        portalSlug = portal?.slug;
+      }
+      
       return createTransportAlert({
+        portalSlug,
         operatorId: sailing.operatorId,
         sailingId,
         alertType: 'capacity',
