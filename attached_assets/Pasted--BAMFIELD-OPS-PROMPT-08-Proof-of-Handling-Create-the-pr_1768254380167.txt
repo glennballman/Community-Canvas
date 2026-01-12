@@ -1,0 +1,752 @@
+**BAMFIELD OPS - PROMPT 08: Proof-of-Handling**
+
+Create the proof-of-handling system for documenting freight pickups, deliveries, and chain of custody.
+
+## Migration 085_proof_of_handling.sql
+```sql
+BEGIN;
+
+-- ============ PROOF OF HANDLING ============
+-- Documented events in freight chain of custody
+
+CREATE TABLE IF NOT EXISTS cc_proof_of_handling (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  manifest_id uuid REFERENCES cc_freight_manifests(id) ON DELETE CASCADE,
+  item_id uuid REFERENCES cc_freight_items(id) ON DELETE CASCADE,
+  location_id uuid REFERENCES cc_locations(id) ON DELETE SET NULL,
+  
+  -- Event type
+  handling_type varchar NOT NULL CHECK (handling_type IN (
+    'pickup',           -- Picked up from shipper
+    'received',         -- Received at dock/warehouse
+    'loaded',           -- Loaded onto vessel
+    'in_transit',       -- Departed on vessel
+    'offloaded',        -- Removed from vessel
+    'warehoused',       -- Stored in warehouse
+    'out_for_delivery', -- Left for final delivery
+    'delivered',        -- Delivered to consignee
+    'attempted',        -- Delivery attempted
+    'returned',         -- Returned to shipper
+    'damaged',          -- Damage documented
+    'inspected',        -- Inspection event
+    'held',             -- Held for issues
+    'released'          -- Released from hold
+  )),
+  
+  -- When & where
+  handled_at timestamptz NOT NULL DEFAULT now(),
+  location_name text,
+  location_description text,
+  
+  -- Who
+  handler_name text NOT NULL,
+  handler_role varchar CHECK (handler_role IN (
+    'shipper', 'driver', 'dock_worker', 'deckhand', 
+    'captain', 'warehouse', 'delivery', 'consignee', 'inspector'
+  )),
+  handler_company text,
+  
+  -- Recipient (for delivery events)
+  recipient_name text,
+  recipient_signature text, -- Base64 or reference
+  recipient_id_type varchar,
+  recipient_id_number varchar,
+  
+  -- Condition assessment
+  condition varchar DEFAULT 'good' CHECK (condition IN (
+    'good', 'fair', 'damaged', 'wet', 'opened', 'missing_items'
+  )),
+  condition_notes text,
+  
+  -- Weight verification
+  verified_weight_lbs numeric(10,2),
+  weight_variance_lbs numeric(10,2),
+  
+  -- Media
+  photo_urls text[],
+  document_urls text[],
+  
+  -- Notes
+  notes text,
+  internal_notes text,
+  
+  -- Geolocation (optional)
+  lat numeric(9,6),
+  lon numeric(9,6),
+  
+  -- Device info
+  device_id varchar,
+  app_version varchar,
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_poh_manifest ON cc_proof_of_handling(manifest_id, handled_at);
+CREATE INDEX idx_poh_item ON cc_proof_of_handling(item_id) WHERE item_id IS NOT NULL;
+CREATE INDEX idx_poh_type ON cc_proof_of_handling(handling_type, handled_at);
+CREATE INDEX idx_poh_location ON cc_proof_of_handling(location_id) WHERE location_id IS NOT NULL;
+
+ALTER TABLE cc_proof_of_handling ENABLE ROW LEVEL SECURITY;
+
+-- ============ HANDLING EXCEPTIONS ============
+-- Issues/problems that need resolution
+
+CREATE TABLE IF NOT EXISTS cc_handling_exceptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  manifest_id uuid REFERENCES cc_freight_manifests(id) ON DELETE CASCADE,
+  item_id uuid REFERENCES cc_freight_items(id) ON DELETE SET NULL,
+  proof_of_handling_id uuid REFERENCES cc_proof_of_handling(id) ON DELETE SET NULL,
+  
+  -- Exception type
+  exception_type varchar NOT NULL CHECK (exception_type IN (
+    'damage',           -- Item damaged
+    'shortage',         -- Missing items/quantity
+    'overage',          -- Extra items received
+    'wrong_item',       -- Wrong item delivered
+    'refused',          -- Delivery refused
+    'address_issue',    -- Can't locate/access
+    'weather_delay',    -- Weather-related delay
+    'mechanical',       -- Vehicle/vessel issue
+    'documentation',    -- Paperwork problem
+    'customs',          -- Customs/inspection hold
+    'hazmat',           -- Hazmat issue
+    'other'
+  )),
+  
+  -- Severity
+  severity varchar DEFAULT 'medium' CHECK (severity IN (
+    'low', 'medium', 'high', 'critical'
+  )),
+  
+  -- Details
+  description text NOT NULL,
+  
+  -- Resolution
+  status varchar DEFAULT 'open' CHECK (status IN (
+    'open', 'investigating', 'pending_action', 'resolved', 'closed'
+  )),
+  
+  resolution_type varchar CHECK (resolution_type IN (
+    'replaced', 'refunded', 'credited', 'repaired', 
+    'accepted_as_is', 'insurance_claim', 'no_action', 'other'
+  )),
+  resolution_notes text,
+  resolved_at timestamptz,
+  resolved_by text,
+  
+  -- Financial impact
+  claimed_amount_cad numeric(10,2),
+  approved_amount_cad numeric(10,2),
+  
+  -- Media
+  photo_urls text[],
+  
+  -- Notifications
+  shipper_notified boolean DEFAULT false,
+  consignee_notified boolean DEFAULT false,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_exceptions_manifest ON cc_handling_exceptions(manifest_id, status);
+CREATE INDEX idx_exceptions_status ON cc_handling_exceptions(status, severity);
+
+ALTER TABLE cc_handling_exceptions ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/proofOfHandlingService.ts
+```typescript
+// server/services/proofOfHandlingService.ts
+
+import { db } from '../db';
+import { eq, and, desc, asc } from 'drizzle-orm';
+import { logActivity } from './activityService';
+import { markItemDelivered } from './freightService';
+
+// ============ TYPES ============
+
+interface RecordHandlingRequest {
+  portalSlug: string;
+  manifestId: string;
+  itemId?: string;
+  locationId?: string;
+  handlingType: string;
+  handledAt?: Date;
+  locationName?: string;
+  locationDescription?: string;
+  handlerName: string;
+  handlerRole?: string;
+  handlerCompany?: string;
+  recipientName?: string;
+  recipientSignature?: string;
+  recipientIdType?: string;
+  recipientIdNumber?: string;
+  condition?: string;
+  conditionNotes?: string;
+  verifiedWeightLbs?: number;
+  photoUrls?: string[];
+  documentUrls?: string[];
+  notes?: string;
+  lat?: number;
+  lon?: number;
+  deviceId?: string;
+}
+
+interface CreateExceptionRequest {
+  portalSlug: string;
+  manifestId: string;
+  itemId?: string;
+  proofOfHandlingId?: string;
+  exceptionType: string;
+  severity?: string;
+  description: string;
+  photoUrls?: string[];
+  claimedAmountCad?: number;
+}
+
+// ============ PROOF OF HANDLING FUNCTIONS ============
+
+export async function recordHandling(req: RecordHandlingRequest): Promise<any> {
+  // Resolve portal
+  let portalId: string | undefined;
+  if (req.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) portalId = portal.id;
+  }
+  
+  // Validate manifest belongs to portal
+  const manifest = await db.query.ccFreightManifests.findFirst({
+    where: eq(ccFreightManifests.id, req.manifestId)
+  });
+  
+  if (!manifest) throw new Error('Manifest not found');
+  if (portalId && manifest.portalId !== portalId) {
+    throw new Error('Manifest does not belong to this portal');
+  }
+  
+  // Calculate weight variance if verified weight provided
+  let weightVariance: number | undefined;
+  if (req.verifiedWeightLbs && req.itemId) {
+    const item = await db.query.ccFreightItems.findFirst({
+      where: eq(ccFreightItems.id, req.itemId)
+    });
+    if (item?.weightLbs) {
+      weightVariance = req.verifiedWeightLbs - Number(item.weightLbs);
+    }
+  }
+  
+  const [poh] = await db.insert(ccProofOfHandling).values({
+    portalId,
+    manifestId: req.manifestId,
+    itemId: req.itemId,
+    locationId: req.locationId,
+    handlingType: req.handlingType,
+    handledAt: req.handledAt || new Date(),
+    locationName: req.locationName,
+    locationDescription: req.locationDescription,
+    handlerName: req.handlerName,
+    handlerRole: req.handlerRole,
+    handlerCompany: req.handlerCompany,
+    recipientName: req.recipientName,
+    recipientSignature: req.recipientSignature,
+    recipientIdType: req.recipientIdType,
+    recipientIdNumber: req.recipientIdNumber,
+    condition: req.condition || 'good',
+    conditionNotes: req.conditionNotes,
+    verifiedWeightLbs: req.verifiedWeightLbs,
+    weightVarianceLbs: weightVariance,
+    photoUrls: req.photoUrls,
+    documentUrls: req.documentUrls,
+    notes: req.notes,
+    lat: req.lat,
+    lon: req.lon,
+    deviceId: req.deviceId
+  }).returning();
+  
+  // Auto-update item/manifest status based on handling type
+  await updateStatusFromHandling(req.manifestId, req.itemId, req.handlingType, req.recipientName, req.notes);
+  
+  // Auto-create exception if condition is damaged
+  if (req.condition === 'damaged' || req.condition === 'missing_items') {
+    await createException({
+      portalSlug: req.portalSlug,
+      manifestId: req.manifestId,
+      itemId: req.itemId,
+      proofOfHandlingId: poh.id,
+      exceptionType: req.condition === 'damaged' ? 'damage' : 'shortage',
+      severity: 'medium',
+      description: req.conditionNotes || `${req.condition} reported at ${req.handlingType}`,
+      photoUrls: req.photoUrls
+    });
+  }
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.handlerName,
+    action: `freight.${req.handlingType}`,
+    resourceType: 'proof_of_handling',
+    resourceId: poh.id,
+    metadata: {
+      manifestId: req.manifestId,
+      itemId: req.itemId,
+      condition: req.condition
+    }
+  });
+  
+  return poh;
+}
+
+async function updateStatusFromHandling(
+  manifestId: string,
+  itemId: string | undefined,
+  handlingType: string,
+  recipientName?: string,
+  notes?: string
+): Promise<void> {
+  // Update item status if item specified
+  if (itemId) {
+    const statusMap: Record<string, string> = {
+      'pickup': 'pending',
+      'received': 'pending',
+      'loaded': 'loaded',
+      'in_transit': 'in_transit',
+      'offloaded': 'offloaded',
+      'delivered': 'delivered',
+      'returned': 'returned',
+      'damaged': 'damaged'
+    };
+    
+    const newStatus = statusMap[handlingType];
+    if (newStatus) {
+      if (newStatus === 'delivered') {
+        await markItemDelivered(itemId, recipientName, notes);
+      } else {
+        await db.update(ccFreightItems)
+          .set({ status: newStatus, updatedAt: new Date() })
+          .where(eq(ccFreightItems.id, itemId));
+      }
+    }
+  }
+  
+  // Update manifest status for manifest-level events
+  const manifestStatusMap: Record<string, string> = {
+    'loaded': 'loaded',
+    'in_transit': 'in_transit',
+    'offloaded': 'arrived'
+  };
+  
+  const newManifestStatus = manifestStatusMap[handlingType];
+  if (newManifestStatus && !itemId) {
+    await db.update(ccFreightManifests)
+      .set({ status: newManifestStatus, updatedAt: new Date() })
+      .where(eq(ccFreightManifests.id, manifestId));
+  }
+}
+
+export async function getHandlingHistory(
+  portalSlug: string,
+  manifestId: string,
+  itemId?: string
+): Promise<any[]> {
+  // Validate portal
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  if (!portal) return [];
+  
+  const conditions: any[] = [
+    eq(ccProofOfHandling.manifestId, manifestId),
+    eq(ccProofOfHandling.portalId, portal.id)
+  ];
+  
+  if (itemId) {
+    conditions.push(eq(ccProofOfHandling.itemId, itemId));
+  }
+  
+  return db.query.ccProofOfHandling.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccProofOfHandling.handledAt)]
+  });
+}
+
+export async function getChainOfCustody(
+  portalSlug: string,
+  trackingCode: string
+): Promise<{
+  item: any;
+  manifest: any;
+  history: any[];
+  exceptions: any[];
+} | null> {
+  // Get item by tracking code
+  const item = await db.query.ccFreightItems.findFirst({
+    where: eq(ccFreightItems.trackingCode, trackingCode)
+  });
+  
+  if (!item) return null;
+  
+  // Get manifest
+  const manifest = await db.query.ccFreightManifests.findFirst({
+    where: eq(ccFreightManifests.id, item.manifestId)
+  });
+  
+  if (!manifest) return null;
+  
+  // Validate portal
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal || manifest.portalId !== portal.id) return null;
+  
+  // Get handling history
+  const history = await db.query.ccProofOfHandling.findMany({
+    where: eq(ccProofOfHandling.itemId, item.id),
+    orderBy: [asc(ccProofOfHandling.handledAt)]
+  });
+  
+  // Get exceptions
+  const exceptions = await db.query.ccHandlingExceptions.findMany({
+    where: eq(ccHandlingExceptions.itemId, item.id),
+    orderBy: [desc(ccHandlingExceptions.createdAt)]
+  });
+  
+  return { item, manifest, history, exceptions };
+}
+
+// ============ EXCEPTION FUNCTIONS ============
+
+export async function createException(req: CreateExceptionRequest): Promise<any> {
+  // Resolve portal
+  let portalId: string | undefined;
+  if (req.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) portalId = portal.id;
+  }
+  
+  const [exception] = await db.insert(ccHandlingExceptions).values({
+    portalId,
+    manifestId: req.manifestId,
+    itemId: req.itemId,
+    proofOfHandlingId: req.proofOfHandlingId,
+    exceptionType: req.exceptionType,
+    severity: req.severity || 'medium',
+    description: req.description,
+    photoUrls: req.photoUrls,
+    claimedAmountCad: req.claimedAmountCad,
+    status: 'open'
+  }).returning();
+  
+  // Update item status to held if damage/shortage
+  if (req.itemId && ['damage', 'shortage', 'wrong_item'].includes(req.exceptionType)) {
+    await db.update(ccFreightItems)
+      .set({ status: 'held', updatedAt: new Date() })
+      .where(eq(ccFreightItems.id, req.itemId));
+  }
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'freight_exception.created',
+    resourceType: 'handling_exception',
+    resourceId: exception.id,
+    metadata: {
+      exceptionType: req.exceptionType,
+      severity: req.severity,
+      manifestId: req.manifestId
+    }
+  });
+  
+  return exception;
+}
+
+export async function getExceptions(
+  portalSlug: string,
+  options?: {
+    manifestId?: string;
+    status?: string;
+    severity?: string;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccHandlingExceptions.portalId, portal.id)];
+  
+  if (options?.manifestId) {
+    conditions.push(eq(ccHandlingExceptions.manifestId, options.manifestId));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccHandlingExceptions.status, options.status));
+  }
+  
+  if (options?.severity) {
+    conditions.push(eq(ccHandlingExceptions.severity, options.severity));
+  }
+  
+  return db.query.ccHandlingExceptions.findMany({
+    where: and(...conditions),
+    orderBy: [
+      desc(sql`CASE severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END`),
+      desc(ccHandlingExceptions.createdAt)
+    ]
+  });
+}
+
+export async function resolveException(
+  exceptionId: string,
+  resolution: {
+    resolutionType: string;
+    resolutionNotes?: string;
+    resolvedBy: string;
+    approvedAmountCad?: number;
+  }
+): Promise<any> {
+  const [updated] = await db.update(ccHandlingExceptions)
+    .set({
+      status: 'resolved',
+      resolutionType: resolution.resolutionType,
+      resolutionNotes: resolution.resolutionNotes,
+      resolvedBy: resolution.resolvedBy,
+      resolvedAt: new Date(),
+      approvedAmountCad: resolution.approvedAmountCad,
+      updatedAt: new Date()
+    })
+    .where(eq(ccHandlingExceptions.id, exceptionId))
+    .returning();
+  
+  // Release item from hold if it was held
+  if (updated.itemId) {
+    await db.update(ccFreightItems)
+      .set({ status: 'pending', updatedAt: new Date() })
+      .where(and(
+        eq(ccFreightItems.id, updated.itemId),
+        eq(ccFreightItems.status, 'held')
+      ));
+  }
+  
+  return updated;
+}
+```
+
+## Add Proof of Handling Routes to transport.ts
+```typescript
+// Add to server/routes/transport.ts
+
+import {
+  recordHandling, getHandlingHistory, getChainOfCustody,
+  createException, getExceptions, resolveException
+} from '../services/proofOfHandlingService';
+
+// ============ PROOF OF HANDLING ENDPOINTS ============
+
+// POST /api/transport/freight/handling - Record handling event
+router.post('/freight/handling', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.portalSlug || !b.manifestId || !b.handlingType || !b.handlerName) {
+    return res.status(400).json({ 
+      error: 'portalSlug, manifestId, handlingType, handlerName required' 
+    });
+  }
+  
+  try {
+    const poh = await recordHandling({
+      portalSlug: b.portalSlug,
+      manifestId: b.manifestId,
+      itemId: b.itemId,
+      locationId: b.locationId,
+      handlingType: b.handlingType,
+      handledAt: b.handledAt ? new Date(b.handledAt) : undefined,
+      locationName: b.locationName,
+      locationDescription: b.locationDescription,
+      handlerName: b.handlerName,
+      handlerRole: b.handlerRole,
+      handlerCompany: b.handlerCompany,
+      recipientName: b.recipientName,
+      recipientSignature: b.recipientSignature,
+      recipientIdType: b.recipientIdType,
+      recipientIdNumber: b.recipientIdNumber,
+      condition: b.condition,
+      conditionNotes: b.conditionNotes,
+      verifiedWeightLbs: b.verifiedWeightLbs,
+      photoUrls: b.photoUrls,
+      documentUrls: b.documentUrls,
+      notes: b.notes,
+      lat: b.lat,
+      lon: b.lon,
+      deviceId: b.deviceId
+    });
+    
+    res.json({ proofOfHandling: poh });
+  } catch (e: any) {
+    console.error('Record handling error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/transport/freight/manifests/:id/handling - Get handling history
+router.get('/freight/manifests/:id/handling', async (req, res) => {
+  const { id } = req.params;
+  const { portal, item } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter required' });
+  }
+  
+  try {
+    const history = await getHandlingHistory(
+      portal as string, 
+      id, 
+      item as string
+    );
+    res.json({ history, count: history.length });
+  } catch (e: any) {
+    console.error('Get handling history error:', e);
+    res.status(500).json({ error: 'Failed to get handling history' });
+  }
+});
+
+// GET /api/transport/freight/chain/:trackingCode - Get full chain of custody
+router.get('/freight/chain/:trackingCode', async (req, res) => {
+  const { trackingCode } = req.params;
+  const { portal } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter required' });
+  }
+  
+  try {
+    const result = await getChainOfCustody(portal as string, trackingCode);
+    if (!result) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get chain of custody error:', e);
+    res.status(500).json({ error: 'Failed to get chain of custody' });
+  }
+});
+
+// ============ EXCEPTION ENDPOINTS ============
+
+// POST /api/transport/freight/exceptions - Create exception
+router.post('/freight/exceptions', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.portalSlug || !b.manifestId || !b.exceptionType || !b.description) {
+    return res.status(400).json({ 
+      error: 'portalSlug, manifestId, exceptionType, description required' 
+    });
+  }
+  
+  try {
+    const exception = await createException({
+      portalSlug: b.portalSlug,
+      manifestId: b.manifestId,
+      itemId: b.itemId,
+      proofOfHandlingId: b.proofOfHandlingId,
+      exceptionType: b.exceptionType,
+      severity: b.severity,
+      description: b.description,
+      photoUrls: b.photoUrls,
+      claimedAmountCad: b.claimedAmountCad
+    });
+    
+    res.json({ exception });
+  } catch (e: any) {
+    console.error('Create exception error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/transport/freight/exceptions - Get exceptions
+router.get('/freight/exceptions', async (req, res) => {
+  const { portal, manifest, status, severity } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query parameter required' });
+  }
+  
+  try {
+    const exceptions = await getExceptions(portal as string, {
+      manifestId: manifest as string,
+      status: status as string,
+      severity: severity as string
+    });
+    
+    res.json({ exceptions, count: exceptions.length });
+  } catch (e: any) {
+    console.error('Get exceptions error:', e);
+    res.status(500).json({ error: 'Failed to get exceptions' });
+  }
+});
+
+// POST /api/transport/freight/exceptions/:id/resolve - Resolve exception
+router.post('/freight/exceptions/:id/resolve', async (req, res) => {
+  const { id } = req.params;
+  const { resolutionType, resolutionNotes, resolvedBy, approvedAmountCad } = req.body || {};
+  
+  if (!resolutionType || !resolvedBy) {
+    return res.status(400).json({ error: 'resolutionType and resolvedBy required' });
+  }
+  
+  try {
+    const exception = await resolveException(id, {
+      resolutionType,
+      resolutionNotes,
+      resolvedBy,
+      approvedAmountCad
+    });
+    
+    res.json({ exception });
+  } catch (e: any) {
+    console.error('Resolve exception error:', e);
+    res.status(500).json({ error: 'Failed to resolve exception' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- ProofOfHandling, InsertProofOfHandling
+- HandlingException, InsertHandlingException
+
+## Deliverables
+- [ ] Migration 085_proof_of_handling.sql
+- [ ] cc_proof_of_handling table with RLS
+- [ ] cc_handling_exceptions table with RLS
+- [ ] server/services/proofOfHandlingService.ts
+- [ ] Routes added to server/routes/transport.ts:
+  - POST /api/transport/freight/handling
+  - GET /api/transport/freight/manifests/:id/handling
+  - GET /api/transport/freight/chain/:trackingCode
+  - POST /api/transport/freight/exceptions
+  - GET /api/transport/freight/exceptions
+  - POST /api/transport/freight/exceptions/:id/resolve
+- [ ] Recording handling auto-updates item/manifest status
+- [ ] Damaged condition auto-creates exception
+- [ ] Weight variance calculated when verified
+- [ ] Chain of custody includes full history + exceptions
+- [ ] Test: Record pickup → loaded → delivered → item status changes
+- [ ] Test: Record with condition='damaged' → exception auto-created
+- [ ] Test: GET /api/transport/freight/chain/:trackingCode returns full history
+
+Report with chain of custody showing handling events and any exceptions.

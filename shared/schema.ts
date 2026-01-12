@@ -1903,3 +1903,93 @@ export const insertFreightItemSchema = createInsertSchema(ccFreightItems).omit({
 });
 export type FreightItem = typeof ccFreightItems.$inferSelect;
 export type InsertFreightItem = z.infer<typeof insertFreightItemSchema>;
+
+// ============ PROOF OF HANDLING ============
+export const ccProofOfHandling = pgTable('cc_proof_of_handling', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  manifestId: uuid('manifest_id').notNull(),
+  itemId: uuid('item_id'),
+  locationId: uuid('location_id'),
+  
+  handlingType: varchar('handling_type', { length: 50 }).notNull(),
+  
+  handledAt: timestamp('handled_at', { withTimezone: true }).notNull().defaultNow(),
+  locationName: text('location_name'),
+  locationDescription: text('location_description'),
+  
+  handlerName: text('handler_name').notNull(),
+  handlerRole: varchar('handler_role', { length: 50 }),
+  handlerCompany: text('handler_company'),
+  
+  recipientName: text('recipient_name'),
+  recipientSignature: text('recipient_signature'),
+  recipientIdType: varchar('recipient_id_type', { length: 50 }),
+  recipientIdNumber: varchar('recipient_id_number', { length: 100 }),
+  
+  condition: varchar('condition', { length: 50 }).default('good'),
+  conditionNotes: text('condition_notes'),
+  
+  verifiedWeightLbs: numeric('verified_weight_lbs', { precision: 10, scale: 2 }),
+  weightVarianceLbs: numeric('weight_variance_lbs', { precision: 10, scale: 2 }),
+  
+  photoUrls: text('photo_urls').array(),
+  documentUrls: text('document_urls').array(),
+  
+  notes: text('notes'),
+  internalNotes: text('internal_notes'),
+  
+  lat: numeric('lat', { precision: 9, scale: 6 }),
+  lon: numeric('lon', { precision: 9, scale: 6 }),
+  
+  deviceId: varchar('device_id', { length: 100 }),
+  appVersion: varchar('app_version', { length: 50 }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertProofOfHandlingSchema = createInsertSchema(ccProofOfHandling).omit({ 
+  id: true, createdAt: true 
+});
+export type ProofOfHandling = typeof ccProofOfHandling.$inferSelect;
+export type InsertProofOfHandling = z.infer<typeof insertProofOfHandlingSchema>;
+
+// ============ HANDLING EXCEPTIONS ============
+export const ccHandlingExceptions = pgTable('cc_handling_exceptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  manifestId: uuid('manifest_id').notNull(),
+  itemId: uuid('item_id'),
+  proofOfHandlingId: uuid('proof_of_handling_id'),
+  
+  exceptionType: varchar('exception_type', { length: 50 }).notNull(),
+  severity: varchar('severity', { length: 20 }).default('medium'),
+  
+  description: text('description').notNull(),
+  
+  status: varchar('status', { length: 50 }).default('open'),
+  
+  resolutionType: varchar('resolution_type', { length: 50 }),
+  resolutionNotes: text('resolution_notes'),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  resolvedBy: text('resolved_by'),
+  
+  claimedAmountCad: numeric('claimed_amount_cad', { precision: 10, scale: 2 }),
+  approvedAmountCad: numeric('approved_amount_cad', { precision: 10, scale: 2 }),
+  
+  photoUrls: text('photo_urls').array(),
+  
+  shipperNotified: boolean('shipper_notified').default(false),
+  consigneeNotified: boolean('consignee_notified').default(false),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertHandlingExceptionSchema = createInsertSchema(ccHandlingExceptions).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type HandlingException = typeof ccHandlingExceptions.$inferSelect;
+export type InsertHandlingException = z.infer<typeof insertHandlingExceptionSchema>;
