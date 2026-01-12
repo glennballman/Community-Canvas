@@ -173,6 +173,7 @@ export async function getPropertyBySlug(
 // ============ UNIT FUNCTIONS ============
 
 interface CreateUnitRequest {
+  portalSlug: string;
   propertyId: string;
   name: string;
   code?: string;
@@ -188,6 +189,21 @@ interface CreateUnitRequest {
 }
 
 export async function createUnit(req: CreateUnitRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, req.propertyId),
+      eq(ccProperties.portalId, portal.id)
+    )
+  });
+  
+  if (!property) throw new Error('Property not found or access denied');
+  
   const code = req.code || `${req.unitType.substring(0, 3).toUpperCase()}-${nanoid(3).toUpperCase()}`;
   
   const [unit] = await db.insert(ccUnits).values({
@@ -248,6 +264,53 @@ export async function getUnit(
 }
 
 export async function updateUnitStatus(
+  portalSlug: string,
+  unitId: string,
+  status: string,
+  cleanStatus?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const unit = await db.query.ccUnits.findFirst({
+    where: eq(ccUnits.id, unitId)
+  });
+  
+  if (!unit) throw new Error('Unit not found');
+  
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, unit.propertyId),
+      eq(ccProperties.portalId, portal.id)
+    )
+  });
+  
+  if (!property) throw new Error('Unit not found or access denied');
+  
+  const updates: Record<string, any> = {
+    status,
+    updatedAt: new Date()
+  };
+  
+  if (cleanStatus) {
+    updates.cleanStatus = cleanStatus;
+    if (cleanStatus === 'clean' || cleanStatus === 'inspected') {
+      updates.lastCleanedAt = new Date();
+    }
+  }
+  
+  const [updated] = await db.update(ccUnits)
+    .set(updates)
+    .where(eq(ccUnits.id, unitId))
+    .returning();
+  
+  return updated;
+}
+
+async function updateUnitStatusInternal(
   unitId: string,
   status: string,
   cleanStatus?: string
@@ -616,7 +679,7 @@ export async function checkInGuest(
     .returning();
   
   if (updated) {
-    await updateUnitStatus(updated.unitId, 'occupied');
+    await updateUnitStatusInternal(updated.unitId, 'occupied');
   }
   
   return updated;
@@ -646,7 +709,7 @@ export async function checkOutGuest(
     .returning();
   
   if (updated) {
-    await updateUnitStatus(updated.unitId, 'available', 'dirty');
+    await updateUnitStatusInternal(updated.unitId, 'available', 'dirty');
   }
   
   return updated;

@@ -100,8 +100,8 @@ router.get('/portals/:slug/properties/:id', async (req, res) => {
 
 // ============ UNIT ENDPOINTS ============
 
-router.post('/properties/:propertyId/units', async (req, res) => {
-  const { propertyId } = req.params;
+router.post('/portals/:slug/properties/:propertyId/units', async (req, res) => {
+  const { slug, propertyId } = req.params;
   const b = req.body || {};
   
   if (!b.name || !b.unitType) {
@@ -110,6 +110,7 @@ router.post('/properties/:propertyId/units', async (req, res) => {
   
   try {
     const unit = await createUnit({
+      portalSlug: slug,
       propertyId,
       name: b.name,
       code: b.code,
@@ -146,8 +147,8 @@ router.get('/portals/:slug/units/:id', async (req, res) => {
   }
 });
 
-router.post('/units/:id/status', async (req, res) => {
-  const { id } = req.params;
+router.post('/portals/:slug/units/:id/status', async (req, res) => {
+  const { slug, id } = req.params;
   const { status, cleanStatus } = req.body || {};
   
   if (!status) {
@@ -155,7 +156,7 @@ router.post('/units/:id/status', async (req, res) => {
   }
   
   try {
-    const unit = await updateUnitStatus(id, status, cleanStatus);
+    const unit = await updateUnitStatus(slug, id, status, cleanStatus);
     res.json({ unit });
   } catch (e: any) {
     console.error('Update status error:', e);
