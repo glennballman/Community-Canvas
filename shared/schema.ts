@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -383,3 +383,148 @@ export const ccPortalMoments = pgTable('cc_portal_moments', {
 export const insertPortalMomentSchema = createInsertSchema(ccPortalMoments).omit({ id: true, createdAt: true });
 export type PortalMoment = typeof ccPortalMoments.$inferSelect;
 export type InsertPortalMoment = z.infer<typeof insertPortalMomentSchema>;
+
+// ============================================================================
+// V3.3.1 TRUTH/DISCLOSURE LAYER - Visibility System
+// ============================================================================
+
+// Channel enum - who is viewing
+export const ccChannelEnum = pgEnum('cc_channel', [
+  'internal_ops',
+  'chamber_desk',
+  'partner',
+  'public'
+]);
+
+// Visibility mode enum - how much to show
+export const ccVisibilityModeEnum = pgEnum('cc_visibility_mode', [
+  'show_all',
+  'show_percentage',
+  'show_cap',
+  'show_by_rules',
+  'hide_all'
+]);
+
+// Asset visibility rule mode
+export const ccAssetVisibilityRuleModeEnum = pgEnum('cc_asset_visibility_rule_mode', [
+  'always_show',
+  'always_hide',
+  'conditional'
+]);
+
+// Participation mode for assets
+export const ccParticipationModeEnum = pgEnum('cc_participation_mode', [
+  'inventory_hidden',
+  'requests_only',
+  'manual_confirm',
+  'instant_confirm'
+]);
+
+// Visibility Profiles - named configurations
+export const cc_visibility_profiles = pgTable('cc_visibility_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  
+  name: text('name').notNull(),
+  
+  defaultMode: ccVisibilityModeEnum('default_mode').notNull().default('show_all'),
+  percentage: integer('percentage'),
+  capCount: integer('cap_count'),
+  
+  safetyNeverSayNo: boolean('safety_never_say_no').notNull().default(false),
+  surfaceSetTtlMinutes: integer('surface_set_ttl_minutes').notNull().default(1440),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertVisibilityProfileSchema = createInsertSchema(cc_visibility_profiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type VisibilityProfile = typeof cc_visibility_profiles.$inferSelect;
+export type InsertVisibilityProfile = z.infer<typeof insertVisibilityProfileSchema>;
+
+// Visibility Profile Windows - time-bound channel assignments
+export const cc_visibility_profile_windows = pgTable('cc_visibility_profile_windows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  profileId: uuid('profile_id').notNull(),
+  
+  channel: ccChannelEnum('channel').notNull(),
+  windowStart: date('window_start').notNull(),
+  windowEnd: date('window_end').notNull(),
+  
+  assetType: varchar('asset_type', { length: 64 }),
+  portalId: uuid('portal_id'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertVisibilityProfileWindowSchema = createInsertSchema(cc_visibility_profile_windows).omit({ id: true, createdAt: true });
+export type VisibilityProfileWindow = typeof cc_visibility_profile_windows.$inferSelect;
+export type InsertVisibilityProfileWindow = z.infer<typeof insertVisibilityProfileWindowSchema>;
+
+// Asset Groups - logical groupings for bulk rules
+export const cc_asset_groups = pgTable('cc_asset_groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertAssetGroupSchema = createInsertSchema(cc_asset_groups).omit({ id: true, createdAt: true });
+export type AssetGroup = typeof cc_asset_groups.$inferSelect;
+export type InsertAssetGroup = z.infer<typeof insertAssetGroupSchema>;
+
+// Asset Group Members - many-to-many link
+export const cc_asset_group_members = pgTable('cc_asset_group_members', {
+  groupId: uuid('group_id').notNull(),
+  assetId: uuid('asset_id').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.groupId, t.assetId] }),
+}));
+
+export type AssetGroupMember = typeof cc_asset_group_members.$inferSelect;
+
+// Asset Visibility Rules - per-asset/group/type overrides
+export const cc_asset_visibility_rules = pgTable('cc_asset_visibility_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  channel: ccChannelEnum('channel').notNull(),
+  
+  assetId: uuid('asset_id'),
+  assetGroupId: uuid('asset_group_id'),
+  assetType: varchar('asset_type', { length: 64 }),
+  
+  mode: ccAssetVisibilityRuleModeEnum('mode').notNull(),
+  condition: jsonb('condition'),
+  priority: integer('priority').notNull().default(100),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertAssetVisibilityRuleSchema = createInsertSchema(cc_asset_visibility_rules).omit({ id: true, createdAt: true });
+export type AssetVisibilityRule = typeof cc_asset_visibility_rules.$inferSelect;
+export type InsertAssetVisibilityRule = z.infer<typeof insertAssetVisibilityRuleSchema>;
+
+// Disclosure Surface Sets - computed/cached visible assets
+export const cc_disclosure_surface_sets = pgTable('cc_disclosure_surface_sets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  profileId: uuid('profile_id').notNull(),
+  channel: ccChannelEnum('channel').notNull(),
+  
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  assetType: varchar('asset_type', { length: 64 }),
+  
+  surfacedAssetIds: uuid('surfaced_asset_ids').array().notNull(),
+  
+  computedAt: timestamp('computed_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  reason: text('reason'),
+});
+
+export const insertDisclosureSurfaceSetSchema = createInsertSchema(cc_disclosure_surface_sets).omit({ id: true, computedAt: true });
+export type DisclosureSurfaceSet = typeof cc_disclosure_surface_sets.$inferSelect;
+export type InsertDisclosureSurfaceSet = z.infer<typeof insertDisclosureSurfaceSetSchema>;

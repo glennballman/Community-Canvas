@@ -1,0 +1,154 @@
+**V3.3.1 BLOCK 01: Truth/Disclosure Layer Schema**
+
+This block creates the visibility system that separates:
+- TRUTH: What ops sees (real inventory)
+- DISCLOSURE: What public/chamber sees (controlled slice, never counts)
+
+## Step 1: Create Enums
+
+Add to shared/schema.ts:
+```typescript
+export const ccChannelEnum = pgEnum('cc_channel', [
+  'internal_ops',
+  'chamber_desk', 
+  'partner',
+  'public'
+]);
+
+export const ccVisibilityModeEnum = pgEnum('cc_visibility_mode', [
+  'show_all',
+  'show_percentage',
+  'show_cap',
+  'show_by_rules',
+  'hide_all'
+]);
+
+export const ccAssetVisibilityRuleModeEnum = pgEnum('cc_asset_visibility_rule_mode', [
+  'always_show',
+  'always_hide',
+  'conditional'
+]);
+
+export const ccParticipationModeEnum = pgEnum('cc_participation_mode', [
+  'inventory_hidden',
+  'requests_only',
+  'manual_confirm',
+  'instant_confirm'
+]);
+```
+
+## Step 2: Create cc_visibility_profiles
+```typescript
+export const cc_visibility_profiles = pgTable('cc_visibility_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => cc_tenants.id, { onDelete: 'cascade' }),
+  
+  name: text('name').notNull(), // "Off Season — Scarcity"
+  
+  defaultMode: ccVisibilityModeEnum('default_mode').notNull().default('show_all'),
+  percentage: integer('percentage'), // 0-100 when show_percentage
+  capCount: integer('cap_count'), // when show_cap
+  
+  safetyNeverSayNo: boolean('safety_never_say_no').notNull().default(false),
+  surfaceSetTtlMinutes: integer('surface_set_ttl_minutes').notNull().default(1440),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+## Step 3: Create cc_visibility_profile_windows
+```typescript
+export const cc_visibility_profile_windows = pgTable('cc_visibility_profile_windows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => cc_tenants.id, { onDelete: 'cascade' }),
+  profileId: uuid('profile_id').notNull().references(() => cc_visibility_profiles.id, { onDelete: 'cascade' }),
+  
+  channel: ccChannelEnum('channel').notNull(),
+  windowStart: date('window_start').notNull(),
+  windowEnd: date('window_end').notNull(),
+  
+  assetType: varchar('asset_type', { length: 64 }),
+  portalId: uuid('portal_id').references(() => cc_portals.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+## Step 4: Create cc_asset_groups + cc_asset_group_members
+```typescript
+export const cc_asset_groups = pgTable('cc_asset_groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => cc_tenants.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const cc_asset_group_members = pgTable('cc_asset_group_members', {
+  groupId: uuid('group_id').notNull().references(() => cc_asset_groups.id, { onDelete: 'cascade' }),
+  assetId: uuid('asset_id').notNull().references(() => cc_assets.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.groupId, t.assetId] }),
+}));
+```
+
+## Step 5: Create cc_asset_visibility_rules
+```typescript
+export const cc_asset_visibility_rules = pgTable('cc_asset_visibility_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => cc_tenants.id, { onDelete: 'cascade' }),
+  channel: ccChannelEnum('channel').notNull(),
+  
+  // Targeting (exactly one non-null)
+  assetId: uuid('asset_id').references(() => cc_assets.id, { onDelete: 'cascade' }),
+  assetGroupId: uuid('asset_group_id').references(() => cc_asset_groups.id, { onDelete: 'cascade' }),
+  assetType: varchar('asset_type', { length: 64 }),
+  
+  mode: ccAssetVisibilityRuleModeEnum('mode').notNull(),
+  condition: jsonb('condition'),
+  priority: integer('priority').notNull().default(100),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+```
+
+## Step 6: Create cc_disclosure_surface_sets
+```typescript
+export const cc_disclosure_surface_sets = pgTable('cc_disclosure_surface_sets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => cc_tenants.id, { onDelete: 'cascade' }),
+  profileId: uuid('profile_id').notNull().references(() => cc_visibility_profiles.id, { onDelete: 'cascade' }),
+  channel: ccChannelEnum('channel').notNull(),
+  
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  assetType: varchar('asset_type', { length: 64 }),
+  
+  surfacedAssetIds: uuid('surfaced_asset_ids').array().notNull(),
+  
+  computedAt: timestamp('computed_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  reason: text('reason'),
+});
+```
+
+## Step 7: Generate and run migration
+```bash
+npx drizzle-kit generate
+npx drizzle-kit migrate
+```
+
+## Step 8: Enable RLS on all new tables
+
+Add RLS policies consistent with existing `app.tenant_id` pattern.
+
+## Deliverables
+- [ ] 4 new enums in schema
+- [ ] 6 new tables in schema
+- [ ] Migration generated and applied
+- [ ] RLS enabled on all new tables
+- [ ] Drizzle types exported
+
+Report completion with table counts and any errors.
