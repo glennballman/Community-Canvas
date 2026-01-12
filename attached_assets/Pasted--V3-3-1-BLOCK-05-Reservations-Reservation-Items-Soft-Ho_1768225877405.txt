@@ -1,0 +1,175 @@
+**V3.3.1 BLOCK 05: Reservations + Reservation Items + Soft Holds**
+
+Create the reservation system with line items and time-limited soft holds.
+
+## Create cc_reservation_items
+```sql
+CREATE TABLE cc_reservation_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  reservation_id uuid NOT NULL REFERENCES cc_reservations(id) ON DELETE CASCADE,
+  
+  offer_id uuid NOT NULL REFERENCES cc_offers(id),
+  facility_id uuid NOT NULL REFERENCES cc_facilities(id),
+  
+  -- What was booked
+  quantity integer NOT NULL DEFAULT 1,
+  unit_id uuid REFERENCES cc_inventory_units(id), -- assigned unit (nullable until confirmed)
+  
+  -- Pricing snapshot at time of booking
+  base_price_cents integer NOT NULL,
+  adjustments_json jsonb DEFAULT '[]'::jsonb, -- [{ruleName, amountCents}]
+  subtotal_cents integer NOT NULL,
+  taxes_json jsonb DEFAULT '[]'::jsonb, -- [{taxName, amountCents}]
+  total_cents integer NOT NULL,
+  
+  -- For length-based pricing
+  length_ft numeric,
+  
+  -- Status
+  status varchar NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show')),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_reservation_items_reservation ON cc_reservation_items(reservation_id);
+CREATE INDEX idx_reservation_items_unit ON cc_reservation_items(unit_id);
+ALTER TABLE cc_reservation_items ENABLE ROW LEVEL SECURITY;
+```
+
+## Create cc_reservation_allocations
+```sql
+CREATE TABLE cc_reservation_allocations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  reservation_item_id uuid NOT NULL REFERENCES cc_reservation_items(id) ON DELETE CASCADE,
+  inventory_unit_id uuid NOT NULL REFERENCES cc_inventory_units(id),
+  
+  -- For continuous allocation (marina segments)
+  allocated_length_ft numeric,
+  position_start_ft numeric, -- where on the dock
+  
+  -- Assignment label shown to customer
+  display_label varchar NOT NULL, -- 'Stall 12', 'Slip C-2', 'Segment A (32ft)'
+  
+  -- Hold mechanics
+  hold_type varchar NOT NULL CHECK (hold_type IN ('soft', 'hard')),
+  hold_expires_at timestamptz, -- NULL for hard holds
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_allocations_unit ON cc_reservation_allocations(inventory_unit_id);
+CREATE INDEX idx_allocations_expires ON cc_reservation_allocations(hold_expires_at) WHERE hold_expires_at IS NOT NULL;
+ALTER TABLE cc_reservation_allocations ENABLE ROW LEVEL SECURITY;
+```
+
+## Extend cc_reservations (if not already done)
+
+Ensure these columns exist:
+```sql
+ALTER TABLE cc_reservations 
+  ADD COLUMN IF NOT EXISTS source varchar DEFAULT 'direct' 
+    CHECK (source IN ('direct', 'portal', 'chamber', 'partner', 'import')),
+  ADD COLUMN IF NOT EXISTS idempotency_key varchar,
+  ADD COLUMN IF NOT EXISTS pricing_snapshot jsonb DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS hold_type varchar CHECK (hold_type IN ('soft', 'hard')),
+  ADD COLUMN IF NOT EXISTS confirmed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS checked_in_at timestamptz,
+  ADD COLUMN IF NOT EXISTS checked_out_at timestamptz;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_idempotency 
+  ON cc_reservations(tenant_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+```
+
+## Create reservationService.ts
+
+Implement core reservation workflow:
+```typescript
+// server/services/reservationService.ts
+
+interface CreateReservationRequest {
+  tenantId: string;
+  facilityId: string;
+  offerId: string;
+  customerId?: string;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  startAt: Date;
+  endAt: Date;
+  vesselLengthFt?: number;
+  vehicleLengthFt?: number;
+  idempotencyKey: string;
+  source: 'direct' | 'portal' | 'chamber' | 'partner';
+}
+
+interface ReservationResult {
+  reservationId: string;
+  confirmationNumber: string;
+  status: string;
+  holdType: 'soft' | 'hard';
+  holdExpiresAt?: Date;
+  items: {
+    offerId: string;
+    unitAssignment?: string;
+    totalCents: number;
+  }[];
+  grandTotalCents: number;
+}
+
+// Core functions to implement:
+export async function createReservation(req: CreateReservationRequest): Promise<ReservationResult>
+export async function confirmReservation(reservationId: string): Promise<ReservationResult>
+export async function cancelReservation(reservationId: string, reason?: string): Promise<void>
+export async function expireSoftHolds(): Promise<number> // Returns count expired
+export async function checkIn(reservationId: string): Promise<void>
+export async function checkOut(reservationId: string): Promise<void>
+```
+
+## Soft Hold Logic
+
+1. When `participation_mode = 'requests_only'` or `'manual_confirm'`:
+   - Create with `hold_type = 'soft'`
+   - Set `hold_expires_at = now() + 24 hours`
+   - Status = 'pending'
+
+2. When `participation_mode = 'instant_confirm'`:
+   - Create with `hold_type = 'hard'`
+   - `hold_expires_at = NULL`
+   - Status = 'confirmed'
+   - Set `confirmed_at = now()`
+
+3. Background job: `expireSoftHolds()` runs every 15 minutes
+   - Find allocations where `hold_type = 'soft' AND hold_expires_at < now()`
+   - Set reservation status = 'expired'
+   - Release allocations
+   - Log to activity_ledger
+
+## Allocation Logic
+
+For discrete units (parking stalls, marina slips, lodging rooms):
+- Find first available unit matching constraints
+- Create allocation with display_label from unit
+
+For continuous units (dock segments):
+- Find segment with enough capacity
+- Calculate position_start_ft using first-fit algorithm
+- Create allocation with calculated position
+
+## Confirmation Number Format
+
+`RES-YYMMDD-NNN` where NNN is daily sequence
+Example: `RES-260812-001`
+
+## Deliverables
+- [ ] Migration file (068_reservation_items_allocations.sql)
+- [ ] cc_reservation_items table with RLS
+- [ ] cc_reservation_allocations table with RLS
+- [ ] Extended cc_reservations columns
+- [ ] server/services/reservationService.ts
+- [ ] Drizzle types (ReservationItem, ReservationAllocation)
+- [ ] Test: Create parking reservation → get confirmation number + stall assignment
+
+Report with table counts and a sample reservation creation output showing confirmation number and unit assignment.

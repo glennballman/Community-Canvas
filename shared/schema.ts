@@ -758,3 +758,71 @@ export const cc_tax_rules = pgTable('cc_tax_rules', {
 export const insertTaxRuleSchema = createInsertSchema(cc_tax_rules).omit({ id: true, createdAt: true });
 export type TaxRule = typeof cc_tax_rules.$inferSelect;
 export type InsertTaxRule = z.infer<typeof insertTaxRuleSchema>;
+
+// ============================================================================
+// V3.3.1 BLOCK 05 - Reservation Items + Allocations
+// ============================================================================
+
+// Reservation Items - line items within a reservation
+export const cc_reservation_items = pgTable('cc_reservation_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  reservationId: uuid('reservation_id').notNull(),
+  
+  offerId: uuid('offer_id').notNull(),
+  facilityId: uuid('facility_id').notNull(),
+  
+  quantity: integer('quantity').notNull().default(1),
+  unitId: uuid('unit_id'),
+  
+  basePriceCents: integer('base_price_cents').notNull(),
+  adjustmentsJson: jsonb('adjustments_json').default([]),
+  subtotalCents: integer('subtotal_cents').notNull(),
+  taxesJson: jsonb('taxes_json').default([]),
+  totalCents: integer('total_cents').notNull(),
+  
+  lengthFt: numeric('length_ft', { precision: 8, scale: 2 }),
+  
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertReservationItemSchema = createInsertSchema(cc_reservation_items).omit({ id: true, createdAt: true, updatedAt: true });
+export type ReservationItem = typeof cc_reservation_items.$inferSelect;
+export type InsertReservationItem = z.infer<typeof insertReservationItemSchema>;
+
+// Reservation Allocations - unit assignments with hold mechanics
+export const cc_reservation_allocations = pgTable('cc_reservation_allocations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  reservationItemId: uuid('reservation_item_id').notNull(),
+  inventoryUnitId: uuid('inventory_unit_id').notNull(),
+  
+  allocatedLengthFt: numeric('allocated_length_ft', { precision: 8, scale: 2 }),
+  positionStartFt: numeric('position_start_ft', { precision: 8, scale: 2 }),
+  
+  displayLabel: varchar('display_label', { length: 100 }).notNull(),
+  
+  holdType: varchar('hold_type', { length: 10 }).notNull(),
+  holdExpiresAt: timestamp('hold_expires_at', { withTimezone: true }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertReservationAllocationSchema = createInsertSchema(cc_reservation_allocations).omit({ id: true, createdAt: true });
+export type ReservationAllocation = typeof cc_reservation_allocations.$inferSelect;
+export type InsertReservationAllocation = z.infer<typeof insertReservationAllocationSchema>;
+
+// Daily Sequences - for confirmation number generation
+export const cc_daily_sequences = pgTable('cc_daily_sequences', {
+  tenantId: uuid('tenant_id').notNull(),
+  sequenceDate: date('sequence_date').notNull(),
+  sequenceType: varchar('sequence_type', { length: 32 }).notNull().default('reservation'),
+  currentValue: integer('current_value').notNull().default(0),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.tenantId, t.sequenceDate, t.sequenceType] }),
+}));
+
+export type DailySequence = typeof cc_daily_sequences.$inferSelect;
