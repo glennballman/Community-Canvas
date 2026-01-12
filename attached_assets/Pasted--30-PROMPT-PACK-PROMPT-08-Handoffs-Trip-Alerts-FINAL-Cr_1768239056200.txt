@@ -1,0 +1,726 @@
+**30-PROMPT PACK - PROMPT 08: Handoffs + Trip Alerts (FINAL)**
+
+Create the handoff system for passing guests between properties and trip alerts for weather/travel disruptions.
+
+## Create Handoff Tables
+
+### Migration 077_handoffs_alerts.sql
+```sql
+BEGIN;
+
+-- ============ TRIP HANDOFFS ============
+-- Pass guest information to next destination
+
+CREATE TABLE IF NOT EXISTS cc_trip_handoffs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id uuid NOT NULL REFERENCES cc_trips(id) ON DELETE CASCADE,
+  
+  -- Source (current property)
+  from_portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  from_tenant_id uuid REFERENCES cc_tenants(id) ON DELETE SET NULL,
+  
+  -- Destination
+  next_destination_name varchar NOT NULL,
+  next_destination_address text,
+  next_destination_phone varchar,
+  next_destination_email varchar,
+  next_destination_portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  
+  -- Timing
+  planned_departure_date date,
+  planned_departure_time time,
+  actual_departure_at timestamptz,
+  
+  -- Transport
+  transport_mode varchar CHECK (transport_mode IN (
+    'self_drive', 'ferry', 'seaplane', 'water_taxi', 'shuttle', 'other'
+  )),
+  transport_details text,
+  transport_booking_ref varchar,
+  
+  -- Consent for sharing
+  consent_share_dietary boolean DEFAULT false,
+  consent_share_accessibility boolean DEFAULT false,
+  consent_share_medical boolean DEFAULT false,
+  consent_share_preferences boolean DEFAULT false,
+  
+  -- Shared info snapshot (only what was consented)
+  needs_snapshot jsonb DEFAULT '{}'::jsonb,
+  
+  -- Notes
+  notes_for_next text, -- What current property wants to tell next
+  special_arrangements text,
+  
+  -- Partner notification
+  partner_invitation_id uuid REFERENCES cc_trip_invitations(id) ON DELETE SET NULL,
+  partner_invitation_sent boolean DEFAULT false,
+  partner_invitation_sent_at timestamptz,
+  partner_accepted boolean DEFAULT false,
+  partner_accepted_at timestamptz,
+  
+  -- Status
+  status varchar DEFAULT 'draft' CHECK (status IN (
+    'draft', 'sent', 'viewed', 'acknowledged', 'completed', 'cancelled'
+  )),
+  
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_handoffs_trip ON cc_trip_handoffs(trip_id);
+CREATE INDEX IF NOT EXISTS idx_handoffs_destination ON cc_trip_handoffs(next_destination_portal_id) WHERE next_destination_portal_id IS NOT NULL;
+
+ALTER TABLE cc_trip_handoffs ENABLE ROW LEVEL SECURITY;
+
+-- ============ TRIP ALERTS ============
+-- Weather, travel, and operational alerts for trips
+
+CREATE TABLE IF NOT EXISTS cc_trip_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  trip_id uuid NOT NULL REFERENCES cc_trips(id) ON DELETE CASCADE,
+  
+  -- Alert type
+  alert_type varchar NOT NULL CHECK (alert_type IN (
+    'weather', 'ferry', 'flight', 'road', 'activity_cancelled',
+    'booking_change', 'provider_message', 'emergency', 'reminder', 'system'
+  )),
+  
+  -- Severity
+  severity varchar NOT NULL DEFAULT 'info' CHECK (severity IN (
+    'info', 'warning', 'critical', 'emergency'
+  )),
+  
+  -- Content
+  title varchar NOT NULL,
+  message text NOT NULL,
+  action_required boolean DEFAULT false,
+  action_url text,
+  action_label varchar,
+  
+  -- Context
+  related_item_id uuid, -- Could be cart_item, reservation, moment, etc.
+  related_item_type varchar,
+  affected_date date,
+  
+  -- Source
+  source varchar DEFAULT 'system' CHECK (source IN (
+    'system', 'weather_service', 'ferry_api', 'provider', 'staff', 'auto'
+  )),
+  source_ref varchar,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active', 'acknowledged', 'resolved', 'dismissed', 'expired'
+  )),
+  acknowledged_at timestamptz,
+  acknowledged_by varchar,
+  resolved_at timestamptz,
+  
+  -- Expiry
+  expires_at timestamptz,
+  
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_trip ON cc_trip_alerts(trip_id, status);
+CREATE INDEX IF NOT EXISTS idx_alerts_active ON cc_trip_alerts(trip_id, severity) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_alerts_date ON cc_trip_alerts(affected_date) WHERE affected_date IS NOT NULL;
+
+ALTER TABLE cc_trip_alerts ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/handoffService.ts
+```typescript
+// server/services/handoffService.ts
+
+import { db } from '../db';
+import { eq, and, desc } from 'drizzle-orm';
+import { getTrip, getTripById } from './tripService';
+import { aggregateNeeds, getTripProfiles } from './partyService';
+import { createInvitation } from './tripService';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateHandoffRequest {
+  tripAccessCode: string;
+  nextDestinationName: string;
+  nextDestinationAddress?: string;
+  nextDestinationPhone?: string;
+  nextDestinationEmail?: string;
+  nextDestinationPortalId?: string;
+  plannedDepartureDate?: Date;
+  plannedDepartureTime?: string;
+  transportMode?: 'self_drive' | 'ferry' | 'seaplane' | 'water_taxi' | 'shuttle' | 'other';
+  transportDetails?: string;
+  transportBookingRef?: string;
+  consentShareDietary?: boolean;
+  consentShareAccessibility?: boolean;
+  consentShareMedical?: boolean;
+  consentSharePreferences?: boolean;
+  notesForNext?: string;
+  specialArrangements?: string;
+  notifyNextProperty?: boolean;
+}
+
+interface HandoffResult {
+  handoff: any;
+  invitation?: any;
+  inviteUrl?: string;
+}
+
+// ============ HANDOFF FUNCTIONS ============
+
+export async function createHandoff(req: CreateHandoffRequest): Promise<HandoffResult> {
+  const trip = await getTrip(req.tripAccessCode);
+  if (!trip) {
+    throw new Error('Trip not found');
+  }
+  
+  // Build needs snapshot based on consent
+  let needsSnapshot: Record<string, any> = {};
+  
+  if (req.consentShareDietary || req.consentShareAccessibility || req.consentShareMedical) {
+    const aggregated = await aggregateNeeds(trip.id);
+    
+    if (req.consentShareDietary) {
+      needsSnapshot.dietary = aggregated.dietary;
+    }
+    if (req.consentShareAccessibility) {
+      needsSnapshot.accessibility = aggregated.accessibility;
+    }
+    if (req.consentShareMedical) {
+      needsSnapshot.medical = {
+        powerCritical: aggregated.medical.powerCritical,
+        // Don't share conditions without explicit consent
+      };
+    }
+    
+    // Always include party composition (non-sensitive)
+    needsSnapshot.partyComposition = aggregated.partyComposition;
+  }
+  
+  const [handoff] = await db.insert(ccTripHandoffs).values({
+    tripId: trip.id,
+    fromPortalId: trip.portalId,
+    fromTenantId: trip.tenantId,
+    nextDestinationName: req.nextDestinationName,
+    nextDestinationAddress: req.nextDestinationAddress,
+    nextDestinationPhone: req.nextDestinationPhone,
+    nextDestinationEmail: req.nextDestinationEmail,
+    nextDestinationPortalId: req.nextDestinationPortalId,
+    plannedDepartureDate: req.plannedDepartureDate,
+    plannedDepartureTime: req.plannedDepartureTime,
+    transportMode: req.transportMode,
+    transportDetails: req.transportDetails,
+    transportBookingRef: req.transportBookingRef,
+    consentShareDietary: req.consentShareDietary || false,
+    consentShareAccessibility: req.consentShareAccessibility || false,
+    consentShareMedical: req.consentShareMedical || false,
+    consentSharePreferences: req.consentSharePreferences || false,
+    needsSnapshot,
+    notesForNext: req.notesForNext,
+    specialArrangements: req.specialArrangements,
+    status: 'draft'
+  }).returning();
+  
+  const result: HandoffResult = { handoff };
+  
+  // Send invitation to next property if requested
+  if (req.notifyNextProperty && req.nextDestinationEmail) {
+    const invitation = await createInvitation({
+      tripId: trip.id,
+      invitationType: 'handoff_recipient',
+      recipientName: req.nextDestinationName,
+      recipientEmail: req.nextDestinationEmail,
+      recipientPhone: req.nextDestinationPhone,
+      handoffId: handoff.id,
+      nextDestinationName: req.nextDestinationName,
+      senderName: trip.primaryContactName,
+      messageSubject: `Guest arriving from ${trip.groupName}`,
+      messageBody: `A guest party is heading your way! They've shared some details to help you prepare.`,
+      expiresInDays: 14
+    });
+    
+    // Update handoff with invitation reference
+    await db.update(ccTripHandoffs)
+      .set({
+        partnerInvitationId: invitation.invitation.id,
+        partnerInvitationSent: true,
+        partnerInvitationSentAt: new Date(),
+        status: 'sent',
+        updatedAt: new Date()
+      })
+      .where(eq(ccTripHandoffs.id, handoff.id));
+    
+    result.invitation = invitation.invitation;
+    result.inviteUrl = invitation.inviteUrl;
+  }
+  
+  await logActivity({
+    tenantId: trip.tenantId || 'system',
+    actorId: 'guest',
+    action: 'handoff.created',
+    resourceType: 'handoff',
+    resourceId: handoff.id,
+    metadata: { 
+      tripId: trip.id, 
+      nextDestination: req.nextDestinationName,
+      notified: req.notifyNextProperty 
+    }
+  });
+  
+  return result;
+}
+
+export async function getHandoff(handoffId: string): Promise<any | null> {
+  return db.query.ccTripHandoffs.findFirst({
+    where: eq(ccTripHandoffs.id, handoffId)
+  });
+}
+
+export async function getTripHandoffs(tripId: string): Promise<any[]> {
+  return db.query.ccTripHandoffs.findMany({
+    where: eq(ccTripHandoffs.tripId, tripId),
+    orderBy: [desc(ccTripHandoffs.createdAt)]
+  });
+}
+
+export async function acknowledgeHandoff(handoffId: string): Promise<any> {
+  const [updated] = await db.update(ccTripHandoffs)
+    .set({
+      status: 'acknowledged',
+      partnerAccepted: true,
+      partnerAcceptedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTripHandoffs.id, handoffId))
+    .returning();
+  
+  return updated;
+}
+
+export async function completeHandoff(
+  handoffId: string,
+  actualDepartureAt?: Date
+): Promise<any> {
+  const [updated] = await db.update(ccTripHandoffs)
+    .set({
+      status: 'completed',
+      actualDepartureAt: actualDepartureAt || new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccTripHandoffs.id, handoffId))
+    .returning();
+  
+  return updated;
+}
+```
+
+## Create server/services/alertService.ts
+```typescript
+// server/services/alertService.ts
+
+import { db } from '../db';
+import { eq, and, desc, gte, lte, or } from 'drizzle-orm';
+import { getTrip } from './tripService';
+
+// ============ TYPES ============
+
+interface CreateAlertRequest {
+  tripId: string;
+  alertType: 'weather' | 'ferry' | 'flight' | 'road' | 'activity_cancelled' | 'booking_change' | 'provider_message' | 'emergency' | 'reminder' | 'system';
+  severity: 'info' | 'warning' | 'critical' | 'emergency';
+  title: string;
+  message: string;
+  actionRequired?: boolean;
+  actionUrl?: string;
+  actionLabel?: string;
+  relatedItemId?: string;
+  relatedItemType?: string;
+  affectedDate?: Date;
+  source?: 'system' | 'weather_service' | 'ferry_api' | 'provider' | 'staff' | 'auto';
+  sourceRef?: string;
+  expiresAt?: Date;
+}
+
+// ============ ALERT FUNCTIONS ============
+
+export async function createAlert(req: CreateAlertRequest): Promise<any> {
+  const [alert] = await db.insert(ccTripAlerts).values({
+    tripId: req.tripId,
+    alertType: req.alertType,
+    severity: req.severity,
+    title: req.title,
+    message: req.message,
+    actionRequired: req.actionRequired || false,
+    actionUrl: req.actionUrl,
+    actionLabel: req.actionLabel,
+    relatedItemId: req.relatedItemId,
+    relatedItemType: req.relatedItemType,
+    affectedDate: req.affectedDate,
+    source: req.source || 'system',
+    sourceRef: req.sourceRef,
+    status: 'active',
+    expiresAt: req.expiresAt
+  }).returning();
+  
+  return alert;
+}
+
+export async function getTripAlerts(
+  tripId: string,
+  options?: { activeOnly?: boolean; severity?: string }
+): Promise<any[]> {
+  const conditions = [eq(ccTripAlerts.tripId, tripId)];
+  
+  if (options?.activeOnly) {
+    conditions.push(eq(ccTripAlerts.status, 'active'));
+  }
+  
+  if (options?.severity) {
+    conditions.push(eq(ccTripAlerts.severity, options.severity));
+  }
+  
+  return db.query.ccTripAlerts.findMany({
+    where: and(...conditions),
+    orderBy: [
+      desc(ccTripAlerts.severity), // Critical first
+      desc(ccTripAlerts.createdAt)
+    ]
+  });
+}
+
+export async function acknowledgeAlert(
+  alertId: string,
+  acknowledgedBy?: string
+): Promise<any> {
+  const [updated] = await db.update(ccTripAlerts)
+    .set({
+      status: 'acknowledged',
+      acknowledgedAt: new Date(),
+      acknowledgedBy
+    })
+    .where(eq(ccTripAlerts.id, alertId))
+    .returning();
+  
+  return updated;
+}
+
+export async function resolveAlert(alertId: string): Promise<any> {
+  const [updated] = await db.update(ccTripAlerts)
+    .set({
+      status: 'resolved',
+      resolvedAt: new Date()
+    })
+    .where(eq(ccTripAlerts.id, alertId))
+    .returning();
+  
+  return updated;
+}
+
+export async function dismissAlert(alertId: string): Promise<any> {
+  const [updated] = await db.update(ccTripAlerts)
+    .set({ status: 'dismissed' })
+    .where(eq(ccTripAlerts.id, alertId))
+    .returning();
+  
+  return updated;
+}
+
+// Create weather alert based on trip dates and weather trends
+export async function checkWeatherAlerts(tripAccessCode: string): Promise<any[]> {
+  const trip = await getTrip(tripAccessCode);
+  if (!trip || !trip.startDate) return [];
+  
+  const startMonth = new Date(trip.startDate).getMonth() + 1;
+  
+  // Get weather for trip dates
+  const weather = await db.query.ccWeatherTrends.findFirst({
+    where: and(
+      eq(ccWeatherTrends.locationCode, 'BAMFIELD'),
+      eq(ccWeatherTrends.month, startMonth)
+    )
+  });
+  
+  if (!weather) return [];
+  
+  const alerts: any[] = [];
+  
+  // Check rain probability
+  if (weather.rainProbPercent && weather.rainProbPercent > 60) {
+    const existingAlert = await db.query.ccTripAlerts.findFirst({
+      where: and(
+        eq(ccTripAlerts.tripId, trip.id),
+        eq(ccTripAlerts.alertType, 'weather'),
+        eq(ccTripAlerts.status, 'active')
+      )
+    });
+    
+    if (!existingAlert) {
+      const alert = await createAlert({
+        tripId: trip.id,
+        alertType: 'weather',
+        severity: weather.rainProbPercent > 70 ? 'warning' : 'info',
+        title: 'Rain Expected During Your Trip',
+        message: `There's a ${weather.rainProbPercent}% chance of rain during your visit. ${weather.planningNotes || 'Consider packing rain gear and having indoor backup plans.'}`,
+        source: 'weather_service',
+        affectedDate: new Date(trip.startDate)
+      });
+      alerts.push(alert);
+    }
+  }
+  
+  return alerts;
+}
+
+// Expire old alerts
+export async function expireOldAlerts(): Promise<number> {
+  const result = await db.update(ccTripAlerts)
+    .set({ status: 'expired' })
+    .where(and(
+      eq(ccTripAlerts.status, 'active'),
+      lte(ccTripAlerts.expiresAt, new Date())
+    ))
+    .returning();
+  
+  return result.length;
+}
+```
+
+## Add Handoff and Alert Routes
+
+### In server/routes/public-portal.ts
+```typescript
+import { 
+  createHandoff, getHandoff, getTripHandoffs, 
+  acknowledgeHandoff, completeHandoff 
+} from '../services/handoffService';
+import { 
+  createAlert, getTripAlerts, acknowledgeAlert, 
+  resolveAlert, dismissAlert, checkWeatherAlerts 
+} from '../services/alertService';
+
+// ============ HANDOFF ENDPOINTS ============
+
+// GET /api/public/trips/:accessCode/handoff - Get latest handoff
+router.get('/trips/:accessCode/handoff', async (req, res) => {
+  const { accessCode } = req.params;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const handoffs = await getTripHandoffs(trip.id);
+    
+    res.json({ 
+      trip, 
+      handoff: handoffs[0] || null,
+      allHandoffs: handoffs
+    });
+  } catch (e: any) {
+    console.error('Get handoff error:', e);
+    res.status(500).json({ error: 'Failed to get handoff' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/handoff - Create handoff
+router.post('/trips/:accessCode/handoff', async (req, res) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.nextDestinationName) {
+    return res.status(400).json({ error: 'nextDestinationName required' });
+  }
+  
+  try {
+    const result = await createHandoff({
+      tripAccessCode: accessCode,
+      nextDestinationName: b.nextDestinationName,
+      nextDestinationAddress: b.nextDestinationAddress,
+      nextDestinationPhone: b.nextDestinationPhone,
+      nextDestinationEmail: b.nextDestinationEmail,
+      nextDestinationPortalId: b.nextDestinationPortalId,
+      plannedDepartureDate: b.plannedDepartureDate ? new Date(b.plannedDepartureDate) : undefined,
+      plannedDepartureTime: b.plannedDepartureTime,
+      transportMode: b.transportMode,
+      transportDetails: b.transportDetails,
+      transportBookingRef: b.transportBookingRef,
+      consentShareDietary: b.consentShareDietary,
+      consentShareAccessibility: b.consentShareAccessibility,
+      consentShareMedical: b.consentShareMedical,
+      consentSharePreferences: b.consentSharePreferences,
+      notesForNext: b.notesForNext,
+      specialArrangements: b.specialArrangements,
+      notifyNextProperty: b.notifyNextProperty
+    });
+    
+    res.json({
+      handoff: result.handoff,
+      invitation: result.invitation,
+      inviteUrl: result.inviteUrl,
+      message: result.inviteUrl 
+        ? 'Handoff created and invitation sent to next property!'
+        : 'Handoff saved'
+    });
+  } catch (e: any) {
+    console.error('Create handoff error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/public/trips/:accessCode/handoff/:handoffId/acknowledge
+router.post('/trips/:accessCode/handoff/:handoffId/acknowledge', async (req, res) => {
+  const { handoffId } = req.params;
+  
+  try {
+    const updated = await acknowledgeHandoff(handoffId);
+    res.json({ handoff: updated });
+  } catch (e: any) {
+    console.error('Acknowledge handoff error:', e);
+    res.status(500).json({ error: 'Failed to acknowledge handoff' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/handoff/:handoffId/complete
+router.post('/trips/:accessCode/handoff/:handoffId/complete', async (req, res) => {
+  const { handoffId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await completeHandoff(
+      handoffId, 
+      b.actualDepartureAt ? new Date(b.actualDepartureAt) : undefined
+    );
+    res.json({ handoff: updated });
+  } catch (e: any) {
+    console.error('Complete handoff error:', e);
+    res.status(500).json({ error: 'Failed to complete handoff' });
+  }
+});
+
+// ============ ALERT ENDPOINTS ============
+
+// GET /api/public/trips/:accessCode/alerts - Get trip alerts
+router.get('/trips/:accessCode/alerts', async (req, res) => {
+  const { accessCode } = req.params;
+  const { active, severity } = req.query;
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    // Check for new weather alerts
+    await checkWeatherAlerts(accessCode);
+    
+    const alerts = await getTripAlerts(trip.id, {
+      activeOnly: active === 'true',
+      severity: severity as string
+    });
+    
+    res.json({ alerts });
+  } catch (e: any) {
+    console.error('Get alerts error:', e);
+    res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/alerts - Create alert (for providers)
+router.post('/trips/:accessCode/alerts', async (req, res) => {
+  const { accessCode } = req.params;
+  const b = req.body || {};
+  
+  if (!b.alertType || !b.title || !b.message) {
+    return res.status(400).json({ error: 'alertType, title, and message required' });
+  }
+  
+  try {
+    const trip = await getTrip(accessCode);
+    if (!trip) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+    
+    const alert = await createAlert({
+      tripId: trip.id,
+      alertType: b.alertType,
+      severity: b.severity || 'info',
+      title: b.title,
+      message: b.message,
+      actionRequired: b.actionRequired,
+      actionUrl: b.actionUrl,
+      actionLabel: b.actionLabel,
+      relatedItemId: b.relatedItemId,
+      relatedItemType: b.relatedItemType,
+      affectedDate: b.affectedDate ? new Date(b.affectedDate) : undefined,
+      source: b.source || 'provider',
+      expiresAt: b.expiresAt ? new Date(b.expiresAt) : undefined
+    });
+    
+    res.json({ alert });
+  } catch (e: any) {
+    console.error('Create alert error:', e);
+    res.status(500).json({ error: 'Failed to create alert' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/alerts/:alertId/acknowledge
+router.post('/trips/:accessCode/alerts/:alertId/acknowledge', async (req, res) => {
+  const { alertId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const updated = await acknowledgeAlert(alertId, b.acknowledgedBy);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Acknowledge alert error:', e);
+    res.status(500).json({ error: 'Failed to acknowledge alert' });
+  }
+});
+
+// POST /api/public/trips/:accessCode/alerts/:alertId/dismiss
+router.post('/trips/:accessCode/alerts/:alertId/dismiss', async (req, res) => {
+  const { alertId } = req.params;
+  
+  try {
+    const updated = await dismissAlert(alertId);
+    res.json({ alert: updated });
+  } catch (e: any) {
+    console.error('Dismiss alert error:', e);
+    res.status(500).json({ error: 'Failed to dismiss alert' });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- TripHandoff, InsertTripHandoff
+- TripAlert, InsertTripAlert
+
+## Deliverables
+- [ ] Migration 077_handoffs_alerts.sql
+- [ ] cc_trip_handoffs table with RLS
+- [ ] cc_trip_alerts table with RLS
+- [ ] server/services/handoffService.ts
+- [ ] server/services/alertService.ts
+- [ ] Handoff routes:
+  - GET /api/public/trips/:accessCode/handoff
+  - POST /api/public/trips/:accessCode/handoff
+  - POST /api/public/trips/:accessCode/handoff/:id/acknowledge
+  - POST /api/public/trips/:accessCode/handoff/:id/complete
+- [ ] Alert routes:
+  - GET /api/public/trips/:accessCode/alerts
+  - POST /api/public/trips/:accessCode/alerts
+  - POST /api/public/trips/:accessCode/alerts/:id/acknowledge
+  - POST /api/public/trips/:accessCode/alerts/:id/dismiss
+- [ ] Weather alert auto-generation from trip dates
+- [ ] Consent-based needs snapshot in handoffs
+- [ ] Test: Create trip → create handoff with consent → verify needs_snapshot
+
+Report with handoff test showing needs_snapshot and weather alert generation.

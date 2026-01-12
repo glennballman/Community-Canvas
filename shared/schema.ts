@@ -514,6 +514,89 @@ export const insertDietaryLookupSchema = createInsertSchema(ccDietaryLookup).omi
 export type DietaryLookup = typeof ccDietaryLookup.$inferSelect;
 export type InsertDietaryLookup = z.infer<typeof insertDietaryLookupSchema>;
 
+// Trip Handoffs (passing guests between properties)
+export const ccTripHandoffs = pgTable('cc_trip_handoffs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tripId: uuid('trip_id').notNull().references(() => ccTrips.id, { onDelete: 'cascade' }),
+  
+  fromPortalId: uuid('from_portal_id'),
+  fromTenantId: uuid('from_tenant_id'),
+  
+  nextDestinationName: varchar('next_destination_name').notNull(),
+  nextDestinationAddress: text('next_destination_address'),
+  nextDestinationPhone: varchar('next_destination_phone'),
+  nextDestinationEmail: varchar('next_destination_email'),
+  nextDestinationPortalId: uuid('next_destination_portal_id'),
+  
+  plannedDepartureDate: date('planned_departure_date'),
+  plannedDepartureTime: time('planned_departure_time'),
+  actualDepartureAt: timestamp('actual_departure_at', { withTimezone: true }),
+  
+  transportMode: varchar('transport_mode'),
+  transportDetails: text('transport_details'),
+  transportBookingRef: varchar('transport_booking_ref'),
+  
+  consentShareDietary: boolean('consent_share_dietary').default(false),
+  consentShareAccessibility: boolean('consent_share_accessibility').default(false),
+  consentShareMedical: boolean('consent_share_medical').default(false),
+  consentSharePreferences: boolean('consent_share_preferences').default(false),
+  
+  needsSnapshot: jsonb('needs_snapshot').default({}),
+  
+  notesForNext: text('notes_for_next'),
+  specialArrangements: text('special_arrangements'),
+  
+  partnerInvitationId: uuid('partner_invitation_id'),
+  partnerInvitationSent: boolean('partner_invitation_sent').default(false),
+  partnerInvitationSentAt: timestamp('partner_invitation_sent_at', { withTimezone: true }),
+  partnerAccepted: boolean('partner_accepted').default(false),
+  partnerAcceptedAt: timestamp('partner_accepted_at', { withTimezone: true }),
+  
+  status: varchar('status').default('draft'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertTripHandoffSchema = createInsertSchema(ccTripHandoffs).omit({ id: true, createdAt: true, updatedAt: true });
+export type TripHandoff = typeof ccTripHandoffs.$inferSelect;
+export type InsertTripHandoff = z.infer<typeof insertTripHandoffSchema>;
+
+// Trip Alerts (weather, travel, operational alerts)
+export const ccTripAlerts = pgTable('cc_trip_alerts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tripId: uuid('trip_id').notNull().references(() => ccTrips.id, { onDelete: 'cascade' }),
+  
+  alertType: varchar('alert_type').notNull(),
+  severity: varchar('severity').notNull().default('info'),
+  
+  title: varchar('title').notNull(),
+  message: text('message').notNull(),
+  actionRequired: boolean('action_required').default(false),
+  actionUrl: text('action_url'),
+  actionLabel: varchar('action_label'),
+  
+  relatedItemId: uuid('related_item_id'),
+  relatedItemType: varchar('related_item_type'),
+  affectedDate: date('affected_date'),
+  
+  source: varchar('source').default('system'),
+  sourceRef: varchar('source_ref'),
+  
+  status: varchar('status').default('active'),
+  acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+  acknowledgedBy: varchar('acknowledged_by'),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertTripAlertSchema = createInsertSchema(ccTripAlerts).omit({ id: true, createdAt: true });
+export type TripAlert = typeof ccTripAlerts.$inferSelect;
+export type InsertTripAlert = z.infer<typeof insertTripAlertSchema>;
+
 // ============================================================================
 // V3.3.1 TRUTH/DISCLOSURE LAYER - Visibility System
 // ============================================================================
