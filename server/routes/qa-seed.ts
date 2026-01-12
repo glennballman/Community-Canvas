@@ -309,4 +309,233 @@ router.delete('/qa/cleanup-test-assets', async (req, res) => {
   }
 });
 
+// ============================================================================
+// V3.3.1 Block 12: Go/No-Go QA Endpoints
+// ============================================================================
+
+const QA_SEED_TAG = 'qa-go-no-go';
+
+interface TenantInfo {
+  tenantId: string;
+  name: string;
+  participates: boolean;
+}
+
+interface AssetInfo {
+  assetId: string;
+  assetType: string;
+  title: string;
+  providerTenantId: string;
+  facilityId: string;
+  offerId?: string;
+}
+
+router.post('/qa/seed-go-no-go', async (req, res) => {
+  const { portalSlug, windowStart, windowEnd } = req.body;
+  
+  try {
+    const portalSlugValue = portalSlug || 'bamfield';
+    
+    const portalResult = await serviceQuery(`
+      SELECT id, slug, owning_tenant_id as community_id
+      FROM cc_portals
+      WHERE slug = $1
+      LIMIT 1
+    `, [portalSlugValue]);
+    
+    let portal = portalResult.rows?.[0] as any;
+    
+    if (!portal) {
+      const communityResult = await serviceQuery(`
+        SELECT id FROM cc_tenants WHERE tenant_type = 'community' LIMIT 1
+      `);
+      const communityId = communityResult.rows?.[0]?.id || 'b0000000-0000-0000-0000-000000000001';
+      
+      const newPortalResult = await serviceQuery(`
+        INSERT INTO cc_portals (slug, name, owning_tenant_id, status, primary_audience)
+        VALUES ($1, 'Bamfield Community Portal', $2::uuid, 'active', 'public')
+        RETURNING id, slug, owning_tenant_id as community_id
+      `, [portalSlugValue, communityId]);
+      portal = newPortalResult.rows?.[0];
+    }
+    
+    const operatorResult = await serviceQuery(`
+      SELECT id, email FROM cc_individuals
+      WHERE email = 'qa.operator@communitycanvas.local'
+      LIMIT 1
+    `);
+    
+    let operator = operatorResult.rows?.[0] as any;
+    
+    if (!operator) {
+      const bcrypt = await import('bcryptjs');
+      const passwordHash = await bcrypt.hash('Password123!', 10);
+      
+      const newOperatorResult = await serviceQuery(`
+        INSERT INTO cc_individuals (email, full_name, password_hash)
+        VALUES ('qa.operator@communitycanvas.local', 'QA Operator', $1)
+        RETURNING id, email
+      `, [passwordHash]);
+      operator = newOperatorResult.rows?.[0];
+    }
+    
+    const tenantsResult = await serviceQuery(`
+      SELECT id, name, tenant_type FROM cc_tenants
+      WHERE tenant_type IN ('provider', 'lodging', 'marina', 'parking')
+      ORDER BY name
+      LIMIT 10
+    `);
+    
+    const tenants: TenantInfo[] = (tenantsResult.rows || []).map((t: any) => ({
+      tenantId: t.id,
+      name: t.name,
+      participates: true
+    }));
+    
+    const assets: AssetInfo[] = [];
+    
+    const lodgingResult = await serviceQuery(`
+      SELECT 
+        f.id as facility_id,
+        f.tenant_id,
+        f.name as facility_name,
+        u.id as unit_id,
+        u.display_label
+      FROM cc_facilities f
+      JOIN cc_inventory_units u ON u.facility_id = f.id
+      WHERE f.facility_type = 'lodging' AND f.is_active = true
+      LIMIT 1
+    `);
+    
+    if (lodgingResult.rows && lodgingResult.rows.length > 0) {
+      const lodging = lodgingResult.rows[0] as any;
+      const offerResult = await serviceQuery(`
+        SELECT id FROM cc_offers WHERE facility_id = $1::uuid LIMIT 1
+      `, [lodging.facility_id]);
+      assets.push({
+        assetId: lodging.unit_id,
+        assetType: 'lodging',
+        title: lodging.display_label || 'Lodging Unit',
+        providerTenantId: lodging.tenant_id,
+        facilityId: lodging.facility_id,
+        offerId: (offerResult.rows?.[0] as any)?.id
+      });
+    }
+    
+    const marinaResult = await serviceQuery(`
+      SELECT 
+        f.id as facility_id,
+        f.tenant_id,
+        f.name as facility_name,
+        u.id as unit_id,
+        u.display_label
+      FROM cc_facilities f
+      JOIN cc_inventory_units u ON u.facility_id = f.id
+      WHERE f.facility_type = 'marina' AND f.is_active = true
+      LIMIT 1
+    `);
+    
+    if (marinaResult.rows && marinaResult.rows.length > 0) {
+      const marina = marinaResult.rows[0] as any;
+      const offerResult = await serviceQuery(`
+        SELECT id FROM cc_offers WHERE facility_id = $1::uuid LIMIT 1
+      `, [marina.facility_id]);
+      assets.push({
+        assetId: marina.unit_id,
+        assetType: 'slip',
+        title: marina.display_label || 'Marina Slip',
+        providerTenantId: marina.tenant_id,
+        facilityId: marina.facility_id,
+        offerId: (offerResult.rows?.[0] as any)?.id
+      });
+    }
+    
+    const parkingResult = await serviceQuery(`
+      SELECT 
+        f.id as facility_id,
+        f.tenant_id,
+        f.name as facility_name,
+        u.id as unit_id,
+        u.display_label
+      FROM cc_facilities f
+      JOIN cc_inventory_units u ON u.facility_id = f.id
+      WHERE f.facility_type = 'parking' AND f.is_active = true
+      LIMIT 1
+    `);
+    
+    if (parkingResult.rows && parkingResult.rows.length > 0) {
+      const parking = parkingResult.rows[0] as any;
+      const offerResult = await serviceQuery(`
+        SELECT id FROM cc_offers WHERE facility_id = $1::uuid LIMIT 1
+      `, [parking.facility_id]);
+      assets.push({
+        assetId: parking.unit_id,
+        assetType: 'parking',
+        title: parking.display_label || 'Parking Stall',
+        providerTenantId: parking.tenant_id,
+        facilityId: parking.facility_id,
+        offerId: (offerResult.rows?.[0] as any)?.id
+      });
+    }
+    
+    const crypto = await import('crypto');
+    
+    res.json({
+      traceId: crypto.randomUUID(),
+      seeded: {
+        portalSlug: portalSlugValue,
+        portalId: portal?.id,
+        communityId: portal?.community_id,
+        tenants,
+        assets,
+        webcamEntityId: null,
+        operatorEmail: operator?.email || 'qa.operator@communitycanvas.local',
+        operatorId: operator?.id
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('QA Seed error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/qa/cleanup-go-no-go', async (_req, res) => {
+  try {
+    await serviceQuery(`
+      DELETE FROM cc_incidents WHERE qa_seed_tag = $1
+    `, [QA_SEED_TAG]);
+    
+    await serviceQuery(`
+      DELETE FROM cc_access_credentials
+      WHERE reservation_id IN (
+        SELECT id FROM cc_reservations WHERE idempotency_key LIKE 'qa-go-no-go-%'
+      )
+    `);
+    
+    await serviceQuery(`
+      DELETE FROM cc_reservations WHERE idempotency_key LIKE 'qa-go-no-go-%'
+    `);
+    
+    res.json({ ok: true, cleanedUp: ['incidents', 'reservations', 'credentials'] });
+    
+  } catch (error: any) {
+    console.error('QA Cleanup error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/qa/health', async (_req, res) => {
+  try {
+    const result = await serviceQuery(`SELECT 1 as ok`);
+    res.json({ 
+      status: 'ok', 
+      database: result.rows && result.rows.length > 0 ? 'connected' : 'error',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', error: error.message });
+  }
+});
+
 export default router;
