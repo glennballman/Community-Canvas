@@ -299,7 +299,7 @@ export async function confirmReservation(reservationId: string): Promise<Reserva
   
   // Get updated reservation
   const result = await db.execute(sql`
-    SELECT id, confirmation_number, status, hold_type
+    SELECT id, confirmation_number, status, hold_type, provider_id
     FROM cc_reservations WHERE id = ${reservationId}
   `);
   
@@ -308,6 +308,17 @@ export async function confirmReservation(reservationId: string): Promise<Reserva
   }
   
   const row = result.rows[0];
+  
+  // Log activity
+  await db.execute(sql`
+    INSERT INTO cc_activity_ledger (
+      tenant_id, action, entity_type, entity_id, payload
+    ) VALUES (
+      ${row.provider_id}, 'reservation.confirmed', 'reservation', ${reservationId},
+      '{"status": "confirmed", "holdType": "hard"}'
+    )
+  `);
+  
   return {
     reservationId: row.id as string,
     confirmationNumber: row.confirmation_number as string,
@@ -322,6 +333,10 @@ export async function confirmReservation(reservationId: string): Promise<Reserva
  * Cancel a reservation
  */
 export async function cancelReservation(reservationId: string, reason?: string): Promise<void> {
+  const resResult = await db.execute(sql`
+    SELECT provider_id FROM cc_reservations WHERE id = ${reservationId}
+  `);
+  
   await db.execute(sql`
     UPDATE cc_reservations
     SET status = 'cancelled', cancellation_reason = ${reason || null}
@@ -334,7 +349,17 @@ export async function cancelReservation(reservationId: string, reason?: string):
     WHERE reservation_id = ${reservationId}
   `);
   
-  // Allocations are automatically released since item status is cancelled
+  // Log activity
+  if (resResult.rows.length > 0) {
+    await db.execute(sql`
+      INSERT INTO cc_activity_ledger (
+        tenant_id, action, entity_type, entity_id, payload
+      ) VALUES (
+        ${resResult.rows[0].provider_id}, 'reservation.cancelled', 'reservation', ${reservationId},
+        ${JSON.stringify({ reason: reason || 'user_cancelled' })}
+      )
+    `);
+  }
 }
 
 /**
@@ -387,6 +412,10 @@ export async function expireSoftHolds(): Promise<number> {
  * Check in a reservation
  */
 export async function checkIn(reservationId: string): Promise<void> {
+  const resResult = await db.execute(sql`
+    SELECT provider_id FROM cc_reservations WHERE id = ${reservationId}
+  `);
+  
   await db.execute(sql`
     UPDATE cc_reservations
     SET status = 'checked_in', checked_in_at = now()
@@ -398,12 +427,28 @@ export async function checkIn(reservationId: string): Promise<void> {
     SET status = 'checked_in'
     WHERE reservation_id = ${reservationId}
   `);
+  
+  // Log activity
+  if (resResult.rows.length > 0) {
+    await db.execute(sql`
+      INSERT INTO cc_activity_ledger (
+        tenant_id, action, entity_type, entity_id, payload
+      ) VALUES (
+        ${resResult.rows[0].provider_id}, 'reservation.checked_in', 'reservation', ${reservationId},
+        '{"status": "checked_in"}'
+      )
+    `);
+  }
 }
 
 /**
  * Check out a reservation
  */
 export async function checkOut(reservationId: string): Promise<void> {
+  const resResult = await db.execute(sql`
+    SELECT provider_id FROM cc_reservations WHERE id = ${reservationId}
+  `);
+  
   await db.execute(sql`
     UPDATE cc_reservations
     SET status = 'checked_out', checked_out_at = now()
@@ -415,6 +460,18 @@ export async function checkOut(reservationId: string): Promise<void> {
     SET status = 'checked_out'
     WHERE reservation_id = ${reservationId}
   `);
+  
+  // Log activity
+  if (resResult.rows.length > 0) {
+    await db.execute(sql`
+      INSERT INTO cc_activity_ledger (
+        tenant_id, action, entity_type, entity_id, payload
+      ) VALUES (
+        ${resResult.rows[0].provider_id}, 'reservation.checked_out', 'reservation', ${reservationId},
+        '{"status": "checked_out"}'
+      )
+    `);
+  }
 }
 
 /**

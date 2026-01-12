@@ -1,0 +1,175 @@
+**V3.3.1 BLOCK 08: Activity Ledger Integration + Visibility Policies**
+
+Complete the activity ledger integration and add the visibility policy layer for truth vs disclosure.
+
+## Verify cc_activity_ledger exists (from Block 02)
+
+Should have columns: id, tenant_id, actor_id, action, resource_type, resource_id, metadata, correlation_id, created_at
+
+## Create activityService.ts
+```typescript
+// server/services/activityService.ts
+
+interface LogActivityRequest {
+  tenantId: string;
+  actorId: string;
+  action: string; // 'reservation.created', 'reservation.confirmed', 'allocation.assigned', 'incident.created', etc.
+  resourceType: string; // 'reservation', 'allocation', 'incident', 'federation_access'
+  resourceId: string;
+  metadata?: Record<string, any>;
+  correlationId?: string; // Link related actions
+}
+
+export async function logActivity(req: LogActivityRequest): Promise<string>
+
+// Query helpers
+export async function getActivityForResource(resourceType: string, resourceId: string): Promise<ActivityLedger[]>
+export async function getActivityByActor(actorId: string, since?: Date): Promise<ActivityLedger[]>
+export async function getActivityByCorrelation(correlationId: string): Promise<ActivityLedger[]>
+```
+
+## Integrate Activity Logging
+
+Add logActivity() calls to:
+
+1. **reservationService.ts**:
+   - `reservation.created` - when reservation created
+   - `reservation.confirmed` - when soft hold becomes hard
+   - `reservation.cancelled` - when cancelled
+   - `reservation.checked_in` - when guest arrives
+   - `reservation.checked_out` - when guest departs
+
+2. **allocationService.ts**:
+   - `allocation.assigned` - when unit assigned
+   - `allocation.released` - when released
+   - `allocation.overridden` - when dockmaster changes assignment
+
+3. **federationService.ts**:
+   - `federation.access` - when Chamber accesses provider inventory
+   - `federation.booking` - when Chamber books on behalf
+
+## Create cc_asset_visibility_policies
+```sql
+CREATE TABLE cc_asset_visibility_policies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+  asset_id uuid REFERENCES cc_assets(id),
+  facility_id uuid REFERENCES cc_facilities(id),
+  
+  -- Policy mode
+  policy_mode varchar NOT NULL DEFAULT 'truthful' 
+    CHECK (policy_mode IN ('scarcity_bookable', 'truthful', 'hidden', 'request_only')),
+  
+  -- What public sees when available
+  public_signal_available varchar DEFAULT 'limited'
+    CHECK (public_signal_available IN ('available', 'limited', 'call_to_confirm')),
+  
+  -- What public sees when full
+  public_signal_full varchar DEFAULT 'waitlist'
+    CHECK (public_signal_full IN ('waitlist', 'call_to_confirm', 'unavailable')),
+  
+  -- Controls
+  operator_can_view_truth boolean DEFAULT true,
+  public_can_show boolean DEFAULT true,
+  allow_requests_when_full boolean DEFAULT true,
+  
+  -- Seasonal overrides
+  seasonal_rules jsonb DEFAULT '[]'::jsonb,
+  -- Example: [{"start": "09-15", "end": "06-01", "mode": "scarcity_bookable"}]
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  -- Either asset_id or facility_id, not both
+  CHECK ((asset_id IS NOT NULL) != (facility_id IS NOT NULL))
+);
+
+ALTER TABLE cc_asset_visibility_policies ENABLE ROW LEVEL SECURITY;
+```
+
+## Create visibilityService.ts
+```typescript
+// server/services/visibilityService.ts
+
+type AvailabilitySignal = 'available' | 'limited' | 'waitlist' | 'call_to_confirm' | 'unavailable';
+type PolicyMode = 'scarcity_bookable' | 'truthful' | 'hidden' | 'request_only';
+
+interface DisclosureResult {
+  disclosedSignal: AvailabilitySignal;
+  truthSignal: AvailabilitySignal;
+  canBook: boolean;
+  nextAction: 'book_request' | 'call_provider' | 'waitlist' | 'unavailable';
+}
+
+// Get what public should see
+export async function getDisclosureSignal(
+  assetId: string,
+  truthSignal: AvailabilitySignal,
+  windowStart: Date,
+  windowEnd: Date
+): Promise<DisclosureResult>
+
+// Check if seasonal rule applies
+function checkSeasonalOverride(
+  rules: any[],
+  currentDate: Date
+): PolicyMode | null
+```
+
+## Seed Visibility Policies
+
+| Facility | Policy | Public Available | Public Full |
+|----------|--------|------------------|-------------|
+| Woods End Landing | scarcity_bookable | limited | waitlist |
+| Woods End Marina | scarcity_bookable | limited | waitlist |
+| Save Paradise Parking | truthful | available | unavailable |
+| HFN Marina | request_only | call_to_confirm | call_to_confirm |
+| Eileen Scott Park | truthful | available | unavailable |
+
+## Create shared/types/noCountsGuard.ts
+```typescript
+// shared/types/noCountsGuard.ts
+
+const FORBIDDEN_KEYS = [
+  'availableCount', 'remainingCount', 'inventoryCount',
+  'stallCount', 'slipCount', 'unitCount',
+  'capacityTotal', 'truthCount', 'trueCount',
+  'totalUnits', 'totalInventory', 'occupancyPercent',
+  'capacityRemaining', 'unitsRemaining', 'realCount'
+];
+
+export function assertNoCountLikeKeysDeep(obj: any, path = ''): string[] {
+  const violations: string[] = [];
+  
+  if (obj === null || obj === undefined) return violations;
+  
+  if (typeof obj === 'object') {
+    for (const key of Object.keys(obj)) {
+      const fullPath = path ? `${path}.${key}` : key;
+      
+      // Check if key is forbidden
+      const lowerKey = key.toLowerCase();
+      if (FORBIDDEN_KEYS.some(f => lowerKey.includes(f.toLowerCase()))) {
+        violations.push(fullPath);
+      }
+      
+      // Recurse
+      violations.push(...assertNoCountLikeKeysDeep(obj[key], fullPath));
+    }
+  }
+  
+  return violations;
+}
+```
+
+## Deliverables
+- [ ] server/services/activityService.ts
+- [ ] Activity logging integrated into reservation/allocation/federation services
+- [ ] cc_asset_visibility_policies table + migration
+- [ ] server/services/visibilityService.ts
+- [ ] Visibility policies seeded for all Bamfield facilities
+- [ ] shared/types/noCountsGuard.ts
+- [ ] Test: Create reservation → verify activity logged
+- [ ] Test: Check disclosure for Woods End → returns "limited" not "available"
+
+Report with activity log sample and disclosure test result.
