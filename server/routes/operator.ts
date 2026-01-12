@@ -342,6 +342,20 @@ router.post('/call-log', authenticateToken, async (req: AuthRequest, res: Respon
 // INCIDENT MANAGEMENT ROUTES
 // ============================================================================
 
+async function verifyTenantAccess(userId: string, tenantId: string): Promise<{ allowed: boolean; tenantType?: string }> {
+  const result = await serviceQuery(`
+    SELECT t.tenant_type, tu.role
+    FROM cc_tenants t
+    JOIN cc_tenant_users tu ON tu.tenant_id = t.id
+    WHERE t.id = $1 AND tu.user_id = $2 AND tu.status = 'active'
+  `, [tenantId, userId]);
+  
+  if (result.rows.length === 0) {
+    return { allowed: false };
+  }
+  return { allowed: true, tenantType: result.rows[0].tenant_type };
+}
+
 router.post('/incidents', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -349,6 +363,15 @@ router.post('/incidents', authenticateToken, async (req: AuthRequest, res: Respo
     
     if (!tenant_id || !incident_type || !narrative) {
       return res.status(400).json({ success: false, error: 'tenant_id, incident_type, and narrative are required' });
+    }
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
     }
     
     const incident = await createIncident({
@@ -374,10 +397,20 @@ router.post('/incidents', authenticateToken, async (req: AuthRequest, res: Respo
 
 router.get('/incidents', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user?.userId;
     const { tenant_id } = req.query;
     
     if (!tenant_id) {
       return res.status(400).json({ success: false, error: 'tenant_id is required' });
+    }
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    
+    const access = await verifyTenantAccess(userId, tenant_id as string);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
     }
     
     const incidents = await getOpenIncidents(tenant_id as string);
@@ -390,10 +423,19 @@ router.get('/incidents', authenticateToken, async (req: AuthRequest, res: Respon
 
 router.get('/incidents/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const incident = await getIncident(req.params.id);
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
     
+    const incident = await getIncident(req.params.id);
     if (!incident) {
       return res.status(404).json({ success: false, error: 'Incident not found' });
+    }
+    
+    const access = await verifyTenantAccess(userId, incident.tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this incident' });
     }
     
     res.json({ success: true, incident });
@@ -406,8 +448,21 @@ router.get('/incidents/:id', authenticateToken, async (req: AuthRequest, res: Re
 router.post('/incidents/:id/dispatch', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { priority, notes } = req.body;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
     
+    const incident = await getIncident(req.params.id);
+    if (!incident) {
+      return res.status(404).json({ success: false, error: 'Incident not found' });
+    }
+    
+    const access = await verifyTenantAccess(userId, incident.tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this incident' });
+    }
+    
+    const { priority, notes } = req.body;
     const result = await dispatchTow(req.params.id, priority || 'normal', notes || '', userId);
     res.json({ success: true, ...result });
   } catch (error: any) {
@@ -419,8 +474,21 @@ router.post('/incidents/:id/dispatch', authenticateToken, async (req: AuthReques
 router.post('/incidents/:id/resolve', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
-    const { resolution } = req.body;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
     
+    const incident = await getIncident(req.params.id);
+    if (!incident) {
+      return res.status(404).json({ success: false, error: 'Incident not found' });
+    }
+    
+    const access = await verifyTenantAccess(userId, incident.tenant_id);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, error: 'Access denied to this incident' });
+    }
+    
+    const { resolution } = req.body;
     if (!resolution) {
       return res.status(400).json({ success: false, error: 'resolution is required' });
     }

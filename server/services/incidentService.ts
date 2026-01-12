@@ -98,7 +98,7 @@ export async function createIncident(req: CreateIncidentRequest): Promise<Incide
       ${req.facilityId || null},
       ${req.inventoryUnitId || null},
       ${req.webcamEntityId || null},
-      ${req.photoUrls ? sql`ARRAY[${sql.raw(req.photoUrls.map(u => `'${u}'`).join(','))}]::text[]` : null},
+      ${req.photoUrls && req.photoUrls.length > 0 ? sql`${req.photoUrls}::text[]` : null},
       ${req.narrative},
       ${req.reporterName || null},
       ${req.reporterContact || null},
