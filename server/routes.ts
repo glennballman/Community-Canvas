@@ -64,6 +64,7 @@ import systemExplorerRouter from "./routes/system-explorer";
 import sitemapRouter from "./routes/sitemap";
 import mediaRouter from "./routes/media";
 import communityRouter from "./routes/community";
+import transportRouter from "./routes/transport";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -199,6 +200,9 @@ export async function registerRoutes(
 
   // Register community routes (cross-tenant Chamber operations)
   app.use('/api/community', communityRouter);
+
+  // Register transport/location routes
+  app.use('/api/transport', transportRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);

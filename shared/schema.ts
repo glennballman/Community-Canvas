@@ -1371,3 +1371,95 @@ export const cc_trip_invitations = pgTable('cc_trip_invitations', {
 export const insertTripInvitationSchema = createInsertSchema(cc_trip_invitations).omit({ id: true, createdAt: true });
 export type TripInvitation = typeof cc_trip_invitations.$inferSelect;
 export type InsertTripInvitation = z.infer<typeof insertTripInvitationSchema>;
+
+// Portals - multi-brand support within tenants
+export const ccPortals = pgTable('cc_portals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  owningTenantId: uuid('owning_tenant_id'),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  status: varchar('status', { length: 50 }).default('active'),
+  primaryAudience: varchar('primary_audience', { length: 50 }),
+  tagline: text('tagline'),
+  description: text('description'),
+  defaultLocale: text('default_locale').default('en'),
+  defaultCurrency: text('default_currency').default('CAD'),
+  supportedLocales: text('supported_locales').array(),
+  defaultRoute: text('default_route'),
+  onboardingFlowKey: text('onboarding_flow_key'),
+  termsUrl: text('terms_url'),
+  privacyUrl: text('privacy_url'),
+  settings: jsonb('settings').default({}),
+  portalType: text('portal_type'),
+  legalDbaName: text('legal_dba_name'),
+  baseUrl: text('base_url'),
+  siteConfig: jsonb('site_config').default({}),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export type Portal = typeof ccPortals.$inferSelect;
+export type InsertPortal = typeof ccPortals.$inferInsert;
+
+// Locations - canonical registry of docks, marinas, trailheads, and stops
+export const ccLocations = pgTable('cc_locations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id'),
+  portalId: uuid('portal_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 20 }),
+  
+  locationType: text('location_type').notNull(),
+  
+  lat: numeric('lat', { precision: 9, scale: 6 }),
+  lon: numeric('lon', { precision: 9, scale: 6 }),
+  region: varchar('region', { length: 255 }).default('Barkley Sound'),
+  timezone: varchar('timezone', { length: 100 }).default('America/Vancouver'),
+  
+  addressLine1: text('address_line1'),
+  addressCity: text('address_city'),
+  addressProvince: varchar('address_province', { length: 10 }).default('BC'),
+  addressPostalCode: varchar('address_postal_code', { length: 20 }),
+  
+  authorityType: varchar('authority_type', { length: 50 }),
+  authorityName: text('authority_name'),
+  authorityRules: jsonb('authority_rules').default({}),
+  
+  stopCapabilities: jsonb('stop_capabilities').default({
+    passenger_embark: true,
+    passenger_disembark: true,
+    freight_load: false,
+    freight_unload: false,
+    kayak_landing: false,
+    overnight_moorage: false,
+    fuel_available: false,
+    power_available: false,
+    water_available: false,
+    boat_launch: false
+  }),
+  
+  contactName: text('contact_name'),
+  contactPhone: text('contact_phone'),
+  contactEmail: text('contact_email'),
+  
+  operatingHoursJson: jsonb('operating_hours_json').default({}),
+  
+  connectedLocations: uuid('connected_locations').array(),
+  travelTimeMinutesJson: jsonb('travel_time_minutes_json').default({}),
+  
+  civosLocationId: uuid('civos_location_id'),
+  
+  imageUrl: text('image_url'),
+  
+  status: varchar('status', { length: 50 }).default('active'),
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertLocationSchema = createInsertSchema(ccLocations).omit({ id: true, createdAt: true, updatedAt: true });
+export type Location = typeof ccLocations.$inferSelect;
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
