@@ -132,12 +132,18 @@ export async function createTransportRequest(
   req: CreateTransportRequest
 ): Promise<TransportRequestResult> {
   let portalId: string | undefined;
+  let tenantId: string | undefined;
+  
   if (req.portalSlug) {
-    const [portal] = await db.select({ id: ccPortals.id })
+    const [portal] = await db.select({ id: ccPortals.id, owningTenantId: ccPortals.owningTenantId })
       .from(ccPortals)
       .where(eq(ccPortals.slug, req.portalSlug))
       .limit(1);
-    if (portal) portalId = portal.id;
+    if (!portal) {
+      throw new Error('Invalid portal');
+    }
+    portalId = portal.id;
+    tenantId = portal.owningTenantId || undefined;
   }
   
   let operatorId = req.operatorId;
@@ -147,11 +153,31 @@ export async function createTransportRequest(
     sailingDetails = await getSailingById(req.sailingId);
     if (sailingDetails) {
       operatorId = sailingDetails.sailing.operatorId;
+      
+      if (portalId && operatorId) {
+        const [operator] = await db.select({ portalId: ccTransportOperators.portalId })
+          .from(ccTransportOperators)
+          .where(sql`${ccTransportOperators.id} = ${operatorId}`)
+          .limit(1);
+        if (!operator || operator.portalId !== portalId) {
+          throw new Error('Sailing does not belong to this portal');
+        }
+      }
     }
   }
   
   if (!operatorId) {
     throw new Error('Operator ID required');
+  }
+  
+  if (portalId && req.operatorId) {
+    const [operator] = await db.select({ portalId: ccTransportOperators.portalId })
+      .from(ccTransportOperators)
+      .where(eq(ccTransportOperators.id, req.operatorId))
+      .limit(1);
+    if (!operator || operator.portalId !== portalId) {
+      throw new Error('Operator does not belong to this portal');
+    }
   }
   
   let waitlisted = false;
@@ -179,6 +205,7 @@ export async function createTransportRequest(
   const dateStr = req.requestedDate.toISOString().split('T')[0];
   
   const [request] = await db.insert(ccTransportRequests).values({
+    tenantId,
     portalId,
     operatorId,
     sailingId: req.sailingId,
