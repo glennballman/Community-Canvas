@@ -990,8 +990,14 @@ router.get('/freight/track/:code', async (req, res) => {
 
 router.post('/freight/manifests/:id/submit', async (req, res) => {
   const { id } = req.params;
+  const { portalSlug } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
+  
   try {
-    const manifest = await submitManifest(id);
+    const manifest = await submitManifest(portalSlug, id);
     res.json({ manifest });
   } catch (e: any) {
     console.error('Submit manifest error:', e);
@@ -1001,8 +1007,14 @@ router.post('/freight/manifests/:id/submit', async (req, res) => {
 
 router.post('/freight/manifests/:id/accept', async (req, res) => {
   const { id } = req.params;
+  const { portalSlug } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
+  
   try {
-    const manifest = await acceptManifest(id);
+    const manifest = await acceptManifest(portalSlug, id);
     res.json({ manifest });
   } catch (e: any) {
     console.error('Accept manifest error:', e);
@@ -1012,8 +1024,14 @@ router.post('/freight/manifests/:id/accept', async (req, res) => {
 
 router.post('/freight/manifests/:id/load', async (req, res) => {
   const { id } = req.params;
+  const { portalSlug } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
+  
   try {
-    const manifest = await markManifestLoaded(id);
+    const manifest = await markManifestLoaded(portalSlug, id);
     res.json({ manifest });
   } catch (e: any) {
     console.error('Load manifest error:', e);
@@ -1023,8 +1041,14 @@ router.post('/freight/manifests/:id/load', async (req, res) => {
 
 router.post('/freight/manifests/:id/depart', async (req, res) => {
   const { id } = req.params;
+  const { portalSlug } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
+  
   try {
-    const manifest = await markManifestInTransit(id);
+    const manifest = await markManifestInTransit(portalSlug, id);
     res.json({ manifest });
   } catch (e: any) {
     console.error('Depart manifest error:', e);
@@ -1034,8 +1058,14 @@ router.post('/freight/manifests/:id/depart', async (req, res) => {
 
 router.post('/freight/manifests/:id/arrive', async (req, res) => {
   const { id } = req.params;
+  const { portalSlug } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
+  
   try {
-    const manifest = await markManifestArrived(id);
+    const manifest = await markManifestArrived(portalSlug, id);
     res.json({ manifest });
   } catch (e: any) {
     console.error('Arrive manifest error:', e);
@@ -1045,8 +1075,14 @@ router.post('/freight/manifests/:id/arrive', async (req, res) => {
 
 router.post('/freight/manifests/:id/cancel', async (req, res) => {
   const { id } = req.params;
+  const { portalSlug } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
+  
   try {
-    const manifest = await cancelManifest(id);
+    const manifest = await cancelManifest(portalSlug, id);
     res.json({ manifest });
   } catch (e: any) {
     console.error('Cancel manifest error:', e);
@@ -1056,10 +1092,14 @@ router.post('/freight/manifests/:id/cancel', async (req, res) => {
 
 router.post('/freight/items/:id/deliver', async (req, res) => {
   const { id } = req.params;
-  const { receivedBy, notes } = req.body || {};
+  const { portalSlug, receivedBy, notes } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
   
   try {
-    const item = await markItemDelivered(id, receivedBy, notes);
+    const item = await markItemDelivered(portalSlug, id, receivedBy, notes);
     res.json({ item });
   } catch (e: any) {
     console.error('Deliver item error:', e);
@@ -1210,14 +1250,18 @@ router.get('/freight/exceptions', async (req, res) => {
 
 router.post('/freight/exceptions/:id/resolve', async (req, res) => {
   const { id } = req.params;
-  const { resolutionType, resolutionNotes, resolvedBy, approvedAmountCad } = req.body || {};
+  const { portalSlug, resolutionType, resolutionNotes, resolvedBy, approvedAmountCad } = req.body || {};
+  
+  if (!portalSlug) {
+    return res.status(400).json({ error: 'portalSlug is required' });
+  }
   
   if (!resolutionType || !resolvedBy) {
     return res.status(400).json({ error: 'resolutionType and resolvedBy required' });
   }
   
   try {
-    const exception = await resolveException(id, {
+    const exception = await resolveException(portalSlug, id, {
       resolutionType,
       resolutionNotes,
       resolvedBy,
@@ -1227,7 +1271,7 @@ router.post('/freight/exceptions/:id/resolve', async (req, res) => {
     res.json({ exception });
   } catch (e: any) {
     console.error('Resolve exception error:', e);
-    res.status(500).json({ error: 'Failed to resolve exception' });
+    res.status(400).json({ error: e.message });
   }
 });
 

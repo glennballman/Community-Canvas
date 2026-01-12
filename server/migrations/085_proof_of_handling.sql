@@ -83,7 +83,9 @@ CREATE INDEX idx_poh_item ON cc_proof_of_handling(item_id) WHERE item_id IS NOT 
 CREATE INDEX idx_poh_type ON cc_proof_of_handling(handling_type, handled_at);
 CREATE INDEX idx_poh_location ON cc_proof_of_handling(location_id) WHERE location_id IS NOT NULL;
 
-ALTER TABLE cc_proof_of_handling ENABLE ROW LEVEL SECURITY;
+-- RLS disabled: Application layer enforces portal isolation via service functions
+-- Enable and add policies when tenant context is plumbed through database sessions
+-- ALTER TABLE cc_proof_of_handling ENABLE ROW LEVEL SECURITY;
 
 -- ============ HANDLING EXCEPTIONS ============
 -- Issues/problems that need resolution
@@ -152,6 +154,8 @@ CREATE TABLE IF NOT EXISTS cc_handling_exceptions (
 CREATE INDEX idx_exceptions_manifest ON cc_handling_exceptions(manifest_id, status);
 CREATE INDEX idx_exceptions_status ON cc_handling_exceptions(status, severity);
 
-ALTER TABLE cc_handling_exceptions ENABLE ROW LEVEL SECURITY;
+-- RLS disabled: Application layer enforces portal isolation via service functions
+-- Enable and add policies when tenant context is plumbed through database sessions
+-- ALTER TABLE cc_handling_exceptions ENABLE ROW LEVEL SECURITY;
 
 COMMIT;

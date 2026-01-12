@@ -5,7 +5,12 @@ import {
   ccFreightItems, ccPortals 
 } from '@shared/schema';
 import { logActivity } from './activityService';
-import { markItemDelivered } from './freightService';
+import { 
+  markItemDelivered, 
+  markManifestLoaded, 
+  markManifestInTransit, 
+  markManifestArrived 
+} from './freightService';
 
 // ============ TYPES ============
 
@@ -75,12 +80,16 @@ export async function recordHandling(req: RecordHandlingRequest): Promise<any> {
   }
   
   let weightVariance: string | undefined;
-  if (req.verifiedWeightLbs && req.itemId) {
+  if (req.itemId) {
     const [item] = await db.select()
       .from(ccFreightItems)
       .where(sql`${ccFreightItems.id} = ${req.itemId}`)
       .limit(1);
-    if (item?.weightLbs) {
+    if (!item) throw new Error('Item not found');
+    if (item.manifestId !== req.manifestId) {
+      throw new Error('Item does not belong to this manifest');
+    }
+    if (req.verifiedWeightLbs && item.weightLbs) {
       weightVariance = String(req.verifiedWeightLbs - Number(item.weightLbs));
     }
   }
@@ -115,7 +124,7 @@ export async function recordHandling(req: RecordHandlingRequest): Promise<any> {
     appVersion: req.appVersion
   }).returning();
   
-  await updateStatusFromHandling(req.manifestId, req.itemId, req.handlingType, req.recipientName, req.notes);
+  await updateStatusFromHandling(req.portalSlug, req.manifestId, req.itemId, req.handlingType, req.recipientName, req.notes);
   
   if (req.condition === 'damaged' || req.condition === 'missing_items') {
     await createException({
@@ -149,13 +158,39 @@ export async function recordHandling(req: RecordHandlingRequest): Promise<any> {
   return poh;
 }
 
+async function verifyManifestPortalLocal(portalSlug: string, manifestId: string): Promise<void> {
+  if (!portalSlug) {
+    throw new Error('portalSlug is required');
+  }
+  
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${portalSlug}`)
+    .limit(1);
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [manifest] = await db.select()
+    .from(ccFreightManifests)
+    .where(sql`${ccFreightManifests.id} = ${manifestId}`)
+    .limit(1);
+  
+  if (!manifest) throw new Error('Manifest not found');
+  if (manifest.portalId !== portal.id) {
+    throw new Error('Manifest does not belong to this portal');
+  }
+}
+
 async function updateStatusFromHandling(
+  portalSlug: string,
   manifestId: string,
   itemId: string | undefined,
   handlingType: string,
   recipientName?: string,
   notes?: string
 ): Promise<void> {
+  await verifyManifestPortalLocal(portalSlug, manifestId);
+  
   if (itemId) {
     const statusMap: Record<string, string> = {
       'pickup': 'pending',
@@ -172,7 +207,7 @@ async function updateStatusFromHandling(
     const newStatus = statusMap[handlingType];
     if (newStatus) {
       if (newStatus === 'delivered') {
-        await markItemDelivered(itemId, recipientName, notes);
+        await markItemDelivered(portalSlug, itemId, recipientName, notes);
       } else {
         await db.update(ccFreightItems)
           .set({ status: newStatus, updatedAt: new Date() })
@@ -181,17 +216,18 @@ async function updateStatusFromHandling(
     }
   }
   
-  const manifestStatusMap: Record<string, string> = {
-    'loaded': 'loaded',
-    'in_transit': 'in_transit',
-    'offloaded': 'arrived'
-  };
-  
-  const newManifestStatus = manifestStatusMap[handlingType];
-  if (newManifestStatus && !itemId) {
-    await db.update(ccFreightManifests)
-      .set({ status: newManifestStatus, updatedAt: new Date() })
-      .where(sql`${ccFreightManifests.id} = ${manifestId}`);
+  if (!itemId) {
+    switch (handlingType) {
+      case 'loaded':
+        await markManifestLoaded(portalSlug, manifestId);
+        break;
+      case 'in_transit':
+        await markManifestInTransit(portalSlug, manifestId);
+        break;
+      case 'offloaded':
+        await markManifestArrived(portalSlug, manifestId);
+        break;
+    }
   }
 }
 
@@ -236,6 +272,13 @@ export async function getChainOfCustody(
     throw new Error('portalSlug is required');
   }
   
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${portalSlug}`)
+    .limit(1);
+  
+  if (!portal) return null;
+  
   const [item] = await db.select()
     .from(ccFreightItems)
     .where(eq(ccFreightItems.trackingCode, trackingCode))
@@ -249,22 +292,16 @@ export async function getChainOfCustody(
     .limit(1);
   
   if (!manifest) return null;
-  
-  const [portal] = await db.select()
-    .from(ccPortals)
-    .where(sql`${ccPortals.slug} = ${portalSlug}`)
-    .limit(1);
-  
-  if (!portal || manifest.portalId !== portal.id) return null;
+  if (manifest.portalId !== portal.id) return null;
   
   const history = await db.select()
     .from(ccProofOfHandling)
-    .where(sql`${ccProofOfHandling.itemId} = ${item.id}`)
+    .where(sql`${ccProofOfHandling.itemId} = ${item.id} AND ${ccProofOfHandling.portalId} = ${portal.id}`)
     .orderBy(asc(ccProofOfHandling.handledAt));
   
   const exceptions = await db.select()
     .from(ccHandlingExceptions)
-    .where(sql`${ccHandlingExceptions.itemId} = ${item.id}`)
+    .where(sql`${ccHandlingExceptions.itemId} = ${item.id} AND ${ccHandlingExceptions.portalId} = ${portal.id}`)
     .orderBy(desc(ccHandlingExceptions.createdAt));
   
   return { item, manifest, history, exceptions };
@@ -283,6 +320,27 @@ export async function createException(req: CreateExceptionRequest): Promise<any>
     .limit(1);
   
   if (!portal) throw new Error('Portal not found');
+  
+  const [manifest] = await db.select()
+    .from(ccFreightManifests)
+    .where(sql`${ccFreightManifests.id} = ${req.manifestId}`)
+    .limit(1);
+  
+  if (!manifest) throw new Error('Manifest not found');
+  if (manifest.portalId !== portal.id) {
+    throw new Error('Manifest does not belong to this portal');
+  }
+  
+  if (req.itemId) {
+    const [item] = await db.select()
+      .from(ccFreightItems)
+      .where(sql`${ccFreightItems.id} = ${req.itemId}`)
+      .limit(1);
+    if (!item) throw new Error('Item not found');
+    if (item.manifestId !== req.manifestId) {
+      throw new Error('Item does not belong to this manifest');
+    }
+  }
   
   const [exception] = await db.insert(ccHandlingExceptions).values({
     portalId: portal.id,
@@ -341,23 +399,28 @@ export async function getExceptions(
   
   if (!portal) return [];
   
-  let whereClause = sql`${ccHandlingExceptions.portalId} = ${portal.id}`;
+  const baseCondition = eq(ccHandlingExceptions.portalId, portal.id);
+  const additionalConditions: ReturnType<typeof eq>[] = [];
   
   if (options?.manifestId) {
-    whereClause = sql`${whereClause} AND ${ccHandlingExceptions.manifestId} = ${options.manifestId}`;
+    additionalConditions.push(eq(ccHandlingExceptions.manifestId, options.manifestId));
   }
   
   if (options?.status) {
-    whereClause = sql`${whereClause} AND ${ccHandlingExceptions.status} = ${options.status}`;
+    additionalConditions.push(eq(ccHandlingExceptions.status, options.status));
   }
   
   if (options?.severity) {
-    whereClause = sql`${whereClause} AND ${ccHandlingExceptions.severity} = ${options.severity}`;
+    additionalConditions.push(eq(ccHandlingExceptions.severity, options.severity));
   }
+  
+  const whereCondition = additionalConditions.length > 0 
+    ? and(baseCondition, ...additionalConditions)
+    : baseCondition;
   
   return db.select()
     .from(ccHandlingExceptions)
-    .where(whereClause)
+    .where(whereCondition)
     .orderBy(
       desc(sql`CASE ${ccHandlingExceptions.severity} WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END`),
       desc(ccHandlingExceptions.createdAt)
@@ -365,6 +428,7 @@ export async function getExceptions(
 }
 
 export async function resolveException(
+  portalSlug: string,
   exceptionId: string,
   resolution: {
     resolutionType: string;
@@ -373,6 +437,27 @@ export async function resolveException(
     approvedAmountCad?: number;
   }
 ): Promise<any> {
+  if (!portalSlug) {
+    throw new Error('portalSlug is required');
+  }
+  
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${portalSlug}`)
+    .limit(1);
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [exception] = await db.select()
+    .from(ccHandlingExceptions)
+    .where(sql`${ccHandlingExceptions.id} = ${exceptionId}`)
+    .limit(1);
+  
+  if (!exception) throw new Error('Exception not found');
+  if (exception.portalId !== portal.id) {
+    throw new Error('Exception does not belong to this portal');
+  }
+  
   const [updated] = await db.update(ccHandlingExceptions)
     .set({
       status: 'resolved',
@@ -383,25 +468,50 @@ export async function resolveException(
       approvedAmountCad: resolution.approvedAmountCad ? String(resolution.approvedAmountCad) : undefined,
       updatedAt: new Date()
     })
-    .where(sql`${ccHandlingExceptions.id} = ${exceptionId}`)
+    .where(eq(ccHandlingExceptions.id, exceptionId))
     .returning();
   
   if (updated?.itemId) {
     await db.update(ccFreightItems)
       .set({ status: 'pending', updatedAt: new Date() })
-      .where(sql`${ccFreightItems.id} = ${updated.itemId} AND ${ccFreightItems.status} = 'held'`);
+      .where(and(
+        eq(ccFreightItems.id, updated.itemId),
+        eq(ccFreightItems.status, 'held')
+      ));
   }
   
   return updated;
 }
 
 export async function updateExceptionStatus(
+  portalSlug: string,
   exceptionId: string,
   status: string
 ): Promise<any> {
+  if (!portalSlug) {
+    throw new Error('portalSlug is required');
+  }
+  
+  const [portal] = await db.select()
+    .from(ccPortals)
+    .where(sql`${ccPortals.slug} = ${portalSlug}`)
+    .limit(1);
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [exception] = await db.select()
+    .from(ccHandlingExceptions)
+    .where(sql`${ccHandlingExceptions.id} = ${exceptionId}`)
+    .limit(1);
+  
+  if (!exception) throw new Error('Exception not found');
+  if (exception.portalId !== portal.id) {
+    throw new Error('Exception does not belong to this portal');
+  }
+  
   const [updated] = await db.update(ccHandlingExceptions)
     .set({ status, updatedAt: new Date() })
-    .where(sql`${ccHandlingExceptions.id} = ${exceptionId}`)
+    .where(eq(ccHandlingExceptions.id, exceptionId))
     .returning();
   
   return updated;
