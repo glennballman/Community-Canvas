@@ -331,7 +331,8 @@ interface AssetInfo {
 }
 
 router.post('/qa/seed-go-no-go', async (req, res) => {
-  const { portalSlug, windowStart, windowEnd } = req.body;
+  const { portalSlug } = req.body;
+  // windowStart/windowEnd reserved for future deterministic scheduling scenarios
   
   try {
     const portalSlugValue = portalSlug || 'bamfield';
@@ -360,21 +361,13 @@ router.post('/qa/seed-go-no-go', async (req, res) => {
     }
     
     const operatorResult = await serviceQuery(`
-      SELECT id, email FROM cc_individuals
-      WHERE email = 'qa.operator@communitycanvas.local'
-      LIMIT 1
+      INSERT INTO cc_individuals (email, full_name)
+      VALUES ('qa.operator@communitycanvas.local', 'QA Operator')
+      ON CONFLICT (email) DO UPDATE SET full_name = 'QA Operator'
+      RETURNING id, email
     `);
     
-    let operator = operatorResult.rows?.[0] as any;
-    
-    if (!operator) {
-      const newOperatorResult = await serviceQuery(`
-        INSERT INTO cc_individuals (email, full_name)
-        VALUES ('qa.operator@communitycanvas.local', 'QA Operator')
-        RETURNING id, email
-      `);
-      operator = newOperatorResult.rows?.[0];
-    }
+    const operator = operatorResult.rows?.[0] as any;
     
     const tenantsResult = await serviceQuery(`
       SELECT id, name, tenant_type FROM cc_tenants
@@ -514,7 +507,11 @@ router.post('/qa/cleanup-go-no-go', async (_req, res) => {
       DELETE FROM cc_reservations WHERE idempotency_key LIKE 'qa-go-no-go-%'
     `);
     
-    res.json({ ok: true, cleanedUp: ['incidents', 'reservations', 'credentials'] });
+    await serviceQuery(`
+      DELETE FROM cc_individuals WHERE email = 'qa.operator@communitycanvas.local'
+    `);
+    
+    res.json({ ok: true, cleanedUp: ['incidents', 'reservations', 'credentials', 'qa_operator'] });
     
   } catch (error: any) {
     console.error('QA Cleanup error:', error);
