@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS cc_verified_identities (
   
   -- Links
   portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
-  contact_id uuid REFERENCES cc_contacts(id) ON DELETE SET NULL,
+  contact_id uuid,
   user_id uuid,
   
   -- Identity type
