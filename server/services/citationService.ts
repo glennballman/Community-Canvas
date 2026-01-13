@@ -3,7 +3,8 @@ import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { 
   ccCitations, ccCitationAppeals, ccViolationHistory,
-  ccPortals, ccProperties, ccUnits, ccComplianceRules
+  ccPortals, ccProperties, ccUnits, ccComplianceRules,
+  ccComplianceChecks, ccIncidentReports, ccPmsReservations
 } from '@shared/schema';
 import { logActivity } from './activityService';
 
@@ -166,6 +167,73 @@ export async function createCitation(req: CreateCitationRequest): Promise<any> {
     if (!property) throw new Error('Property not found');
   }
   
+  if (req.unitId) {
+    const unit = await db.query.ccUnits.findFirst({
+      where: eq(ccUnits.id, req.unitId)
+    });
+    if (!unit) throw new Error('Unit not found');
+    if (req.propertyId && unit.propertyId !== req.propertyId) {
+      throw new Error('Unit does not belong to the specified property');
+    }
+    const property = await db.query.ccProperties.findFirst({
+      where: and(
+        eq(ccProperties.id, unit.propertyId),
+        eq(ccProperties.portalId, portal.id)
+      )
+    });
+    if (!property) throw new Error('Unit property not in portal');
+  }
+  
+  if (req.complianceRuleId) {
+    const rule = await db.query.ccComplianceRules.findFirst({
+      where: and(
+        eq(ccComplianceRules.id, req.complianceRuleId),
+        eq(ccComplianceRules.portalId, portal.id)
+      )
+    });
+    if (!rule) throw new Error('Compliance rule not found in portal');
+  }
+  
+  if (req.complianceCheckId) {
+    const check = await db.query.ccComplianceChecks.findFirst({
+      where: and(
+        eq(ccComplianceChecks.id, req.complianceCheckId),
+        eq(ccComplianceChecks.portalId, portal.id)
+      )
+    });
+    if (!check) throw new Error('Compliance check not found in portal');
+  }
+  
+  if (req.incidentReportId) {
+    const incident = await db.query.ccIncidentReports.findFirst({
+      where: and(
+        eq(ccIncidentReports.id, req.incidentReportId),
+        eq(ccIncidentReports.portalId, portal.id)
+      )
+    });
+    if (!incident) throw new Error('Incident report not found in portal');
+  }
+  
+  if (req.reservationId) {
+    const reservation = await db.query.ccPmsReservations.findFirst({
+      where: and(
+        eq(ccPmsReservations.id, req.reservationId),
+        eq(ccPmsReservations.portalId, portal.id)
+      )
+    });
+    if (!reservation) throw new Error('Reservation not found in portal');
+  }
+  
+  if (req.guestReservationId) {
+    const guestRes = await db.query.ccPmsReservations.findFirst({
+      where: and(
+        eq(ccPmsReservations.id, req.guestReservationId),
+        eq(ccPmsReservations.portalId, portal.id)
+      )
+    });
+    if (!guestRes) throw new Error('Guest reservation not found in portal');
+  }
+  
   const priorCitations = await getPriorCitations(portal.id, req.violatorEmail);
   const offenseNumber = priorCitations.length + 1;
   
@@ -240,20 +308,25 @@ export async function createCitation(req: CreateCitationRequest): Promise<any> {
     await updateViolationHistoryInternal(portal.id, 'vehicle_plate', req.vehiclePlate, citation);
   }
   
-  await logActivity({
-    tenantId: 'system',
-    actorId: req.issuedBy,
-    action: 'citation.issued',
-    resourceType: 'citation',
-    resourceId: citation.id,
-    metadata: { 
-      citationNumber, 
-      violator: req.violatorName, 
-      rule: req.ruleName,
-      offenseNumber,
-      fineAmount
-    }
-  });
+  try {
+    await logActivity({
+      tenantId: portal.id,
+      actorId: undefined,
+      action: 'citation.issued',
+      resourceType: 'citation',
+      resourceId: citation.id,
+      metadata: { 
+        citationNumber, 
+        violator: req.violatorName, 
+        rule: req.ruleName,
+        offenseNumber,
+        fineAmount,
+        issuedBy: req.issuedBy
+      }
+    });
+  } catch (e) {
+    console.error('Failed to log citation activity:', e);
+  }
   
   return { citation, offenseNumber, priorCitations: priorCitationsJson };
 }
@@ -284,19 +357,28 @@ export async function getCitation(
   
   if (citation.propertyId) {
     property = await db.query.ccProperties.findFirst({
-      where: eq(ccProperties.id, citation.propertyId)
+      where: and(
+        eq(ccProperties.id, citation.propertyId),
+        eq(ccProperties.portalId, portal.id)
+      )
     });
   }
   
-  if (citation.unitId) {
+  if (citation.unitId && property) {
     unit = await db.query.ccUnits.findFirst({
-      where: eq(ccUnits.id, citation.unitId)
+      where: and(
+        eq(ccUnits.id, citation.unitId),
+        eq(ccUnits.propertyId, property.id)
+      )
     });
   }
   
   if (citation.complianceRuleId) {
     rule = await db.query.ccComplianceRules.findFirst({
-      where: eq(ccComplianceRules.id, citation.complianceRuleId)
+      where: and(
+        eq(ccComplianceRules.id, citation.complianceRuleId),
+        eq(ccComplianceRules.portalId, portal.id)
+      )
     });
   }
   
@@ -487,14 +569,18 @@ export async function fileAppeal(
     })
     .where(eq(ccCitations.id, citationId));
   
-  await logActivity({
-    tenantId: 'system',
-    actorId: data.appellantEmail || 'appellant',
-    action: 'citation.appealed',
-    resourceType: 'citation_appeal',
-    resourceId: appeal.id,
-    metadata: { appealNumber, citationNumber: citation.citationNumber }
-  });
+  try {
+    await logActivity({
+      tenantId: portal.id,
+      actorId: undefined,
+      action: 'citation.appealed',
+      resourceType: 'citation_appeal',
+      resourceId: appeal.id,
+      metadata: { appealNumber, citationNumber: citation.citationNumber, appellant: data.appellantEmail }
+    });
+  } catch (e) {
+    console.error('Failed to log appeal activity:', e);
+  }
   
   return { appeal, citation };
 }
@@ -614,14 +700,18 @@ export async function decideAppeal(
     .set(citationUpdates)
     .where(eq(ccCitations.id, appeal.citationId));
   
-  await logActivity({
-    tenantId: 'system',
-    actorId: data.decidedBy,
-    action: 'appeal.decided',
-    resourceType: 'citation_appeal',
-    resourceId: appealId,
-    metadata: { decision: data.decision, newFineAmount: data.newFineAmount }
-  });
+  try {
+    await logActivity({
+      tenantId: citationResult.citation.portalId,
+      actorId: undefined,
+      action: 'appeal.decided',
+      resourceType: 'citation_appeal',
+      resourceId: appealId,
+      metadata: { decision: data.decision, newFineAmount: data.newFineAmount, decidedBy: data.decidedBy }
+    });
+  } catch (e) {
+    console.error('Failed to log appeal decision activity:', e);
+  }
   
   return { appeal: updatedAppeal, citation: citationResult.citation };
 }
