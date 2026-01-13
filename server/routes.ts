@@ -70,6 +70,7 @@ import pmsRouter from "./routes/pms";
 import enforcementRouter from "./routes/enforcement";
 import citationRouter from "./routes/citations";
 import identityRouter from "./routes/identity";
+import dashboardRouter from "./routes/dashboard";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -221,6 +222,9 @@ export async function registerRoutes(
   
   // Register identity verification routes
   app.use('/api/identity', identityRouter);
+
+  // Register operator dashboard routes
+  app.use('/api/dashboard', dashboardRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);
