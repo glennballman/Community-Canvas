@@ -3551,7 +3551,7 @@ export const ccOperatorApplications = pgTable('cc_operator_applications', {
   id: uuid('id').primaryKey().defaultRandom(),
   
   portalId: uuid('portal_id').notNull().references(() => ccPortals.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => ccUserProfiles.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull(),
   
   applicationNumber: varchar('application_number', { length: 20 }).notNull().unique(),
   
@@ -3602,14 +3602,14 @@ export const ccOperatorApplications = pgTable('cc_operator_applications', {
   status: varchar('status').default('draft'),
   
   submittedAt: timestamp('submitted_at', { withTimezone: true }),
-  reviewedBy: uuid('reviewed_by').references(() => ccUserProfiles.id),
+  reviewedBy: uuid('reviewed_by'),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
   reviewNotes: text('review_notes'),
   
   rejectionReason: text('rejection_reason'),
   
   approvedAt: timestamp('approved_at', { withTimezone: true }),
-  approvedBy: uuid('approved_by').references(() => ccUserProfiles.id),
+  approvedBy: uuid('approved_by'),
   
   termsAccepted: boolean('terms_accepted').default(false),
   termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
@@ -3633,10 +3633,10 @@ export const ccOperators = pgTable('cc_operators', {
   id: uuid('id').primaryKey().defaultRandom(),
   
   portalId: uuid('portal_id').notNull().references(() => ccPortals.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => ccUserProfiles.id),
+  userId: uuid('user_id').notNull(),
   applicationId: uuid('application_id').references(() => ccOperatorApplications.id),
   identityId: uuid('identity_id').references(() => ccVerifiedIdentities.id),
-  tenantId: uuid('tenant_id').references(() => ccTenants.id),
+  tenantId: uuid('tenant_id'),
   
   operatorNumber: varchar('operator_number', { length: 20 }).notNull().unique(),
   
@@ -3731,7 +3731,7 @@ export const ccOperatorDocuments = pgTable('cc_operator_documents', {
   expiryDate: date('expiry_date'),
   
   verificationStatus: varchar('verification_status').default('pending'),
-  verifiedBy: uuid('verified_by').references(() => ccUserProfiles.id),
+  verifiedBy: uuid('verified_by'),
   verifiedAt: timestamp('verified_at', { withTimezone: true }),
   rejectionReason: text('rejection_reason'),
   
