@@ -2735,3 +2735,176 @@ export const insertHousekeepingChecklistSchema = createInsertSchema(ccHousekeepi
 });
 export type HousekeepingChecklist = typeof ccHousekeepingChecklists.$inferSelect;
 export type InsertHousekeepingChecklist = z.infer<typeof insertHousekeepingChecklistSchema>;
+
+// ============ COMPLIANCE RULES ============
+export const ccComplianceRules = pgTable('cc_compliance_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id'),
+  authorityId: uuid('authority_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 30 }),
+  
+  category: varchar('category').notNull(),
+  
+  description: text('description').notNull(),
+  rationale: text('rationale'),
+  
+  appliesTo: text('applies_to').array().default(['guest']),
+  
+  enforcementLevel: varchar('enforcement_level').default('standard'),
+  
+  firstOffenseAction: varchar('first_offense_action').default('warning'),
+  secondOffenseAction: varchar('second_offense_action').default('citation'),
+  thirdOffenseAction: varchar('third_offense_action').default('eviction'),
+  
+  fineAmountCad: numeric('fine_amount_cad', { precision: 10, scale: 2 }),
+  
+  effectiveDate: date('effective_date'),
+  expiryDate: date('expiry_date'),
+  seasonalMonths: integer('seasonal_months').array(),
+  
+  quietHoursStart: time('quiet_hours_start'),
+  quietHoursEnd: time('quiet_hours_end'),
+  
+  bylawReference: text('bylaw_reference'),
+  externalUrl: text('external_url'),
+  
+  status: varchar('status').default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertComplianceRuleSchema = createInsertSchema(ccComplianceRules).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type ComplianceRule = typeof ccComplianceRules.$inferSelect;
+export type InsertComplianceRule = z.infer<typeof insertComplianceRuleSchema>;
+
+// ============ COMPLIANCE CHECKS ============
+export const ccComplianceChecks = pgTable('cc_compliance_checks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id'),
+  unitId: uuid('unit_id'),
+  reservationId: uuid('reservation_id'),
+  
+  checkNumber: varchar('check_number', { length: 20 }).notNull().unique(),
+  
+  checkType: varchar('check_type').notNull(),
+  
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+  scheduledBy: text('scheduled_by'),
+  
+  assignedTo: text('assigned_to'),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }),
+  
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  
+  locationDescription: text('location_description'),
+  lat: numeric('lat', { precision: 9, scale: 6 }),
+  lon: numeric('lon', { precision: 9, scale: 6 }),
+  
+  status: varchar('status').default('scheduled'),
+  
+  overallResult: varchar('overall_result'),
+  
+  checklistJson: jsonb('checklist_json').default([]),
+  
+  findingsSummary: text('findings_summary'),
+  photosJson: jsonb('photos_json').default([]),
+  
+  actionsTaken: text('actions_taken'),
+  warningsIssued: integer('warnings_issued').default(0),
+  citationsIssued: integer('citations_issued').default(0),
+  
+  requiresFollowup: boolean('requires_followup').default(false),
+  followupDate: date('followup_date'),
+  followupNotes: text('followup_notes'),
+  
+  inspectorNotes: text('inspector_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertComplianceCheckSchema = createInsertSchema(ccComplianceChecks).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type ComplianceCheck = typeof ccComplianceChecks.$inferSelect;
+export type InsertComplianceCheck = z.infer<typeof insertComplianceCheckSchema>;
+
+// ============ INCIDENT REPORTS ============
+export const ccIncidentReports = pgTable('cc_incident_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id'),
+  unitId: uuid('unit_id'),
+  reservationId: uuid('reservation_id'),
+  locationId: uuid('location_id'),
+  
+  reportNumber: varchar('report_number', { length: 20 }).notNull().unique(),
+  
+  incidentType: varchar('incident_type').notNull(),
+  
+  severity: varchar('severity').default('moderate'),
+  
+  incidentAt: timestamp('incident_at', { withTimezone: true }).notNull(),
+  reportedAt: timestamp('reported_at', { withTimezone: true }).defaultNow(),
+  locationDescription: text('location_description'),
+  lat: numeric('lat', { precision: 9, scale: 6 }),
+  lon: numeric('lon', { precision: 9, scale: 6 }),
+  
+  reportedByType: varchar('reported_by_type').default('staff'),
+  reportedByName: text('reported_by_name'),
+  reportedByContact: text('reported_by_contact'),
+  reporterReservationId: uuid('reporter_reservation_id'),
+  
+  involvedPartiesJson: jsonb('involved_parties_json').default([]),
+  
+  title: text('title').notNull(),
+  description: text('description'),
+  
+  photosJson: jsonb('photos_json').default([]),
+  witnessStatements: jsonb('witness_statements').default([]),
+  
+  status: varchar('status').default('reported'),
+  
+  respondedBy: text('responded_by'),
+  respondedAt: timestamp('responded_at', { withTimezone: true }),
+  responseTimeMinutes: integer('response_time_minutes'),
+  
+  investigationNotes: text('investigation_notes'),
+  investigatedBy: text('investigated_by'),
+  
+  resolutionType: varchar('resolution_type'),
+  resolutionNotes: text('resolution_notes'),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  resolvedBy: text('resolved_by'),
+  
+  complianceCheckId: uuid('compliance_check_id'),
+  maintenanceRequestId: uuid('maintenance_request_id'),
+  
+  damageEstimateCad: numeric('damage_estimate_cad', { precision: 10, scale: 2 }),
+  repairCostCad: numeric('repair_cost_cad', { precision: 10, scale: 2 }),
+  
+  requiresFollowup: boolean('requires_followup').default(false),
+  followupDate: date('followup_date'),
+  
+  guestVisible: boolean('guest_visible').default(false),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertIncidentReportSchema = createInsertSchema(ccIncidentReports).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type IncidentReport = typeof ccIncidentReports.$inferSelect;
+export type InsertIncidentReport = z.infer<typeof insertIncidentReportSchema>;

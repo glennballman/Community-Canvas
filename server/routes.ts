@@ -67,6 +67,7 @@ import communityRouter from "./routes/community";
 import transportRouter from "./routes/transport";
 import permitsRouter from "./routes/permits";
 import pmsRouter from "./routes/pms";
+import enforcementRouter from "./routes/enforcement";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -209,6 +210,9 @@ export async function registerRoutes(
   // Register permits (authorities, permit types) routes
   app.use('/api/permits', permitsRouter);
   app.use('/api/pms', pmsRouter);
+  
+  // Register enforcement & compliance routes
+  app.use('/api/enforcement', enforcementRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);

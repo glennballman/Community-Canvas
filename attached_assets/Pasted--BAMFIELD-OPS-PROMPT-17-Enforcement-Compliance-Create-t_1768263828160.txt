@@ -1,0 +1,1413 @@
+**BAMFIELD OPS - PROMPT 17: Enforcement & Compliance**
+
+Create the rules, compliance checks, and enforcement framework for properties and the community.
+
+## Migration 093_enforcement.sql
+```sql
+BEGIN;
+
+-- ============ COMPLIANCE RULES ============
+-- Rules that properties, guests, and operators must follow
+
+CREATE TABLE IF NOT EXISTS cc_compliance_rules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Scope
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid REFERENCES cc_properties(id) ON DELETE CASCADE,
+  authority_id uuid REFERENCES cc_authorities(id) ON DELETE SET NULL,
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(30),
+  
+  -- Category
+  category varchar NOT NULL CHECK (category IN (
+    'noise',           -- Noise regulations
+    'occupancy',       -- Occupancy limits
+    'parking',         -- Parking rules
+    'pets',            -- Pet policies
+    'fire_safety',     -- Fire safety
+    'waste',           -- Waste disposal
+    'water',           -- Water usage/conservation
+    'wildlife',        -- Wildlife interaction
+    'environmental',   -- Environmental protection
+    'cultural',        -- Cultural site respect
+    'boating',         -- Boating/marine rules
+    'fishing',         -- Fishing regulations
+    'camping',         -- Camping rules
+    'trail',           -- Trail usage
+    'commercial',      -- Commercial operation
+    'permit',          -- Permit requirements
+    'general'          -- General rules
+  )),
+  
+  -- Rule details
+  description text NOT NULL,
+  rationale text,
+  
+  -- Applicability
+  applies_to varchar[] DEFAULT ARRAY['guest'],
+  -- ['guest', 'operator', 'property', 'vessel', 'vehicle']
+  
+  -- Enforcement
+  enforcement_level varchar DEFAULT 'standard' CHECK (enforcement_level IN (
+    'advisory',        -- Information only
+    'standard',        -- Standard enforcement
+    'strict',          -- Zero tolerance
+    'seasonal'         -- Seasonal enforcement
+  )),
+  
+  -- Penalties
+  first_offense_action varchar DEFAULT 'warning',
+  second_offense_action varchar DEFAULT 'citation',
+  third_offense_action varchar DEFAULT 'eviction',
+  
+  fine_amount_cad numeric(10,2),
+  
+  -- Timing
+  effective_date date,
+  expiry_date date,
+  seasonal_months integer[],  -- [6,7,8,9] for summer rules
+  
+  quiet_hours_start time,
+  quiet_hours_end time,
+  
+  -- Reference
+  bylaw_reference text,
+  external_url text,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN ('draft', 'active', 'suspended', 'archived')),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, code)
+);
+
+CREATE INDEX idx_compliance_rules_portal ON cc_compliance_rules(portal_id, status);
+CREATE INDEX idx_compliance_rules_category ON cc_compliance_rules(category, status);
+CREATE INDEX idx_compliance_rules_property ON cc_compliance_rules(property_id) WHERE property_id IS NOT NULL;
+
+ALTER TABLE cc_compliance_rules ENABLE ROW LEVEL SECURITY;
+
+-- ============ COMPLIANCE CHECKS ============
+-- Scheduled or triggered compliance inspections
+
+CREATE TABLE IF NOT EXISTS cc_compliance_checks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid REFERENCES cc_properties(id),
+  unit_id uuid REFERENCES cc_units(id),
+  reservation_id uuid REFERENCES cc_pms_reservations(id),
+  
+  -- Identity
+  check_number varchar(20) NOT NULL UNIQUE,
+  -- Format: CHK-YYMMDD-XXXX
+  
+  -- Type
+  check_type varchar NOT NULL CHECK (check_type IN (
+    'routine',         -- Scheduled routine check
+    'complaint',       -- Response to complaint
+    'incident',        -- Following an incident
+    'permit',          -- Permit compliance
+    'safety',          -- Safety inspection
+    'noise',           -- Noise complaint response
+    'occupancy',       -- Occupancy verification
+    'random',          -- Random spot check
+    'followup'         -- Follow-up to previous issue
+  )),
+  
+  -- Scheduling
+  scheduled_at timestamptz,
+  scheduled_by text,
+  
+  -- Assignment
+  assigned_to text,
+  assigned_at timestamptz,
+  
+  -- Execution
+  started_at timestamptz,
+  completed_at timestamptz,
+  
+  -- Location
+  location_description text,
+  lat numeric(9,6),
+  lon numeric(9,6),
+  
+  -- Findings
+  status varchar DEFAULT 'scheduled' CHECK (status IN (
+    'scheduled',       -- Planned
+    'in_progress',     -- Being conducted
+    'completed',       -- Finished
+    'compliant',       -- No issues found
+    'non_compliant',   -- Issues found
+    'cancelled'        -- Cancelled
+  )),
+  
+  overall_result varchar CHECK (overall_result IN (
+    'pass', 'fail', 'partial', 'not_applicable'
+  )),
+  
+  -- Checklist results
+  checklist_json jsonb DEFAULT '[]'::jsonb,
+  -- [{rule_id: uuid, rule_name: '...', compliant: true, notes: '...'}]
+  
+  -- Evidence
+  findings_summary text,
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  
+  -- Actions taken
+  actions_taken text,
+  warnings_issued integer DEFAULT 0,
+  citations_issued integer DEFAULT 0,
+  
+  -- Follow-up
+  requires_followup boolean DEFAULT false,
+  followup_date date,
+  followup_notes text,
+  
+  -- Notes
+  inspector_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_compliance_checks_portal ON cc_compliance_checks(portal_id, status);
+CREATE INDEX idx_compliance_checks_property ON cc_compliance_checks(property_id) WHERE property_id IS NOT NULL;
+CREATE INDEX idx_compliance_checks_scheduled ON cc_compliance_checks(scheduled_at, status);
+CREATE INDEX idx_compliance_checks_number ON cc_compliance_checks(check_number);
+
+ALTER TABLE cc_compliance_checks ENABLE ROW LEVEL SECURITY;
+
+-- ============ INCIDENT REPORTS ============
+-- Reports of incidents, complaints, and observations
+
+CREATE TABLE IF NOT EXISTS cc_incident_reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid REFERENCES cc_properties(id),
+  unit_id uuid REFERENCES cc_units(id),
+  reservation_id uuid REFERENCES cc_pms_reservations(id),
+  location_id uuid REFERENCES cc_locations(id),
+  
+  -- Identity
+  report_number varchar(20) NOT NULL UNIQUE,
+  -- Format: INC-YYMMDD-XXXX
+  
+  -- Type
+  incident_type varchar NOT NULL CHECK (incident_type IN (
+    'noise_complaint',    -- Noise disturbance
+    'property_damage',    -- Damage to property
+    'safety_hazard',      -- Safety concern
+    'rule_violation',     -- General rule violation
+    'guest_conflict',     -- Guest-to-guest conflict
+    'trespass',           -- Unauthorized access
+    'wildlife',           -- Wildlife incident
+    'environmental',      -- Environmental issue
+    'medical',            -- Medical emergency
+    'theft',              -- Theft report
+    'vandalism',          -- Vandalism
+    'fire',               -- Fire incident
+    'accident',           -- Accident
+    'other'
+  )),
+  
+  -- Severity
+  severity varchar DEFAULT 'moderate' CHECK (severity IN (
+    'minor',           -- Minor issue
+    'moderate',        -- Moderate concern
+    'major',           -- Significant incident
+    'critical',        -- Requires immediate action
+    'emergency'        -- Emergency situation
+  )),
+  
+  -- When & where
+  incident_at timestamptz NOT NULL,
+  reported_at timestamptz DEFAULT now(),
+  location_description text,
+  lat numeric(9,6),
+  lon numeric(9,6),
+  
+  -- Reporter
+  reported_by_type varchar DEFAULT 'staff' CHECK (reported_by_type IN (
+    'guest', 'staff', 'neighbor', 'authority', 'anonymous', 'system'
+  )),
+  reported_by_name text,
+  reported_by_contact text,
+  reporter_reservation_id uuid REFERENCES cc_pms_reservations(id),
+  
+  -- Involved parties
+  involved_parties_json jsonb DEFAULT '[]'::jsonb,
+  -- [{name: '...', type: 'guest', reservation_id: uuid, role: 'subject'}]
+  
+  -- Description
+  title text NOT NULL,
+  description text,
+  
+  -- Evidence
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  witness_statements jsonb DEFAULT '[]'::jsonb,
+  
+  -- Status
+  status varchar DEFAULT 'reported' CHECK (status IN (
+    'reported',        -- Just reported
+    'investigating',   -- Under investigation
+    'action_taken',    -- Action has been taken
+    'resolved',        -- Resolved
+    'escalated',       -- Escalated to authority
+    'closed',          -- Closed (no action)
+    'unfounded'        -- Found to be unfounded
+  )),
+  
+  -- Response
+  responded_by text,
+  responded_at timestamptz,
+  response_time_minutes integer,
+  
+  -- Investigation
+  investigation_notes text,
+  investigated_by text,
+  
+  -- Resolution
+  resolution_type varchar CHECK (resolution_type IN (
+    'verbal_warning',
+    'written_warning',
+    'citation_issued',
+    'eviction',
+    'repair_ordered',
+    'no_action',
+    'referred_authority',
+    'other'
+  )),
+  resolution_notes text,
+  resolved_at timestamptz,
+  resolved_by text,
+  
+  -- Related records
+  compliance_check_id uuid REFERENCES cc_compliance_checks(id),
+  maintenance_request_id uuid REFERENCES cc_maintenance_requests(id),
+  
+  -- Costs
+  damage_estimate_cad numeric(10,2),
+  repair_cost_cad numeric(10,2),
+  
+  -- Follow-up
+  requires_followup boolean DEFAULT false,
+  followup_date date,
+  
+  -- Privacy
+  guest_visible boolean DEFAULT false,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_incidents_portal ON cc_incident_reports(portal_id, status);
+CREATE INDEX idx_incidents_property ON cc_incident_reports(property_id) WHERE property_id IS NOT NULL;
+CREATE INDEX idx_incidents_type ON cc_incident_reports(incident_type, severity);
+CREATE INDEX idx_incidents_date ON cc_incident_reports(incident_at DESC);
+CREATE INDEX idx_incidents_number ON cc_incident_reports(report_number);
+
+ALTER TABLE cc_incident_reports ENABLE ROW LEVEL SECURITY;
+
+-- ============ SEED BAMFIELD COMPLIANCE RULES ============
+
+DO $$
+DECLARE
+  v_portal_id uuid;
+BEGIN
+  SELECT id INTO v_portal_id FROM cc_portals WHERE slug = 'bamfield' LIMIT 1;
+  
+  IF v_portal_id IS NOT NULL THEN
+    -- Quiet Hours
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level, quiet_hours_start, quiet_hours_end,
+      first_offense_action, second_offense_action, third_offense_action,
+      status
+    ) VALUES (
+      v_portal_id, 'Quiet Hours', 'QUIET-HRS', 'noise',
+      'Quiet hours are in effect from 10:00 PM to 7:00 AM. Excessive noise during these hours is prohibited.',
+      'standard', '22:00', '07:00',
+      'warning', 'citation', 'eviction',
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+    
+    -- Occupancy Limits
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level, first_offense_action, fine_amount_cad,
+      status
+    ) VALUES (
+      v_portal_id, 'Occupancy Limits', 'OCC-LIMIT', 'occupancy',
+      'The number of guests must not exceed the maximum occupancy listed for the unit. Additional guests require approval and may incur extra fees.',
+      'strict', 'citation', 100.00,
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+    
+    -- Wildlife Interaction
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level, rationale,
+      status
+    ) VALUES (
+      v_portal_id, 'Wildlife Non-Interference', 'WILDLIFE', 'wildlife',
+      'Do not feed, approach, or disturb wildlife. Store food in bear-proof containers where provided. Report wildlife sightings to staff.',
+      'strict',
+      'Bamfield is home to bears, cougars, wolves, and marine mammals. Human food can habituate wildlife to human presence, creating dangerous situations.',
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+    
+    -- Fire Safety
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level, seasonal_months,
+      status
+    ) VALUES (
+      v_portal_id, 'Fire Restrictions', 'FIRE-SAFE', 'fire_safety',
+      'Open fires only in designated fire pits. During fire bans, no open flames are permitted. Check current fire danger rating before starting any fire.',
+      'strict', ARRAY[6,7,8,9],
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+    
+    -- Waste Disposal
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level,
+      status
+    ) VALUES (
+      v_portal_id, 'Waste Disposal', 'WASTE', 'waste',
+      'All waste must be disposed of in designated receptacles. Pack out what you pack in for backcountry areas. No dumping of grey water except at designated stations.',
+      'standard',
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+    
+    -- Parking
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level, fine_amount_cad,
+      status
+    ) VALUES (
+      v_portal_id, 'Parking Regulations', 'PARKING', 'parking',
+      'Park only in designated areas. Display valid parking permit. No overnight parking without authorization. Boat trailers must use designated areas.',
+      'standard', 50.00,
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+    
+    -- Cultural Site Respect
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level, rationale,
+      status
+    ) VALUES (
+      v_portal_id, 'Cultural Site Protocol', 'CULTURAL', 'cultural',
+      'Respect all cultural and archaeological sites. Do not remove artifacts. Some areas require guided access. Photography may be restricted at certain locations.',
+      'strict',
+      'The Bamfield area is within the traditional territory of the Huu-ay-aht First Nations and contains many significant cultural sites.',
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+    
+    -- Boating Safety
+    INSERT INTO cc_compliance_rules (
+      portal_id, name, code, category, description,
+      enforcement_level,
+      status
+    ) VALUES (
+      v_portal_id, 'Boating Safety', 'BOAT-SAFE', 'boating',
+      'All vessels must comply with Transport Canada regulations. Life jackets required. No wake zones must be observed. Check marine weather before departure.',
+      'strict',
+      'active'
+    ) ON CONFLICT (portal_id, code) DO NOTHING;
+  END IF;
+END $$;
+
+COMMIT;
+```
+
+## Create server/services/enforcementService.ts
+```typescript
+// server/services/enforcementService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, asc, desc, or, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateCheckRequest {
+  portalSlug: string;
+  propertyId?: string;
+  unitId?: string;
+  reservationId?: string;
+  checkType: string;
+  scheduledAt?: Date;
+  scheduledBy?: string;
+  assignedTo?: string;
+  locationDescription?: string;
+}
+
+interface CreateIncidentRequest {
+  portalSlug: string;
+  propertyId?: string;
+  unitId?: string;
+  reservationId?: string;
+  locationId?: string;
+  incidentType: string;
+  severity?: string;
+  incidentAt: Date;
+  locationDescription?: string;
+  lat?: number;
+  lon?: number;
+  reportedByType?: string;
+  reportedByName?: string;
+  reportedByContact?: string;
+  reporterReservationId?: string;
+  title: string;
+  description?: string;
+  involvedParties?: any[];
+}
+
+// ============ HELPERS ============
+
+function generateCheckNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `CHK-${dateStr}-${suffix}`;
+}
+
+function generateIncidentNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `INC-${dateStr}-${suffix}`;
+}
+
+// ============ COMPLIANCE RULES ============
+
+export async function getComplianceRules(
+  portalSlug: string,
+  options?: {
+    category?: string;
+    propertyId?: string;
+    status?: string;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [
+    eq(ccComplianceRules.status, options?.status || 'active')
+  ];
+  
+  // Portal-wide or property-specific rules
+  if (options?.propertyId) {
+    conditions.push(or(
+      eq(ccComplianceRules.portalId, portal.id),
+      eq(ccComplianceRules.propertyId, options.propertyId)
+    ));
+  } else {
+    conditions.push(eq(ccComplianceRules.portalId, portal.id));
+  }
+  
+  if (options?.category) {
+    conditions.push(eq(ccComplianceRules.category, options.category));
+  }
+  
+  return db.query.ccComplianceRules.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccComplianceRules.category), asc(ccComplianceRules.name)]
+  });
+}
+
+export async function getRuleByCode(
+  portalSlug: string,
+  code: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  return db.query.ccComplianceRules.findFirst({
+    where: and(
+      eq(ccComplianceRules.portalId, portal.id),
+      eq(ccComplianceRules.code, code)
+    )
+  });
+}
+
+export async function createComplianceRule(
+  portalSlug: string,
+  data: {
+    name: string;
+    code?: string;
+    category: string;
+    description: string;
+    rationale?: string;
+    propertyId?: string;
+    enforcementLevel?: string;
+    firstOffenseAction?: string;
+    secondOffenseAction?: string;
+    thirdOffenseAction?: string;
+    fineAmount?: number;
+    quietHoursStart?: string;
+    quietHoursEnd?: string;
+    seasonalMonths?: number[];
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [rule] = await db.insert(ccComplianceRules).values({
+    portalId: portal.id,
+    propertyId: data.propertyId,
+    name: data.name,
+    code: data.code,
+    category: data.category,
+    description: data.description,
+    rationale: data.rationale,
+    enforcementLevel: data.enforcementLevel || 'standard',
+    firstOffenseAction: data.firstOffenseAction || 'warning',
+    secondOffenseAction: data.secondOffenseAction || 'citation',
+    thirdOffenseAction: data.thirdOffenseAction || 'eviction',
+    fineAmountCad: data.fineAmount,
+    quietHoursStart: data.quietHoursStart,
+    quietHoursEnd: data.quietHoursEnd,
+    seasonalMonths: data.seasonalMonths,
+    status: 'active'
+  }).returning();
+  
+  return rule;
+}
+
+// ============ COMPLIANCE CHECKS ============
+
+export async function createComplianceCheck(req: CreateCheckRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate property if provided
+  if (req.propertyId) {
+    const property = await db.query.ccProperties.findFirst({
+      where: and(
+        eq(ccProperties.id, req.propertyId),
+        eq(ccProperties.portalId, portal.id)
+      )
+    });
+    if (!property) throw new Error('Property not found');
+  }
+  
+  const checkNumber = generateCheckNumber();
+  
+  // Build checklist from applicable rules
+  const rules = await getComplianceRules(req.portalSlug, { propertyId: req.propertyId });
+  const checklistJson = rules.map(rule => ({
+    ruleId: rule.id,
+    ruleName: rule.name,
+    ruleCode: rule.code,
+    category: rule.category,
+    compliant: null,
+    notes: ''
+  }));
+  
+  const [check] = await db.insert(ccComplianceChecks).values({
+    portalId: portal.id,
+    propertyId: req.propertyId,
+    unitId: req.unitId,
+    reservationId: req.reservationId,
+    checkNumber,
+    checkType: req.checkType,
+    scheduledAt: req.scheduledAt || new Date(),
+    scheduledBy: req.scheduledBy,
+    assignedTo: req.assignedTo,
+    assignedAt: req.assignedTo ? new Date() : undefined,
+    locationDescription: req.locationDescription,
+    checklistJson,
+    status: req.assignedTo ? 'scheduled' : 'scheduled'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.scheduledBy || 'system',
+    action: 'compliance_check.created',
+    resourceType: 'compliance_check',
+    resourceId: check.id,
+    metadata: { checkNumber, checkType: req.checkType }
+  });
+  
+  return { check, checklist: checklistJson };
+}
+
+export async function getComplianceCheck(
+  portalSlug: string,
+  checkId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const check = await db.query.ccComplianceChecks.findFirst({
+    where: and(
+      eq(ccComplianceChecks.id, checkId),
+      eq(ccComplianceChecks.portalId, portal.id)
+    )
+  });
+  
+  if (!check) return null;
+  
+  let property = null;
+  let unit = null;
+  
+  if (check.propertyId) {
+    property = await db.query.ccProperties.findFirst({
+      where: eq(ccProperties.id, check.propertyId)
+    });
+  }
+  
+  if (check.unitId) {
+    unit = await db.query.ccUnits.findFirst({
+      where: eq(ccUnits.id, check.unitId)
+    });
+  }
+  
+  return { check, property, unit };
+}
+
+export async function searchComplianceChecks(
+  portalSlug: string,
+  options?: {
+    propertyId?: string;
+    status?: string;
+    checkType?: string;
+    assignedTo?: string;
+    fromDate?: Date;
+    toDate?: Date;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccComplianceChecks.portalId, portal.id)];
+  
+  if (options?.propertyId) {
+    conditions.push(eq(ccComplianceChecks.propertyId, options.propertyId));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccComplianceChecks.status, options.status));
+  }
+  
+  if (options?.checkType) {
+    conditions.push(eq(ccComplianceChecks.checkType, options.checkType));
+  }
+  
+  if (options?.assignedTo) {
+    conditions.push(eq(ccComplianceChecks.assignedTo, options.assignedTo));
+  }
+  
+  if (options?.fromDate) {
+    conditions.push(gte(ccComplianceChecks.scheduledAt, options.fromDate));
+  }
+  
+  if (options?.toDate) {
+    conditions.push(lte(ccComplianceChecks.scheduledAt, options.toDate));
+  }
+  
+  return db.query.ccComplianceChecks.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccComplianceChecks.scheduledAt)],
+    limit: options?.limit || 50
+  });
+}
+
+export async function startComplianceCheck(
+  portalSlug: string,
+  checkId: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccComplianceChecks)
+    .set({
+      status: 'in_progress',
+      startedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccComplianceChecks.id, checkId),
+      eq(ccComplianceChecks.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function updateCheckChecklist(
+  portalSlug: string,
+  checkId: string,
+  checklistJson: any[]
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccComplianceChecks)
+    .set({
+      checklistJson,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccComplianceChecks.id, checkId),
+      eq(ccComplianceChecks.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function completeComplianceCheck(
+  portalSlug: string,
+  checkId: string,
+  data: {
+    overallResult: string;
+    findingsSummary?: string;
+    actionsTaken?: string;
+    warningsIssued?: number;
+    citationsIssued?: number;
+    requiresFollowup?: boolean;
+    followupDate?: Date;
+    followupNotes?: string;
+    inspectorNotes?: string;
+    photos?: string[];
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Determine status based on result
+  let status = 'completed';
+  if (data.overallResult === 'pass') {
+    status = 'compliant';
+  } else if (data.overallResult === 'fail') {
+    status = 'non_compliant';
+  }
+  
+  const [updated] = await db.update(ccComplianceChecks)
+    .set({
+      status,
+      completedAt: new Date(),
+      overallResult: data.overallResult,
+      findingsSummary: data.findingsSummary,
+      actionsTaken: data.actionsTaken,
+      warningsIssued: data.warningsIssued || 0,
+      citationsIssued: data.citationsIssued || 0,
+      requiresFollowup: data.requiresFollowup || false,
+      followupDate: data.followupDate,
+      followupNotes: data.followupNotes,
+      inspectorNotes: data.inspectorNotes,
+      photosJson: data.photos,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccComplianceChecks.id, checkId),
+      eq(ccComplianceChecks.portalId, portal.id)
+    ))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'inspector',
+    action: 'compliance_check.completed',
+    resourceType: 'compliance_check',
+    resourceId: checkId,
+    metadata: { result: data.overallResult, warnings: data.warningsIssued, citations: data.citationsIssued }
+  });
+  
+  return updated;
+}
+
+// ============ INCIDENT REPORTS ============
+
+export async function createIncidentReport(req: CreateIncidentRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate property if provided
+  if (req.propertyId) {
+    const property = await db.query.ccProperties.findFirst({
+      where: and(
+        eq(ccProperties.id, req.propertyId),
+        eq(ccProperties.portalId, portal.id)
+      )
+    });
+    if (!property) throw new Error('Property not found');
+  }
+  
+  const reportNumber = generateIncidentNumber();
+  
+  const [report] = await db.insert(ccIncidentReports).values({
+    portalId: portal.id,
+    propertyId: req.propertyId,
+    unitId: req.unitId,
+    reservationId: req.reservationId,
+    locationId: req.locationId,
+    reportNumber,
+    incidentType: req.incidentType,
+    severity: req.severity || 'moderate',
+    incidentAt: req.incidentAt,
+    locationDescription: req.locationDescription,
+    lat: req.lat,
+    lon: req.lon,
+    reportedByType: req.reportedByType || 'staff',
+    reportedByName: req.reportedByName,
+    reportedByContact: req.reportedByContact,
+    reporterReservationId: req.reporterReservationId,
+    title: req.title,
+    description: req.description,
+    involvedPartiesJson: req.involvedParties || [],
+    status: 'reported'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.reportedByName || 'reporter',
+    action: 'incident.reported',
+    resourceType: 'incident_report',
+    resourceId: report.id,
+    metadata: { reportNumber, incidentType: req.incidentType, severity: req.severity }
+  });
+  
+  return { report };
+}
+
+export async function getIncidentReport(
+  portalSlug: string,
+  reportId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const report = await db.query.ccIncidentReports.findFirst({
+    where: and(
+      eq(ccIncidentReports.id, reportId),
+      eq(ccIncidentReports.portalId, portal.id)
+    )
+  });
+  
+  if (!report) return null;
+  
+  let property = null;
+  let unit = null;
+  
+  if (report.propertyId) {
+    property = await db.query.ccProperties.findFirst({
+      where: eq(ccProperties.id, report.propertyId)
+    });
+  }
+  
+  if (report.unitId) {
+    unit = await db.query.ccUnits.findFirst({
+      where: eq(ccUnits.id, report.unitId)
+    });
+  }
+  
+  return { report, property, unit };
+}
+
+export async function searchIncidentReports(
+  portalSlug: string,
+  options?: {
+    propertyId?: string;
+    incidentType?: string;
+    severity?: string;
+    status?: string;
+    fromDate?: Date;
+    toDate?: Date;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccIncidentReports.portalId, portal.id)];
+  
+  if (options?.propertyId) {
+    conditions.push(eq(ccIncidentReports.propertyId, options.propertyId));
+  }
+  
+  if (options?.incidentType) {
+    conditions.push(eq(ccIncidentReports.incidentType, options.incidentType));
+  }
+  
+  if (options?.severity) {
+    conditions.push(eq(ccIncidentReports.severity, options.severity));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccIncidentReports.status, options.status));
+  }
+  
+  if (options?.fromDate) {
+    conditions.push(gte(ccIncidentReports.incidentAt, options.fromDate));
+  }
+  
+  if (options?.toDate) {
+    conditions.push(lte(ccIncidentReports.incidentAt, options.toDate));
+  }
+  
+  return db.query.ccIncidentReports.findMany({
+    where: and(...conditions),
+    orderBy: [
+      desc(sql`CASE severity WHEN 'emergency' THEN 5 WHEN 'critical' THEN 4 WHEN 'major' THEN 3 WHEN 'moderate' THEN 2 ELSE 1 END`),
+      desc(ccIncidentReports.incidentAt)
+    ],
+    limit: options?.limit || 50
+  });
+}
+
+export async function updateIncidentStatus(
+  portalSlug: string,
+  reportId: string,
+  status: string,
+  data?: {
+    respondedBy?: string;
+    investigatedBy?: string;
+    investigationNotes?: string;
+    resolutionType?: string;
+    resolutionNotes?: string;
+    resolvedBy?: string;
+    damageEstimate?: number;
+    repairCost?: number;
+    requiresFollowup?: boolean;
+    followupDate?: Date;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const report = await db.query.ccIncidentReports.findFirst({
+    where: and(
+      eq(ccIncidentReports.id, reportId),
+      eq(ccIncidentReports.portalId, portal.id)
+    )
+  });
+  
+  if (!report) throw new Error('Report not found');
+  
+  const updates: Record<string, any> = {
+    status,
+    updatedAt: new Date()
+  };
+  
+  // Calculate response time if responding
+  if (status === 'investigating' && !report.respondedAt) {
+    updates.respondedAt = new Date();
+    updates.respondedBy = data?.respondedBy;
+    const responseMinutes = Math.round((new Date().getTime() - report.reportedAt.getTime()) / 60000);
+    updates.responseTimeMinutes = responseMinutes;
+  }
+  
+  if (data?.investigatedBy) updates.investigatedBy = data.investigatedBy;
+  if (data?.investigationNotes) updates.investigationNotes = data.investigationNotes;
+  if (data?.resolutionType) updates.resolutionType = data.resolutionType;
+  if (data?.resolutionNotes) updates.resolutionNotes = data.resolutionNotes;
+  if (data?.resolvedBy) updates.resolvedBy = data.resolvedBy;
+  if (data?.damageEstimate !== undefined) updates.damageEstimateCad = data.damageEstimate;
+  if (data?.repairCost !== undefined) updates.repairCostCad = data.repairCost;
+  if (data?.requiresFollowup !== undefined) updates.requiresFollowup = data.requiresFollowup;
+  if (data?.followupDate) updates.followupDate = data.followupDate;
+  
+  if (status === 'resolved') {
+    updates.resolvedAt = new Date();
+  }
+  
+  const [updated] = await db.update(ccIncidentReports)
+    .set(updates)
+    .where(eq(ccIncidentReports.id, reportId))
+    .returning();
+  
+  return updated;
+}
+```
+
+## Create server/routes/enforcement.ts
+```typescript
+// server/routes/enforcement.ts
+
+import { Router } from 'express';
+import {
+  getComplianceRules, getRuleByCode, createComplianceRule,
+  createComplianceCheck, getComplianceCheck, searchComplianceChecks,
+  startComplianceCheck, updateCheckChecklist, completeComplianceCheck,
+  createIncidentReport, getIncidentReport, searchIncidentReports,
+  updateIncidentStatus
+} from '../services/enforcementService';
+
+const router = Router();
+
+// ============ COMPLIANCE RULES ============
+
+// GET /api/enforcement/portals/:slug/rules - Get rules
+router.get('/portals/:slug/rules', async (req, res) => {
+  const { slug } = req.params;
+  const { category, property, status } = req.query;
+  
+  try {
+    const rules = await getComplianceRules(slug, {
+      category: category as string,
+      propertyId: property as string,
+      status: status as string
+    });
+    
+    res.json({ rules, count: rules.length });
+  } catch (e: any) {
+    console.error('Get rules error:', e);
+    res.status(500).json({ error: 'Failed to get rules' });
+  }
+});
+
+// GET /api/enforcement/portals/:slug/rules/:code - Get rule by code
+router.get('/portals/:slug/rules/:code', async (req, res) => {
+  const { slug, code } = req.params;
+  
+  try {
+    const rule = await getRuleByCode(slug, code);
+    if (!rule) {
+      return res.status(404).json({ error: 'Rule not found' });
+    }
+    res.json({ rule });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get rule' });
+  }
+});
+
+// POST /api/enforcement/portals/:slug/rules - Create rule
+router.post('/portals/:slug/rules', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.name || !b.category || !b.description) {
+    return res.status(400).json({ error: 'name, category, description required' });
+  }
+  
+  try {
+    const rule = await createComplianceRule(slug, b);
+    res.json({ rule });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ COMPLIANCE CHECKS ============
+
+// POST /api/enforcement/portals/:slug/checks - Create check
+router.post('/portals/:slug/checks', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.checkType) {
+    return res.status(400).json({ error: 'checkType required' });
+  }
+  
+  try {
+    const result = await createComplianceCheck({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      reservationId: b.reservationId,
+      checkType: b.checkType,
+      scheduledAt: b.scheduledAt ? new Date(b.scheduledAt) : undefined,
+      scheduledBy: b.scheduledBy,
+      assignedTo: b.assignedTo,
+      locationDescription: b.locationDescription
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/enforcement/portals/:slug/checks - Search checks
+router.get('/portals/:slug/checks', async (req, res) => {
+  const { slug } = req.params;
+  const { property, status, type, assignedTo, from, to, limit } = req.query;
+  
+  try {
+    const checks = await searchComplianceChecks(slug, {
+      propertyId: property as string,
+      status: status as string,
+      checkType: type as string,
+      assignedTo: assignedTo as string,
+      fromDate: from ? new Date(from as string) : undefined,
+      toDate: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ checks, count: checks.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search checks' });
+  }
+});
+
+// GET /api/enforcement/portals/:slug/checks/:id - Get check
+router.get('/portals/:slug/checks/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getComplianceCheck(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Check not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get check' });
+  }
+});
+
+// POST /api/enforcement/portals/:slug/checks/:id/start - Start check
+router.post('/portals/:slug/checks/:id/start', async (req, res) => {
+  const { slug, id } = req.params;
+  try {
+    const check = await startComplianceCheck(slug, id);
+    res.json({ check });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/enforcement/portals/:slug/checks/:id/checklist - Update checklist
+router.post('/portals/:slug/checks/:id/checklist', async (req, res) => {
+  const { slug, id } = req.params;
+  const { checklist } = req.body || {};
+  
+  if (!checklist) {
+    return res.status(400).json({ error: 'checklist required' });
+  }
+  
+  try {
+    const check = await updateCheckChecklist(slug, id, checklist);
+    res.json({ check });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/enforcement/portals/:slug/checks/:id/complete - Complete check
+router.post('/portals/:slug/checks/:id/complete', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.overallResult) {
+    return res.status(400).json({ error: 'overallResult required' });
+  }
+  
+  try {
+    const check = await completeComplianceCheck(slug, id, {
+      overallResult: b.overallResult,
+      findingsSummary: b.findingsSummary,
+      actionsTaken: b.actionsTaken,
+      warningsIssued: b.warningsIssued,
+      citationsIssued: b.citationsIssued,
+      requiresFollowup: b.requiresFollowup,
+      followupDate: b.followupDate ? new Date(b.followupDate) : undefined,
+      followupNotes: b.followupNotes,
+      inspectorNotes: b.inspectorNotes,
+      photos: b.photos
+    });
+    
+    res.json({ check });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ INCIDENT REPORTS ============
+
+// POST /api/enforcement/portals/:slug/incidents - Create incident
+router.post('/portals/:slug/incidents', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.incidentType || !b.title || !b.incidentAt) {
+    return res.status(400).json({ error: 'incidentType, title, incidentAt required' });
+  }
+  
+  try {
+    const result = await createIncidentReport({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      reservationId: b.reservationId,
+      locationId: b.locationId,
+      incidentType: b.incidentType,
+      severity: b.severity,
+      incidentAt: new Date(b.incidentAt),
+      locationDescription: b.locationDescription,
+      lat: b.lat,
+      lon: b.lon,
+      reportedByType: b.reportedByType,
+      reportedByName: b.reportedByName,
+      reportedByContact: b.reportedByContact,
+      reporterReservationId: b.reporterReservationId,
+      title: b.title,
+      description: b.description,
+      involvedParties: b.involvedParties
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/enforcement/portals/:slug/incidents - Search incidents
+router.get('/portals/:slug/incidents', async (req, res) => {
+  const { slug } = req.params;
+  const { property, type, severity, status, from, to, limit } = req.query;
+  
+  try {
+    const reports = await searchIncidentReports(slug, {
+      propertyId: property as string,
+      incidentType: type as string,
+      severity: severity as string,
+      status: status as string,
+      fromDate: from ? new Date(from as string) : undefined,
+      toDate: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ reports, count: reports.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search incidents' });
+  }
+});
+
+// GET /api/enforcement/portals/:slug/incidents/:id - Get incident
+router.get('/portals/:slug/incidents/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getIncidentReport(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Incident not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get incident' });
+  }
+});
+
+// POST /api/enforcement/portals/:slug/incidents/:id/status - Update status
+router.post('/portals/:slug/incidents/:id/status', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const report = await updateIncidentStatus(slug, id, b.status, {
+      respondedBy: b.respondedBy,
+      investigatedBy: b.investigatedBy,
+      investigationNotes: b.investigationNotes,
+      resolutionType: b.resolutionType,
+      resolutionNotes: b.resolutionNotes,
+      resolvedBy: b.resolvedBy,
+      damageEstimate: b.damageEstimate,
+      repairCost: b.repairCost,
+      requiresFollowup: b.requiresFollowup,
+      followupDate: b.followupDate ? new Date(b.followupDate) : undefined
+    });
+    
+    res.json({ report });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import enforcementRoutes from './routes/enforcement';
+
+// Add with other routes
+app.use('/api/enforcement', enforcementRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- ComplianceRule, InsertComplianceRule
+- ComplianceCheck, InsertComplianceCheck
+- IncidentReport, InsertIncidentReport
+
+## Deliverables
+- [ ] Migration 093_enforcement.sql
+- [ ] cc_compliance_rules table with RLS
+- [ ] cc_compliance_checks table with RLS
+- [ ] cc_incident_reports table with RLS
+- [ ] 8 compliance rules seeded (quiet hours, occupancy, wildlife, fire, waste, parking, cultural, boating)
+- [ ] server/services/enforcementService.ts
+- [ ] server/routes/enforcement.ts
+- [ ] Routes registered in server/index.ts
+- [ ] API Endpoints:
+  - Rules: list, get by code, create
+  - Checks: create, search, get, start, update checklist, complete
+  - Incidents: create, search, get, update status
+- [ ] Check creation auto-loads rules as checklist items
+- [ ] Incident status tracks response time in minutes
+- [ ] Incidents sorted by severity (emergency > critical > major > moderate > minor)
+- [ ] Test: GET /api/enforcement/portals/bamfield/rules returns 8 rules
+- [ ] Test: Create compliance check → checklist populated with rules
+- [ ] Test: Create incident → status transitions to investigating → response time calculated
+
+Report with rules list, compliance check with checklist, and incident with response time.
