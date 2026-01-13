@@ -12,6 +12,12 @@ import {
   getPropertyAvailability, getSeasonalRules, createSeasonalRule,
   updateSeasonalRule, deleteSeasonalRule
 } from '../services/unitCalendarService';
+import {
+  createHousekeepingTask, getHousekeepingTask, searchHousekeepingTasks,
+  assignTask, startTask, updateChecklist, completeTask, inspectTask,
+  createMaintenanceRequest, getMaintenanceRequest, searchMaintenanceRequests,
+  updateMaintenanceStatus
+} from '../services/housekeepingService';
 
 const router = Router();
 
@@ -502,6 +508,253 @@ router.delete('/portals/:slug/seasonal-rules/:ruleId', async (req, res) => {
     res.json({ deleted });
   } catch (e: any) {
     console.error('Delete seasonal rule error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ HOUSEKEEPING ENDPOINTS ============
+
+router.post('/portals/:slug/housekeeping', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.propertyId || !b.unitId || !b.taskType || !b.scheduledDate) {
+    return res.status(400).json({ error: 'propertyId, unitId, taskType, scheduledDate required' });
+  }
+  
+  try {
+    const result = await createHousekeepingTask({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      taskType: b.taskType,
+      priority: b.priority,
+      scheduledDate: new Date(b.scheduledDate),
+      scheduledTime: b.scheduledTime,
+      dueBy: b.dueBy ? new Date(b.dueBy) : undefined,
+      checkoutReservationId: b.checkoutReservationId,
+      checkinReservationId: b.checkinReservationId,
+      guestArrivalTime: b.guestArrivalTime,
+      assignedTo: b.assignedTo,
+      assignedTeam: b.assignedTeam,
+      estimatedMinutes: b.estimatedMinutes,
+      specialInstructions: b.specialInstructions
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create task error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/portals/:slug/housekeeping', async (req, res) => {
+  const { slug } = req.params;
+  const { property, unit, status, assignedTo, from, to, limit } = req.query;
+  
+  try {
+    const tasks = await searchHousekeepingTasks(slug, {
+      propertyId: property as string,
+      unitId: unit as string,
+      status: status as string,
+      assignedTo: assignedTo as string,
+      dateFrom: from ? new Date(from as string) : undefined,
+      dateTo: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ tasks, count: tasks.length });
+  } catch (e: any) {
+    console.error('Search tasks error:', e);
+    res.status(500).json({ error: 'Failed to search tasks' });
+  }
+});
+
+router.get('/portals/:slug/housekeeping/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getHousekeepingTask(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get task error:', e);
+    res.status(500).json({ error: 'Failed to get task' });
+  }
+});
+
+router.post('/portals/:slug/housekeeping/:id/assign', async (req, res) => {
+  const { slug, id } = req.params;
+  const { assignedTo, team } = req.body || {};
+  
+  if (!assignedTo) {
+    return res.status(400).json({ error: 'assignedTo required' });
+  }
+  
+  try {
+    const task = await assignTask(slug, id, assignedTo, team);
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/portals/:slug/housekeeping/:id/start', async (req, res) => {
+  const { slug, id } = req.params;
+  try {
+    const task = await startTask(slug, id);
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/portals/:slug/housekeeping/:id/checklist', async (req, res) => {
+  const { slug, id } = req.params;
+  const { checklist } = req.body || {};
+  
+  if (!checklist) {
+    return res.status(400).json({ error: 'checklist required' });
+  }
+  
+  try {
+    const task = await updateChecklist(slug, id, checklist);
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/portals/:slug/housekeeping/:id/complete', async (req, res) => {
+  const { slug, id } = req.params;
+  const { actualMinutes, suppliesUsed, notes, issuesFound, maintenanceNeeded } = req.body || {};
+  
+  try {
+    const task = await completeTask(slug, id, {
+      actualMinutes,
+      suppliesUsed,
+      notes,
+      issuesFound,
+      maintenanceNeeded
+    });
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/portals/:slug/housekeeping/:id/inspect', async (req, res) => {
+  const { slug, id } = req.params;
+  const { passed, inspectedBy, notes, photos } = req.body || {};
+  
+  if (passed === undefined || !inspectedBy) {
+    return res.status(400).json({ error: 'passed and inspectedBy required' });
+  }
+  
+  try {
+    const task = await inspectTask(slug, id, { passed, inspectedBy, notes, photos });
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ MAINTENANCE ENDPOINTS ============
+
+router.post('/portals/:slug/maintenance', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.propertyId || !b.category || !b.title) {
+    return res.status(400).json({ error: 'propertyId, category, title required' });
+  }
+  
+  try {
+    const result = await createMaintenanceRequest({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      reportedByType: b.reportedByType,
+      reportedByName: b.reportedByName,
+      reportedByContact: b.reportedByContact,
+      reservationId: b.reservationId,
+      housekeepingTaskId: b.housekeepingTaskId,
+      category: b.category,
+      priority: b.priority,
+      title: b.title,
+      description: b.description,
+      locationDetail: b.locationDetail,
+      affectsHabitability: b.affectsHabitability
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create maintenance request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/portals/:slug/maintenance', async (req, res) => {
+  const { slug } = req.params;
+  const { property, unit, category, status, priority, assignedTo, limit } = req.query;
+  
+  try {
+    const requests = await searchMaintenanceRequests(slug, {
+      propertyId: property as string,
+      unitId: unit as string,
+      category: category as string,
+      status: status as string,
+      priority: priority as string,
+      assignedTo: assignedTo as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ requests, count: requests.length });
+  } catch (e: any) {
+    console.error('Search maintenance error:', e);
+    res.status(500).json({ error: 'Failed to search requests' });
+  }
+});
+
+router.get('/portals/:slug/maintenance/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getMaintenanceRequest(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get maintenance error:', e);
+    res.status(500).json({ error: 'Failed to get request' });
+  }
+});
+
+router.post('/portals/:slug/maintenance/:id/status', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const request = await updateMaintenanceStatus(slug, id, b.status, {
+      assignedTo: b.assignedTo,
+      assignedVendor: b.assignedVendor,
+      scheduledDate: b.scheduledDate ? new Date(b.scheduledDate) : undefined,
+      workPerformed: b.workPerformed,
+      resolutionNotes: b.resolutionNotes,
+      laborCost: b.laborCost,
+      partsCost: b.partsCost,
+      vendorCost: b.vendorCost
+    });
+    
+    res.json({ request });
+  } catch (e: any) {
     res.status(400).json({ error: e.message });
   }
 });

@@ -1,0 +1,1313 @@
+**BAMFIELD OPS - PROMPT 16: Housekeeping & Maintenance**
+
+Create the housekeeping task system and maintenance request tracking for properties.
+
+## Migration 092_housekeeping.sql
+```sql
+BEGIN;
+
+-- ============ HOUSEKEEPING TASKS ============
+-- Cleaning and turnover tasks for units
+
+CREATE TABLE IF NOT EXISTS cc_housekeeping_tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid NOT NULL REFERENCES cc_properties(id),
+  unit_id uuid NOT NULL REFERENCES cc_units(id),
+  reservation_id uuid REFERENCES cc_pms_reservations(id) ON DELETE SET NULL,
+  
+  -- Identity
+  task_number varchar(20) NOT NULL UNIQUE,
+  -- Format: HK-YYMMDD-XXXX
+  
+  -- Task type
+  task_type varchar NOT NULL CHECK (task_type IN (
+    'checkout_clean',   -- Standard checkout cleaning
+    'turnover',         -- Full turnover between guests
+    'deep_clean',       -- Deep cleaning
+    'inspection',       -- Inspection only
+    'touch_up',         -- Quick touch-up
+    'linen_change',     -- Linen change only
+    'guest_request',    -- During-stay guest request
+    'maintenance_prep', -- Prep for maintenance
+    'seasonal'          -- Seasonal deep clean
+  )),
+  
+  -- Priority
+  priority varchar DEFAULT 'normal' CHECK (priority IN (
+    'low', 'normal', 'high', 'urgent'
+  )),
+  
+  -- Scheduling
+  scheduled_date date NOT NULL,
+  scheduled_time time,
+  due_by timestamptz,
+  
+  -- For turnovers
+  checkout_reservation_id uuid REFERENCES cc_pms_reservations(id),
+  checkin_reservation_id uuid REFERENCES cc_pms_reservations(id),
+  guest_arrival_time time,
+  
+  -- Assignment
+  assigned_to text,
+  assigned_team text,
+  assigned_at timestamptz,
+  
+  -- Status
+  status varchar DEFAULT 'pending' CHECK (status IN (
+    'pending',        -- Not started
+    'assigned',       -- Assigned to cleaner
+    'in_progress',    -- Being cleaned
+    'completed',      -- Cleaning done
+    'inspected',      -- Passed inspection
+    'failed',         -- Failed inspection
+    'cancelled',      -- Cancelled
+    'skipped'         -- Skipped (no turnover needed)
+  )),
+  
+  started_at timestamptz,
+  completed_at timestamptz,
+  
+  -- Time tracking
+  estimated_minutes integer DEFAULT 60,
+  actual_minutes integer,
+  
+  -- Checklist
+  checklist_json jsonb DEFAULT '[]'::jsonb,
+  -- [{item: 'Make beds', done: true}, {item: 'Clean bathroom', done: true}]
+  
+  -- Inspection
+  inspected_by text,
+  inspected_at timestamptz,
+  inspection_notes text,
+  inspection_photos jsonb DEFAULT '[]'::jsonb,
+  
+  -- Issues found
+  issues_found text,
+  maintenance_needed boolean DEFAULT false,
+  maintenance_request_id uuid,
+  
+  -- Supplies
+  supplies_used jsonb DEFAULT '[]'::jsonb,
+  -- [{item: 'Toilet paper', qty: 4}, {item: 'Soap bars', qty: 2}]
+  
+  -- Notes
+  notes text,
+  special_instructions text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_housekeeping_property ON cc_housekeeping_tasks(property_id, scheduled_date);
+CREATE INDEX idx_housekeeping_unit ON cc_housekeeping_tasks(unit_id, status);
+CREATE INDEX idx_housekeeping_date ON cc_housekeeping_tasks(scheduled_date, status);
+CREATE INDEX idx_housekeeping_assigned ON cc_housekeeping_tasks(assigned_to, status) WHERE assigned_to IS NOT NULL;
+CREATE INDEX idx_housekeeping_number ON cc_housekeeping_tasks(task_number);
+
+ALTER TABLE cc_housekeeping_tasks ENABLE ROW LEVEL SECURITY;
+
+-- ============ MAINTENANCE REQUESTS ============
+-- Repair and maintenance work orders
+
+CREATE TABLE IF NOT EXISTS cc_maintenance_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid NOT NULL REFERENCES cc_properties(id),
+  unit_id uuid REFERENCES cc_units(id),
+  location_id uuid REFERENCES cc_locations(id),
+  
+  -- Source
+  reported_by_type varchar DEFAULT 'staff' CHECK (reported_by_type IN (
+    'guest', 'staff', 'housekeeping', 'inspection', 'owner', 'system'
+  )),
+  reported_by_name text,
+  reported_by_contact text,
+  reservation_id uuid REFERENCES cc_pms_reservations(id),
+  housekeeping_task_id uuid REFERENCES cc_housekeeping_tasks(id),
+  
+  -- Identity
+  request_number varchar(20) NOT NULL UNIQUE,
+  -- Format: MR-YYMMDD-XXXX
+  
+  -- Category
+  category varchar NOT NULL CHECK (category IN (
+    'plumbing',       -- Plumbing issues
+    'electrical',     -- Electrical issues
+    'hvac',           -- Heating/cooling
+    'appliance',      -- Appliance repair
+    'structural',     -- Building structure
+    'furniture',      -- Furniture repair
+    'exterior',       -- Exterior/grounds
+    'safety',         -- Safety concern
+    'pest',           -- Pest control
+    'general',        -- General maintenance
+    'preventive'      -- Preventive maintenance
+  )),
+  
+  -- Priority
+  priority varchar DEFAULT 'normal' CHECK (priority IN (
+    'low',            -- Can wait
+    'normal',         -- Standard timeframe
+    'high',           -- Needs attention soon
+    'urgent',         -- Needs immediate attention
+    'emergency'       -- Safety/habitability emergency
+  )),
+  
+  -- Description
+  title text NOT NULL,
+  description text,
+  location_detail text,  -- "Master bathroom sink"
+  
+  -- Photos
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  
+  -- Impact
+  affects_habitability boolean DEFAULT false,
+  unit_blocked boolean DEFAULT false,
+  blocked_until date,
+  
+  -- Assignment
+  assigned_to text,
+  assigned_vendor text,
+  assigned_at timestamptz,
+  
+  -- Scheduling
+  scheduled_date date,
+  scheduled_time_start time,
+  scheduled_time_end time,
+  
+  -- Status
+  status varchar DEFAULT 'reported' CHECK (status IN (
+    'reported',       -- Just reported
+    'triaged',        -- Reviewed and prioritized
+    'assigned',       -- Assigned to tech/vendor
+    'scheduled',      -- Work scheduled
+    'in_progress',    -- Work underway
+    'parts_ordered',  -- Waiting for parts
+    'on_hold',        -- On hold
+    'completed',      -- Work completed
+    'verified',       -- Verified fixed
+    'cancelled'       -- Cancelled
+  )),
+  
+  -- Timeline
+  triaged_at timestamptz,
+  work_started_at timestamptz,
+  work_completed_at timestamptz,
+  verified_at timestamptz,
+  
+  -- Resolution
+  resolution_notes text,
+  work_performed text,
+  parts_used jsonb DEFAULT '[]'::jsonb,
+  
+  -- Costs
+  labor_cost_cad numeric(10,2) DEFAULT 0,
+  parts_cost_cad numeric(10,2) DEFAULT 0,
+  vendor_cost_cad numeric(10,2) DEFAULT 0,
+  total_cost_cad numeric(10,2) DEFAULT 0,
+  
+  -- Billing
+  billable_to varchar CHECK (billable_to IN (
+    'property', 'owner', 'guest', 'warranty', 'insurance'
+  )),
+  invoice_number text,
+  
+  -- Recurrence
+  is_recurring boolean DEFAULT false,
+  recurrence_schedule text,
+  parent_request_id uuid REFERENCES cc_maintenance_requests(id),
+  
+  -- Notes
+  internal_notes text,
+  guest_visible_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_maintenance_property ON cc_maintenance_requests(property_id, status);
+CREATE INDEX idx_maintenance_unit ON cc_maintenance_requests(unit_id, status) WHERE unit_id IS NOT NULL;
+CREATE INDEX idx_maintenance_category ON cc_maintenance_requests(category, priority);
+CREATE INDEX idx_maintenance_status ON cc_maintenance_requests(status, priority);
+CREATE INDEX idx_maintenance_assigned ON cc_maintenance_requests(assigned_to, status) WHERE assigned_to IS NOT NULL;
+CREATE INDEX idx_maintenance_number ON cc_maintenance_requests(request_number);
+
+ALTER TABLE cc_maintenance_requests ENABLE ROW LEVEL SECURITY;
+
+-- ============ HOUSEKEEPING CHECKLISTS ============
+-- Reusable checklist templates
+
+CREATE TABLE IF NOT EXISTS cc_housekeeping_checklists (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid REFERENCES cc_properties(id) ON DELETE CASCADE,
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(20),
+  
+  -- What it applies to
+  task_type varchar NOT NULL,
+  unit_type varchar,  -- Optional: only for specific unit types
+  
+  -- Checklist items
+  items_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+  -- [{item: 'Strip beds', category: 'Bedroom', order: 1, required: true},
+  --  {item: 'Clean toilet', category: 'Bathroom', order: 10, required: true}]
+  
+  -- Time estimate
+  estimated_minutes integer DEFAULT 60,
+  
+  -- Status
+  status varchar DEFAULT 'active',
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(property_id, code)
+);
+
+CREATE INDEX idx_checklists_property ON cc_housekeeping_checklists(property_id) WHERE property_id IS NOT NULL;
+
+ALTER TABLE cc_housekeeping_checklists ENABLE ROW LEVEL SECURITY;
+
+-- ============ SEED DEFAULT CHECKLISTS ============
+
+DO $$
+DECLARE
+  v_portal_id uuid;
+BEGIN
+  SELECT id INTO v_portal_id FROM cc_portals WHERE slug = 'bamfield' LIMIT 1;
+  
+  IF v_portal_id IS NOT NULL THEN
+    -- Standard turnover checklist
+    INSERT INTO cc_housekeeping_checklists (
+      portal_id, name, code, task_type, estimated_minutes, items_json
+    ) VALUES (
+      v_portal_id, 'Standard Turnover', 'STD-TURN', 'turnover', 90,
+      '[
+        {"item": "Strip all beds", "category": "Bedroom", "order": 1, "required": true},
+        {"item": "Make beds with fresh linens", "category": "Bedroom", "order": 2, "required": true},
+        {"item": "Dust all surfaces", "category": "Bedroom", "order": 3, "required": true},
+        {"item": "Vacuum/mop floors", "category": "Bedroom", "order": 4, "required": true},
+        {"item": "Clean toilet", "category": "Bathroom", "order": 10, "required": true},
+        {"item": "Clean shower/tub", "category": "Bathroom", "order": 11, "required": true},
+        {"item": "Clean sink and mirror", "category": "Bathroom", "order": 12, "required": true},
+        {"item": "Replace towels", "category": "Bathroom", "order": 13, "required": true},
+        {"item": "Restock toiletries", "category": "Bathroom", "order": 14, "required": true},
+        {"item": "Clean counters", "category": "Kitchen", "order": 20, "required": true},
+        {"item": "Clean appliances", "category": "Kitchen", "order": 21, "required": true},
+        {"item": "Check fridge - remove old items", "category": "Kitchen", "order": 22, "required": true},
+        {"item": "Run dishwasher if needed", "category": "Kitchen", "order": 23, "required": false},
+        {"item": "Take out trash", "category": "General", "order": 30, "required": true},
+        {"item": "Check all lights working", "category": "General", "order": 31, "required": true},
+        {"item": "Lock windows", "category": "General", "order": 32, "required": true},
+        {"item": "Set thermostat", "category": "General", "order": 33, "required": true}
+      ]'::jsonb
+    ) ON CONFLICT (property_id, code) DO NOTHING;
+    
+    -- Quick touch-up checklist
+    INSERT INTO cc_housekeeping_checklists (
+      portal_id, name, code, task_type, estimated_minutes, items_json
+    ) VALUES (
+      v_portal_id, 'Quick Touch-Up', 'TOUCH-UP', 'touch_up', 30,
+      '[
+        {"item": "Make beds", "category": "Bedroom", "order": 1, "required": true},
+        {"item": "Replace used towels", "category": "Bathroom", "order": 10, "required": true},
+        {"item": "Wipe bathroom surfaces", "category": "Bathroom", "order": 11, "required": true},
+        {"item": "Empty trash", "category": "General", "order": 20, "required": true},
+        {"item": "Quick vacuum high-traffic areas", "category": "General", "order": 21, "required": false}
+      ]'::jsonb
+    ) ON CONFLICT (property_id, code) DO NOTHING;
+    
+    -- Campsite turnover
+    INSERT INTO cc_housekeeping_checklists (
+      portal_id, name, code, task_type, unit_type, estimated_minutes, items_json
+    ) VALUES (
+      v_portal_id, 'Campsite Turnover', 'CAMP-TURN', 'turnover', 20, 'tent_site',
+      '[
+        {"item": "Remove any trash", "category": "Site", "order": 1, "required": true},
+        {"item": "Check fire pit - remove ashes", "category": "Site", "order": 2, "required": true},
+        {"item": "Inspect picnic table", "category": "Site", "order": 3, "required": true},
+        {"item": "Check for damage", "category": "Site", "order": 4, "required": true},
+        {"item": "Rake/tidy site", "category": "Site", "order": 5, "required": false}
+      ]'::jsonb
+    ) ON CONFLICT (property_id, code) DO NOTHING;
+  END IF;
+END $$;
+
+COMMIT;
+```
+
+## Create server/services/housekeepingService.ts
+```typescript
+// server/services/housekeepingService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, asc, desc, or } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { updateUnitStatusInternal } from './pmsService';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateTaskRequest {
+  portalSlug: string;
+  propertyId: string;
+  unitId: string;
+  taskType: string;
+  priority?: string;
+  scheduledDate: Date;
+  scheduledTime?: string;
+  dueBy?: Date;
+  checkoutReservationId?: string;
+  checkinReservationId?: string;
+  guestArrivalTime?: string;
+  assignedTo?: string;
+  assignedTeam?: string;
+  estimatedMinutes?: number;
+  specialInstructions?: string;
+}
+
+interface CreateMaintenanceRequest {
+  portalSlug: string;
+  propertyId: string;
+  unitId?: string;
+  reportedByType?: string;
+  reportedByName?: string;
+  reportedByContact?: string;
+  reservationId?: string;
+  housekeepingTaskId?: string;
+  category: string;
+  priority?: string;
+  title: string;
+  description?: string;
+  locationDetail?: string;
+  affectsHabitability?: boolean;
+}
+
+// ============ HELPERS ============
+
+function generateTaskNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `HK-${dateStr}-${suffix}`;
+}
+
+function generateRequestNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `MR-${dateStr}-${suffix}`;
+}
+
+// ============ HOUSEKEEPING TASK FUNCTIONS ============
+
+export async function createHousekeepingTask(req: CreateTaskRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate property belongs to portal
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, req.propertyId),
+      eq(ccProperties.portalId, portal.id)
+    )
+  });
+  
+  if (!property) throw new Error('Property not found');
+  
+  // Validate unit belongs to property
+  const unit = await db.query.ccUnits.findFirst({
+    where: and(
+      eq(ccUnits.id, req.unitId),
+      eq(ccUnits.propertyId, req.propertyId)
+    )
+  });
+  
+  if (!unit) throw new Error('Unit not found');
+  
+  // Get appropriate checklist
+  let checklistJson: any[] = [];
+  const checklist = await db.query.ccHousekeepingChecklists.findFirst({
+    where: and(
+      or(
+        eq(ccHousekeepingChecklists.portalId, portal.id),
+        eq(ccHousekeepingChecklists.propertyId, req.propertyId)
+      ),
+      eq(ccHousekeepingChecklists.taskType, req.taskType),
+      eq(ccHousekeepingChecklists.status, 'active')
+    ),
+    orderBy: [desc(ccHousekeepingChecklists.propertyId)] // Property-specific first
+  });
+  
+  if (checklist) {
+    const items = checklist.itemsJson as any[];
+    checklistJson = items.map(item => ({ ...item, done: false }));
+  }
+  
+  const taskNumber = generateTaskNumber();
+  
+  const [task] = await db.insert(ccHousekeepingTasks).values({
+    portalId: portal.id,
+    propertyId: req.propertyId,
+    unitId: req.unitId,
+    taskNumber,
+    taskType: req.taskType,
+    priority: req.priority || 'normal',
+    scheduledDate: req.scheduledDate,
+    scheduledTime: req.scheduledTime,
+    dueBy: req.dueBy,
+    checkoutReservationId: req.checkoutReservationId,
+    checkinReservationId: req.checkinReservationId,
+    guestArrivalTime: req.guestArrivalTime,
+    assignedTo: req.assignedTo,
+    assignedTeam: req.assignedTeam,
+    assignedAt: req.assignedTo ? new Date() : undefined,
+    estimatedMinutes: req.estimatedMinutes || checklist?.estimatedMinutes || 60,
+    checklistJson,
+    specialInstructions: req.specialInstructions,
+    status: req.assignedTo ? 'assigned' : 'pending'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'housekeeping.task_created',
+    resourceType: 'housekeeping_task',
+    resourceId: task.id,
+    metadata: { taskNumber, taskType: req.taskType, unit: unit.name }
+  });
+  
+  return { task, checklist };
+}
+
+export async function getHousekeepingTask(
+  portalSlug: string,
+  taskId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const task = await db.query.ccHousekeepingTasks.findFirst({
+    where: and(
+      eq(ccHousekeepingTasks.id, taskId),
+      eq(ccHousekeepingTasks.portalId, portal.id)
+    )
+  });
+  
+  if (!task) return null;
+  
+  const unit = await db.query.ccUnits.findFirst({
+    where: eq(ccUnits.id, task.unitId)
+  });
+  
+  const property = await db.query.ccProperties.findFirst({
+    where: eq(ccProperties.id, task.propertyId)
+  });
+  
+  return { task, unit, property };
+}
+
+export async function searchHousekeepingTasks(
+  portalSlug: string,
+  options?: {
+    propertyId?: string;
+    unitId?: string;
+    status?: string;
+    assignedTo?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccHousekeepingTasks.portalId, portal.id)];
+  
+  if (options?.propertyId) {
+    conditions.push(eq(ccHousekeepingTasks.propertyId, options.propertyId));
+  }
+  
+  if (options?.unitId) {
+    conditions.push(eq(ccHousekeepingTasks.unitId, options.unitId));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccHousekeepingTasks.status, options.status));
+  }
+  
+  if (options?.assignedTo) {
+    conditions.push(eq(ccHousekeepingTasks.assignedTo, options.assignedTo));
+  }
+  
+  if (options?.dateFrom) {
+    conditions.push(gte(ccHousekeepingTasks.scheduledDate, options.dateFrom));
+  }
+  
+  if (options?.dateTo) {
+    conditions.push(lte(ccHousekeepingTasks.scheduledDate, options.dateTo));
+  }
+  
+  return db.query.ccHousekeepingTasks.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccHousekeepingTasks.scheduledDate), asc(ccHousekeepingTasks.scheduledTime)],
+    limit: options?.limit || 50
+  });
+}
+
+export async function assignTask(
+  portalSlug: string,
+  taskId: string,
+  assignedTo: string,
+  team?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccHousekeepingTasks)
+    .set({
+      assignedTo,
+      assignedTeam: team,
+      assignedAt: new Date(),
+      status: 'assigned',
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccHousekeepingTasks.id, taskId),
+      eq(ccHousekeepingTasks.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function startTask(
+  portalSlug: string,
+  taskId: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const task = await db.query.ccHousekeepingTasks.findFirst({
+    where: and(
+      eq(ccHousekeepingTasks.id, taskId),
+      eq(ccHousekeepingTasks.portalId, portal.id)
+    )
+  });
+  
+  if (!task) throw new Error('Task not found');
+  
+  // Update unit clean status
+  await updateUnitStatusInternal(task.unitId, undefined, 'in_progress');
+  
+  const [updated] = await db.update(ccHousekeepingTasks)
+    .set({
+      status: 'in_progress',
+      startedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccHousekeepingTasks.id, taskId))
+    .returning();
+  
+  return updated;
+}
+
+export async function updateChecklist(
+  portalSlug: string,
+  taskId: string,
+  checklistJson: any[]
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccHousekeepingTasks)
+    .set({
+      checklistJson,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccHousekeepingTasks.id, taskId),
+      eq(ccHousekeepingTasks.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function completeTask(
+  portalSlug: string,
+  taskId: string,
+  data?: {
+    actualMinutes?: number;
+    suppliesUsed?: any[];
+    notes?: string;
+    issuesFound?: string;
+    maintenanceNeeded?: boolean;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const task = await db.query.ccHousekeepingTasks.findFirst({
+    where: and(
+      eq(ccHousekeepingTasks.id, taskId),
+      eq(ccHousekeepingTasks.portalId, portal.id)
+    )
+  });
+  
+  if (!task) throw new Error('Task not found');
+  
+  const [updated] = await db.update(ccHousekeepingTasks)
+    .set({
+      status: 'completed',
+      completedAt: new Date(),
+      actualMinutes: data?.actualMinutes,
+      suppliesUsed: data?.suppliesUsed,
+      notes: data?.notes,
+      issuesFound: data?.issuesFound,
+      maintenanceNeeded: data?.maintenanceNeeded || false,
+      updatedAt: new Date()
+    })
+    .where(eq(ccHousekeepingTasks.id, taskId))
+    .returning();
+  
+  // Update unit clean status
+  await updateUnitStatusInternal(task.unitId, undefined, 'clean');
+  
+  // Create maintenance request if needed
+  if (data?.maintenanceNeeded && data?.issuesFound) {
+    const property = await db.query.ccProperties.findFirst({
+      where: eq(ccProperties.id, task.propertyId)
+    });
+    
+    if (property) {
+      const maintenanceReq = await createMaintenanceRequest({
+        portalSlug,
+        propertyId: task.propertyId,
+        unitId: task.unitId,
+        reportedByType: 'housekeeping',
+        housekeepingTaskId: taskId,
+        category: 'general',
+        priority: 'normal',
+        title: 'Issue found during cleaning',
+        description: data.issuesFound
+      });
+      
+      // Link maintenance request to task
+      await db.update(ccHousekeepingTasks)
+        .set({ maintenanceRequestId: maintenanceReq.request.id })
+        .where(eq(ccHousekeepingTasks.id, taskId));
+    }
+  }
+  
+  return updated;
+}
+
+export async function inspectTask(
+  portalSlug: string,
+  taskId: string,
+  data: {
+    passed: boolean;
+    inspectedBy: string;
+    notes?: string;
+    photos?: string[];
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const task = await db.query.ccHousekeepingTasks.findFirst({
+    where: and(
+      eq(ccHousekeepingTasks.id, taskId),
+      eq(ccHousekeepingTasks.portalId, portal.id)
+    )
+  });
+  
+  if (!task) throw new Error('Task not found');
+  
+  const [updated] = await db.update(ccHousekeepingTasks)
+    .set({
+      status: data.passed ? 'inspected' : 'failed',
+      inspectedBy: data.inspectedBy,
+      inspectedAt: new Date(),
+      inspectionNotes: data.notes,
+      inspectionPhotos: data.photos,
+      updatedAt: new Date()
+    })
+    .where(eq(ccHousekeepingTasks.id, taskId))
+    .returning();
+  
+  // Update unit clean status
+  if (data.passed) {
+    await updateUnitStatusInternal(task.unitId, undefined, 'inspected');
+  } else {
+    await updateUnitStatusInternal(task.unitId, undefined, 'dirty');
+  }
+  
+  return updated;
+}
+
+// ============ MAINTENANCE REQUEST FUNCTIONS ============
+
+export async function createMaintenanceRequest(req: CreateMaintenanceRequest): Promise<{
+  request: any;
+}> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate property belongs to portal
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, req.propertyId),
+      eq(ccProperties.portalId, portal.id)
+    )
+  });
+  
+  if (!property) throw new Error('Property not found');
+  
+  const requestNumber = generateRequestNumber();
+  
+  const [request] = await db.insert(ccMaintenanceRequests).values({
+    portalId: portal.id,
+    propertyId: req.propertyId,
+    unitId: req.unitId,
+    reportedByType: req.reportedByType || 'staff',
+    reportedByName: req.reportedByName,
+    reportedByContact: req.reportedByContact,
+    reservationId: req.reservationId,
+    housekeepingTaskId: req.housekeepingTaskId,
+    requestNumber,
+    category: req.category,
+    priority: req.priority || 'normal',
+    title: req.title,
+    description: req.description,
+    locationDetail: req.locationDetail,
+    affectsHabitability: req.affectsHabitability || false,
+    status: 'reported'
+  }).returning();
+  
+  // If affects habitability and has unit, block the unit
+  if (req.affectsHabitability && req.unitId) {
+    await updateUnitStatusInternal(req.unitId, 'maintenance', 'blocked');
+    
+    await db.update(ccMaintenanceRequests)
+      .set({ unitBlocked: true })
+      .where(eq(ccMaintenanceRequests.id, request.id));
+  }
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.reportedByName || 'system',
+    action: 'maintenance.request_created',
+    resourceType: 'maintenance_request',
+    resourceId: request.id,
+    metadata: { requestNumber, category: req.category, priority: req.priority }
+  });
+  
+  return { request };
+}
+
+export async function getMaintenanceRequest(
+  portalSlug: string,
+  requestId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const request = await db.query.ccMaintenanceRequests.findFirst({
+    where: and(
+      eq(ccMaintenanceRequests.id, requestId),
+      eq(ccMaintenanceRequests.portalId, portal.id)
+    )
+  });
+  
+  if (!request) return null;
+  
+  const property = await db.query.ccProperties.findFirst({
+    where: eq(ccProperties.id, request.propertyId)
+  });
+  
+  let unit = null;
+  if (request.unitId) {
+    unit = await db.query.ccUnits.findFirst({
+      where: eq(ccUnits.id, request.unitId)
+    });
+  }
+  
+  return { request, property, unit };
+}
+
+export async function searchMaintenanceRequests(
+  portalSlug: string,
+  options?: {
+    propertyId?: string;
+    unitId?: string;
+    category?: string;
+    status?: string;
+    priority?: string;
+    assignedTo?: string;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccMaintenanceRequests.portalId, portal.id)];
+  
+  if (options?.propertyId) {
+    conditions.push(eq(ccMaintenanceRequests.propertyId, options.propertyId));
+  }
+  
+  if (options?.unitId) {
+    conditions.push(eq(ccMaintenanceRequests.unitId, options.unitId));
+  }
+  
+  if (options?.category) {
+    conditions.push(eq(ccMaintenanceRequests.category, options.category));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccMaintenanceRequests.status, options.status));
+  }
+  
+  if (options?.priority) {
+    conditions.push(eq(ccMaintenanceRequests.priority, options.priority));
+  }
+  
+  if (options?.assignedTo) {
+    conditions.push(eq(ccMaintenanceRequests.assignedTo, options.assignedTo));
+  }
+  
+  return db.query.ccMaintenanceRequests.findMany({
+    where: and(...conditions),
+    orderBy: [
+      desc(sql`CASE priority WHEN 'emergency' THEN 5 WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'normal' THEN 2 ELSE 1 END`),
+      asc(ccMaintenanceRequests.createdAt)
+    ],
+    limit: options?.limit || 50
+  });
+}
+
+export async function updateMaintenanceStatus(
+  portalSlug: string,
+  requestId: string,
+  status: string,
+  data?: {
+    assignedTo?: string;
+    assignedVendor?: string;
+    scheduledDate?: Date;
+    workPerformed?: string;
+    resolutionNotes?: string;
+    laborCost?: number;
+    partsCost?: number;
+    vendorCost?: number;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const updates: Record<string, any> = {
+    status,
+    updatedAt: new Date()
+  };
+  
+  // Status-specific timestamps
+  if (status === 'triaged') updates.triagedAt = new Date();
+  if (status === 'assigned') updates.assignedAt = new Date();
+  if (status === 'in_progress') updates.workStartedAt = new Date();
+  if (status === 'completed') updates.workCompletedAt = new Date();
+  if (status === 'verified') updates.verifiedAt = new Date();
+  
+  // Additional data
+  if (data?.assignedTo) updates.assignedTo = data.assignedTo;
+  if (data?.assignedVendor) updates.assignedVendor = data.assignedVendor;
+  if (data?.scheduledDate) updates.scheduledDate = data.scheduledDate;
+  if (data?.workPerformed) updates.workPerformed = data.workPerformed;
+  if (data?.resolutionNotes) updates.resolutionNotes = data.resolutionNotes;
+  
+  // Costs
+  if (data?.laborCost !== undefined) updates.laborCostCad = data.laborCost;
+  if (data?.partsCost !== undefined) updates.partsCostCad = data.partsCost;
+  if (data?.vendorCost !== undefined) updates.vendorCostCad = data.vendorCost;
+  
+  // Calculate total cost
+  const request = await db.query.ccMaintenanceRequests.findFirst({
+    where: eq(ccMaintenanceRequests.id, requestId)
+  });
+  
+  if (request) {
+    const labor = data?.laborCost ?? Number(request.laborCostCad) ?? 0;
+    const parts = data?.partsCost ?? Number(request.partsCostCad) ?? 0;
+    const vendor = data?.vendorCost ?? Number(request.vendorCostCad) ?? 0;
+    updates.totalCostCad = labor + parts + vendor;
+  }
+  
+  const [updated] = await db.update(ccMaintenanceRequests)
+    .set(updates)
+    .where(and(
+      eq(ccMaintenanceRequests.id, requestId),
+      eq(ccMaintenanceRequests.portalId, portal.id)
+    ))
+    .returning();
+  
+  // If completed/verified and unit was blocked, unblock it
+  if (['completed', 'verified'].includes(status) && updated?.unitBlocked && updated?.unitId) {
+    await updateUnitStatusInternal(updated.unitId, 'available', 'dirty');
+    
+    await db.update(ccMaintenanceRequests)
+      .set({ unitBlocked: false, blockedUntil: null })
+      .where(eq(ccMaintenanceRequests.id, requestId));
+  }
+  
+  return updated;
+}
+```
+
+## Add Housekeeping Routes to pms.ts
+```typescript
+// Add to server/routes/pms.ts
+
+import {
+  createHousekeepingTask, getHousekeepingTask, searchHousekeepingTasks,
+  assignTask, startTask, updateChecklist, completeTask, inspectTask,
+  createMaintenanceRequest, getMaintenanceRequest, searchMaintenanceRequests,
+  updateMaintenanceStatus
+} from '../services/housekeepingService';
+
+// ============ HOUSEKEEPING ENDPOINTS ============
+
+// POST /api/pms/portals/:slug/housekeeping - Create task
+router.post('/portals/:slug/housekeeping', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.propertyId || !b.unitId || !b.taskType || !b.scheduledDate) {
+    return res.status(400).json({ error: 'propertyId, unitId, taskType, scheduledDate required' });
+  }
+  
+  try {
+    const result = await createHousekeepingTask({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      taskType: b.taskType,
+      priority: b.priority,
+      scheduledDate: new Date(b.scheduledDate),
+      scheduledTime: b.scheduledTime,
+      dueBy: b.dueBy ? new Date(b.dueBy) : undefined,
+      checkoutReservationId: b.checkoutReservationId,
+      checkinReservationId: b.checkinReservationId,
+      guestArrivalTime: b.guestArrivalTime,
+      assignedTo: b.assignedTo,
+      assignedTeam: b.assignedTeam,
+      estimatedMinutes: b.estimatedMinutes,
+      specialInstructions: b.specialInstructions
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create task error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/pms/portals/:slug/housekeeping - Search tasks
+router.get('/portals/:slug/housekeeping', async (req, res) => {
+  const { slug } = req.params;
+  const { property, unit, status, assignedTo, from, to, limit } = req.query;
+  
+  try {
+    const tasks = await searchHousekeepingTasks(slug, {
+      propertyId: property as string,
+      unitId: unit as string,
+      status: status as string,
+      assignedTo: assignedTo as string,
+      dateFrom: from ? new Date(from as string) : undefined,
+      dateTo: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ tasks, count: tasks.length });
+  } catch (e: any) {
+    console.error('Search tasks error:', e);
+    res.status(500).json({ error: 'Failed to search tasks' });
+  }
+});
+
+// GET /api/pms/portals/:slug/housekeeping/:id - Get task
+router.get('/portals/:slug/housekeeping/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getHousekeepingTask(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get task error:', e);
+    res.status(500).json({ error: 'Failed to get task' });
+  }
+});
+
+// POST /api/pms/portals/:slug/housekeeping/:id/assign - Assign task
+router.post('/portals/:slug/housekeeping/:id/assign', async (req, res) => {
+  const { slug, id } = req.params;
+  const { assignedTo, team } = req.body || {};
+  
+  if (!assignedTo) {
+    return res.status(400).json({ error: 'assignedTo required' });
+  }
+  
+  try {
+    const task = await assignTask(slug, id, assignedTo, team);
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/pms/portals/:slug/housekeeping/:id/start - Start task
+router.post('/portals/:slug/housekeeping/:id/start', async (req, res) => {
+  const { slug, id } = req.params;
+  try {
+    const task = await startTask(slug, id);
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/pms/portals/:slug/housekeeping/:id/checklist - Update checklist
+router.post('/portals/:slug/housekeeping/:id/checklist', async (req, res) => {
+  const { slug, id } = req.params;
+  const { checklist } = req.body || {};
+  
+  if (!checklist) {
+    return res.status(400).json({ error: 'checklist required' });
+  }
+  
+  try {
+    const task = await updateChecklist(slug, id, checklist);
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/pms/portals/:slug/housekeeping/:id/complete - Complete task
+router.post('/portals/:slug/housekeeping/:id/complete', async (req, res) => {
+  const { slug, id } = req.params;
+  const { actualMinutes, suppliesUsed, notes, issuesFound, maintenanceNeeded } = req.body || {};
+  
+  try {
+    const task = await completeTask(slug, id, {
+      actualMinutes,
+      suppliesUsed,
+      notes,
+      issuesFound,
+      maintenanceNeeded
+    });
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/pms/portals/:slug/housekeeping/:id/inspect - Inspect task
+router.post('/portals/:slug/housekeeping/:id/inspect', async (req, res) => {
+  const { slug, id } = req.params;
+  const { passed, inspectedBy, notes, photos } = req.body || {};
+  
+  if (passed === undefined || !inspectedBy) {
+    return res.status(400).json({ error: 'passed and inspectedBy required' });
+  }
+  
+  try {
+    const task = await inspectTask(slug, id, { passed, inspectedBy, notes, photos });
+    res.json({ task });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ MAINTENANCE ENDPOINTS ============
+
+// POST /api/pms/portals/:slug/maintenance - Create request
+router.post('/portals/:slug/maintenance', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.propertyId || !b.category || !b.title) {
+    return res.status(400).json({ error: 'propertyId, category, title required' });
+  }
+  
+  try {
+    const result = await createMaintenanceRequest({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      reportedByType: b.reportedByType,
+      reportedByName: b.reportedByName,
+      reportedByContact: b.reportedByContact,
+      reservationId: b.reservationId,
+      housekeepingTaskId: b.housekeepingTaskId,
+      category: b.category,
+      priority: b.priority,
+      title: b.title,
+      description: b.description,
+      locationDetail: b.locationDetail,
+      affectsHabitability: b.affectsHabitability
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create maintenance request error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/pms/portals/:slug/maintenance - Search requests
+router.get('/portals/:slug/maintenance', async (req, res) => {
+  const { slug } = req.params;
+  const { property, unit, category, status, priority, assignedTo, limit } = req.query;
+  
+  try {
+    const requests = await searchMaintenanceRequests(slug, {
+      propertyId: property as string,
+      unitId: unit as string,
+      category: category as string,
+      status: status as string,
+      priority: priority as string,
+      assignedTo: assignedTo as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ requests, count: requests.length });
+  } catch (e: any) {
+    console.error('Search maintenance error:', e);
+    res.status(500).json({ error: 'Failed to search requests' });
+  }
+});
+
+// GET /api/pms/portals/:slug/maintenance/:id - Get request
+router.get('/portals/:slug/maintenance/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getMaintenanceRequest(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    console.error('Get maintenance error:', e);
+    res.status(500).json({ error: 'Failed to get request' });
+  }
+});
+
+// POST /api/pms/portals/:slug/maintenance/:id/status - Update status
+router.post('/portals/:slug/maintenance/:id/status', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const request = await updateMaintenanceStatus(slug, id, b.status, {
+      assignedTo: b.assignedTo,
+      assignedVendor: b.assignedVendor,
+      scheduledDate: b.scheduledDate ? new Date(b.scheduledDate) : undefined,
+      workPerformed: b.workPerformed,
+      resolutionNotes: b.resolutionNotes,
+      laborCost: b.laborCost,
+      partsCost: b.partsCost,
+      vendorCost: b.vendorCost
+    });
+    
+    res.json({ request });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- HousekeepingTask, InsertHousekeepingTask
+- MaintenanceRequest, InsertMaintenanceRequest
+- HousekeepingChecklist, InsertHousekeepingChecklist
+
+## Deliverables
+- [ ] Migration 092_housekeeping.sql
+- [ ] cc_housekeeping_tasks table with RLS
+- [ ] cc_maintenance_requests table with RLS
+- [ ] cc_housekeeping_checklists table with RLS
+- [ ] 3 checklists seeded:
+  - Standard Turnover (17 items, 90 min)
+  - Quick Touch-Up (5 items, 30 min)
+  - Campsite Turnover (5 items, 20 min)
+- [ ] server/services/housekeepingService.ts
+- [ ] Routes added to server/routes/pms.ts:
+  - Housekeeping: create, search, get, assign, start, checklist, complete, inspect
+  - Maintenance: create, search, get, status update
+- [ ] Task creation auto-loads checklist based on task type
+- [ ] Task complete updates unit clean status to 'clean'
+- [ ] Inspection pass updates unit clean status to 'inspected'
+- [ ] Inspection fail updates unit clean status to 'dirty'
+- [ ] Issues found during cleaning auto-create maintenance request
+- [ ] Emergency maintenance auto-blocks unit
+- [ ] Test: Create turnover task → checklist loaded with 17 items
+- [ ] Test: Complete with maintenanceNeeded=true → MR created
+- [ ] Test: Emergency maintenance on unit → unit status = maintenance
+
+Report with housekeeping task showing loaded checklist and maintenance request creation.

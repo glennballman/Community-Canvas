@@ -310,15 +310,18 @@ export async function updateUnitStatus(
   return updated;
 }
 
-async function updateUnitStatusInternal(
+export async function updateUnitStatusInternal(
   unitId: string,
-  status: string,
+  status?: string,
   cleanStatus?: string
 ): Promise<any> {
   const updates: Record<string, any> = {
-    status,
     updatedAt: new Date()
   };
+  
+  if (status !== undefined) {
+    updates.status = status;
+  }
   
   if (cleanStatus) {
     updates.cleanStatus = cleanStatus;

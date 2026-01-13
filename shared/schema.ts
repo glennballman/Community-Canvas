@@ -2572,3 +2572,166 @@ export const insertIcalSyncLogSchema = createInsertSchema(ccIcalSyncLog).omit({
 });
 export type IcalSyncLog = typeof ccIcalSyncLog.$inferSelect;
 export type InsertIcalSyncLog = z.infer<typeof insertIcalSyncLogSchema>;
+
+// ============ HOUSEKEEPING TASKS ============
+export const ccHousekeepingTasks = pgTable('cc_housekeeping_tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id').notNull(),
+  unitId: uuid('unit_id').notNull(),
+  reservationId: uuid('reservation_id'),
+  
+  taskNumber: varchar('task_number', { length: 20 }).notNull().unique(),
+  
+  taskType: varchar('task_type').notNull(),
+  priority: varchar('priority').default('normal'),
+  
+  scheduledDate: date('scheduled_date').notNull(),
+  scheduledTime: time('scheduled_time'),
+  dueBy: timestamp('due_by', { withTimezone: true }),
+  
+  checkoutReservationId: uuid('checkout_reservation_id'),
+  checkinReservationId: uuid('checkin_reservation_id'),
+  guestArrivalTime: time('guest_arrival_time'),
+  
+  assignedTo: text('assigned_to'),
+  assignedTeam: text('assigned_team'),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }),
+  
+  status: varchar('status').default('pending'),
+  
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  
+  estimatedMinutes: integer('estimated_minutes').default(60),
+  actualMinutes: integer('actual_minutes'),
+  
+  checklistJson: jsonb('checklist_json').default([]),
+  
+  inspectedBy: text('inspected_by'),
+  inspectedAt: timestamp('inspected_at', { withTimezone: true }),
+  inspectionNotes: text('inspection_notes'),
+  inspectionPhotos: jsonb('inspection_photos').default([]),
+  
+  issuesFound: text('issues_found'),
+  maintenanceNeeded: boolean('maintenance_needed').default(false),
+  maintenanceRequestId: uuid('maintenance_request_id'),
+  
+  suppliesUsed: jsonb('supplies_used').default([]),
+  
+  notes: text('notes'),
+  specialInstructions: text('special_instructions'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertHousekeepingTaskSchema = createInsertSchema(ccHousekeepingTasks).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type HousekeepingTask = typeof ccHousekeepingTasks.$inferSelect;
+export type InsertHousekeepingTask = z.infer<typeof insertHousekeepingTaskSchema>;
+
+// ============ MAINTENANCE REQUESTS ============
+export const ccMaintenanceRequests = pgTable('cc_maintenance_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id').notNull(),
+  unitId: uuid('unit_id'),
+  locationId: uuid('location_id'),
+  
+  reportedByType: varchar('reported_by_type').default('staff'),
+  reportedByName: text('reported_by_name'),
+  reportedByContact: text('reported_by_contact'),
+  reservationId: uuid('reservation_id'),
+  housekeepingTaskId: uuid('housekeeping_task_id'),
+  
+  requestNumber: varchar('request_number', { length: 20 }).notNull().unique(),
+  
+  category: varchar('category').notNull(),
+  priority: varchar('priority').default('normal'),
+  
+  title: text('title').notNull(),
+  description: text('description'),
+  locationDetail: text('location_detail'),
+  
+  photosJson: jsonb('photos_json').default([]),
+  
+  affectsHabitability: boolean('affects_habitability').default(false),
+  unitBlocked: boolean('unit_blocked').default(false),
+  blockedUntil: date('blocked_until'),
+  
+  assignedTo: text('assigned_to'),
+  assignedVendor: text('assigned_vendor'),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }),
+  
+  scheduledDate: date('scheduled_date'),
+  scheduledTimeStart: time('scheduled_time_start'),
+  scheduledTimeEnd: time('scheduled_time_end'),
+  
+  status: varchar('status').default('reported'),
+  
+  triagedAt: timestamp('triaged_at', { withTimezone: true }),
+  workStartedAt: timestamp('work_started_at', { withTimezone: true }),
+  workCompletedAt: timestamp('work_completed_at', { withTimezone: true }),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  
+  resolutionNotes: text('resolution_notes'),
+  workPerformed: text('work_performed'),
+  partsUsed: jsonb('parts_used').default([]),
+  
+  laborCostCad: numeric('labor_cost_cad', { precision: 10, scale: 2 }).default('0'),
+  partsCostCad: numeric('parts_cost_cad', { precision: 10, scale: 2 }).default('0'),
+  vendorCostCad: numeric('vendor_cost_cad', { precision: 10, scale: 2 }).default('0'),
+  totalCostCad: numeric('total_cost_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  billableTo: varchar('billable_to'),
+  invoiceNumber: text('invoice_number'),
+  
+  isRecurring: boolean('is_recurring').default(false),
+  recurrenceSchedule: text('recurrence_schedule'),
+  parentRequestId: uuid('parent_request_id'),
+  
+  internalNotes: text('internal_notes'),
+  guestVisibleNotes: text('guest_visible_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertMaintenanceRequestSchema = createInsertSchema(ccMaintenanceRequests).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type MaintenanceRequest = typeof ccMaintenanceRequests.$inferSelect;
+export type InsertMaintenanceRequest = z.infer<typeof insertMaintenanceRequestSchema>;
+
+// ============ HOUSEKEEPING CHECKLISTS ============
+export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 20 }),
+  
+  taskType: varchar('task_type').notNull(),
+  unitType: varchar('unit_type'),
+  
+  itemsJson: jsonb('items_json').notNull().default([]),
+  
+  estimatedMinutes: integer('estimated_minutes').default(60),
+  
+  status: varchar('status').default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertHousekeepingChecklistSchema = createInsertSchema(ccHousekeepingChecklists).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type HousekeepingChecklist = typeof ccHousekeepingChecklists.$inferSelect;
+export type InsertHousekeepingChecklist = z.infer<typeof insertHousekeepingChecklistSchema>;
