@@ -47,6 +47,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Media Storage System**: Cloudflare R2-based storage for images and documents with automatic optimization and tenant-isolated storage.
 - **Authority & Permits System**: Multi-authority permit management with lifecycle management and QR code verification.
 - **Trip Permit Orchestration**: Links permits to trips with automatic requirement detection and status tracking.
+- **Business Operator Onboarding**: Application workflow system for registering 11 operator types (accommodation, transport, tour, rental, food_beverage, retail, service, contractor, guide, artisan, other) with unique numbering (OPA-YYMMDD-XXXX for applications, OPR-TYPE-YYMMDD-XXXX for approved operators), document verification, and auto-provisioning of operator records and role assignments upon approval.
 
 ### Feature Specifications
 - **Dual-view Mode**: Sources View (data source URLs) and Data View (live monitoring).
