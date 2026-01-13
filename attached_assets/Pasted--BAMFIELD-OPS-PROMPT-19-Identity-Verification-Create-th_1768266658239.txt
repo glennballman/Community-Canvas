@@ -1,0 +1,1374 @@
+**BAMFIELD OPS - PROMPT 19: Identity Verification**
+
+Create the identity verification system for guests, operators, and vessels to enable trusted transactions.
+
+## Migration 095_identity.sql
+```sql
+BEGIN;
+
+-- ============ VERIFIED IDENTITIES ============
+-- Verified identity records for guests and operators
+
+CREATE TABLE IF NOT EXISTS cc_verified_identities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  contact_id uuid REFERENCES cc_contacts(id) ON DELETE SET NULL,
+  user_id uuid,  -- If linked to auth user
+  
+  -- Identity type
+  identity_type varchar NOT NULL CHECK (identity_type IN (
+    'guest',          -- Guest/visitor
+    'operator',       -- Business operator
+    'staff',          -- Property staff
+    'authority',      -- Authority representative
+    'owner'           -- Property owner
+  )),
+  
+  -- Basic info
+  legal_name text NOT NULL,
+  preferred_name text,
+  email text,
+  phone text,
+  
+  -- Address
+  address_line1 text,
+  address_line2 text,
+  city varchar(100),
+  province varchar(50),
+  postal_code varchar(20),
+  country varchar(50) DEFAULT 'Canada',
+  
+  -- Government ID
+  id_type varchar CHECK (id_type IN (
+    'drivers_license', 'passport', 'bc_id', 'nexus', 
+    'status_card', 'military', 'other'
+  )),
+  id_number_hash text,  -- Hashed for privacy
+  id_issuing_authority text,
+  id_expiry_date date,
+  id_verified boolean DEFAULT false,
+  id_verified_at timestamptz,
+  id_verified_by text,
+  
+  -- Photo ID
+  photo_id_url text,
+  selfie_url text,
+  photo_match_score numeric(5,2),
+  
+  -- Verification status
+  verification_status varchar DEFAULT 'unverified' CHECK (verification_status IN (
+    'unverified',      -- Not yet verified
+    'pending',         -- Verification in progress
+    'verified',        -- Fully verified
+    'expired',         -- Verification expired
+    'rejected',        -- Verification rejected
+    'suspended'        -- Suspended (fraud concern)
+  )),
+  
+  verification_level varchar DEFAULT 'none' CHECK (verification_level IN (
+    'none',            -- No verification
+    'email',           -- Email verified only
+    'phone',           -- Phone verified
+    'basic',           -- Basic ID check
+    'enhanced',        -- Enhanced verification
+    'trusted'          -- Fully trusted (repeat guest)
+  )),
+  
+  verified_at timestamptz,
+  verification_expires_at timestamptz,
+  
+  -- Trust score
+  trust_score integer DEFAULT 50,  -- 0-100
+  trust_factors_json jsonb DEFAULT '{}'::jsonb,
+  -- {verified_id: +20, repeat_guest: +15, no_violations: +10, ...}
+  
+  -- Violations link
+  violation_history_id uuid REFERENCES cc_violation_history(id),
+  
+  -- Emergency contact
+  emergency_contact_name text,
+  emergency_contact_phone text,
+  emergency_contact_relation text,
+  
+  -- Preferences
+  communication_preference varchar DEFAULT 'email' CHECK (communication_preference IN (
+    'email', 'phone', 'sms', 'any'
+  )),
+  language_preference varchar DEFAULT 'en',
+  
+  -- Notes
+  notes text,
+  internal_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, email)
+);
+
+CREATE INDEX idx_verified_identities_portal ON cc_verified_identities(portal_id, verification_status);
+CREATE INDEX idx_verified_identities_email ON cc_verified_identities(email) WHERE email IS NOT NULL;
+CREATE INDEX idx_verified_identities_contact ON cc_verified_identities(contact_id) WHERE contact_id IS NOT NULL;
+CREATE INDEX idx_verified_identities_trust ON cc_verified_identities(trust_score DESC);
+
+ALTER TABLE cc_verified_identities ENABLE ROW LEVEL SECURITY;
+
+-- ============ VESSEL REGISTRATIONS ============
+-- Registered vessels for marine operations
+
+CREATE TABLE IF NOT EXISTS cc_vessel_registrations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  owner_identity_id uuid REFERENCES cc_verified_identities(id),
+  
+  -- Identity
+  registration_number varchar(30) NOT NULL UNIQUE,
+  -- Format: VES-PORTAL-YYMMDD-XXXX
+  
+  -- Vessel details
+  vessel_name text NOT NULL,
+  vessel_type varchar NOT NULL CHECK (vessel_type IN (
+    'kayak', 'canoe', 'sup', 'rowboat', 'sailboat', 
+    'powerboat', 'yacht', 'fishing', 'commercial', 'other'
+  )),
+  
+  -- Registration
+  tc_registration text,  -- Transport Canada registration
+  hull_id text,          -- Hull identification number
+  
+  -- Specs
+  length_ft numeric(6,2),
+  beam_ft numeric(6,2),
+  draft_ft numeric(6,2),
+  gross_tonnage numeric(8,2),
+  
+  -- Propulsion
+  propulsion_type varchar CHECK (propulsion_type IN (
+    'paddle', 'sail', 'outboard', 'inboard', 'jet', 'electric', 'hybrid'
+  )),
+  engine_hp integer,
+  fuel_type varchar,
+  
+  -- Capacity
+  max_passengers integer,
+  max_crew integer,
+  
+  -- Safety
+  safety_equipment_json jsonb DEFAULT '[]'::jsonb,
+  -- ['life_jackets', 'flares', 'fire_extinguisher', 'vhf_radio', 'epirb']
+  
+  last_safety_inspection date,
+  safety_certificate_url text,
+  
+  -- Insurance
+  insurance_provider text,
+  insurance_policy_number text,
+  insurance_expiry date,
+  insurance_verified boolean DEFAULT false,
+  
+  -- Photos
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  
+  -- Verification
+  verification_status varchar DEFAULT 'pending' CHECK (verification_status IN (
+    'pending', 'verified', 'expired', 'rejected', 'suspended'
+  )),
+  verified_at timestamptz,
+  verified_by text,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active', 'inactive', 'seasonal', 'sold', 'decommissioned'
+  )),
+  
+  -- Home port
+  home_port text,
+  home_slip text,
+  
+  -- Notes
+  notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_vessel_registrations_portal ON cc_vessel_registrations(portal_id, status);
+CREATE INDEX idx_vessel_registrations_owner ON cc_vessel_registrations(owner_identity_id);
+CREATE INDEX idx_vessel_registrations_tc ON cc_vessel_registrations(tc_registration) WHERE tc_registration IS NOT NULL;
+
+ALTER TABLE cc_vessel_registrations ENABLE ROW LEVEL SECURITY;
+
+-- ============ VEHICLE REGISTRATIONS ============
+-- Registered vehicles for parking and access
+
+CREATE TABLE IF NOT EXISTS cc_vehicle_registrations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  owner_identity_id uuid REFERENCES cc_verified_identities(id),
+  
+  -- Identity
+  registration_number varchar(30) NOT NULL UNIQUE,
+  -- Format: VEH-PORTAL-YYMMDD-XXXX
+  
+  -- Vehicle details
+  plate_number varchar(20) NOT NULL,
+  plate_province varchar(20) DEFAULT 'BC',
+  
+  vehicle_type varchar NOT NULL CHECK (vehicle_type IN (
+    'car', 'suv', 'truck', 'van', 'rv', 'motorcycle', 
+    'trailer', 'boat_trailer', 'commercial', 'other'
+  )),
+  
+  make varchar(50),
+  model varchar(50),
+  year integer,
+  color varchar(30),
+  
+  -- Trailer (if applicable)
+  has_trailer boolean DEFAULT false,
+  trailer_plate varchar(20),
+  trailer_type varchar,
+  trailer_length_ft numeric(5,2),
+  
+  -- Verification
+  verification_status varchar DEFAULT 'pending' CHECK (verification_status IN (
+    'pending', 'verified', 'expired', 'rejected', 'suspended'
+  )),
+  verified_at timestamptz,
+  
+  -- Insurance
+  insurance_verified boolean DEFAULT false,
+  insurance_expiry date,
+  
+  -- Parking permits
+  parking_permit_number text,
+  parking_permit_expiry date,
+  
+  -- Access
+  access_zones text[],  -- ['lot_a', 'lot_b', 'boat_launch']
+  
+  -- Photos
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active', 'inactive', 'expired', 'blacklisted'
+  )),
+  
+  -- Notes
+  notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, plate_number, plate_province)
+);
+
+CREATE INDEX idx_vehicle_registrations_portal ON cc_vehicle_registrations(portal_id, status);
+CREATE INDEX idx_vehicle_registrations_owner ON cc_vehicle_registrations(owner_identity_id);
+CREATE INDEX idx_vehicle_registrations_plate ON cc_vehicle_registrations(plate_number, plate_province);
+
+ALTER TABLE cc_vehicle_registrations ENABLE ROW LEVEL SECURITY;
+
+-- ============ VERIFICATION REQUESTS ============
+-- Pending verification requests
+
+CREATE TABLE IF NOT EXISTS cc_verification_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  identity_id uuid REFERENCES cc_verified_identities(id) ON DELETE CASCADE,
+  
+  -- Request details
+  request_number varchar(20) NOT NULL UNIQUE,
+  -- Format: VRQ-YYMMDD-XXXX
+  
+  verification_type varchar NOT NULL CHECK (verification_type IN (
+    'email', 'phone', 'id_document', 'selfie', 'address', 'enhanced'
+  )),
+  
+  -- Status
+  status varchar DEFAULT 'pending' CHECK (status IN (
+    'pending', 'in_progress', 'completed', 'failed', 'expired', 'cancelled'
+  )),
+  
+  -- For email/phone verification
+  verification_code varchar(10),
+  code_expires_at timestamptz,
+  code_attempts integer DEFAULT 0,
+  
+  -- For document verification
+  document_url text,
+  document_type varchar,
+  
+  -- Result
+  result varchar CHECK (result IN ('pass', 'fail', 'manual_review')),
+  result_details jsonb,
+  reviewed_by text,
+  reviewed_at timestamptz,
+  
+  -- Notes
+  notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  expires_at timestamptz
+);
+
+CREATE INDEX idx_verification_requests_identity ON cc_verification_requests(identity_id, status);
+CREATE INDEX idx_verification_requests_status ON cc_verification_requests(status, created_at);
+
+ALTER TABLE cc_verification_requests ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/identityService.ts
+```typescript
+// server/services/identityService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, asc, desc, or } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import crypto from 'crypto';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateIdentityRequest {
+  portalSlug: string;
+  identityType: string;
+  legalName: string;
+  preferredName?: string;
+  email?: string;
+  phone?: string;
+  addressLine1?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  country?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+}
+
+interface RegisterVesselRequest {
+  portalSlug: string;
+  ownerIdentityId?: string;
+  vesselName: string;
+  vesselType: string;
+  tcRegistration?: string;
+  hullId?: string;
+  lengthFt?: number;
+  beamFt?: number;
+  propulsionType?: string;
+  engineHp?: number;
+  maxPassengers?: number;
+  safetyEquipment?: string[];
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  insuranceExpiry?: Date;
+  homePort?: string;
+}
+
+interface RegisterVehicleRequest {
+  portalSlug: string;
+  ownerIdentityId?: string;
+  plateNumber: string;
+  plateProvince?: string;
+  vehicleType: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  color?: string;
+  hasTrailer?: boolean;
+  trailerPlate?: string;
+  trailerType?: string;
+  trailerLengthFt?: number;
+  accessZones?: string[];
+}
+
+// ============ HELPERS ============
+
+function generateRegistrationNumber(prefix: string, portalCode: string): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `${prefix}-${portalCode.substring(0, 3).toUpperCase()}-${dateStr}-${suffix}`;
+}
+
+function generateVerificationCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function hashIdNumber(idNumber: string): string {
+  return crypto.createHash('sha256').update(idNumber.toLowerCase()).digest('hex');
+}
+
+function calculateTrustScore(identity: any, factors: Record<string, number>): number {
+  let score = 50; // Base score
+  
+  if (identity.idVerified) score += factors.verified_id || 20;
+  if (identity.verificationLevel === 'enhanced') score += factors.enhanced || 15;
+  if (identity.verificationLevel === 'trusted') score += factors.trusted || 25;
+  if (identity.emergencyContactPhone) score += factors.emergency_contact || 5;
+  
+  return Math.min(100, Math.max(0, score));
+}
+
+// ============ IDENTITY FUNCTIONS ============
+
+export async function createIdentity(req: CreateIdentityRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Check for existing identity with same email
+  if (req.email) {
+    const existing = await db.query.ccVerifiedIdentities.findFirst({
+      where: and(
+        eq(ccVerifiedIdentities.portalId, portal.id),
+        eq(ccVerifiedIdentities.email, req.email.toLowerCase())
+      )
+    });
+    
+    if (existing) {
+      throw new Error('Identity with this email already exists');
+    }
+  }
+  
+  const [identity] = await db.insert(ccVerifiedIdentities).values({
+    portalId: portal.id,
+    identityType: req.identityType,
+    legalName: req.legalName,
+    preferredName: req.preferredName,
+    email: req.email?.toLowerCase(),
+    phone: req.phone,
+    addressLine1: req.addressLine1,
+    city: req.city,
+    province: req.province || 'BC',
+    postalCode: req.postalCode,
+    country: req.country || 'Canada',
+    emergencyContactName: req.emergencyContactName,
+    emergencyContactPhone: req.emergencyContactPhone,
+    emergencyContactRelation: req.emergencyContactRelation,
+    verificationStatus: 'unverified',
+    verificationLevel: 'none',
+    trustScore: 50
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.email || 'system',
+    action: 'identity.created',
+    resourceType: 'verified_identity',
+    resourceId: identity.id,
+    metadata: { identityType: req.identityType, name: req.legalName }
+  });
+  
+  return identity;
+}
+
+export async function getIdentity(
+  portalSlug: string,
+  identityId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const identity = await db.query.ccVerifiedIdentities.findFirst({
+    where: and(
+      eq(ccVerifiedIdentities.id, identityId),
+      eq(ccVerifiedIdentities.portalId, portal.id)
+    )
+  });
+  
+  if (!identity) return null;
+  
+  // Get related vessels and vehicles
+  const vessels = await db.query.ccVesselRegistrations.findMany({
+    where: eq(ccVesselRegistrations.ownerIdentityId, identityId)
+  });
+  
+  const vehicles = await db.query.ccVehicleRegistrations.findMany({
+    where: eq(ccVehicleRegistrations.ownerIdentityId, identityId)
+  });
+  
+  return { identity, vessels, vehicles };
+}
+
+export async function getIdentityByEmail(
+  portalSlug: string,
+  email: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const identity = await db.query.ccVerifiedIdentities.findFirst({
+    where: and(
+      eq(ccVerifiedIdentities.portalId, portal.id),
+      eq(ccVerifiedIdentities.email, email.toLowerCase())
+    )
+  });
+  
+  if (!identity) return null;
+  
+  return getIdentity(portalSlug, identity.id);
+}
+
+export async function searchIdentities(
+  portalSlug: string,
+  options?: {
+    identityType?: string;
+    verificationStatus?: string;
+    verificationLevel?: string;
+    query?: string;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccVerifiedIdentities.portalId, portal.id)];
+  
+  if (options?.identityType) {
+    conditions.push(eq(ccVerifiedIdentities.identityType, options.identityType));
+  }
+  
+  if (options?.verificationStatus) {
+    conditions.push(eq(ccVerifiedIdentities.verificationStatus, options.verificationStatus));
+  }
+  
+  if (options?.verificationLevel) {
+    conditions.push(eq(ccVerifiedIdentities.verificationLevel, options.verificationLevel));
+  }
+  
+  return db.query.ccVerifiedIdentities.findMany({
+    where: and(...conditions),
+    orderBy: [desc(ccVerifiedIdentities.trustScore), asc(ccVerifiedIdentities.legalName)],
+    limit: options?.limit || 50
+  });
+}
+
+// ============ VERIFICATION ============
+
+export async function requestVerification(
+  portalSlug: string,
+  identityId: string,
+  verificationType: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const identity = await db.query.ccVerifiedIdentities.findFirst({
+    where: and(
+      eq(ccVerifiedIdentities.id, identityId),
+      eq(ccVerifiedIdentities.portalId, portal.id)
+    )
+  });
+  
+  if (!identity) throw new Error('Identity not found');
+  
+  const requestNumber = `VRQ-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${nanoid(4).toUpperCase()}`;
+  
+  let verificationCode: string | undefined;
+  let codeExpiresAt: Date | undefined;
+  
+  if (['email', 'phone'].includes(verificationType)) {
+    verificationCode = generateVerificationCode();
+    codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  }
+  
+  const [request] = await db.insert(ccVerificationRequests).values({
+    portalId: portal.id,
+    identityId,
+    requestNumber,
+    verificationType,
+    verificationCode,
+    codeExpiresAt,
+    status: 'pending',
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+  }).returning();
+  
+  // In production, would send email/SMS here
+  // For now, return the code in the response (dev mode)
+  
+  return { request, verificationCode };
+}
+
+export async function verifyCode(
+  portalSlug: string,
+  requestId: string,
+  code: string
+): Promise<{ success: boolean; message: string }> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return { success: false, message: 'Portal not found' };
+  
+  const request = await db.query.ccVerificationRequests.findFirst({
+    where: and(
+      eq(ccVerificationRequests.id, requestId),
+      eq(ccVerificationRequests.portalId, portal.id)
+    )
+  });
+  
+  if (!request) return { success: false, message: 'Request not found' };
+  
+  if (request.status !== 'pending') {
+    return { success: false, message: 'Request already processed' };
+  }
+  
+  if (request.codeExpiresAt && new Date() > request.codeExpiresAt) {
+    await db.update(ccVerificationRequests)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(eq(ccVerificationRequests.id, requestId));
+    return { success: false, message: 'Code expired' };
+  }
+  
+  // Increment attempts
+  const attempts = (request.codeAttempts || 0) + 1;
+  
+  if (attempts > 5) {
+    await db.update(ccVerificationRequests)
+      .set({ status: 'failed', codeAttempts: attempts, updatedAt: new Date() })
+      .where(eq(ccVerificationRequests.id, requestId));
+    return { success: false, message: 'Too many attempts' };
+  }
+  
+  if (request.verificationCode !== code) {
+    await db.update(ccVerificationRequests)
+      .set({ codeAttempts: attempts, updatedAt: new Date() })
+      .where(eq(ccVerificationRequests.id, requestId));
+    return { success: false, message: 'Invalid code' };
+  }
+  
+  // Success!
+  await db.update(ccVerificationRequests)
+    .set({
+      status: 'completed',
+      result: 'pass',
+      reviewedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccVerificationRequests.id, requestId));
+  
+  // Update identity verification level
+  const newLevel = request.verificationType === 'email' ? 'email' : 
+                   request.verificationType === 'phone' ? 'phone' : 'basic';
+  
+  await db.update(ccVerifiedIdentities)
+    .set({
+      verificationLevel: newLevel,
+      verificationStatus: 'verified',
+      verifiedAt: new Date(),
+      trustScore: 60, // Bump trust score
+      updatedAt: new Date()
+    })
+    .where(eq(ccVerifiedIdentities.id, request.identityId));
+  
+  return { success: true, message: 'Verification successful' };
+}
+
+export async function verifyIdentityDocument(
+  portalSlug: string,
+  identityId: string,
+  data: {
+    idType: string;
+    idNumber: string;
+    idIssuingAuthority?: string;
+    idExpiryDate?: Date;
+    verifiedBy: string;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const idNumberHash = hashIdNumber(data.idNumber);
+  
+  const [updated] = await db.update(ccVerifiedIdentities)
+    .set({
+      idType: data.idType,
+      idNumberHash,
+      idIssuingAuthority: data.idIssuingAuthority,
+      idExpiryDate: data.idExpiryDate,
+      idVerified: true,
+      idVerifiedAt: new Date(),
+      idVerifiedBy: data.verifiedBy,
+      verificationLevel: 'basic',
+      verificationStatus: 'verified',
+      verifiedAt: new Date(),
+      verificationExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+      trustScore: 70,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccVerifiedIdentities.id, identityId),
+      eq(ccVerifiedIdentities.portalId, portal.id)
+    ))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: data.verifiedBy,
+    action: 'identity.id_verified',
+    resourceType: 'verified_identity',
+    resourceId: identityId,
+    metadata: { idType: data.idType }
+  });
+  
+  return updated;
+}
+
+// ============ VESSEL REGISTRATION ============
+
+export async function registerVessel(req: RegisterVesselRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate owner if provided
+  if (req.ownerIdentityId) {
+    const owner = await db.query.ccVerifiedIdentities.findFirst({
+      where: and(
+        eq(ccVerifiedIdentities.id, req.ownerIdentityId),
+        eq(ccVerifiedIdentities.portalId, portal.id)
+      )
+    });
+    if (!owner) throw new Error('Owner identity not found');
+  }
+  
+  const registrationNumber = generateRegistrationNumber('VES', portal.slug);
+  
+  const [vessel] = await db.insert(ccVesselRegistrations).values({
+    portalId: portal.id,
+    ownerIdentityId: req.ownerIdentityId,
+    registrationNumber,
+    vesselName: req.vesselName,
+    vesselType: req.vesselType,
+    tcRegistration: req.tcRegistration,
+    hullId: req.hullId,
+    lengthFt: req.lengthFt,
+    beamFt: req.beamFt,
+    propulsionType: req.propulsionType,
+    engineHp: req.engineHp,
+    maxPassengers: req.maxPassengers,
+    safetyEquipmentJson: req.safetyEquipment || [],
+    insuranceProvider: req.insuranceProvider,
+    insurancePolicyNumber: req.insurancePolicyNumber,
+    insuranceExpiry: req.insuranceExpiry,
+    homePort: req.homePort,
+    verificationStatus: 'pending',
+    status: 'active'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'vessel.registered',
+    resourceType: 'vessel_registration',
+    resourceId: vessel.id,
+    metadata: { registrationNumber, vesselName: req.vesselName }
+  });
+  
+  return vessel;
+}
+
+export async function getVessel(
+  portalSlug: string,
+  vesselId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const vessel = await db.query.ccVesselRegistrations.findFirst({
+    where: and(
+      eq(ccVesselRegistrations.id, vesselId),
+      eq(ccVesselRegistrations.portalId, portal.id)
+    )
+  });
+  
+  if (!vessel) return null;
+  
+  let owner = null;
+  if (vessel.ownerIdentityId) {
+    owner = await db.query.ccVerifiedIdentities.findFirst({
+      where: eq(ccVerifiedIdentities.id, vessel.ownerIdentityId)
+    });
+  }
+  
+  return { vessel, owner };
+}
+
+export async function searchVessels(
+  portalSlug: string,
+  options?: {
+    vesselType?: string;
+    status?: string;
+    ownerIdentityId?: string;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccVesselRegistrations.portalId, portal.id)];
+  
+  if (options?.vesselType) {
+    conditions.push(eq(ccVesselRegistrations.vesselType, options.vesselType));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccVesselRegistrations.status, options.status));
+  }
+  
+  if (options?.ownerIdentityId) {
+    conditions.push(eq(ccVesselRegistrations.ownerIdentityId, options.ownerIdentityId));
+  }
+  
+  return db.query.ccVesselRegistrations.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccVesselRegistrations.vesselName)],
+    limit: options?.limit || 50
+  });
+}
+
+// ============ VEHICLE REGISTRATION ============
+
+export async function registerVehicle(req: RegisterVehicleRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Check for existing plate
+  const existing = await db.query.ccVehicleRegistrations.findFirst({
+    where: and(
+      eq(ccVehicleRegistrations.portalId, portal.id),
+      eq(ccVehicleRegistrations.plateNumber, req.plateNumber.toUpperCase()),
+      eq(ccVehicleRegistrations.plateProvince, req.plateProvince || 'BC')
+    )
+  });
+  
+  if (existing) {
+    throw new Error('Vehicle with this plate already registered');
+  }
+  
+  const registrationNumber = generateRegistrationNumber('VEH', portal.slug);
+  
+  const [vehicle] = await db.insert(ccVehicleRegistrations).values({
+    portalId: portal.id,
+    ownerIdentityId: req.ownerIdentityId,
+    registrationNumber,
+    plateNumber: req.plateNumber.toUpperCase(),
+    plateProvince: req.plateProvince || 'BC',
+    vehicleType: req.vehicleType,
+    make: req.make,
+    model: req.model,
+    year: req.year,
+    color: req.color,
+    hasTrailer: req.hasTrailer || false,
+    trailerPlate: req.trailerPlate?.toUpperCase(),
+    trailerType: req.trailerType,
+    trailerLengthFt: req.trailerLengthFt,
+    accessZones: req.accessZones,
+    verificationStatus: 'pending',
+    status: 'active'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'vehicle.registered',
+    resourceType: 'vehicle_registration',
+    resourceId: vehicle.id,
+    metadata: { registrationNumber, plate: req.plateNumber }
+  });
+  
+  return vehicle;
+}
+
+export async function getVehicle(
+  portalSlug: string,
+  vehicleId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const vehicle = await db.query.ccVehicleRegistrations.findFirst({
+    where: and(
+      eq(ccVehicleRegistrations.id, vehicleId),
+      eq(ccVehicleRegistrations.portalId, portal.id)
+    )
+  });
+  
+  if (!vehicle) return null;
+  
+  let owner = null;
+  if (vehicle.ownerIdentityId) {
+    owner = await db.query.ccVerifiedIdentities.findFirst({
+      where: eq(ccVerifiedIdentities.id, vehicle.ownerIdentityId)
+    });
+  }
+  
+  return { vehicle, owner };
+}
+
+export async function getVehicleByPlate(
+  portalSlug: string,
+  plateNumber: string,
+  plateProvince?: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const vehicle = await db.query.ccVehicleRegistrations.findFirst({
+    where: and(
+      eq(ccVehicleRegistrations.portalId, portal.id),
+      eq(ccVehicleRegistrations.plateNumber, plateNumber.toUpperCase()),
+      eq(ccVehicleRegistrations.plateProvince, plateProvince || 'BC')
+    )
+  });
+  
+  if (!vehicle) return null;
+  
+  return getVehicle(portalSlug, vehicle.id);
+}
+
+export async function searchVehicles(
+  portalSlug: string,
+  options?: {
+    vehicleType?: string;
+    status?: string;
+    ownerIdentityId?: string;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccVehicleRegistrations.portalId, portal.id)];
+  
+  if (options?.vehicleType) {
+    conditions.push(eq(ccVehicleRegistrations.vehicleType, options.vehicleType));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccVehicleRegistrations.status, options.status));
+  }
+  
+  if (options?.ownerIdentityId) {
+    conditions.push(eq(ccVehicleRegistrations.ownerIdentityId, options.ownerIdentityId));
+  }
+  
+  return db.query.ccVehicleRegistrations.findMany({
+    where: and(...conditions),
+    orderBy: [asc(ccVehicleRegistrations.plateNumber)],
+    limit: options?.limit || 50
+  });
+}
+```
+
+## Create server/routes/identity.ts
+```typescript
+// server/routes/identity.ts
+
+import { Router } from 'express';
+import {
+  createIdentity, getIdentity, getIdentityByEmail, searchIdentities,
+  requestVerification, verifyCode, verifyIdentityDocument,
+  registerVessel, getVessel, searchVessels,
+  registerVehicle, getVehicle, getVehicleByPlate, searchVehicles
+} from '../services/identityService';
+
+const router = Router();
+
+// ============ IDENTITY ENDPOINTS ============
+
+// POST /api/identity/portals/:slug/identities - Create identity
+router.post('/portals/:slug/identities', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.identityType || !b.legalName) {
+    return res.status(400).json({ error: 'identityType and legalName required' });
+  }
+  
+  try {
+    const identity = await createIdentity({
+      portalSlug: slug,
+      identityType: b.identityType,
+      legalName: b.legalName,
+      preferredName: b.preferredName,
+      email: b.email,
+      phone: b.phone,
+      addressLine1: b.addressLine1,
+      city: b.city,
+      province: b.province,
+      postalCode: b.postalCode,
+      country: b.country,
+      emergencyContactName: b.emergencyContactName,
+      emergencyContactPhone: b.emergencyContactPhone,
+      emergencyContactRelation: b.emergencyContactRelation
+    });
+    
+    res.json({ identity });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/identity/portals/:slug/identities - Search identities
+router.get('/portals/:slug/identities', async (req, res) => {
+  const { slug } = req.params;
+  const { type, status, level, q, limit } = req.query;
+  
+  try {
+    const identities = await searchIdentities(slug, {
+      identityType: type as string,
+      verificationStatus: status as string,
+      verificationLevel: level as string,
+      query: q as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ identities, count: identities.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search identities' });
+  }
+});
+
+// GET /api/identity/portals/:slug/identities/:id - Get identity
+router.get('/portals/:slug/identities/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getIdentity(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Identity not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get identity' });
+  }
+});
+
+// GET /api/identity/portals/:slug/identities/by-email/:email - Get by email
+router.get('/portals/:slug/identities/by-email/:email', async (req, res) => {
+  const { slug, email } = req.params;
+  
+  try {
+    const result = await getIdentityByEmail(slug, email);
+    if (!result) {
+      return res.status(404).json({ error: 'Identity not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get identity' });
+  }
+});
+
+// ============ VERIFICATION ENDPOINTS ============
+
+// POST /api/identity/portals/:slug/identities/:id/verify - Request verification
+router.post('/portals/:slug/identities/:id/verify', async (req, res) => {
+  const { slug, id } = req.params;
+  const { verificationType } = req.body || {};
+  
+  if (!verificationType) {
+    return res.status(400).json({ error: 'verificationType required' });
+  }
+  
+  try {
+    const result = await requestVerification(slug, id, verificationType);
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/identity/portals/:slug/verify-code - Verify code
+router.post('/portals/:slug/verify-code', async (req, res) => {
+  const { slug } = req.params;
+  const { requestId, code } = req.body || {};
+  
+  if (!requestId || !code) {
+    return res.status(400).json({ error: 'requestId and code required' });
+  }
+  
+  try {
+    const result = await verifyCode(slug, requestId, code);
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/identity/portals/:slug/identities/:id/verify-document - Verify ID document
+router.post('/portals/:slug/identities/:id/verify-document', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.idType || !b.idNumber || !b.verifiedBy) {
+    return res.status(400).json({ error: 'idType, idNumber, verifiedBy required' });
+  }
+  
+  try {
+    const identity = await verifyIdentityDocument(slug, id, {
+      idType: b.idType,
+      idNumber: b.idNumber,
+      idIssuingAuthority: b.idIssuingAuthority,
+      idExpiryDate: b.idExpiryDate ? new Date(b.idExpiryDate) : undefined,
+      verifiedBy: b.verifiedBy
+    });
+    
+    res.json({ identity });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ VESSEL ENDPOINTS ============
+
+// POST /api/identity/portals/:slug/vessels - Register vessel
+router.post('/portals/:slug/vessels', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.vesselName || !b.vesselType) {
+    return res.status(400).json({ error: 'vesselName and vesselType required' });
+  }
+  
+  try {
+    const vessel = await registerVessel({
+      portalSlug: slug,
+      ownerIdentityId: b.ownerIdentityId,
+      vesselName: b.vesselName,
+      vesselType: b.vesselType,
+      tcRegistration: b.tcRegistration,
+      hullId: b.hullId,
+      lengthFt: b.lengthFt,
+      beamFt: b.beamFt,
+      propulsionType: b.propulsionType,
+      engineHp: b.engineHp,
+      maxPassengers: b.maxPassengers,
+      safetyEquipment: b.safetyEquipment,
+      insuranceProvider: b.insuranceProvider,
+      insurancePolicyNumber: b.insurancePolicyNumber,
+      insuranceExpiry: b.insuranceExpiry ? new Date(b.insuranceExpiry) : undefined,
+      homePort: b.homePort
+    });
+    
+    res.json({ vessel });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/identity/portals/:slug/vessels - Search vessels
+router.get('/portals/:slug/vessels', async (req, res) => {
+  const { slug } = req.params;
+  const { type, status, owner, limit } = req.query;
+  
+  try {
+    const vessels = await searchVessels(slug, {
+      vesselType: type as string,
+      status: status as string,
+      ownerIdentityId: owner as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ vessels, count: vessels.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search vessels' });
+  }
+});
+
+// GET /api/identity/portals/:slug/vessels/:id - Get vessel
+router.get('/portals/:slug/vessels/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getVessel(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Vessel not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get vessel' });
+  }
+});
+
+// ============ VEHICLE ENDPOINTS ============
+
+// POST /api/identity/portals/:slug/vehicles - Register vehicle
+router.post('/portals/:slug/vehicles', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.plateNumber || !b.vehicleType) {
+    return res.status(400).json({ error: 'plateNumber and vehicleType required' });
+  }
+  
+  try {
+    const vehicle = await registerVehicle({
+      portalSlug: slug,
+      ownerIdentityId: b.ownerIdentityId,
+      plateNumber: b.plateNumber,
+      plateProvince: b.plateProvince,
+      vehicleType: b.vehicleType,
+      make: b.make,
+      model: b.model,
+      year: b.year,
+      color: b.color,
+      hasTrailer: b.hasTrailer,
+      trailerPlate: b.trailerPlate,
+      trailerType: b.trailerType,
+      trailerLengthFt: b.trailerLengthFt,
+      accessZones: b.accessZones
+    });
+    
+    res.json({ vehicle });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/identity/portals/:slug/vehicles - Search vehicles
+router.get('/portals/:slug/vehicles', async (req, res) => {
+  const { slug } = req.params;
+  const { type, status, owner, limit } = req.query;
+  
+  try {
+    const vehicles = await searchVehicles(slug, {
+      vehicleType: type as string,
+      status: status as string,
+      ownerIdentityId: owner as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ vehicles, count: vehicles.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search vehicles' });
+  }
+});
+
+// GET /api/identity/portals/:slug/vehicles/:id - Get vehicle
+router.get('/portals/:slug/vehicles/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getVehicle(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get vehicle' });
+  }
+});
+
+// GET /api/identity/portals/:slug/vehicles/by-plate/:plate - Get by plate
+router.get('/portals/:slug/vehicles/by-plate/:plate', async (req, res) => {
+  const { slug, plate } = req.params;
+  const { province } = req.query;
+  
+  try {
+    const result = await getVehicleByPlate(slug, plate, province as string);
+    if (!result) {
+      return res.status(404).json({ error: 'Vehicle not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get vehicle' });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import identityRoutes from './routes/identity';
+
+// Add with other routes
+app.use('/api/identity', identityRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- VerifiedIdentity, InsertVerifiedIdentity
+- VesselRegistration, InsertVesselRegistration
+- VehicleRegistration, InsertVehicleRegistration
+- VerificationRequest, InsertVerificationRequest
+
+## Deliverables
+- [ ] Migration 095_identity.sql
+- [ ] cc_verified_identities table with RLS
+- [ ] cc_vessel_registrations table with RLS
+- [ ] cc_vehicle_registrations table with RLS
+- [ ] cc_verification_requests table with RLS
+- [ ] server/services/identityService.ts
+- [ ] server/routes/identity.ts
+- [ ] Routes registered in server/index.ts
+- [ ] API Endpoints:
+  - Identity: create, search, get, get by email, verify, verify-code, verify-document
+  - Vessels: register, search, get
+  - Vehicles: register, search, get, get by plate
+- [ ] Registration number formats:
+  - VES-BAM-YYMMDD-XXXX (vessels)
+  - VEH-BAM-YYMMDD-XXXX (vehicles)
+  - VRQ-YYMMDD-XXXX (verification requests)
+- [ ] Trust score calculation (50 base + verification bonuses)
+- [ ] Verification levels: none → email → phone → basic → enhanced → trusted
+- [ ] ID number hashed for privacy (SHA-256)
+- [ ] Verification codes expire in 15 minutes, max 5 attempts
+- [ ] Test: Create identity → trust score = 50, level = none
+- [ ] Test: Request email verification → get code → verify → level = email, trust = 60
+- [ ] Test: Register vessel → VES-BAM-YYMMDD-XXXX format
+- [ ] Test: Register vehicle → lookup by plate works
+
+Report with identity showing trust score and verification level, plus vessel registration.

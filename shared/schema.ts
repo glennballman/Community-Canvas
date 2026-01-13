@@ -3076,3 +3076,227 @@ export const insertViolationHistorySchema = createInsertSchema(ccViolationHistor
 });
 export type ViolationHistory = typeof ccViolationHistory.$inferSelect;
 export type InsertViolationHistory = z.infer<typeof insertViolationHistorySchema>;
+
+// ============================================================================
+// VERIFIED IDENTITIES
+// ============================================================================
+
+export const ccVerifiedIdentities = pgTable('cc_verified_identities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  contactId: uuid('contact_id'),
+  userId: uuid('user_id'),
+  
+  identityType: varchar('identity_type').notNull(),
+  
+  legalName: text('legal_name').notNull(),
+  preferredName: text('preferred_name'),
+  email: text('email'),
+  phone: text('phone'),
+  
+  addressLine1: text('address_line1'),
+  addressLine2: text('address_line2'),
+  city: varchar('city', { length: 100 }),
+  province: varchar('province', { length: 50 }),
+  postalCode: varchar('postal_code', { length: 20 }),
+  country: varchar('country', { length: 50 }).default('Canada'),
+  
+  idType: varchar('id_type'),
+  idNumberHash: text('id_number_hash'),
+  idIssuingAuthority: text('id_issuing_authority'),
+  idExpiryDate: date('id_expiry_date'),
+  idVerified: boolean('id_verified').default(false),
+  idVerifiedAt: timestamp('id_verified_at', { withTimezone: true }),
+  idVerifiedBy: text('id_verified_by'),
+  
+  photoIdUrl: text('photo_id_url'),
+  selfieUrl: text('selfie_url'),
+  photoMatchScore: numeric('photo_match_score', { precision: 5, scale: 2 }),
+  
+  verificationStatus: varchar('verification_status').default('unverified'),
+  verificationLevel: varchar('verification_level').default('none'),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  verificationExpiresAt: timestamp('verification_expires_at', { withTimezone: true }),
+  
+  trustScore: integer('trust_score').default(50),
+  trustFactorsJson: jsonb('trust_factors_json').default({}),
+  
+  violationHistoryId: uuid('violation_history_id'),
+  
+  emergencyContactName: text('emergency_contact_name'),
+  emergencyContactPhone: text('emergency_contact_phone'),
+  emergencyContactRelation: text('emergency_contact_relation'),
+  
+  communicationPreference: varchar('communication_preference').default('email'),
+  languagePreference: varchar('language_preference').default('en'),
+  
+  notes: text('notes'),
+  internalNotes: text('internal_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertVerifiedIdentitySchema = createInsertSchema(ccVerifiedIdentities).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type VerifiedIdentity = typeof ccVerifiedIdentities.$inferSelect;
+export type InsertVerifiedIdentity = z.infer<typeof insertVerifiedIdentitySchema>;
+
+// ============================================================================
+// VESSEL REGISTRATIONS
+// ============================================================================
+
+export const ccVesselRegistrations = pgTable('cc_vessel_registrations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  ownerIdentityId: uuid('owner_identity_id'),
+  
+  registrationNumber: varchar('registration_number', { length: 30 }).notNull().unique(),
+  
+  vesselName: text('vessel_name').notNull(),
+  vesselType: varchar('vessel_type').notNull(),
+  
+  tcRegistration: text('tc_registration'),
+  hullId: text('hull_id'),
+  
+  lengthFt: numeric('length_ft', { precision: 6, scale: 2 }),
+  beamFt: numeric('beam_ft', { precision: 6, scale: 2 }),
+  draftFt: numeric('draft_ft', { precision: 6, scale: 2 }),
+  grossTonnage: numeric('gross_tonnage', { precision: 8, scale: 2 }),
+  
+  propulsionType: varchar('propulsion_type'),
+  engineHp: integer('engine_hp'),
+  fuelType: varchar('fuel_type'),
+  
+  maxPassengers: integer('max_passengers'),
+  maxCrew: integer('max_crew'),
+  
+  safetyEquipmentJson: jsonb('safety_equipment_json').default([]),
+  lastSafetyInspection: date('last_safety_inspection'),
+  safetyCertificateUrl: text('safety_certificate_url'),
+  
+  insuranceProvider: text('insurance_provider'),
+  insurancePolicyNumber: text('insurance_policy_number'),
+  insuranceExpiry: date('insurance_expiry'),
+  insuranceVerified: boolean('insurance_verified').default(false),
+  
+  photosJson: jsonb('photos_json').default([]),
+  
+  verificationStatus: varchar('verification_status').default('pending'),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  verifiedBy: text('verified_by'),
+  
+  status: varchar('status').default('active'),
+  
+  homePort: text('home_port'),
+  homeSlip: text('home_slip'),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertVesselRegistrationSchema = createInsertSchema(ccVesselRegistrations).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type VesselRegistration = typeof ccVesselRegistrations.$inferSelect;
+export type InsertVesselRegistration = z.infer<typeof insertVesselRegistrationSchema>;
+
+// ============================================================================
+// VEHICLE REGISTRATIONS
+// ============================================================================
+
+export const ccVehicleRegistrations = pgTable('cc_vehicle_registrations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  ownerIdentityId: uuid('owner_identity_id'),
+  
+  registrationNumber: varchar('registration_number', { length: 30 }).notNull().unique(),
+  
+  plateNumber: varchar('plate_number', { length: 20 }).notNull(),
+  plateProvince: varchar('plate_province', { length: 20 }).default('BC'),
+  
+  vehicleType: varchar('vehicle_type').notNull(),
+  
+  make: varchar('make', { length: 50 }),
+  model: varchar('model', { length: 50 }),
+  year: integer('year'),
+  color: varchar('color', { length: 30 }),
+  
+  hasTrailer: boolean('has_trailer').default(false),
+  trailerPlate: varchar('trailer_plate', { length: 20 }),
+  trailerType: varchar('trailer_type'),
+  trailerLengthFt: numeric('trailer_length_ft', { precision: 5, scale: 2 }),
+  
+  verificationStatus: varchar('verification_status').default('pending'),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  
+  insuranceVerified: boolean('insurance_verified').default(false),
+  insuranceExpiry: date('insurance_expiry'),
+  
+  parkingPermitNumber: text('parking_permit_number'),
+  parkingPermitExpiry: date('parking_permit_expiry'),
+  
+  accessZones: text('access_zones').array(),
+  
+  photosJson: jsonb('photos_json').default([]),
+  
+  status: varchar('status').default('active'),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertVehicleRegistrationSchema = createInsertSchema(ccVehicleRegistrations).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type VehicleRegistration = typeof ccVehicleRegistrations.$inferSelect;
+export type InsertVehicleRegistration = z.infer<typeof insertVehicleRegistrationSchema>;
+
+// ============================================================================
+// VERIFICATION REQUESTS
+// ============================================================================
+
+export const ccVerificationRequests = pgTable('cc_verification_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  identityId: uuid('identity_id'),
+  
+  requestNumber: varchar('request_number', { length: 20 }).notNull().unique(),
+  
+  verificationType: varchar('verification_type').notNull(),
+  
+  status: varchar('status').default('pending'),
+  
+  verificationCode: varchar('verification_code', { length: 10 }),
+  codeExpiresAt: timestamp('code_expires_at', { withTimezone: true }),
+  codeAttempts: integer('code_attempts').default(0),
+  
+  documentUrl: text('document_url'),
+  documentType: varchar('document_type'),
+  
+  result: varchar('result'),
+  resultDetails: jsonb('result_details'),
+  reviewedBy: text('reviewed_by'),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+});
+
+export const insertVerificationRequestSchema = createInsertSchema(ccVerificationRequests).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type VerificationRequest = typeof ccVerificationRequests.$inferSelect;
+export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
