@@ -3300,3 +3300,150 @@ export const insertVerificationRequestSchema = createInsertSchema(ccVerification
 });
 export type VerificationRequest = typeof ccVerificationRequests.$inferSelect;
 export type InsertVerificationRequest = z.infer<typeof insertVerificationRequestSchema>;
+
+// ============================================================================
+// AUTH ACCOUNTS
+// ============================================================================
+
+export const ccAuthAccounts = pgTable('cc_auth_accounts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  identityId: uuid('identity_id'),
+  tenantId: uuid('tenant_id'),
+  
+  authProvider: varchar('auth_provider').default('email'),
+  authProviderId: text('auth_provider_id'),
+  
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('email_verified').default(false),
+  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
+  
+  phone: text('phone'),
+  phoneVerified: boolean('phone_verified').default(false),
+  phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
+  
+  passwordHash: text('password_hash'),
+  passwordChangedAt: timestamp('password_changed_at', { withTimezone: true }),
+  
+  displayName: text('display_name').notNull(),
+  avatarUrl: text('avatar_url'),
+  bio: text('bio'),
+  
+  timezone: varchar('timezone', { length: 50 }).default('America/Vancouver'),
+  locale: varchar('locale', { length: 10 }).default('en-CA'),
+  
+  preferencesJson: jsonb('preferences_json').default({}),
+  notificationSettingsJson: jsonb('notification_settings_json').default({
+    email_marketing: false,
+    email_transactional: true,
+    email_updates: true,
+    sms_alerts: false,
+    push_enabled: false
+  }),
+  
+  status: varchar('status').default('active'),
+  
+  suspensionReason: text('suspension_reason'),
+  suspendedUntil: timestamp('suspended_until', { withTimezone: true }),
+  
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  lastActiveAt: timestamp('last_active_at', { withTimezone: true }),
+  loginCount: integer('login_count').default(0),
+  
+  onboardingCompleted: boolean('onboarding_completed').default(false),
+  onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+  onboardingStep: varchar('onboarding_step').default('welcome'),
+  
+  termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
+  privacyAcceptedAt: timestamp('privacy_accepted_at', { withTimezone: true }),
+  termsVersion: varchar('terms_version'),
+  
+  signupSource: varchar('signup_source'),
+  signupReferrerId: uuid('signup_referrer_id'),
+  utmSource: varchar('utm_source'),
+  utmMedium: varchar('utm_medium'),
+  utmCampaign: varchar('utm_campaign'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const insertAuthAccountSchema = createInsertSchema(ccAuthAccounts).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type AuthAccount = typeof ccAuthAccounts.$inferSelect;
+export type InsertAuthAccount = z.infer<typeof insertAuthAccountSchema>;
+
+// ============================================================================
+// AUTH SESSIONS
+// ============================================================================
+
+export const ccAuthSessions = pgTable('cc_auth_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  userId: uuid('user_id').notNull(),
+  
+  tokenHash: text('token_hash').notNull().unique(),
+  
+  refreshTokenHash: text('refresh_token_hash').unique(),
+  refreshExpiresAt: timestamp('refresh_expires_at', { withTimezone: true }),
+  
+  sessionType: varchar('session_type').default('web'),
+  
+  deviceName: text('device_name'),
+  deviceType: varchar('device_type'),
+  browser: varchar('browser'),
+  os: varchar('os'),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  
+  city: varchar('city'),
+  region: varchar('region'),
+  country: varchar('country', { length: 2 }),
+  
+  status: varchar('status').default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  revokedReason: varchar('revoked_reason'),
+  
+  isSuspicious: boolean('is_suspicious').default(false),
+  mfaVerified: boolean('mfa_verified').default(false),
+});
+
+export const insertAuthSessionSchema = createInsertSchema(ccAuthSessions).omit({ 
+  id: true, createdAt: true, lastUsedAt: true 
+});
+export type AuthSession = typeof ccAuthSessions.$inferSelect;
+export type InsertAuthSession = z.infer<typeof insertAuthSessionSchema>;
+
+// ============================================================================
+// PASSWORD RESETS
+// ============================================================================
+
+export const ccPasswordResets = pgTable('cc_password_resets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  userId: uuid('user_id').notNull(),
+  
+  tokenHash: text('token_hash').notNull().unique(),
+  
+  status: varchar('status').default('pending'),
+  
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+});
+
+export const insertPasswordResetSchema = createInsertSchema(ccPasswordResets).omit({ 
+  id: true, createdAt: true 
+});
+export type PasswordReset = typeof ccPasswordResets.$inferSelect;
+export type InsertPasswordReset = z.infer<typeof insertPasswordResetSchema>;

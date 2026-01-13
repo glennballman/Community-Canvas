@@ -1,0 +1,992 @@
+**PHASE 5 - PROMPT 21: User Profiles & Authentication**
+
+Create the user profile system with authentication tokens and session management.
+
+## Migration 096_user_profiles.sql
+```sql
+BEGIN;
+
+-- ============ USER PROFILES ============
+-- Extended user profiles beyond basic auth
+
+CREATE TABLE IF NOT EXISTS cc_user_profiles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  identity_id uuid REFERENCES cc_verified_identities(id) ON DELETE SET NULL,
+  tenant_id uuid REFERENCES cc_tenants(id) ON DELETE SET NULL,
+  
+  -- Auth reference (external auth system or internal)
+  auth_provider varchar DEFAULT 'email' CHECK (auth_provider IN (
+    'email', 'google', 'apple', 'microsoft', 'phone'
+  )),
+  auth_provider_id text,  -- External provider's user ID
+  
+  -- Basic info
+  email text NOT NULL,
+  email_verified boolean DEFAULT false,
+  email_verified_at timestamptz,
+  
+  phone text,
+  phone_verified boolean DEFAULT false,
+  phone_verified_at timestamptz,
+  
+  -- Password (for email auth)
+  password_hash text,
+  password_changed_at timestamptz,
+  
+  -- Profile
+  display_name text NOT NULL,
+  avatar_url text,
+  bio text,
+  
+  -- Location
+  timezone varchar(50) DEFAULT 'America/Vancouver',
+  locale varchar(10) DEFAULT 'en-CA',
+  
+  -- Preferences
+  preferences_json jsonb DEFAULT '{}'::jsonb,
+  -- {theme: 'light', notifications: {email: true, sms: false}, ...}
+  
+  notification_settings_json jsonb DEFAULT '{
+    "email_marketing": false,
+    "email_transactional": true,
+    "email_updates": true,
+    "sms_alerts": false,
+    "push_enabled": false
+  }'::jsonb,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'pending',         -- Awaiting verification
+    'active',          -- Normal active user
+    'suspended',       -- Temporarily suspended
+    'banned',          -- Permanently banned
+    'deleted'          -- Soft deleted
+  )),
+  
+  suspension_reason text,
+  suspended_until timestamptz,
+  
+  -- Activity tracking
+  last_login_at timestamptz,
+  last_active_at timestamptz,
+  login_count integer DEFAULT 0,
+  
+  -- Onboarding
+  onboarding_completed boolean DEFAULT false,
+  onboarding_completed_at timestamptz,
+  onboarding_step varchar DEFAULT 'welcome',
+  
+  -- Terms acceptance
+  terms_accepted_at timestamptz,
+  privacy_accepted_at timestamptz,
+  terms_version varchar,
+  
+  -- Metadata
+  signup_source varchar,  -- 'web', 'mobile', 'invite', 'referral'
+  signup_referrer_id uuid REFERENCES cc_user_profiles(id),
+  utm_source varchar,
+  utm_medium varchar,
+  utm_campaign varchar,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz,
+  
+  UNIQUE(email)
+);
+
+CREATE INDEX idx_user_profiles_email ON cc_user_profiles(email);
+CREATE INDEX idx_user_profiles_portal ON cc_user_profiles(portal_id) WHERE portal_id IS NOT NULL;
+CREATE INDEX idx_user_profiles_identity ON cc_user_profiles(identity_id) WHERE identity_id IS NOT NULL;
+CREATE INDEX idx_user_profiles_status ON cc_user_profiles(status);
+CREATE INDEX idx_user_profiles_auth ON cc_user_profiles(auth_provider, auth_provider_id);
+
+ALTER TABLE cc_user_profiles ENABLE ROW LEVEL SECURITY;
+
+-- ============ AUTH SESSIONS ============
+-- Active user sessions and tokens
+
+CREATE TABLE IF NOT EXISTS cc_auth_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  user_id uuid NOT NULL REFERENCES cc_user_profiles(id) ON DELETE CASCADE,
+  
+  -- Session token
+  token_hash text NOT NULL UNIQUE,
+  
+  -- Refresh token (for token refresh flow)
+  refresh_token_hash text UNIQUE,
+  refresh_expires_at timestamptz,
+  
+  -- Session info
+  session_type varchar DEFAULT 'web' CHECK (session_type IN (
+    'web', 'mobile', 'api', 'cli'
+  )),
+  
+  -- Device/client info
+  device_name text,
+  device_type varchar,  -- 'desktop', 'mobile', 'tablet'
+  browser varchar,
+  os varchar,
+  ip_address inet,
+  user_agent text,
+  
+  -- Location (from IP)
+  city varchar,
+  region varchar,
+  country varchar(2),
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'active', 'expired', 'revoked'
+  )),
+  
+  -- Timestamps
+  created_at timestamptz DEFAULT now(),
+  last_used_at timestamptz DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz,
+  revoked_reason varchar,
+  
+  -- Security
+  is_suspicious boolean DEFAULT false,
+  mfa_verified boolean DEFAULT false
+);
+
+CREATE INDEX idx_auth_sessions_user ON cc_auth_sessions(user_id, status);
+CREATE INDEX idx_auth_sessions_token ON cc_auth_sessions(token_hash);
+CREATE INDEX idx_auth_sessions_expires ON cc_auth_sessions(expires_at) WHERE status = 'active';
+
+ALTER TABLE cc_auth_sessions ENABLE ROW LEVEL SECURITY;
+
+-- ============ PASSWORD RESET TOKENS ============
+-- For password reset flow
+
+CREATE TABLE IF NOT EXISTS cc_password_resets (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  user_id uuid NOT NULL REFERENCES cc_user_profiles(id) ON DELETE CASCADE,
+  
+  token_hash text NOT NULL UNIQUE,
+  
+  -- Status
+  status varchar DEFAULT 'pending' CHECK (status IN (
+    'pending', 'used', 'expired'
+  )),
+  
+  -- Security
+  ip_address inet,
+  user_agent text,
+  
+  created_at timestamptz DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  used_at timestamptz
+);
+
+CREATE INDEX idx_password_resets_token ON cc_password_resets(token_hash);
+CREATE INDEX idx_password_resets_user ON cc_password_resets(user_id, status);
+
+ALTER TABLE cc_password_resets ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/authService.ts
+```typescript
+// server/services/authService.ts
+
+import { db } from '../db';
+import { eq, and, gt, desc } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import crypto from 'crypto';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface RegisterRequest {
+  email: string;
+  password: string;
+  displayName: string;
+  portalSlug?: string;
+  signupSource?: string;
+  referrerId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+}
+
+interface LoginRequest {
+  email: string;
+  password: string;
+  deviceName?: string;
+  deviceType?: string;
+  browser?: string;
+  os?: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+interface SessionInfo {
+  user: any;
+  session: any;
+  token: string;
+}
+
+// ============ HELPERS ============
+
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, storedHash: string): boolean {
+  const [salt, hash] = storedHash.split(':');
+  const verifyHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return hash === verifyHash;
+}
+
+function generateToken(): string {
+  return nanoid(48);
+}
+
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+// ============ REGISTRATION ============
+
+export async function registerUser(req: RegisterRequest): Promise<SessionInfo> {
+  // Check for existing user
+  const existing = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.email, req.email.toLowerCase())
+  });
+  
+  if (existing) {
+    throw new Error('Email already registered');
+  }
+  
+  // Get portal if specified
+  let portalId: string | undefined;
+  if (req.portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, req.portalSlug)
+    });
+    if (portal) portalId = portal.id;
+  }
+  
+  // Validate password strength
+  if (req.password.length < 8) {
+    throw new Error('Password must be at least 8 characters');
+  }
+  
+  const passwordHash = hashPassword(req.password);
+  
+  // Create user profile
+  const [user] = await db.insert(ccUserProfiles).values({
+    email: req.email.toLowerCase(),
+    passwordHash,
+    displayName: req.displayName,
+    portalId,
+    authProvider: 'email',
+    status: 'active',
+    signupSource: req.signupSource || 'web',
+    signupReferrerId: req.referrerId,
+    utmSource: req.utmSource,
+    utmMedium: req.utmMedium,
+    utmCampaign: req.utmCampaign,
+    termsAcceptedAt: new Date(),
+    privacyAcceptedAt: new Date(),
+    termsVersion: '1.0'
+  }).returning();
+  
+  // Create session
+  const token = generateToken();
+  const refreshToken = generateToken();
+  
+  const [session] = await db.insert(ccAuthSessions).values({
+    userId: user.id,
+    tokenHash: hashToken(token),
+    refreshTokenHash: hashToken(refreshToken),
+    refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    sessionType: 'web',
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    status: 'active'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: user.id,
+    action: 'user.registered',
+    resourceType: 'user_profile',
+    resourceId: user.id,
+    metadata: { email: user.email, source: req.signupSource }
+  });
+  
+  // Return user without password hash
+  const { passwordHash: _, ...safeUser } = user;
+  
+  return {
+    user: safeUser,
+    session,
+    token
+  };
+}
+
+// ============ LOGIN ============
+
+export async function loginUser(req: LoginRequest): Promise<SessionInfo> {
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.email, req.email.toLowerCase())
+  });
+  
+  if (!user) {
+    throw new Error('Invalid email or password');
+  }
+  
+  if (user.status === 'suspended') {
+    throw new Error('Account is suspended');
+  }
+  
+  if (user.status === 'banned') {
+    throw new Error('Account is banned');
+  }
+  
+  if (!user.passwordHash) {
+    throw new Error('Password login not available for this account');
+  }
+  
+  if (!verifyPassword(req.password, user.passwordHash)) {
+    throw new Error('Invalid email or password');
+  }
+  
+  // Create new session
+  const token = generateToken();
+  const refreshToken = generateToken();
+  
+  const [session] = await db.insert(ccAuthSessions).values({
+    userId: user.id,
+    tokenHash: hashToken(token),
+    refreshTokenHash: hashToken(refreshToken),
+    refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    sessionType: 'web',
+    deviceName: req.deviceName,
+    deviceType: req.deviceType,
+    browser: req.browser,
+    os: req.os,
+    ipAddress: req.ipAddress,
+    userAgent: req.userAgent,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    status: 'active'
+  }).returning();
+  
+  // Update login stats
+  await db.update(ccUserProfiles)
+    .set({
+      lastLoginAt: new Date(),
+      lastActiveAt: new Date(),
+      loginCount: (user.loginCount || 0) + 1,
+      updatedAt: new Date()
+    })
+    .where(eq(ccUserProfiles.id, user.id));
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: user.id,
+    action: 'user.login',
+    resourceType: 'auth_session',
+    resourceId: session.id,
+    metadata: { deviceType: req.deviceType, browser: req.browser }
+  });
+  
+  const { passwordHash: _, ...safeUser } = user;
+  
+  return {
+    user: safeUser,
+    session,
+    token
+  };
+}
+
+// ============ SESSION MANAGEMENT ============
+
+export async function validateSession(token: string): Promise<any | null> {
+  const tokenHash = hashToken(token);
+  
+  const session = await db.query.ccAuthSessions.findFirst({
+    where: and(
+      eq(ccAuthSessions.tokenHash, tokenHash),
+      eq(ccAuthSessions.status, 'active'),
+      gt(ccAuthSessions.expiresAt, new Date())
+    )
+  });
+  
+  if (!session) return null;
+  
+  // Update last used
+  await db.update(ccAuthSessions)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(ccAuthSessions.id, session.id));
+  
+  // Get user
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, session.userId)
+  });
+  
+  if (!user || user.status !== 'active') return null;
+  
+  // Update user last active
+  await db.update(ccUserProfiles)
+    .set({ lastActiveAt: new Date() })
+    .where(eq(ccUserProfiles.id, user.id));
+  
+  const { passwordHash: _, ...safeUser } = user;
+  
+  return { user: safeUser, session };
+}
+
+export async function refreshSession(refreshToken: string): Promise<SessionInfo | null> {
+  const tokenHash = hashToken(refreshToken);
+  
+  const session = await db.query.ccAuthSessions.findFirst({
+    where: and(
+      eq(ccAuthSessions.refreshTokenHash, tokenHash),
+      eq(ccAuthSessions.status, 'active'),
+      gt(ccAuthSessions.refreshExpiresAt, new Date())
+    )
+  });
+  
+  if (!session) return null;
+  
+  // Get user
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, session.userId)
+  });
+  
+  if (!user || user.status !== 'active') return null;
+  
+  // Generate new tokens
+  const newToken = generateToken();
+  const newRefreshToken = generateToken();
+  
+  // Update session with new tokens
+  const [updated] = await db.update(ccAuthSessions)
+    .set({
+      tokenHash: hashToken(newToken),
+      refreshTokenHash: hashToken(newRefreshToken),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      lastUsedAt: new Date()
+    })
+    .where(eq(ccAuthSessions.id, session.id))
+    .returning();
+  
+  const { passwordHash: _, ...safeUser } = user;
+  
+  return {
+    user: safeUser,
+    session: updated,
+    token: newToken
+  };
+}
+
+export async function logoutSession(token: string): Promise<boolean> {
+  const tokenHash = hashToken(token);
+  
+  const result = await db.update(ccAuthSessions)
+    .set({
+      status: 'revoked',
+      revokedAt: new Date(),
+      revokedReason: 'logout'
+    })
+    .where(eq(ccAuthSessions.tokenHash, tokenHash))
+    .returning();
+  
+  return result.length > 0;
+}
+
+export async function logoutAllSessions(userId: string, exceptSessionId?: string): Promise<number> {
+  const conditions: any[] = [
+    eq(ccAuthSessions.userId, userId),
+    eq(ccAuthSessions.status, 'active')
+  ];
+  
+  if (exceptSessionId) {
+    // Would need to add neq import for this
+  }
+  
+  const result = await db.update(ccAuthSessions)
+    .set({
+      status: 'revoked',
+      revokedAt: new Date(),
+      revokedReason: 'logout_all'
+    })
+    .where(and(...conditions))
+    .returning();
+  
+  return result.length;
+}
+
+export async function getUserSessions(userId: string): Promise<any[]> {
+  return db.query.ccAuthSessions.findMany({
+    where: and(
+      eq(ccAuthSessions.userId, userId),
+      eq(ccAuthSessions.status, 'active')
+    ),
+    orderBy: [desc(ccAuthSessions.lastUsedAt)]
+  });
+}
+
+// ============ PASSWORD RESET ============
+
+export async function requestPasswordReset(
+  email: string,
+  ipAddress?: string,
+  userAgent?: string
+): Promise<{ token: string; expiresAt: Date }> {
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.email, email.toLowerCase())
+  });
+  
+  if (!user) {
+    // Don't reveal if email exists
+    throw new Error('If this email exists, a reset link will be sent');
+  }
+  
+  const token = generateToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  
+  await db.insert(ccPasswordResets).values({
+    userId: user.id,
+    tokenHash: hashToken(token),
+    expiresAt,
+    ipAddress,
+    userAgent,
+    status: 'pending'
+  });
+  
+  // In production, send email here
+  
+  return { token, expiresAt };
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string
+): Promise<boolean> {
+  const tokenHash = hashToken(token);
+  
+  const reset = await db.query.ccPasswordResets.findFirst({
+    where: and(
+      eq(ccPasswordResets.tokenHash, tokenHash),
+      eq(ccPasswordResets.status, 'pending'),
+      gt(ccPasswordResets.expiresAt, new Date())
+    )
+  });
+  
+  if (!reset) {
+    throw new Error('Invalid or expired reset token');
+  }
+  
+  if (newPassword.length < 8) {
+    throw new Error('Password must be at least 8 characters');
+  }
+  
+  const passwordHash = hashPassword(newPassword);
+  
+  // Update password
+  await db.update(ccUserProfiles)
+    .set({
+      passwordHash,
+      passwordChangedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccUserProfiles.id, reset.userId));
+  
+  // Mark token as used
+  await db.update(ccPasswordResets)
+    .set({
+      status: 'used',
+      usedAt: new Date()
+    })
+    .where(eq(ccPasswordResets.id, reset.id));
+  
+  // Revoke all existing sessions
+  await logoutAllSessions(reset.userId);
+  
+  return true;
+}
+
+// ============ PROFILE MANAGEMENT ============
+
+export async function getUserProfile(userId: string): Promise<any | null> {
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, userId)
+  });
+  
+  if (!user) return null;
+  
+  const { passwordHash: _, ...safeUser } = user;
+  return safeUser;
+}
+
+export async function updateUserProfile(
+  userId: string,
+  data: {
+    displayName?: string;
+    avatarUrl?: string;
+    bio?: string;
+    timezone?: string;
+    locale?: string;
+    preferences?: any;
+    notificationSettings?: any;
+  }
+): Promise<any> {
+  const updates: Record<string, any> = {
+    updatedAt: new Date()
+  };
+  
+  if (data.displayName) updates.displayName = data.displayName;
+  if (data.avatarUrl !== undefined) updates.avatarUrl = data.avatarUrl;
+  if (data.bio !== undefined) updates.bio = data.bio;
+  if (data.timezone) updates.timezone = data.timezone;
+  if (data.locale) updates.locale = data.locale;
+  if (data.preferences) updates.preferencesJson = data.preferences;
+  if (data.notificationSettings) updates.notificationSettingsJson = data.notificationSettings;
+  
+  const [updated] = await db.update(ccUserProfiles)
+    .set(updates)
+    .where(eq(ccUserProfiles.id, userId))
+    .returning();
+  
+  const { passwordHash: _, ...safeUser } = updated;
+  return safeUser;
+}
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<boolean> {
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, userId)
+  });
+  
+  if (!user || !user.passwordHash) {
+    throw new Error('User not found');
+  }
+  
+  if (!verifyPassword(currentPassword, user.passwordHash)) {
+    throw new Error('Current password is incorrect');
+  }
+  
+  if (newPassword.length < 8) {
+    throw new Error('New password must be at least 8 characters');
+  }
+  
+  const passwordHash = hashPassword(newPassword);
+  
+  await db.update(ccUserProfiles)
+    .set({
+      passwordHash,
+      passwordChangedAt: new Date(),
+      updatedAt: new Date()
+    })
+    .where(eq(ccUserProfiles.id, userId));
+  
+  return true;
+}
+```
+
+## Create server/routes/auth.ts
+```typescript
+// server/routes/auth.ts
+
+import { Router } from 'express';
+import {
+  registerUser, loginUser, validateSession, refreshSession,
+  logoutSession, logoutAllSessions, getUserSessions,
+  requestPasswordReset, resetPassword,
+  getUserProfile, updateUserProfile, changePassword
+} from '../services/authService';
+
+const router = Router();
+
+// POST /api/auth/register - Register new user
+router.post('/register', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.email || !b.password || !b.displayName) {
+    return res.status(400).json({ error: 'email, password, displayName required' });
+  }
+  
+  try {
+    const result = await registerUser({
+      email: b.email,
+      password: b.password,
+      displayName: b.displayName,
+      portalSlug: b.portalSlug,
+      signupSource: b.signupSource,
+      referrerId: b.referrerId,
+      utmSource: b.utmSource,
+      utmMedium: b.utmMedium,
+      utmCampaign: b.utmCampaign
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/auth/login - Login
+router.post('/login', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.email || !b.password) {
+    return res.status(400).json({ error: 'email and password required' });
+  }
+  
+  try {
+    const result = await loginUser({
+      email: b.email,
+      password: b.password,
+      deviceName: b.deviceName,
+      deviceType: b.deviceType,
+      browser: b.browser,
+      os: b.os,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    res.status(401).json({ error: e.message });
+  }
+});
+
+// POST /api/auth/validate - Validate session token
+router.post('/validate', async (req, res) => {
+  const { token } = req.body || {};
+  
+  if (!token) {
+    return res.status(400).json({ error: 'token required' });
+  }
+  
+  try {
+    const result = await validateSession(token);
+    if (!result) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(401).json({ error: 'Invalid session' });
+  }
+});
+
+// POST /api/auth/refresh - Refresh session token
+router.post('/refresh', async (req, res) => {
+  const { refreshToken } = req.body || {};
+  
+  if (!refreshToken) {
+    return res.status(400).json({ error: 'refreshToken required' });
+  }
+  
+  try {
+    const result = await refreshSession(refreshToken);
+    if (!result) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(401).json({ error: 'Invalid refresh token' });
+  }
+});
+
+// POST /api/auth/logout - Logout current session
+router.post('/logout', async (req, res) => {
+  const { token } = req.body || {};
+  
+  if (!token) {
+    return res.status(400).json({ error: 'token required' });
+  }
+  
+  try {
+    await logoutSession(token);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/auth/logout-all - Logout all sessions
+router.post('/logout-all', async (req, res) => {
+  const { userId } = req.body || {};
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'userId required' });
+  }
+  
+  try {
+    const count = await logoutAllSessions(userId);
+    res.json({ success: true, sessionsRevoked: count });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/auth/sessions/:userId - Get user's active sessions
+router.get('/sessions/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const sessions = await getUserSessions(userId);
+    res.json({ sessions, count: sessions.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get sessions' });
+  }
+});
+
+// POST /api/auth/forgot-password - Request password reset
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body || {};
+  
+  if (!email) {
+    return res.status(400).json({ error: 'email required' });
+  }
+  
+  try {
+    const result = await requestPasswordReset(
+      email,
+      req.ip,
+      req.headers['user-agent']
+    );
+    // In production, don't return the token - send via email
+    res.json({ success: true, message: 'Reset link sent if email exists', ...result });
+  } catch (e: any) {
+    // Always return success to prevent email enumeration
+    res.json({ success: true, message: 'Reset link sent if email exists' });
+  }
+});
+
+// POST /api/auth/reset-password - Reset password with token
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body || {};
+  
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'token and newPassword required' });
+  }
+  
+  try {
+    await resetPassword(token, newPassword);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/auth/profile/:userId - Get user profile
+router.get('/profile/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const profile = await getUserProfile(userId);
+    if (!profile) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ profile });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get profile' });
+  }
+});
+
+// PUT /api/auth/profile/:userId - Update user profile
+router.put('/profile/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const profile = await updateUserProfile(userId, {
+      displayName: b.displayName,
+      avatarUrl: b.avatarUrl,
+      bio: b.bio,
+      timezone: b.timezone,
+      locale: b.locale,
+      preferences: b.preferences,
+      notificationSettings: b.notificationSettings
+    });
+    
+    res.json({ profile });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/auth/change-password - Change password (logged in)
+router.post('/change-password', async (req, res) => {
+  const { userId, currentPassword, newPassword } = req.body || {};
+  
+  if (!userId || !currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'userId, currentPassword, newPassword required' });
+  }
+  
+  try {
+    await changePassword(userId, currentPassword, newPassword);
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import authRoutes from './routes/auth';
+
+// Add with other routes
+app.use('/api/auth', authRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- UserProfile, InsertUserProfile
+- AuthSession, InsertAuthSession
+- PasswordReset, InsertPasswordReset
+
+## Deliverables
+- [ ] Migration 096_user_profiles.sql
+- [ ] cc_user_profiles table with RLS
+- [ ] cc_auth_sessions table with RLS
+- [ ] cc_password_resets table with RLS
+- [ ] server/services/authService.ts
+- [ ] server/routes/auth.ts
+- [ ] Routes registered in server/index.ts
+- [ ] API Endpoints:
+  - POST /register - Create account
+  - POST /login - Login with email/password
+  - POST /validate - Validate session token
+  - POST /refresh - Refresh expired token
+  - POST /logout - Logout current session
+  - POST /logout-all - Logout all sessions
+  - GET /sessions/:userId - List active sessions
+  - POST /forgot-password - Request reset
+  - POST /reset-password - Reset with token
+  - GET /profile/:userId - Get profile
+  - PUT /profile/:userId - Update profile
+  - POST /change-password - Change password
+- [ ] Password hashing with PBKDF2 (100k iterations, SHA-512)
+- [ ] Token hashing with SHA-256
+- [ ] Session tokens expire in 24 hours
+- [ ] Refresh tokens expire in 30 days
+- [ ] Password reset tokens expire in 1 hour
+- [ ] Logout all sessions when password reset
+- [ ] Test: Register → login → validate → logout
+- [ ] Test: Forgot password → reset → old sessions revoked
+
+Report with user registration and session management working.

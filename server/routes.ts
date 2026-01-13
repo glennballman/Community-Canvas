@@ -71,6 +71,7 @@ import enforcementRouter from "./routes/enforcement";
 import citationRouter from "./routes/citations";
 import identityRouter from "./routes/identity";
 import dashboardRouter from "./routes/dashboard";
+import authAccountsRouter from "./routes/authAccounts";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -225,6 +226,9 @@ export async function registerRoutes(
 
   // Register operator dashboard routes
   app.use('/api/dashboard', dashboardRouter);
+
+  // Register auth accounts routes (new user profiles + sessions system)
+  app.use('/api/auth-accounts', authAccountsRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);
