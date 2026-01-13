@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { eq, and, gte, lte, asc, desc, sql, or, ne } from 'drizzle-orm';
+import { eq, and, gte, lte, asc, desc, sql, or, ne, inArray } from 'drizzle-orm';
 import {
   ccPortals, ccProperties, ccUnits, ccPmsReservations,
   ccHousekeepingTasks, ccMaintenanceRequests, ccComplianceChecks,
@@ -7,6 +7,29 @@ import {
   ccTransportRequests, ccFreightManifests, ccTransportAlerts,
   ccVerifiedIdentities
 } from '@shared/schema';
+
+async function getPortalScopedProperty(propertyId: string, portalId: string) {
+  return await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, propertyId),
+      eq(ccProperties.portalId, portalId)
+    )
+  });
+}
+
+async function getPortalScopedUnit(unitId: string, portalId: string) {
+  const unit = await db.query.ccUnits.findFirst({
+    where: eq(ccUnits.id, unitId)
+  });
+  if (!unit) return null;
+  const property = await db.query.ccProperties.findFirst({
+    where: and(
+      eq(ccProperties.id, unit.propertyId),
+      eq(ccProperties.portalId, portalId)
+    )
+  });
+  return property ? unit : null;
+}
 
 interface DashboardSummary {
   date: string;
@@ -354,12 +377,8 @@ export async function getArrivalsBoard(
   });
   
   const enriched = await Promise.all(arrivals.map(async (r) => {
-    const property = await db.query.ccProperties.findFirst({
-      where: eq(ccProperties.id, r.propertyId)
-    });
-    const unit = await db.query.ccUnits.findFirst({
-      where: eq(ccUnits.id, r.unitId)
-    });
+    const property = await getPortalScopedProperty(r.propertyId, portal.id);
+    const unit = await getPortalScopedUnit(r.unitId, portal.id);
     
     return {
       reservation: {
@@ -407,15 +426,12 @@ export async function getDeparturesBoard(
   });
   
   const enriched = await Promise.all(departures.map(async (r) => {
-    const property = await db.query.ccProperties.findFirst({
-      where: eq(ccProperties.id, r.propertyId)
-    });
-    const unit = await db.query.ccUnits.findFirst({
-      where: eq(ccUnits.id, r.unitId)
-    });
+    const property = await getPortalScopedProperty(r.propertyId, portal.id);
+    const unit = await getPortalScopedUnit(r.unitId, portal.id);
     
     const housekeeping = await db.query.ccHousekeepingTasks.findFirst({
       where: and(
+        eq(ccHousekeepingTasks.portalId, portal.id),
         eq(ccHousekeepingTasks.unitId, r.unitId),
         sql`${ccHousekeepingTasks.scheduledDate}::date = ${dateStr}::date`
       )
@@ -468,17 +484,16 @@ export async function getHousekeepingBoard(
   });
   
   const enriched = await Promise.all(tasks.map(async (t) => {
-    const property = await db.query.ccProperties.findFirst({
-      where: eq(ccProperties.id, t.propertyId)
-    });
-    const unit = await db.query.ccUnits.findFirst({
-      where: eq(ccUnits.id, t.unitId)
-    });
+    const property = await getPortalScopedProperty(t.propertyId, portal.id);
+    const unit = await getPortalScopedUnit(t.unitId, portal.id);
     
     let nextArrival = null;
     if (t.checkinReservationId) {
       const reservation = await db.query.ccPmsReservations.findFirst({
-        where: eq(ccPmsReservations.id, t.checkinReservationId)
+        where: and(
+          eq(ccPmsReservations.id, t.checkinReservationId),
+          eq(ccPmsReservations.portalId, portal.id)
+        )
       });
       if (reservation) {
         nextArrival = {
@@ -536,14 +551,10 @@ export async function getMaintenanceBoard(
   });
   
   const enriched = await Promise.all(requests.map(async (r) => {
-    const property = await db.query.ccProperties.findFirst({
-      where: eq(ccProperties.id, r.propertyId)
-    });
+    const property = await getPortalScopedProperty(r.propertyId, portal.id);
     let unit = null;
     if (r.unitId) {
-      unit = await db.query.ccUnits.findFirst({
-        where: eq(ccUnits.id, r.unitId)
-      });
+      unit = await getPortalScopedUnit(r.unitId, portal.id);
     }
     
     const ageHours = r.createdAt 
@@ -594,7 +605,7 @@ export async function getTransportBoard(
   
   const sailings = await db.query.ccSailings.findMany({
     where: and(
-      sql`${ccSailings.operatorId} = ANY(ARRAY[${sql.raw(operatorIds.map(id => `'${id}'`).join(','))}]::uuid[])`,
+      inArray(ccSailings.operatorId, operatorIds),
       sql`${ccSailings.sailingDate}::date = ${dateStr}::date`
     ),
     orderBy: [asc(ccSailings.scheduledDeparture)]
@@ -670,9 +681,7 @@ export async function getIncidentsBoard(
   const enriched = await Promise.all(incidents.map(async (i) => {
     let property = null;
     if (i.propertyId) {
-      property = await db.query.ccProperties.findFirst({
-        where: eq(ccProperties.id, i.propertyId)
-      });
+      property = await getPortalScopedProperty(i.propertyId, portal.id);
     }
     
     const hoursSince = Math.round((Date.now() - i.incidentAt.getTime()) / (1000 * 60 * 60));
