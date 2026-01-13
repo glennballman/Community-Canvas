@@ -3542,3 +3542,207 @@ export const insertPermissionSchema = createInsertSchema(ccPermissions).omit({
 });
 export type Permission = typeof ccPermissions.$inferSelect;
 export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+
+// ============================================================================
+// OPERATOR APPLICATIONS
+// ============================================================================
+
+export const ccOperatorApplications = pgTable('cc_operator_applications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id').notNull().references(() => ccPortals.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => ccUserProfiles.id, { onDelete: 'cascade' }),
+  
+  applicationNumber: varchar('application_number', { length: 20 }).notNull().unique(),
+  
+  operatorType: varchar('operator_type').notNull(),
+  
+  businessName: text('business_name').notNull(),
+  businessLegalName: text('business_legal_name'),
+  businessNumber: text('business_number'),
+  gstNumber: text('gst_number'),
+  pstNumber: text('pst_number'),
+  
+  businessStructure: varchar('business_structure'),
+  
+  contactName: text('contact_name').notNull(),
+  contactEmail: text('contact_email').notNull(),
+  contactPhone: text('contact_phone'),
+  
+  businessAddressLine1: text('business_address_line1'),
+  businessAddressLine2: text('business_address_line2'),
+  businessCity: varchar('business_city', { length: 100 }),
+  businessProvince: varchar('business_province', { length: 50 }).default('BC'),
+  businessPostalCode: varchar('business_postal_code', { length: 20 }),
+  
+  businessDescription: text('business_description'),
+  servicesOffered: text('services_offered').array(),
+  serviceAreas: text('service_areas').array(),
+  
+  yearsInBusiness: integer('years_in_business'),
+  employeeCount: integer('employee_count'),
+  seasonalOperation: boolean('seasonal_operation').default(false),
+  operatingMonths: integer('operating_months').array(),
+  
+  businessLicenseNumber: text('business_license_number'),
+  businessLicenseExpiry: date('business_license_expiry'),
+  insuranceProvider: text('insurance_provider'),
+  insurancePolicyNumber: text('insurance_policy_number'),
+  insuranceExpiry: date('insurance_expiry'),
+  liabilityCoverageAmount: numeric('liability_coverage_amount', { precision: 12, scale: 2 }),
+  
+  transportLicense: text('transport_license'),
+  foodSafeCertificate: text('food_safe_certificate'),
+  guideCertification: text('guide_certification'),
+  worksafeAccount: text('worksafe_account'),
+  
+  documentsJson: jsonb('documents_json').default([]),
+  referencesJson: jsonb('references_json').default([]),
+  
+  status: varchar('status').default('draft'),
+  
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  reviewedBy: uuid('reviewed_by').references(() => ccUserProfiles.id),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  reviewNotes: text('review_notes'),
+  
+  rejectionReason: text('rejection_reason'),
+  
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  approvedBy: uuid('approved_by').references(() => ccUserProfiles.id),
+  
+  termsAccepted: boolean('terms_accepted').default(false),
+  termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
+  codeOfConductAccepted: boolean('code_of_conduct_accepted').default(false),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertOperatorApplicationSchema = createInsertSchema(ccOperatorApplications).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type OperatorApplication = typeof ccOperatorApplications.$inferSelect;
+export type InsertOperatorApplication = z.infer<typeof insertOperatorApplicationSchema>;
+
+// ============================================================================
+// OPERATORS
+// ============================================================================
+
+export const ccOperators = pgTable('cc_operators', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id').notNull().references(() => ccPortals.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => ccUserProfiles.id),
+  applicationId: uuid('application_id').references(() => ccOperatorApplications.id),
+  identityId: uuid('identity_id').references(() => ccVerifiedIdentities.id),
+  tenantId: uuid('tenant_id').references(() => ccTenants.id),
+  
+  operatorNumber: varchar('operator_number', { length: 20 }).notNull().unique(),
+  
+  operatorType: varchar('operator_type').notNull(),
+  operatorSubtypes: text('operator_subtypes').array(),
+  
+  businessName: text('business_name').notNull(),
+  businessLegalName: text('business_legal_name'),
+  businessNumber: text('business_number'),
+  gstNumber: text('gst_number'),
+  
+  contactName: text('contact_name').notNull(),
+  contactEmail: text('contact_email').notNull(),
+  contactPhone: text('contact_phone'),
+  websiteUrl: text('website_url'),
+  
+  businessAddressJson: jsonb('business_address_json'),
+  
+  description: text('description'),
+  tagline: varchar('tagline', { length: 200 }),
+  logoUrl: text('logo_url'),
+  coverPhotoUrl: text('cover_photo_url'),
+  photosJson: jsonb('photos_json').default([]),
+  
+  servicesOffered: text('services_offered').array(),
+  serviceAreas: text('service_areas').array(),
+  amenities: text('amenities').array(),
+  
+  seasonalOperation: boolean('seasonal_operation').default(false),
+  operatingMonths: integer('operating_months').array(),
+  operatingHoursJson: jsonb('operating_hours_json'),
+  
+  employeeCount: integer('employee_count'),
+  
+  businessLicenseNumber: text('business_license_number'),
+  businessLicenseExpiry: date('business_license_expiry'),
+  insuranceExpiry: date('insurance_expiry'),
+  liabilityCoverageAmount: numeric('liability_coverage_amount', { precision: 12, scale: 2 }),
+  
+  verificationStatus: varchar('verification_status').default('pending'),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  verificationExpiresAt: timestamp('verification_expires_at', { withTimezone: true }),
+  lastComplianceCheck: date('last_compliance_check'),
+  
+  ratingAverage: numeric('rating_average', { precision: 3, scale: 2 }).default('0'),
+  ratingCount: integer('rating_count').default(0),
+  
+  status: varchar('status').default('active'),
+  
+  featured: boolean('featured').default(false),
+  acceptsOnlineBooking: boolean('accepts_online_booking').default(true),
+  instantConfirmation: boolean('instant_confirmation').default(false),
+  
+  commissionRatePercent: numeric('commission_rate_percent', { precision: 5, scale: 2 }).default('10.00'),
+  payoutMethod: varchar('payout_method').default('bank_transfer'),
+  payoutDetailsJson: jsonb('payout_details_json'),
+  
+  onboardingCompleted: boolean('onboarding_completed').default(false),
+  onboardingCompletedAt: timestamp('onboarding_completed_at', { withTimezone: true }),
+  
+  internalNotes: text('internal_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertOperatorSchema = createInsertSchema(ccOperators).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type Operator = typeof ccOperators.$inferSelect;
+export type InsertOperator = z.infer<typeof insertOperatorSchema>;
+
+// ============================================================================
+// OPERATOR DOCUMENTS
+// ============================================================================
+
+export const ccOperatorDocuments = pgTable('cc_operator_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  operatorId: uuid('operator_id').notNull().references(() => ccOperators.id, { onDelete: 'cascade' }),
+  
+  documentType: varchar('document_type').notNull(),
+  
+  documentName: text('document_name').notNull(),
+  documentNumber: text('document_number'),
+  
+  fileUrl: text('file_url').notNull(),
+  fileType: varchar('file_type', { length: 20 }),
+  fileSizeBytes: integer('file_size_bytes'),
+  
+  issueDate: date('issue_date'),
+  expiryDate: date('expiry_date'),
+  
+  verificationStatus: varchar('verification_status').default('pending'),
+  verifiedBy: uuid('verified_by').references(() => ccUserProfiles.id),
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
+  rejectionReason: text('rejection_reason'),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertOperatorDocumentSchema = createInsertSchema(ccOperatorDocuments).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type OperatorDocument = typeof ccOperatorDocuments.$inferSelect;
+export type InsertOperatorDocument = z.infer<typeof insertOperatorDocumentSchema>;

@@ -1,0 +1,1370 @@
+**PHASE 5 - PROMPT 23: Operator Onboarding**
+
+Create the business operator registration system with verification workflow and operator types.
+
+## Migration 098_operators.sql
+```sql
+BEGIN;
+
+-- ============ OPERATOR APPLICATIONS ============
+-- Business operator registration applications
+
+CREATE TABLE IF NOT EXISTS cc_operator_applications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid NOT NULL REFERENCES cc_portals(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES cc_user_profiles(id) ON DELETE CASCADE,
+  
+  -- Application number
+  application_number varchar(20) NOT NULL UNIQUE,
+  -- Format: OPA-YYMMDD-XXXX
+  
+  -- Operator type
+  operator_type varchar NOT NULL CHECK (operator_type IN (
+    'accommodation',     -- Lodging provider
+    'transport',         -- Transport operator
+    'tour',              -- Tour operator
+    'rental',            -- Equipment rental
+    'food_beverage',     -- Restaurant/cafe
+    'retail',            -- Retail shop
+    'service',           -- Service provider
+    'contractor',        -- Contractor/tradesperson
+    'guide',             -- Licensed guide
+    'artisan',           -- Artisan/craftsperson
+    'other'
+  )),
+  
+  -- Business info
+  business_name text NOT NULL,
+  business_legal_name text,
+  business_number text,  -- BC business number
+  gst_number text,
+  pst_number text,
+  
+  -- Business type
+  business_structure varchar CHECK (business_structure IN (
+    'sole_proprietor', 'partnership', 'corporation', 
+    'cooperative', 'nonprofit', 'first_nations'
+  )),
+  
+  -- Contact
+  contact_name text NOT NULL,
+  contact_email text NOT NULL,
+  contact_phone text,
+  
+  -- Address
+  business_address_line1 text,
+  business_address_line2 text,
+  business_city varchar(100),
+  business_province varchar(50) DEFAULT 'BC',
+  business_postal_code varchar(20),
+  
+  -- Description
+  business_description text,
+  services_offered text[],
+  service_areas text[],  -- Geographic areas served
+  
+  -- Capacity
+  years_in_business integer,
+  employee_count integer,
+  seasonal_operation boolean DEFAULT false,
+  operating_months integer[],  -- [5,6,7,8,9] for May-Sep
+  
+  -- Licensing
+  business_license_number text,
+  business_license_expiry date,
+  insurance_provider text,
+  insurance_policy_number text,
+  insurance_expiry date,
+  liability_coverage_amount numeric(12,2),
+  
+  -- For specific operator types
+  transport_license text,  -- Transport operators
+  food_safe_certificate text,  -- Food service
+  guide_certification text,  -- Guides
+  worksafe_account text,  -- Contractors
+  
+  -- Documents
+  documents_json jsonb DEFAULT '[]'::jsonb,
+  -- [{type: 'business_license', url: '...', verified: false}]
+  
+  -- References
+  references_json jsonb DEFAULT '[]'::jsonb,
+  -- [{name: '...', phone: '...', relationship: '...'}]
+  
+  -- Application status
+  status varchar DEFAULT 'draft' CHECK (status IN (
+    'draft',           -- Not yet submitted
+    'submitted',       -- Awaiting review
+    'under_review',    -- Being reviewed
+    'info_requested',  -- Additional info needed
+    'approved',        -- Approved
+    'rejected',        -- Rejected
+    'withdrawn'        -- Withdrawn by applicant
+  )),
+  
+  -- Review
+  submitted_at timestamptz,
+  reviewed_by uuid REFERENCES cc_user_profiles(id),
+  reviewed_at timestamptz,
+  review_notes text,
+  
+  -- If rejected
+  rejection_reason text,
+  
+  -- If approved
+  approved_at timestamptz,
+  approved_by uuid REFERENCES cc_user_profiles(id),
+  
+  -- Terms
+  terms_accepted boolean DEFAULT false,
+  terms_accepted_at timestamptz,
+  code_of_conduct_accepted boolean DEFAULT false,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_operator_apps_portal ON cc_operator_applications(portal_id, status);
+CREATE INDEX idx_operator_apps_user ON cc_operator_applications(user_id);
+CREATE INDEX idx_operator_apps_type ON cc_operator_applications(operator_type, status);
+CREATE INDEX idx_operator_apps_number ON cc_operator_applications(application_number);
+
+ALTER TABLE cc_operator_applications ENABLE ROW LEVEL SECURITY;
+
+-- ============ OPERATORS ============
+-- Approved business operators
+
+CREATE TABLE IF NOT EXISTS cc_operators (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid NOT NULL REFERENCES cc_portals(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES cc_user_profiles(id),
+  application_id uuid REFERENCES cc_operator_applications(id),
+  identity_id uuid REFERENCES cc_verified_identities(id),
+  tenant_id uuid REFERENCES cc_tenants(id),
+  
+  -- Operator number
+  operator_number varchar(20) NOT NULL UNIQUE,
+  -- Format: OPR-TYPE-YYMMDD-XXXX (e.g., OPR-ACC-260113-A7K9)
+  
+  -- Type
+  operator_type varchar NOT NULL,
+  operator_subtypes text[],  -- Additional categories
+  
+  -- Business info (copied from approved application)
+  business_name text NOT NULL,
+  business_legal_name text,
+  business_number text,
+  gst_number text,
+  
+  -- Contact
+  contact_name text NOT NULL,
+  contact_email text NOT NULL,
+  contact_phone text,
+  website_url text,
+  
+  -- Address
+  business_address_json jsonb,
+  
+  -- Profile
+  description text,
+  tagline varchar(200),
+  logo_url text,
+  cover_photo_url text,
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  
+  -- Services
+  services_offered text[],
+  service_areas text[],
+  amenities text[],
+  
+  -- Operation
+  seasonal_operation boolean DEFAULT false,
+  operating_months integer[],
+  operating_hours_json jsonb,
+  -- {monday: {open: '09:00', close: '17:00'}, ...}
+  
+  -- Capacity
+  employee_count integer,
+  
+  -- Compliance
+  business_license_number text,
+  business_license_expiry date,
+  insurance_expiry date,
+  liability_coverage_amount numeric(12,2),
+  
+  -- Verification
+  verification_status varchar DEFAULT 'pending' CHECK (verification_status IN (
+    'pending', 'verified', 'expired', 'suspended', 'revoked'
+  )),
+  verified_at timestamptz,
+  verification_expires_at timestamptz,
+  last_compliance_check date,
+  
+  -- Rating
+  rating_average numeric(3,2) DEFAULT 0,
+  rating_count integer DEFAULT 0,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN (
+    'pending',         -- Awaiting setup completion
+    'active',          -- Active operator
+    'inactive',        -- Temporarily inactive
+    'suspended',       -- Suspended (compliance issue)
+    'closed'           -- Permanently closed
+  )),
+  
+  -- Flags
+  featured boolean DEFAULT false,
+  accepts_online_booking boolean DEFAULT true,
+  instant_confirmation boolean DEFAULT false,
+  
+  -- Financial
+  commission_rate_percent numeric(5,2) DEFAULT 10.00,
+  payout_method varchar DEFAULT 'bank_transfer',
+  payout_details_json jsonb,
+  
+  -- Onboarding
+  onboarding_completed boolean DEFAULT false,
+  onboarding_completed_at timestamptz,
+  
+  -- Notes
+  internal_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_operators_portal ON cc_operators(portal_id, status);
+CREATE INDEX idx_operators_user ON cc_operators(user_id);
+CREATE INDEX idx_operators_type ON cc_operators(operator_type, status);
+CREATE INDEX idx_operators_number ON cc_operators(operator_number);
+CREATE INDEX idx_operators_verification ON cc_operators(verification_status, verification_expires_at);
+
+ALTER TABLE cc_operators ENABLE ROW LEVEL SECURITY;
+
+-- ============ OPERATOR DOCUMENTS ============
+-- Document storage and verification
+
+CREATE TABLE IF NOT EXISTS cc_operator_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  operator_id uuid NOT NULL REFERENCES cc_operators(id) ON DELETE CASCADE,
+  
+  -- Document info
+  document_type varchar NOT NULL CHECK (document_type IN (
+    'business_license',
+    'insurance_certificate',
+    'gst_registration',
+    'food_safe',
+    'transport_license',
+    'guide_certification',
+    'worksafe_registration',
+    'first_nations_permit',
+    'environmental_permit',
+    'health_inspection',
+    'safety_certification',
+    'other'
+  )),
+  
+  document_name text NOT NULL,
+  document_number text,
+  
+  -- File
+  file_url text NOT NULL,
+  file_type varchar(20),
+  file_size_bytes integer,
+  
+  -- Dates
+  issue_date date,
+  expiry_date date,
+  
+  -- Verification
+  verification_status varchar DEFAULT 'pending' CHECK (verification_status IN (
+    'pending', 'verified', 'rejected', 'expired'
+  )),
+  verified_by uuid REFERENCES cc_user_profiles(id),
+  verified_at timestamptz,
+  rejection_reason text,
+  
+  -- Notes
+  notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_operator_docs_operator ON cc_operator_documents(operator_id);
+CREATE INDEX idx_operator_docs_type ON cc_operator_documents(document_type, verification_status);
+CREATE INDEX idx_operator_docs_expiry ON cc_operator_documents(expiry_date) WHERE expiry_date IS NOT NULL;
+
+ALTER TABLE cc_operator_documents ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/operatorService.ts
+```typescript
+// server/services/operatorService.ts
+
+import { db } from '../db';
+import { eq, and, or, desc, asc, lte } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { logActivity } from './activityService';
+import { assignRoleToUser } from './roleService';
+
+// ============ TYPES ============
+
+interface CreateApplicationRequest {
+  portalSlug: string;
+  userId: string;
+  operatorType: string;
+  businessName: string;
+  businessLegalName?: string;
+  businessNumber?: string;
+  gstNumber?: string;
+  businessStructure?: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  businessAddress?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+  };
+  businessDescription?: string;
+  servicesOffered?: string[];
+  serviceAreas?: string[];
+  yearsInBusiness?: number;
+  employeeCount?: number;
+  seasonalOperation?: boolean;
+  operatingMonths?: number[];
+}
+
+// ============ HELPERS ============
+
+function generateApplicationNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `OPA-${dateStr}-${suffix}`;
+}
+
+function generateOperatorNumber(operatorType: string): string {
+  const typeCode = operatorType.substring(0, 3).toUpperCase();
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `OPR-${typeCode}-${dateStr}-${suffix}`;
+}
+
+// ============ APPLICATION FUNCTIONS ============
+
+export async function createApplication(req: CreateApplicationRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Verify user exists
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, req.userId)
+  });
+  
+  if (!user) throw new Error('User not found');
+  
+  // Check for existing pending application
+  const existing = await db.query.ccOperatorApplications.findFirst({
+    where: and(
+      eq(ccOperatorApplications.portalId, portal.id),
+      eq(ccOperatorApplications.userId, req.userId),
+      or(
+        eq(ccOperatorApplications.status, 'draft'),
+        eq(ccOperatorApplications.status, 'submitted'),
+        eq(ccOperatorApplications.status, 'under_review')
+      )
+    )
+  });
+  
+  if (existing) {
+    throw new Error('You already have a pending application');
+  }
+  
+  const applicationNumber = generateApplicationNumber();
+  
+  const [application] = await db.insert(ccOperatorApplications).values({
+    portalId: portal.id,
+    userId: req.userId,
+    applicationNumber,
+    operatorType: req.operatorType,
+    businessName: req.businessName,
+    businessLegalName: req.businessLegalName,
+    businessNumber: req.businessNumber,
+    gstNumber: req.gstNumber,
+    businessStructure: req.businessStructure,
+    contactName: req.contactName,
+    contactEmail: req.contactEmail,
+    contactPhone: req.contactPhone,
+    businessAddressLine1: req.businessAddress?.line1,
+    businessAddressLine2: req.businessAddress?.line2,
+    businessCity: req.businessAddress?.city,
+    businessProvince: req.businessAddress?.province || 'BC',
+    businessPostalCode: req.businessAddress?.postalCode,
+    businessDescription: req.businessDescription,
+    servicesOffered: req.servicesOffered,
+    serviceAreas: req.serviceAreas,
+    yearsInBusiness: req.yearsInBusiness,
+    employeeCount: req.employeeCount,
+    seasonalOperation: req.seasonalOperation,
+    operatingMonths: req.operatingMonths,
+    status: 'draft'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.userId,
+    action: 'operator.application_created',
+    resourceType: 'operator_application',
+    resourceId: application.id,
+    metadata: { applicationNumber, operatorType: req.operatorType }
+  });
+  
+  return application;
+}
+
+export async function getApplication(
+  portalSlug: string,
+  applicationId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const application = await db.query.ccOperatorApplications.findFirst({
+    where: and(
+      eq(ccOperatorApplications.id, applicationId),
+      eq(ccOperatorApplications.portalId, portal.id)
+    )
+  });
+  
+  if (!application) return null;
+  
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, application.userId)
+  });
+  
+  return { application, user: user ? { id: user.id, displayName: user.displayName, email: user.email } : null };
+}
+
+export async function getUserApplications(
+  portalSlug: string,
+  userId: string
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  return db.query.ccOperatorApplications.findMany({
+    where: and(
+      eq(ccOperatorApplications.portalId, portal.id),
+      eq(ccOperatorApplications.userId, userId)
+    ),
+    orderBy: [desc(ccOperatorApplications.createdAt)]
+  });
+}
+
+export async function searchApplications(
+  portalSlug: string,
+  options?: {
+    status?: string;
+    operatorType?: string;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccOperatorApplications.portalId, portal.id)];
+  
+  if (options?.status) {
+    conditions.push(eq(ccOperatorApplications.status, options.status));
+  }
+  
+  if (options?.operatorType) {
+    conditions.push(eq(ccOperatorApplications.operatorType, options.operatorType));
+  }
+  
+  return db.query.ccOperatorApplications.findMany({
+    where: and(...conditions),
+    orderBy: [desc(ccOperatorApplications.submittedAt), desc(ccOperatorApplications.createdAt)],
+    limit: options?.limit || 50
+  });
+}
+
+export async function updateApplication(
+  portalSlug: string,
+  applicationId: string,
+  data: Partial<CreateApplicationRequest>
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const application = await db.query.ccOperatorApplications.findFirst({
+    where: and(
+      eq(ccOperatorApplications.id, applicationId),
+      eq(ccOperatorApplications.portalId, portal.id)
+    )
+  });
+  
+  if (!application) throw new Error('Application not found');
+  
+  if (!['draft', 'info_requested'].includes(application.status)) {
+    throw new Error('Cannot update application in current status');
+  }
+  
+  const updates: Record<string, any> = { updatedAt: new Date() };
+  
+  if (data.businessName) updates.businessName = data.businessName;
+  if (data.businessLegalName !== undefined) updates.businessLegalName = data.businessLegalName;
+  if (data.businessNumber !== undefined) updates.businessNumber = data.businessNumber;
+  if (data.gstNumber !== undefined) updates.gstNumber = data.gstNumber;
+  if (data.businessStructure !== undefined) updates.businessStructure = data.businessStructure;
+  if (data.contactName) updates.contactName = data.contactName;
+  if (data.contactEmail) updates.contactEmail = data.contactEmail;
+  if (data.contactPhone !== undefined) updates.contactPhone = data.contactPhone;
+  if (data.businessAddress) {
+    if (data.businessAddress.line1 !== undefined) updates.businessAddressLine1 = data.businessAddress.line1;
+    if (data.businessAddress.line2 !== undefined) updates.businessAddressLine2 = data.businessAddress.line2;
+    if (data.businessAddress.city !== undefined) updates.businessCity = data.businessAddress.city;
+    if (data.businessAddress.province !== undefined) updates.businessProvince = data.businessAddress.province;
+    if (data.businessAddress.postalCode !== undefined) updates.businessPostalCode = data.businessAddress.postalCode;
+  }
+  if (data.businessDescription !== undefined) updates.businessDescription = data.businessDescription;
+  if (data.servicesOffered !== undefined) updates.servicesOffered = data.servicesOffered;
+  if (data.serviceAreas !== undefined) updates.serviceAreas = data.serviceAreas;
+  if (data.yearsInBusiness !== undefined) updates.yearsInBusiness = data.yearsInBusiness;
+  if (data.employeeCount !== undefined) updates.employeeCount = data.employeeCount;
+  if (data.seasonalOperation !== undefined) updates.seasonalOperation = data.seasonalOperation;
+  if (data.operatingMonths !== undefined) updates.operatingMonths = data.operatingMonths;
+  
+  const [updated] = await db.update(ccOperatorApplications)
+    .set(updates)
+    .where(eq(ccOperatorApplications.id, applicationId))
+    .returning();
+  
+  return updated;
+}
+
+export async function submitApplication(
+  portalSlug: string,
+  applicationId: string,
+  termsAccepted: boolean,
+  codeOfConductAccepted: boolean
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  if (!termsAccepted || !codeOfConductAccepted) {
+    throw new Error('You must accept the terms and code of conduct');
+  }
+  
+  const [updated] = await db.update(ccOperatorApplications)
+    .set({
+      status: 'submitted',
+      submittedAt: new Date(),
+      termsAccepted: true,
+      termsAcceptedAt: new Date(),
+      codeOfConductAccepted: true,
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccOperatorApplications.id, applicationId),
+      eq(ccOperatorApplications.portalId, portal.id),
+      eq(ccOperatorApplications.status, 'draft')
+    ))
+    .returning();
+  
+  if (!updated) throw new Error('Application not found or already submitted');
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: updated.userId,
+    action: 'operator.application_submitted',
+    resourceType: 'operator_application',
+    resourceId: applicationId,
+    metadata: { applicationNumber: updated.applicationNumber }
+  });
+  
+  return updated;
+}
+
+export async function reviewApplication(
+  portalSlug: string,
+  applicationId: string,
+  reviewerId: string,
+  action: 'approve' | 'reject' | 'request_info',
+  notes?: string,
+  rejectionReason?: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const application = await db.query.ccOperatorApplications.findFirst({
+    where: and(
+      eq(ccOperatorApplications.id, applicationId),
+      eq(ccOperatorApplications.portalId, portal.id)
+    )
+  });
+  
+  if (!application) throw new Error('Application not found');
+  
+  const updates: Record<string, any> = {
+    reviewedBy: reviewerId,
+    reviewedAt: new Date(),
+    reviewNotes: notes,
+    updatedAt: new Date()
+  };
+  
+  if (action === 'approve') {
+    updates.status = 'approved';
+    updates.approvedAt = new Date();
+    updates.approvedBy = reviewerId;
+  } else if (action === 'reject') {
+    updates.status = 'rejected';
+    updates.rejectionReason = rejectionReason;
+  } else if (action === 'request_info') {
+    updates.status = 'info_requested';
+  }
+  
+  const [updated] = await db.update(ccOperatorApplications)
+    .set(updates)
+    .where(eq(ccOperatorApplications.id, applicationId))
+    .returning();
+  
+  // If approved, create the operator record
+  let operator = null;
+  if (action === 'approve') {
+    operator = await createOperatorFromApplication(portalSlug, updated);
+  }
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: reviewerId,
+    action: `operator.application_${action}`,
+    resourceType: 'operator_application',
+    resourceId: applicationId,
+    metadata: { applicationNumber: updated.applicationNumber, action }
+  });
+  
+  return { application: updated, operator };
+}
+
+// ============ OPERATOR FUNCTIONS ============
+
+async function createOperatorFromApplication(
+  portalSlug: string,
+  application: any
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const operatorNumber = generateOperatorNumber(application.operatorType);
+  
+  const [operator] = await db.insert(ccOperators).values({
+    portalId: portal.id,
+    userId: application.userId,
+    applicationId: application.id,
+    operatorNumber,
+    operatorType: application.operatorType,
+    businessName: application.businessName,
+    businessLegalName: application.businessLegalName,
+    businessNumber: application.businessNumber,
+    gstNumber: application.gstNumber,
+    contactName: application.contactName,
+    contactEmail: application.contactEmail,
+    contactPhone: application.contactPhone,
+    businessAddressJson: {
+      line1: application.businessAddressLine1,
+      line2: application.businessAddressLine2,
+      city: application.businessCity,
+      province: application.businessProvince,
+      postalCode: application.businessPostalCode
+    },
+    description: application.businessDescription,
+    servicesOffered: application.servicesOffered,
+    serviceAreas: application.serviceAreas,
+    seasonalOperation: application.seasonalOperation,
+    operatingMonths: application.operatingMonths,
+    employeeCount: application.employeeCount,
+    businessLicenseNumber: application.businessLicenseNumber,
+    businessLicenseExpiry: application.businessLicenseExpiry,
+    insuranceExpiry: application.insuranceExpiry,
+    liabilityCoverageAmount: application.liabilityCoverageAmount,
+    verificationStatus: 'pending',
+    status: 'pending'
+  }).returning();
+  
+  // Assign operator role to user
+  try {
+    await assignRoleToUser({
+      userId: application.userId,
+      roleCode: getOperatorRoleCode(application.operatorType),
+      portalSlug
+    });
+  } catch (e) {
+    console.error('Failed to assign operator role:', e);
+  }
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'operator.created',
+    resourceType: 'operator',
+    resourceId: operator.id,
+    metadata: { operatorNumber, operatorType: application.operatorType }
+  });
+  
+  return operator;
+}
+
+function getOperatorRoleCode(operatorType: string): string {
+  switch (operatorType) {
+    case 'accommodation':
+      return 'property_manager';
+    case 'transport':
+      return 'transport_operator';
+    default:
+      return 'guest';  // Basic role, can be upgraded
+  }
+}
+
+export async function getOperator(
+  portalSlug: string,
+  operatorId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const operator = await db.query.ccOperators.findFirst({
+    where: and(
+      eq(ccOperators.id, operatorId),
+      eq(ccOperators.portalId, portal.id)
+    )
+  });
+  
+  if (!operator) return null;
+  
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, operator.userId)
+  });
+  
+  const documents = await db.query.ccOperatorDocuments.findMany({
+    where: eq(ccOperatorDocuments.operatorId, operatorId)
+  });
+  
+  return {
+    operator,
+    user: user ? { id: user.id, displayName: user.displayName, email: user.email } : null,
+    documents
+  };
+}
+
+export async function getOperatorByNumber(
+  portalSlug: string,
+  operatorNumber: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const operator = await db.query.ccOperators.findFirst({
+    where: and(
+      eq(ccOperators.operatorNumber, operatorNumber),
+      eq(ccOperators.portalId, portal.id)
+    )
+  });
+  
+  if (!operator) return null;
+  
+  return getOperator(portalSlug, operator.id);
+}
+
+export async function searchOperators(
+  portalSlug: string,
+  options?: {
+    operatorType?: string;
+    status?: string;
+    verificationStatus?: string;
+    featured?: boolean;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccOperators.portalId, portal.id)];
+  
+  if (options?.operatorType) {
+    conditions.push(eq(ccOperators.operatorType, options.operatorType));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccOperators.status, options.status));
+  }
+  
+  if (options?.verificationStatus) {
+    conditions.push(eq(ccOperators.verificationStatus, options.verificationStatus));
+  }
+  
+  if (options?.featured !== undefined) {
+    conditions.push(eq(ccOperators.featured, options.featured));
+  }
+  
+  return db.query.ccOperators.findMany({
+    where: and(...conditions),
+    orderBy: [desc(ccOperators.featured), desc(ccOperators.ratingAverage), asc(ccOperators.businessName)],
+    limit: options?.limit || 50
+  });
+}
+
+export async function updateOperator(
+  portalSlug: string,
+  operatorId: string,
+  data: {
+    businessName?: string;
+    description?: string;
+    tagline?: string;
+    logoUrl?: string;
+    coverPhotoUrl?: string;
+    websiteUrl?: string;
+    servicesOffered?: string[];
+    serviceAreas?: string[];
+    amenities?: string[];
+    operatingHours?: any;
+    acceptsOnlineBooking?: boolean;
+    instantConfirmation?: boolean;
+    status?: string;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const updates: Record<string, any> = { updatedAt: new Date() };
+  
+  if (data.businessName) updates.businessName = data.businessName;
+  if (data.description !== undefined) updates.description = data.description;
+  if (data.tagline !== undefined) updates.tagline = data.tagline;
+  if (data.logoUrl !== undefined) updates.logoUrl = data.logoUrl;
+  if (data.coverPhotoUrl !== undefined) updates.coverPhotoUrl = data.coverPhotoUrl;
+  if (data.websiteUrl !== undefined) updates.websiteUrl = data.websiteUrl;
+  if (data.servicesOffered !== undefined) updates.servicesOffered = data.servicesOffered;
+  if (data.serviceAreas !== undefined) updates.serviceAreas = data.serviceAreas;
+  if (data.amenities !== undefined) updates.amenities = data.amenities;
+  if (data.operatingHours !== undefined) updates.operatingHoursJson = data.operatingHours;
+  if (data.acceptsOnlineBooking !== undefined) updates.acceptsOnlineBooking = data.acceptsOnlineBooking;
+  if (data.instantConfirmation !== undefined) updates.instantConfirmation = data.instantConfirmation;
+  if (data.status) updates.status = data.status;
+  
+  const [updated] = await db.update(ccOperators)
+    .set(updates)
+    .where(and(
+      eq(ccOperators.id, operatorId),
+      eq(ccOperators.portalId, portal.id)
+    ))
+    .returning();
+  
+  return updated;
+}
+
+export async function verifyOperator(
+  portalSlug: string,
+  operatorId: string,
+  verifiedBy: string
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [updated] = await db.update(ccOperators)
+    .set({
+      verificationStatus: 'verified',
+      verifiedAt: new Date(),
+      verificationExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+      lastComplianceCheck: new Date(),
+      status: 'active',
+      updatedAt: new Date()
+    })
+    .where(and(
+      eq(ccOperators.id, operatorId),
+      eq(ccOperators.portalId, portal.id)
+    ))
+    .returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: verifiedBy,
+    action: 'operator.verified',
+    resourceType: 'operator',
+    resourceId: operatorId,
+    metadata: { operatorNumber: updated.operatorNumber }
+  });
+  
+  return updated;
+}
+
+// ============ DOCUMENT FUNCTIONS ============
+
+export async function addOperatorDocument(
+  operatorId: string,
+  data: {
+    documentType: string;
+    documentName: string;
+    documentNumber?: string;
+    fileUrl: string;
+    fileType?: string;
+    fileSizeBytes?: number;
+    issueDate?: Date;
+    expiryDate?: Date;
+  }
+): Promise<any> {
+  const [document] = await db.insert(ccOperatorDocuments).values({
+    operatorId,
+    documentType: data.documentType,
+    documentName: data.documentName,
+    documentNumber: data.documentNumber,
+    fileUrl: data.fileUrl,
+    fileType: data.fileType,
+    fileSizeBytes: data.fileSizeBytes,
+    issueDate: data.issueDate,
+    expiryDate: data.expiryDate,
+    verificationStatus: 'pending'
+  }).returning();
+  
+  return document;
+}
+
+export async function verifyDocument(
+  documentId: string,
+  verifiedBy: string,
+  approved: boolean,
+  rejectionReason?: string
+): Promise<any> {
+  const [updated] = await db.update(ccOperatorDocuments)
+    .set({
+      verificationStatus: approved ? 'verified' : 'rejected',
+      verifiedBy,
+      verifiedAt: new Date(),
+      rejectionReason: approved ? null : rejectionReason,
+      updatedAt: new Date()
+    })
+    .where(eq(ccOperatorDocuments.id, documentId))
+    .returning();
+  
+  return updated;
+}
+
+export async function getExpiringDocuments(
+  portalSlug: string,
+  daysAhead: number = 30
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const cutoffDate = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000);
+  
+  // Get operators for this portal
+  const operators = await db.query.ccOperators.findMany({
+    where: eq(ccOperators.portalId, portal.id)
+  });
+  
+  const operatorIds = operators.map(o => o.id);
+  
+  if (operatorIds.length === 0) return [];
+  
+  return db.query.ccOperatorDocuments.findMany({
+    where: and(
+      inArray(ccOperatorDocuments.operatorId, operatorIds),
+      lte(ccOperatorDocuments.expiryDate, cutoffDate),
+      eq(ccOperatorDocuments.verificationStatus, 'verified')
+    ),
+    orderBy: [asc(ccOperatorDocuments.expiryDate)]
+  });
+}
+```
+
+## Create server/routes/operators.ts
+```typescript
+// server/routes/operators.ts
+
+import { Router } from 'express';
+import {
+  createApplication, getApplication, getUserApplications, searchApplications,
+  updateApplication, submitApplication, reviewApplication,
+  getOperator, getOperatorByNumber, searchOperators,
+  updateOperator, verifyOperator,
+  addOperatorDocument, verifyDocument, getExpiringDocuments
+} from '../services/operatorService';
+
+const router = Router();
+
+// ============ APPLICATION ENDPOINTS ============
+
+// POST /api/operators/portals/:slug/applications - Create application
+router.post('/portals/:slug/applications', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.userId || !b.operatorType || !b.businessName || !b.contactName || !b.contactEmail) {
+    return res.status(400).json({ 
+      error: 'userId, operatorType, businessName, contactName, contactEmail required' 
+    });
+  }
+  
+  try {
+    const application = await createApplication({
+      portalSlug: slug,
+      userId: b.userId,
+      operatorType: b.operatorType,
+      businessName: b.businessName,
+      businessLegalName: b.businessLegalName,
+      businessNumber: b.businessNumber,
+      gstNumber: b.gstNumber,
+      businessStructure: b.businessStructure,
+      contactName: b.contactName,
+      contactEmail: b.contactEmail,
+      contactPhone: b.contactPhone,
+      businessAddress: b.businessAddress,
+      businessDescription: b.businessDescription,
+      servicesOffered: b.servicesOffered,
+      serviceAreas: b.serviceAreas,
+      yearsInBusiness: b.yearsInBusiness,
+      employeeCount: b.employeeCount,
+      seasonalOperation: b.seasonalOperation,
+      operatingMonths: b.operatingMonths
+    });
+    
+    res.json({ application });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/operators/portals/:slug/applications - Search applications
+router.get('/portals/:slug/applications', async (req, res) => {
+  const { slug } = req.params;
+  const { status, type, limit } = req.query;
+  
+  try {
+    const applications = await searchApplications(slug, {
+      status: status as string,
+      operatorType: type as string,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ applications, count: applications.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search applications' });
+  }
+});
+
+// GET /api/operators/portals/:slug/applications/:id - Get application
+router.get('/portals/:slug/applications/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getApplication(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get application' });
+  }
+});
+
+// GET /api/operators/portals/:slug/users/:userId/applications - Get user's applications
+router.get('/portals/:slug/users/:userId/applications', async (req, res) => {
+  const { slug, userId } = req.params;
+  
+  try {
+    const applications = await getUserApplications(slug, userId);
+    res.json({ applications, count: applications.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get applications' });
+  }
+});
+
+// PUT /api/operators/portals/:slug/applications/:id - Update application
+router.put('/portals/:slug/applications/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const application = await updateApplication(slug, id, b);
+    res.json({ application });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/operators/portals/:slug/applications/:id/submit - Submit application
+router.post('/portals/:slug/applications/:id/submit', async (req, res) => {
+  const { slug, id } = req.params;
+  const { termsAccepted, codeOfConductAccepted } = req.body || {};
+  
+  try {
+    const application = await submitApplication(slug, id, termsAccepted, codeOfConductAccepted);
+    res.json({ application });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/operators/portals/:slug/applications/:id/review - Review application
+router.post('/portals/:slug/applications/:id/review', async (req, res) => {
+  const { slug, id } = req.params;
+  const { reviewerId, action, notes, rejectionReason } = req.body || {};
+  
+  if (!reviewerId || !action) {
+    return res.status(400).json({ error: 'reviewerId and action required' });
+  }
+  
+  if (!['approve', 'reject', 'request_info'].includes(action)) {
+    return res.status(400).json({ error: 'action must be approve, reject, or request_info' });
+  }
+  
+  try {
+    const result = await reviewApplication(slug, id, reviewerId, action, notes, rejectionReason);
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ OPERATOR ENDPOINTS ============
+
+// GET /api/operators/portals/:slug/operators - Search operators
+router.get('/portals/:slug/operators', async (req, res) => {
+  const { slug } = req.params;
+  const { type, status, verification, featured, limit } = req.query;
+  
+  try {
+    const operators = await searchOperators(slug, {
+      operatorType: type as string,
+      status: status as string,
+      verificationStatus: verification as string,
+      featured: featured === 'true' ? true : featured === 'false' ? false : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ operators, count: operators.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search operators' });
+  }
+});
+
+// GET /api/operators/portals/:slug/operators/:id - Get operator
+router.get('/portals/:slug/operators/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getOperator(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Operator not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get operator' });
+  }
+});
+
+// GET /api/operators/portals/:slug/operators/by-number/:number - Get by number
+router.get('/portals/:slug/operators/by-number/:number', async (req, res) => {
+  const { slug, number } = req.params;
+  
+  try {
+    const result = await getOperatorByNumber(slug, number);
+    if (!result) {
+      return res.status(404).json({ error: 'Operator not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get operator' });
+  }
+});
+
+// PUT /api/operators/portals/:slug/operators/:id - Update operator
+router.put('/portals/:slug/operators/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const operator = await updateOperator(slug, id, b);
+    res.json({ operator });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/operators/portals/:slug/operators/:id/verify - Verify operator
+router.post('/portals/:slug/operators/:id/verify', async (req, res) => {
+  const { slug, id } = req.params;
+  const { verifiedBy } = req.body || {};
+  
+  if (!verifiedBy) {
+    return res.status(400).json({ error: 'verifiedBy required' });
+  }
+  
+  try {
+    const operator = await verifyOperator(slug, id, verifiedBy);
+    res.json({ operator });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ DOCUMENT ENDPOINTS ============
+
+// POST /api/operators/operators/:id/documents - Add document
+router.post('/operators/:id/documents', async (req, res) => {
+  const { id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.documentType || !b.documentName || !b.fileUrl) {
+    return res.status(400).json({ error: 'documentType, documentName, fileUrl required' });
+  }
+  
+  try {
+    const document = await addOperatorDocument(id, {
+      documentType: b.documentType,
+      documentName: b.documentName,
+      documentNumber: b.documentNumber,
+      fileUrl: b.fileUrl,
+      fileType: b.fileType,
+      fileSizeBytes: b.fileSizeBytes,
+      issueDate: b.issueDate ? new Date(b.issueDate) : undefined,
+      expiryDate: b.expiryDate ? new Date(b.expiryDate) : undefined
+    });
+    
+    res.json({ document });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/operators/documents/:id/verify - Verify document
+router.post('/documents/:id/verify', async (req, res) => {
+  const { id } = req.params;
+  const { verifiedBy, approved, rejectionReason } = req.body || {};
+  
+  if (!verifiedBy || approved === undefined) {
+    return res.status(400).json({ error: 'verifiedBy and approved required' });
+  }
+  
+  try {
+    const document = await verifyDocument(id, verifiedBy, approved, rejectionReason);
+    res.json({ document });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/operators/portals/:slug/documents/expiring - Get expiring documents
+router.get('/portals/:slug/documents/expiring', async (req, res) => {
+  const { slug } = req.params;
+  const { days } = req.query;
+  
+  try {
+    const documents = await getExpiringDocuments(slug, days ? parseInt(days as string) : 30);
+    res.json({ documents, count: documents.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get expiring documents' });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import operatorRoutes from './routes/operators';
+
+// Add with other routes
+app.use('/api/operators', operatorRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- OperatorApplication, InsertOperatorApplication
+- Operator, InsertOperator
+- OperatorDocument, InsertOperatorDocument
+
+## Deliverables
+- [ ] Migration 098_operators.sql
+- [ ] cc_operator_applications table with RLS
+- [ ] cc_operators table with RLS
+- [ ] cc_operator_documents table with RLS
+- [ ] server/services/operatorService.ts
+- [ ] server/routes/operators.ts
+- [ ] Routes registered in server/index.ts
+- [ ] 11 operator types supported:
+  - accommodation, transport, tour, rental, food_beverage, retail
+  - service, contractor, guide, artisan, other
+- [ ] Application number format: OPA-YYMMDD-XXXX
+- [ ] Operator number format: OPR-TYPE-YYMMDD-XXXX
+- [ ] Application workflow: draft → submitted → under_review → approved/rejected
+- [ ] Approved applications auto-create operator record
+- [ ] Approved operators auto-assigned appropriate role
+- [ ] Document verification workflow
+- [ ] Expiring document alerts
+- [ ] API Endpoints:
+  - Applications: create, search, get, update, submit, review
+  - Operators: search, get, get by number, update, verify
+  - Documents: add, verify, get expiring
+- [ ] Test: Create application → submit → approve → operator created
+- [ ] Test: Add document → verify → status changes
+- [ ] Test: Approval auto-assigns role to user
+
+Report with application approval creating operator and assigning role.
