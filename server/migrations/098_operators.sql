@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS cc_operator_applications (
   
   -- Links
   portal_id uuid NOT NULL REFERENCES cc_portals(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES cc_user_profiles(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES cc_user_profiles(user_id) ON DELETE CASCADE,
   
   -- Application number
   application_number varchar(20) NOT NULL UNIQUE,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS cc_operator_applications (
   
   -- Review
   submitted_at timestamptz,
-  reviewed_by uuid REFERENCES cc_user_profiles(id),
+  reviewed_by uuid REFERENCES cc_user_profiles(user_id),
   reviewed_at timestamptz,
   review_notes text,
   
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS cc_operator_applications (
   
   -- If approved
   approved_at timestamptz,
-  approved_by uuid REFERENCES cc_user_profiles(id),
+  approved_by uuid REFERENCES cc_user_profiles(user_id),
   
   -- Terms
   terms_accepted boolean DEFAULT false,
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS cc_operators (
   
   -- Links
   portal_id uuid NOT NULL REFERENCES cc_portals(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES cc_user_profiles(id),
+  user_id uuid NOT NULL REFERENCES cc_user_profiles(user_id),
   application_id uuid REFERENCES cc_operator_applications(id),
   identity_id uuid REFERENCES cc_verified_identities(id),
   tenant_id uuid REFERENCES cc_tenants(id),
@@ -280,7 +280,7 @@ CREATE TABLE IF NOT EXISTS cc_operator_documents (
   verification_status varchar DEFAULT 'pending' CHECK (verification_status IN (
     'pending', 'verified', 'rejected', 'expired'
   )),
-  verified_by uuid REFERENCES cc_user_profiles(id),
+  verified_by uuid REFERENCES cc_user_profiles(user_id),
   verified_at timestamptz,
   rejection_reason text,
   
