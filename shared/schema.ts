@@ -3447,3 +3447,98 @@ export const insertPasswordResetSchema = createInsertSchema(ccPasswordResets).om
 });
 export type PasswordReset = typeof ccPasswordResets.$inferSelect;
 export type InsertPasswordReset = z.infer<typeof insertPasswordResetSchema>;
+
+// ============================================================================
+// ROLES (RBAC)
+// ============================================================================
+
+export const ccRoles = pgTable('cc_roles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  
+  name: text('name').notNull(),
+  code: varchar('code', { length: 30 }).notNull(),
+  description: text('description'),
+  
+  roleType: varchar('role_type').default('custom'),
+  
+  hierarchyLevel: integer('hierarchy_level').default(0),
+  
+  permissions: text('permissions').array().default([]),
+  
+  color: varchar('color', { length: 20 }),
+  icon: varchar('icon', { length: 50 }),
+  
+  status: varchar('status').default('active'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertRoleSchema = createInsertSchema(ccRoles).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type Role = typeof ccRoles.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+
+// ============================================================================
+// USER ROLES (ASSIGNMENTS)
+// ============================================================================
+
+export const ccUserRoles = pgTable('cc_user_roles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  userId: uuid('user_id').notNull(),
+  roleId: uuid('role_id').notNull(),
+  portalId: uuid('portal_id'),
+  
+  propertyId: uuid('property_id'),
+  
+  assignedBy: uuid('assigned_by'),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }).defaultNow(),
+  
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  
+  status: varchar('status').default('active'),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertUserRoleSchema = createInsertSchema(ccUserRoles).omit({ 
+  id: true, createdAt: true, updatedAt: true, assignedAt: true 
+});
+export type UserRole = typeof ccUserRoles.$inferSelect;
+export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+
+// ============================================================================
+// PERMISSIONS (CATALOG)
+// ============================================================================
+
+export const ccPermissions = pgTable('cc_permissions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description'),
+  
+  category: varchar('category', { length: 30 }).notNull(),
+  
+  resourceType: varchar('resource_type', { length: 50 }),
+  
+  action: varchar('action', { length: 20 }).notNull(),
+  
+  isDangerous: boolean('is_dangerous').default(false),
+  requiresMfa: boolean('requires_mfa').default(false),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertPermissionSchema = createInsertSchema(ccPermissions).omit({ 
+  id: true, createdAt: true 
+});
+export type Permission = typeof ccPermissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;

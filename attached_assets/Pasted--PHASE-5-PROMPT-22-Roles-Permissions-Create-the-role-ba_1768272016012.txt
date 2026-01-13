@@ -1,0 +1,1084 @@
+**PHASE 5 - PROMPT 22: Roles & Permissions**
+
+Create the role-based access control (RBAC) system with role templates, user assignments, and permission checks.
+
+## Migration 097_roles_permissions.sql
+```sql
+BEGIN;
+
+-- ============ ROLES ============
+-- Role definitions with permission sets
+
+CREATE TABLE IF NOT EXISTS cc_roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Scope
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE CASCADE,
+  -- NULL portal_id = system-wide role
+  
+  -- Identity
+  name text NOT NULL,
+  code varchar(30) NOT NULL,
+  description text,
+  
+  -- Type
+  role_type varchar DEFAULT 'custom' CHECK (role_type IN (
+    'system',          -- Built-in system roles (cannot modify)
+    'template',        -- Template roles (can clone)
+    'custom'           -- Custom portal-specific roles
+  )),
+  
+  -- Hierarchy
+  hierarchy_level integer DEFAULT 0,
+  -- Higher = more access (admin=100, manager=50, staff=25, user=10, guest=0)
+  
+  -- Permissions (array of permission codes)
+  permissions text[] DEFAULT ARRAY[]::text[],
+  
+  -- UI
+  color varchar(20),
+  icon varchar(50),
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, code)
+);
+
+CREATE INDEX idx_roles_portal ON cc_roles(portal_id) WHERE portal_id IS NOT NULL;
+CREATE INDEX idx_roles_code ON cc_roles(code);
+CREATE INDEX idx_roles_type ON cc_roles(role_type);
+
+ALTER TABLE cc_roles ENABLE ROW LEVEL SECURITY;
+
+-- ============ USER ROLE ASSIGNMENTS ============
+-- Assign roles to users within portals
+
+CREATE TABLE IF NOT EXISTS cc_user_roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  user_id uuid NOT NULL REFERENCES cc_user_profiles(id) ON DELETE CASCADE,
+  role_id uuid NOT NULL REFERENCES cc_roles(id) ON DELETE CASCADE,
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE CASCADE,
+  
+  -- Scope restrictions (optional)
+  property_id uuid REFERENCES cc_properties(id) ON DELETE CASCADE,
+  -- If set, role only applies to this property
+  
+  -- Assignment info
+  assigned_by uuid REFERENCES cc_user_profiles(id),
+  assigned_at timestamptz DEFAULT now(),
+  
+  -- Expiry (for temporary assignments)
+  expires_at timestamptz,
+  
+  -- Status
+  status varchar DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'expired')),
+  
+  -- Notes
+  notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(user_id, role_id, portal_id, property_id)
+);
+
+CREATE INDEX idx_user_roles_user ON cc_user_roles(user_id, status);
+CREATE INDEX idx_user_roles_portal ON cc_user_roles(portal_id, status);
+CREATE INDEX idx_user_roles_role ON cc_user_roles(role_id);
+CREATE INDEX idx_user_roles_property ON cc_user_roles(property_id) WHERE property_id IS NOT NULL;
+
+ALTER TABLE cc_user_roles ENABLE ROW LEVEL SECURITY;
+
+-- ============ PERMISSION DEFINITIONS ============
+-- Master list of all permissions
+
+CREATE TABLE IF NOT EXISTS cc_permissions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Identity
+  code varchar(50) NOT NULL UNIQUE,
+  name text NOT NULL,
+  description text,
+  
+  -- Grouping
+  category varchar(30) NOT NULL,
+  -- 'portal', 'property', 'reservation', 'transport', 'enforcement', 'identity', 'system'
+  
+  -- Resource type this permission applies to
+  resource_type varchar(50),
+  
+  -- Action type
+  action varchar(20) NOT NULL CHECK (action IN (
+    'view', 'create', 'update', 'delete', 'manage', 'approve', 'execute'
+  )),
+  
+  -- Flags
+  is_dangerous boolean DEFAULT false,  -- Requires extra confirmation
+  requires_mfa boolean DEFAULT false,  -- Requires MFA for this action
+  
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_permissions_category ON cc_permissions(category);
+CREATE INDEX idx_permissions_resource ON cc_permissions(resource_type);
+
+-- ============ SEED SYSTEM ROLES ============
+
+DO $$
+BEGIN
+  -- Super Admin (system-wide)
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Super Admin', 'super_admin', 'Full system access', 'system', 100,
+    ARRAY['*'],  -- Wildcard = all permissions
+    '#dc2626'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Portal Admin
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Portal Admin', 'portal_admin', 'Full portal management', 'template', 90,
+    ARRAY[
+      'portal.manage', 'portal.settings',
+      'users.view', 'users.create', 'users.update', 'users.delete', 'users.roles',
+      'properties.view', 'properties.create', 'properties.update', 'properties.delete',
+      'reservations.view', 'reservations.create', 'reservations.update', 'reservations.delete',
+      'transport.view', 'transport.manage',
+      'enforcement.view', 'enforcement.manage', 'citations.create', 'citations.manage',
+      'identity.view', 'identity.verify',
+      'reports.view', 'reports.export',
+      'billing.view', 'billing.manage'
+    ],
+    '#7c3aed'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Property Manager
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Property Manager', 'property_manager', 'Manage assigned properties', 'template', 50,
+    ARRAY[
+      'properties.view', 'properties.update',
+      'units.view', 'units.update',
+      'reservations.view', 'reservations.create', 'reservations.update',
+      'housekeeping.view', 'housekeeping.create', 'housekeeping.update',
+      'maintenance.view', 'maintenance.create', 'maintenance.update',
+      'guests.view',
+      'reports.view'
+    ],
+    '#2563eb'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Front Desk Staff
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Front Desk', 'front_desk', 'Check-in/out and guest services', 'template', 30,
+    ARRAY[
+      'reservations.view', 'reservations.checkin', 'reservations.checkout',
+      'guests.view', 'guests.update',
+      'housekeeping.view',
+      'maintenance.view', 'maintenance.create',
+      'transport.view'
+    ],
+    '#0891b2'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Housekeeping Staff
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Housekeeping', 'housekeeping', 'Housekeeping task management', 'template', 25,
+    ARRAY[
+      'housekeeping.view', 'housekeeping.update',
+      'units.view',
+      'maintenance.create'
+    ],
+    '#65a30d'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Maintenance Staff
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Maintenance', 'maintenance', 'Maintenance request handling', 'template', 25,
+    ARRAY[
+      'maintenance.view', 'maintenance.update',
+      'units.view',
+      'properties.view'
+    ],
+    '#ea580c'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Transport Operator
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Transport Operator', 'transport_operator', 'Transport operations', 'template', 40,
+    ARRAY[
+      'transport.view', 'transport.update',
+      'sailings.view', 'sailings.update',
+      'freight.view', 'freight.update',
+      'passengers.view', 'passengers.checkin'
+    ],
+    '#0d9488'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Enforcement Officer
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Enforcement Officer', 'enforcement_officer', 'Compliance and citations', 'template', 45,
+    ARRAY[
+      'enforcement.view', 'enforcement.create', 'enforcement.update',
+      'citations.view', 'citations.create',
+      'incidents.view', 'incidents.create', 'incidents.update',
+      'identity.view'
+    ],
+    '#be123c'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+  
+  -- Guest (registered user)
+  INSERT INTO cc_roles (name, code, description, role_type, hierarchy_level, permissions, color)
+  VALUES (
+    'Guest', 'guest', 'Registered guest user', 'template', 10,
+    ARRAY[
+      'reservations.view.own',
+      'profile.view.own', 'profile.update.own',
+      'transport.view', 'transport.book',
+      'permits.view.own', 'permits.apply'
+    ],
+    '#64748b'
+  ) ON CONFLICT (portal_id, code) DO NOTHING;
+END $$;
+
+-- ============ SEED PERMISSIONS ============
+
+INSERT INTO cc_permissions (code, name, description, category, resource_type, action) VALUES
+-- Portal permissions
+('portal.view', 'View Portal', 'View portal details', 'portal', 'portal', 'view'),
+('portal.manage', 'Manage Portal', 'Full portal management', 'portal', 'portal', 'manage'),
+('portal.settings', 'Portal Settings', 'Modify portal settings', 'portal', 'portal', 'update'),
+
+-- User permissions
+('users.view', 'View Users', 'View user list', 'portal', 'user', 'view'),
+('users.create', 'Create Users', 'Create new users', 'portal', 'user', 'create'),
+('users.update', 'Update Users', 'Update user details', 'portal', 'user', 'update'),
+('users.delete', 'Delete Users', 'Delete users', 'portal', 'user', 'delete'),
+('users.roles', 'Manage User Roles', 'Assign roles to users', 'portal', 'user', 'manage'),
+
+-- Property permissions
+('properties.view', 'View Properties', 'View property list', 'property', 'property', 'view'),
+('properties.create', 'Create Properties', 'Create new properties', 'property', 'property', 'create'),
+('properties.update', 'Update Properties', 'Update property details', 'property', 'property', 'update'),
+('properties.delete', 'Delete Properties', 'Delete properties', 'property', 'property', 'delete'),
+
+-- Unit permissions
+('units.view', 'View Units', 'View unit list', 'property', 'unit', 'view'),
+('units.update', 'Update Units', 'Update unit details', 'property', 'unit', 'update'),
+
+-- Reservation permissions
+('reservations.view', 'View Reservations', 'View all reservations', 'reservation', 'reservation', 'view'),
+('reservations.view.own', 'View Own Reservations', 'View own reservations only', 'reservation', 'reservation', 'view'),
+('reservations.create', 'Create Reservations', 'Create new reservations', 'reservation', 'reservation', 'create'),
+('reservations.update', 'Update Reservations', 'Update reservations', 'reservation', 'reservation', 'update'),
+('reservations.delete', 'Cancel Reservations', 'Cancel reservations', 'reservation', 'reservation', 'delete'),
+('reservations.checkin', 'Check In Guests', 'Perform guest check-in', 'reservation', 'reservation', 'execute'),
+('reservations.checkout', 'Check Out Guests', 'Perform guest check-out', 'reservation', 'reservation', 'execute'),
+
+-- Housekeeping permissions
+('housekeeping.view', 'View Housekeeping', 'View housekeeping tasks', 'property', 'housekeeping', 'view'),
+('housekeeping.create', 'Create Housekeeping Tasks', 'Create housekeeping tasks', 'property', 'housekeeping', 'create'),
+('housekeeping.update', 'Update Housekeeping Tasks', 'Update housekeeping tasks', 'property', 'housekeeping', 'update'),
+
+-- Maintenance permissions
+('maintenance.view', 'View Maintenance', 'View maintenance requests', 'property', 'maintenance', 'view'),
+('maintenance.create', 'Create Maintenance Requests', 'Create maintenance requests', 'property', 'maintenance', 'create'),
+('maintenance.update', 'Update Maintenance Requests', 'Update maintenance requests', 'property', 'maintenance', 'update'),
+
+-- Transport permissions
+('transport.view', 'View Transport', 'View transport operations', 'transport', 'transport', 'view'),
+('transport.manage', 'Manage Transport', 'Full transport management', 'transport', 'transport', 'manage'),
+('transport.book', 'Book Transport', 'Book transport requests', 'transport', 'transport', 'create'),
+('sailings.view', 'View Sailings', 'View sailing schedules', 'transport', 'sailing', 'view'),
+('sailings.update', 'Update Sailings', 'Update sailing info', 'transport', 'sailing', 'update'),
+('freight.view', 'View Freight', 'View freight manifests', 'transport', 'freight', 'view'),
+('freight.update', 'Update Freight', 'Update freight manifests', 'transport', 'freight', 'update'),
+('passengers.view', 'View Passengers', 'View passenger lists', 'transport', 'passenger', 'view'),
+('passengers.checkin', 'Check In Passengers', 'Check in passengers', 'transport', 'passenger', 'execute'),
+
+-- Enforcement permissions
+('enforcement.view', 'View Enforcement', 'View compliance data', 'enforcement', 'enforcement', 'view'),
+('enforcement.create', 'Create Checks', 'Create compliance checks', 'enforcement', 'enforcement', 'create'),
+('enforcement.update', 'Update Enforcement', 'Update enforcement records', 'enforcement', 'enforcement', 'update'),
+('enforcement.manage', 'Manage Enforcement', 'Full enforcement management', 'enforcement', 'enforcement', 'manage'),
+('citations.view', 'View Citations', 'View citations', 'enforcement', 'citation', 'view'),
+('citations.create', 'Issue Citations', 'Issue new citations', 'enforcement', 'citation', 'create'),
+('citations.manage', 'Manage Citations', 'Manage citations and appeals', 'enforcement', 'citation', 'manage'),
+('incidents.view', 'View Incidents', 'View incident reports', 'enforcement', 'incident', 'view'),
+('incidents.create', 'Report Incidents', 'Create incident reports', 'enforcement', 'incident', 'create'),
+('incidents.update', 'Update Incidents', 'Update incident reports', 'enforcement', 'incident', 'update'),
+
+-- Identity permissions
+('identity.view', 'View Identities', 'View verified identities', 'identity', 'identity', 'view'),
+('identity.verify', 'Verify Identities', 'Verify identity documents', 'identity', 'identity', 'approve'),
+
+-- Permit permissions
+('permits.view', 'View Permits', 'View all permits', 'enforcement', 'permit', 'view'),
+('permits.view.own', 'View Own Permits', 'View own permits', 'enforcement', 'permit', 'view'),
+('permits.apply', 'Apply for Permits', 'Apply for permits', 'enforcement', 'permit', 'create'),
+('permits.approve', 'Approve Permits', 'Approve permit applications', 'enforcement', 'permit', 'approve'),
+
+-- Guest permissions
+('guests.view', 'View Guests', 'View guest information', 'reservation', 'guest', 'view'),
+('guests.update', 'Update Guests', 'Update guest information', 'reservation', 'guest', 'update'),
+
+-- Profile permissions
+('profile.view.own', 'View Own Profile', 'View own profile', 'portal', 'profile', 'view'),
+('profile.update.own', 'Update Own Profile', 'Update own profile', 'portal', 'profile', 'update'),
+
+-- Report permissions
+('reports.view', 'View Reports', 'View reports', 'portal', 'report', 'view'),
+('reports.export', 'Export Reports', 'Export report data', 'portal', 'report', 'execute'),
+
+-- Billing permissions
+('billing.view', 'View Billing', 'View billing information', 'portal', 'billing', 'view'),
+('billing.manage', 'Manage Billing', 'Manage billing settings', 'portal', 'billing', 'manage')
+
+ON CONFLICT (code) DO NOTHING;
+
+COMMIT;
+```
+
+## Create server/services/roleService.ts
+```typescript
+// server/services/roleService.ts
+
+import { db } from '../db';
+import { eq, and, or, gt, isNull, inArray } from 'drizzle-orm';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface AssignRoleRequest {
+  userId: string;
+  roleId?: string;
+  roleCode?: string;
+  portalSlug: string;
+  propertyId?: string;
+  assignedBy?: string;
+  expiresAt?: Date;
+  notes?: string;
+}
+
+// ============ ROLE FUNCTIONS ============
+
+export async function getRoles(
+  portalSlug?: string,
+  options?: {
+    includeSystem?: boolean;
+    includeTemplates?: boolean;
+    status?: string;
+  }
+): Promise<any[]> {
+  const conditions: any[] = [];
+  
+  if (portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, portalSlug)
+    });
+    
+    if (portal) {
+      // Portal-specific roles + system/template roles
+      conditions.push(or(
+        eq(ccRoles.portalId, portal.id),
+        isNull(ccRoles.portalId)
+      ));
+    }
+  }
+  
+  if (!options?.includeSystem) {
+    conditions.push(or(
+      eq(ccRoles.roleType, 'template'),
+      eq(ccRoles.roleType, 'custom')
+    ));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccRoles.status, options.status));
+  } else {
+    conditions.push(eq(ccRoles.status, 'active'));
+  }
+  
+  return db.query.ccRoles.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    orderBy: [desc(ccRoles.hierarchyLevel), asc(ccRoles.name)]
+  });
+}
+
+export async function getRoleByCode(code: string, portalSlug?: string): Promise<any | null> {
+  const conditions: any[] = [eq(ccRoles.code, code)];
+  
+  if (portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, portalSlug)
+    });
+    
+    if (portal) {
+      conditions.push(or(
+        eq(ccRoles.portalId, portal.id),
+        isNull(ccRoles.portalId)
+      ));
+    }
+  }
+  
+  return db.query.ccRoles.findFirst({
+    where: and(...conditions)
+  });
+}
+
+export async function createRole(
+  portalSlug: string,
+  data: {
+    name: string;
+    code: string;
+    description?: string;
+    hierarchyLevel?: number;
+    permissions: string[];
+    color?: string;
+    icon?: string;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const [role] = await db.insert(ccRoles).values({
+    portalId: portal.id,
+    name: data.name,
+    code: data.code,
+    description: data.description,
+    roleType: 'custom',
+    hierarchyLevel: data.hierarchyLevel || 20,
+    permissions: data.permissions,
+    color: data.color,
+    icon: data.icon,
+    status: 'active'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: 'system',
+    action: 'role.created',
+    resourceType: 'role',
+    resourceId: role.id,
+    metadata: { name: role.name, code: role.code }
+  });
+  
+  return role;
+}
+
+export async function updateRole(
+  roleId: string,
+  data: {
+    name?: string;
+    description?: string;
+    hierarchyLevel?: number;
+    permissions?: string[];
+    color?: string;
+    icon?: string;
+    status?: string;
+  }
+): Promise<any> {
+  const role = await db.query.ccRoles.findFirst({
+    where: eq(ccRoles.id, roleId)
+  });
+  
+  if (!role) throw new Error('Role not found');
+  
+  if (role.roleType === 'system') {
+    throw new Error('Cannot modify system roles');
+  }
+  
+  const updates: Record<string, any> = { updatedAt: new Date() };
+  
+  if (data.name) updates.name = data.name;
+  if (data.description !== undefined) updates.description = data.description;
+  if (data.hierarchyLevel !== undefined) updates.hierarchyLevel = data.hierarchyLevel;
+  if (data.permissions) updates.permissions = data.permissions;
+  if (data.color !== undefined) updates.color = data.color;
+  if (data.icon !== undefined) updates.icon = data.icon;
+  if (data.status) updates.status = data.status;
+  
+  const [updated] = await db.update(ccRoles)
+    .set(updates)
+    .where(eq(ccRoles.id, roleId))
+    .returning();
+  
+  return updated;
+}
+
+// ============ USER ROLE ASSIGNMENT ============
+
+export async function assignRoleToUser(req: AssignRoleRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Get role by ID or code
+  let role: any;
+  if (req.roleId) {
+    role = await db.query.ccRoles.findFirst({
+      where: eq(ccRoles.id, req.roleId)
+    });
+  } else if (req.roleCode) {
+    role = await getRoleByCode(req.roleCode, req.portalSlug);
+  }
+  
+  if (!role) throw new Error('Role not found');
+  
+  // Verify user exists
+  const user = await db.query.ccUserProfiles.findFirst({
+    where: eq(ccUserProfiles.id, req.userId)
+  });
+  
+  if (!user) throw new Error('User not found');
+  
+  // Check for existing assignment
+  const existing = await db.query.ccUserRoles.findFirst({
+    where: and(
+      eq(ccUserRoles.userId, req.userId),
+      eq(ccUserRoles.roleId, role.id),
+      eq(ccUserRoles.portalId, portal.id),
+      req.propertyId 
+        ? eq(ccUserRoles.propertyId, req.propertyId)
+        : isNull(ccUserRoles.propertyId)
+    )
+  });
+  
+  if (existing) {
+    // Update existing assignment
+    const [updated] = await db.update(ccUserRoles)
+      .set({
+        status: 'active',
+        expiresAt: req.expiresAt,
+        notes: req.notes,
+        updatedAt: new Date()
+      })
+      .where(eq(ccUserRoles.id, existing.id))
+      .returning();
+    
+    return updated;
+  }
+  
+  // Create new assignment
+  const [assignment] = await db.insert(ccUserRoles).values({
+    userId: req.userId,
+    roleId: role.id,
+    portalId: portal.id,
+    propertyId: req.propertyId,
+    assignedBy: req.assignedBy,
+    expiresAt: req.expiresAt,
+    notes: req.notes,
+    status: 'active'
+  }).returning();
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.assignedBy || 'system',
+    action: 'role.assigned',
+    resourceType: 'user_role',
+    resourceId: assignment.id,
+    metadata: { userId: req.userId, roleCode: role.code, portalSlug: req.portalSlug }
+  });
+  
+  return assignment;
+}
+
+export async function removeRoleFromUser(
+  userId: string,
+  roleId: string,
+  portalSlug: string,
+  propertyId?: string
+): Promise<boolean> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const conditions: any[] = [
+    eq(ccUserRoles.userId, userId),
+    eq(ccUserRoles.roleId, roleId),
+    eq(ccUserRoles.portalId, portal.id)
+  ];
+  
+  if (propertyId) {
+    conditions.push(eq(ccUserRoles.propertyId, propertyId));
+  } else {
+    conditions.push(isNull(ccUserRoles.propertyId));
+  }
+  
+  const result = await db.delete(ccUserRoles)
+    .where(and(...conditions))
+    .returning();
+  
+  return result.length > 0;
+}
+
+export async function getUserRoles(
+  userId: string,
+  portalSlug?: string
+): Promise<any[]> {
+  const conditions: any[] = [
+    eq(ccUserRoles.userId, userId),
+    eq(ccUserRoles.status, 'active'),
+    or(
+      isNull(ccUserRoles.expiresAt),
+      gt(ccUserRoles.expiresAt, new Date())
+    )
+  ];
+  
+  if (portalSlug) {
+    const portal = await db.query.ccPortals.findFirst({
+      where: eq(ccPortals.slug, portalSlug)
+    });
+    
+    if (portal) {
+      conditions.push(eq(ccUserRoles.portalId, portal.id));
+    }
+  }
+  
+  const assignments = await db.query.ccUserRoles.findMany({
+    where: and(...conditions)
+  });
+  
+  // Enrich with role details
+  const enriched = await Promise.all(assignments.map(async (a) => {
+    const role = await db.query.ccRoles.findFirst({
+      where: eq(ccRoles.id, a.roleId)
+    });
+    
+    let property = null;
+    if (a.propertyId) {
+      property = await db.query.ccProperties.findFirst({
+        where: eq(ccProperties.id, a.propertyId)
+      });
+    }
+    
+    return {
+      assignment: a,
+      role,
+      property: property ? { id: property.id, name: property.name } : null
+    };
+  }));
+  
+  return enriched;
+}
+
+// ============ PERMISSION CHECKING ============
+
+export async function getUserPermissions(
+  userId: string,
+  portalSlug: string,
+  propertyId?: string
+): Promise<string[]> {
+  const userRoles = await getUserRoles(userId, portalSlug);
+  
+  const allPermissions = new Set<string>();
+  
+  for (const { role, assignment } of userRoles) {
+    if (!role) continue;
+    
+    // If property-scoped role, only include if matches or is portal-wide
+    if (propertyId && assignment.propertyId && assignment.propertyId !== propertyId) {
+      continue;
+    }
+    
+    // Check for wildcard
+    if (role.permissions?.includes('*')) {
+      allPermissions.add('*');
+    } else {
+      role.permissions?.forEach((p: string) => allPermissions.add(p));
+    }
+  }
+  
+  return Array.from(allPermissions);
+}
+
+export async function checkPermission(
+  userId: string,
+  portalSlug: string,
+  permission: string,
+  propertyId?: string
+): Promise<boolean> {
+  const permissions = await getUserPermissions(userId, portalSlug, propertyId);
+  
+  // Check for wildcard
+  if (permissions.includes('*')) return true;
+  
+  // Check exact match
+  if (permissions.includes(permission)) return true;
+  
+  // Check for manage permission (implies all actions on resource)
+  const [resource, action] = permission.split('.');
+  if (permissions.includes(`${resource}.manage`)) return true;
+  
+  return false;
+}
+
+export async function checkAnyPermission(
+  userId: string,
+  portalSlug: string,
+  permissions: string[],
+  propertyId?: string
+): Promise<boolean> {
+  const userPermissions = await getUserPermissions(userId, portalSlug, propertyId);
+  
+  if (userPermissions.includes('*')) return true;
+  
+  for (const permission of permissions) {
+    if (userPermissions.includes(permission)) return true;
+    
+    const [resource] = permission.split('.');
+    if (userPermissions.includes(`${resource}.manage`)) return true;
+  }
+  
+  return false;
+}
+
+export async function checkAllPermissions(
+  userId: string,
+  portalSlug: string,
+  permissions: string[],
+  propertyId?: string
+): Promise<boolean> {
+  const userPermissions = await getUserPermissions(userId, portalSlug, propertyId);
+  
+  if (userPermissions.includes('*')) return true;
+  
+  for (const permission of permissions) {
+    if (!userPermissions.includes(permission)) {
+      const [resource] = permission.split('.');
+      if (!userPermissions.includes(`${resource}.manage`)) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+// ============ PERMISSION LISTING ============
+
+export async function getPermissions(category?: string): Promise<any[]> {
+  if (category) {
+    return db.query.ccPermissions.findMany({
+      where: eq(ccPermissions.category, category),
+      orderBy: [asc(ccPermissions.category), asc(ccPermissions.code)]
+    });
+  }
+  
+  return db.query.ccPermissions.findMany({
+    orderBy: [asc(ccPermissions.category), asc(ccPermissions.code)]
+  });
+}
+
+export async function getPermissionCategories(): Promise<string[]> {
+  const permissions = await db.query.ccPermissions.findMany();
+  const categories = new Set(permissions.map(p => p.category));
+  return Array.from(categories).sort();
+}
+```
+
+## Create server/routes/roles.ts
+```typescript
+// server/routes/roles.ts
+
+import { Router } from 'express';
+import {
+  getRoles, getRoleByCode, createRole, updateRole,
+  assignRoleToUser, removeRoleFromUser, getUserRoles,
+  getUserPermissions, checkPermission, checkAnyPermission,
+  getPermissions, getPermissionCategories
+} from '../services/roleService';
+
+const router = Router();
+
+// ============ ROLE ENDPOINTS ============
+
+// GET /api/roles - List roles
+router.get('/', async (req, res) => {
+  const { portal, includeSystem, includeTemplates, status } = req.query;
+  
+  try {
+    const roles = await getRoles(portal as string, {
+      includeSystem: includeSystem === 'true',
+      includeTemplates: includeTemplates !== 'false',
+      status: status as string
+    });
+    
+    res.json({ roles, count: roles.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get roles' });
+  }
+});
+
+// GET /api/roles/by-code/:code - Get role by code
+router.get('/by-code/:code', async (req, res) => {
+  const { code } = req.params;
+  const { portal } = req.query;
+  
+  try {
+    const role = await getRoleByCode(code, portal as string);
+    if (!role) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+    res.json({ role });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get role' });
+  }
+});
+
+// POST /api/roles/portals/:slug - Create custom role
+router.post('/portals/:slug', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.name || !b.code || !b.permissions) {
+    return res.status(400).json({ error: 'name, code, permissions required' });
+  }
+  
+  try {
+    const role = await createRole(slug, {
+      name: b.name,
+      code: b.code,
+      description: b.description,
+      hierarchyLevel: b.hierarchyLevel,
+      permissions: b.permissions,
+      color: b.color,
+      icon: b.icon
+    });
+    
+    res.json({ role });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// PUT /api/roles/:id - Update role
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const b = req.body || {};
+  
+  try {
+    const role = await updateRole(id, {
+      name: b.name,
+      description: b.description,
+      hierarchyLevel: b.hierarchyLevel,
+      permissions: b.permissions,
+      color: b.color,
+      icon: b.icon,
+      status: b.status
+    });
+    
+    res.json({ role });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ USER ROLE ASSIGNMENT ============
+
+// POST /api/roles/assign - Assign role to user
+router.post('/assign', async (req, res) => {
+  const b = req.body || {};
+  
+  if (!b.userId || !b.portalSlug || (!b.roleId && !b.roleCode)) {
+    return res.status(400).json({ error: 'userId, portalSlug, roleId or roleCode required' });
+  }
+  
+  try {
+    const assignment = await assignRoleToUser({
+      userId: b.userId,
+      roleId: b.roleId,
+      roleCode: b.roleCode,
+      portalSlug: b.portalSlug,
+      propertyId: b.propertyId,
+      assignedBy: b.assignedBy,
+      expiresAt: b.expiresAt ? new Date(b.expiresAt) : undefined,
+      notes: b.notes
+    });
+    
+    res.json({ assignment });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// DELETE /api/roles/assign - Remove role from user
+router.delete('/assign', async (req, res) => {
+  const { userId, roleId, portalSlug, propertyId } = req.body || {};
+  
+  if (!userId || !roleId || !portalSlug) {
+    return res.status(400).json({ error: 'userId, roleId, portalSlug required' });
+  }
+  
+  try {
+    const removed = await removeRoleFromUser(userId, roleId, portalSlug, propertyId);
+    res.json({ success: removed });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/roles/user/:userId - Get user's roles
+router.get('/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { portal } = req.query;
+  
+  try {
+    const roles = await getUserRoles(userId, portal as string);
+    res.json({ roles, count: roles.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get user roles' });
+  }
+});
+
+// ============ PERMISSION CHECKING ============
+
+// GET /api/roles/user/:userId/permissions - Get user's permissions
+router.get('/user/:userId/permissions', async (req, res) => {
+  const { userId } = req.params;
+  const { portal, property } = req.query;
+  
+  if (!portal) {
+    return res.status(400).json({ error: 'portal query param required' });
+  }
+  
+  try {
+    const permissions = await getUserPermissions(userId, portal as string, property as string);
+    res.json({ permissions, count: permissions.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get permissions' });
+  }
+});
+
+// POST /api/roles/check - Check single permission
+router.post('/check', async (req, res) => {
+  const { userId, portalSlug, permission, propertyId } = req.body || {};
+  
+  if (!userId || !portalSlug || !permission) {
+    return res.status(400).json({ error: 'userId, portalSlug, permission required' });
+  }
+  
+  try {
+    const hasPermission = await checkPermission(userId, portalSlug, permission, propertyId);
+    res.json({ hasPermission, permission });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to check permission' });
+  }
+});
+
+// POST /api/roles/check-any - Check if user has any of the permissions
+router.post('/check-any', async (req, res) => {
+  const { userId, portalSlug, permissions, propertyId } = req.body || {};
+  
+  if (!userId || !portalSlug || !permissions || !Array.isArray(permissions)) {
+    return res.status(400).json({ error: 'userId, portalSlug, permissions[] required' });
+  }
+  
+  try {
+    const hasPermission = await checkAnyPermission(userId, portalSlug, permissions, propertyId);
+    res.json({ hasPermission, permissions });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to check permissions' });
+  }
+});
+
+// ============ PERMISSION CATALOG ============
+
+// GET /api/roles/permissions - List all permissions
+router.get('/permissions', async (req, res) => {
+  const { category } = req.query;
+  
+  try {
+    const permissions = await getPermissions(category as string);
+    res.json({ permissions, count: permissions.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get permissions' });
+  }
+});
+
+// GET /api/roles/permissions/categories - List permission categories
+router.get('/permissions/categories', async (req, res) => {
+  try {
+    const categories = await getPermissionCategories();
+    res.json({ categories });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get categories' });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import roleRoutes from './routes/roles';
+
+// Add with other routes
+app.use('/api/roles', roleRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- Role, InsertRole
+- UserRole, InsertUserRole
+- Permission, InsertPermission
+
+## Deliverables
+- [ ] Migration 097_roles_permissions.sql
+- [ ] cc_roles table with RLS
+- [ ] cc_user_roles table with RLS
+- [ ] cc_permissions table
+- [ ] 9 template roles seeded:
+  - super_admin (level 100, wildcard)
+  - portal_admin (level 90)
+  - property_manager (level 50)
+  - front_desk (level 30)
+  - housekeeping (level 25)
+  - maintenance (level 25)
+  - transport_operator (level 40)
+  - enforcement_officer (level 45)
+  - guest (level 10)
+- [ ] 50+ permissions seeded across 7 categories
+- [ ] server/services/roleService.ts
+- [ ] server/routes/roles.ts
+- [ ] Routes registered in server/index.ts
+- [ ] API Endpoints:
+  - GET /roles - List roles
+  - GET /roles/by-code/:code - Get role by code
+  - POST /roles/portals/:slug - Create custom role
+  - PUT /roles/:id - Update role
+  - POST /roles/assign - Assign role to user
+  - DELETE /roles/assign - Remove role
+  - GET /roles/user/:userId - Get user's roles
+  - GET /roles/user/:userId/permissions - Get effective permissions
+  - POST /roles/check - Check single permission
+  - POST /roles/check-any - Check multiple permissions
+  - GET /roles/permissions - List all permissions
+  - GET /roles/permissions/categories - List categories
+- [ ] Permission inheritance: "manage" implies all actions
+- [ ] Wildcard permission (*) grants all access
+- [ ] Property-scoped roles (only apply to specific property)
+- [ ] Temporary role assignments with expiry
+- [ ] Test: Assign portal_admin → check permission → returns true
+- [ ] Test: Create custom role → assign to user → verify permissions
+
+Report with roles list and permission check working.

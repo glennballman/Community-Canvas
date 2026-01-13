@@ -72,6 +72,7 @@ import citationRouter from "./routes/citations";
 import identityRouter from "./routes/identity";
 import dashboardRouter from "./routes/dashboard";
 import authAccountsRouter from "./routes/authAccounts";
+import rolesRouter from "./routes/roles";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -229,6 +230,7 @@ export async function registerRoutes(
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);
+  app.use('/api/roles', rolesRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);
