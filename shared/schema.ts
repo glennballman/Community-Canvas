@@ -2908,3 +2908,171 @@ export const insertIncidentReportSchema = createInsertSchema(ccIncidentReports).
 });
 export type IncidentReport = typeof ccIncidentReports.$inferSelect;
 export type InsertIncidentReport = z.infer<typeof insertIncidentReportSchema>;
+
+// ============================================================================
+// CITATIONS
+// ============================================================================
+
+export const ccCitations = pgTable('cc_citations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id'),
+  unitId: uuid('unit_id'),
+  reservationId: uuid('reservation_id'),
+  
+  complianceRuleId: uuid('compliance_rule_id'),
+  complianceCheckId: uuid('compliance_check_id'),
+  incidentReportId: uuid('incident_report_id'),
+  
+  citationNumber: varchar('citation_number', { length: 20 }).notNull().unique(),
+  
+  violatorType: varchar('violator_type').default('guest'),
+  violatorName: text('violator_name').notNull(),
+  violatorEmail: text('violator_email'),
+  violatorPhone: text('violator_phone'),
+  violatorAddress: text('violator_address'),
+  
+  guestReservationId: uuid('guest_reservation_id'),
+  
+  vesselName: text('vessel_name'),
+  vesselRegistration: text('vessel_registration'),
+  vehiclePlate: text('vehicle_plate'),
+  vehicleDescription: text('vehicle_description'),
+  
+  violationDate: date('violation_date').notNull(),
+  violationTime: time('violation_time'),
+  violationLocation: text('violation_location'),
+  lat: numeric('lat', { precision: 9, scale: 6 }),
+  lon: numeric('lon', { precision: 9, scale: 6 }),
+  
+  ruleCode: varchar('rule_code', { length: 30 }),
+  ruleName: text('rule_name').notNull(),
+  violationDescription: text('violation_description').notNull(),
+  
+  evidenceDescription: text('evidence_description'),
+  photosJson: jsonb('photos_json').default([]),
+  witnessNames: text('witness_names').array(),
+  
+  offenseNumber: integer('offense_number').default(1),
+  priorCitationsJson: jsonb('prior_citations_json').default([]),
+  
+  fineAmountCad: numeric('fine_amount_cad', { precision: 10, scale: 2 }).default('0'),
+  fineDueDate: date('fine_due_date'),
+  
+  paymentStatus: varchar('payment_status').default('unpaid'),
+  amountPaidCad: numeric('amount_paid_cad', { precision: 10, scale: 2 }).default('0'),
+  paymentDate: date('payment_date'),
+  paymentReference: text('payment_reference'),
+  
+  status: varchar('status').default('issued'),
+  
+  issuedBy: text('issued_by').notNull(),
+  issuedAt: timestamp('issued_at', { withTimezone: true }).defaultNow(),
+  servedMethod: varchar('served_method'),
+  servedAt: timestamp('served_at', { withTimezone: true }),
+  acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+  
+  additionalAction: varchar('additional_action'),
+  actionNotes: text('action_notes'),
+  
+  issuerNotes: text('issuer_notes'),
+  violatorStatement: text('violator_statement'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertCitationSchema = createInsertSchema(ccCitations).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type Citation = typeof ccCitations.$inferSelect;
+export type InsertCitation = z.infer<typeof insertCitationSchema>;
+
+// ============================================================================
+// CITATION APPEALS
+// ============================================================================
+
+export const ccCitationAppeals = pgTable('cc_citation_appeals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  citationId: uuid('citation_id').notNull(),
+  
+  appealNumber: varchar('appeal_number', { length: 20 }).notNull().unique(),
+  
+  appellantName: text('appellant_name').notNull(),
+  appellantEmail: text('appellant_email'),
+  appellantPhone: text('appellant_phone'),
+  
+  filedAt: timestamp('filed_at', { withTimezone: true }).defaultNow(),
+  grounds: text('grounds').notNull(),
+  supportingEvidence: text('supporting_evidence'),
+  documentsJson: jsonb('documents_json').default([]),
+  
+  status: varchar('status').default('filed'),
+  
+  assignedTo: text('assigned_to'),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }),
+  
+  hearingDate: date('hearing_date'),
+  hearingTime: time('hearing_time'),
+  hearingLocation: text('hearing_location'),
+  hearingNotes: text('hearing_notes'),
+  
+  decision: varchar('decision'),
+  decisionReason: text('decision_reason'),
+  decidedBy: text('decided_by'),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+  
+  newFineAmountCad: numeric('new_fine_amount_cad', { precision: 10, scale: 2 }),
+  newDueDate: date('new_due_date'),
+  
+  internalNotes: text('internal_notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertCitationAppealSchema = createInsertSchema(ccCitationAppeals).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type CitationAppeal = typeof ccCitationAppeals.$inferSelect;
+export type InsertCitationAppeal = z.infer<typeof insertCitationAppealSchema>;
+
+// ============================================================================
+// VIOLATION HISTORY
+// ============================================================================
+
+export const ccViolationHistory = pgTable('cc_violation_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  portalId: uuid('portal_id'),
+  
+  identifierType: varchar('identifier_type').notNull(),
+  identifierValue: text('identifier_value').notNull(),
+  
+  totalCitations: integer('total_citations').default(0),
+  totalWarnings: integer('total_warnings').default(0),
+  totalFinesCad: numeric('total_fines_cad', { precision: 10, scale: 2 }).default('0'),
+  unpaidFinesCad: numeric('unpaid_fines_cad', { precision: 10, scale: 2 }).default('0'),
+  
+  lastCitationId: uuid('last_citation_id'),
+  lastCitationDate: date('last_citation_date'),
+  lastViolationType: varchar('last_violation_type'),
+  
+  standing: varchar('standing').default('good'),
+  
+  banReason: text('ban_reason'),
+  banUntil: date('ban_until'),
+  
+  notes: text('notes'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertViolationHistorySchema = createInsertSchema(ccViolationHistory).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type ViolationHistory = typeof ccViolationHistory.$inferSelect;
+export type InsertViolationHistory = z.infer<typeof insertViolationHistorySchema>;

@@ -1,0 +1,1305 @@
+**BAMFIELD OPS - PROMPT 18: Citations & Violations**
+
+Create the citation issuance system for rule violations with fine tracking and appeals process.
+
+## Migration 094_citations.sql
+```sql
+BEGIN;
+
+-- ============ CITATIONS ============
+-- Formal citations issued for rule violations
+
+CREATE TABLE IF NOT EXISTS cc_citations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Links
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  property_id uuid REFERENCES cc_properties(id),
+  unit_id uuid REFERENCES cc_units(id),
+  reservation_id uuid REFERENCES cc_pms_reservations(id),
+  
+  -- Source
+  compliance_rule_id uuid REFERENCES cc_compliance_rules(id),
+  compliance_check_id uuid REFERENCES cc_compliance_checks(id),
+  incident_report_id uuid REFERENCES cc_incident_reports(id),
+  
+  -- Identity
+  citation_number varchar(20) NOT NULL UNIQUE,
+  -- Format: CIT-YYMMDD-XXXX
+  
+  -- Violator
+  violator_type varchar DEFAULT 'guest' CHECK (violator_type IN (
+    'guest', 'operator', 'property_owner', 'vessel', 'vehicle', 'other'
+  )),
+  violator_name text NOT NULL,
+  violator_email text,
+  violator_phone text,
+  violator_address text,
+  
+  -- For guests
+  guest_reservation_id uuid REFERENCES cc_pms_reservations(id),
+  
+  -- For vessels/vehicles
+  vessel_name text,
+  vessel_registration text,
+  vehicle_plate text,
+  vehicle_description text,
+  
+  -- Violation details
+  violation_date date NOT NULL,
+  violation_time time,
+  violation_location text,
+  lat numeric(9,6),
+  lon numeric(9,6),
+  
+  -- Rule violated
+  rule_code varchar(30),
+  rule_name text NOT NULL,
+  violation_description text NOT NULL,
+  
+  -- Evidence
+  evidence_description text,
+  photos_json jsonb DEFAULT '[]'::jsonb,
+  witness_names text[],
+  
+  -- Offense tracking
+  offense_number integer DEFAULT 1,  -- 1st, 2nd, 3rd offense
+  prior_citations_json jsonb DEFAULT '[]'::jsonb,
+  -- [{citation_number, date, rule_code}]
+  
+  -- Fine
+  fine_amount_cad numeric(10,2) DEFAULT 0,
+  fine_due_date date,
+  
+  -- Payment
+  payment_status varchar DEFAULT 'unpaid' CHECK (payment_status IN (
+    'unpaid', 'partial', 'paid', 'waived', 'appealed', 'sent_collections'
+  )),
+  amount_paid_cad numeric(10,2) DEFAULT 0,
+  payment_date date,
+  payment_reference text,
+  
+  -- Status
+  status varchar DEFAULT 'issued' CHECK (status IN (
+    'draft',          -- Not yet issued
+    'issued',         -- Issued to violator
+    'acknowledged',   -- Violator acknowledged
+    'contested',      -- Under appeal
+    'upheld',         -- Appeal denied
+    'reduced',        -- Fine reduced on appeal
+    'dismissed',      -- Citation dismissed
+    'paid',           -- Fine paid
+    'closed',         -- Closed (expired, collections, etc.)
+    'void'            -- Voided (issued in error)
+  )),
+  
+  -- Issuance
+  issued_by text NOT NULL,
+  issued_at timestamptz DEFAULT now(),
+  served_method varchar CHECK (served_method IN (
+    'in_person', 'email', 'mail', 'posted'
+  )),
+  served_at timestamptz,
+  acknowledged_at timestamptz,
+  
+  -- Additional actions
+  additional_action varchar CHECK (additional_action IN (
+    'none', 'verbal_warning', 'written_warning', 'eviction', 
+    'ban', 'referred_authority', 'police_called'
+  )),
+  action_notes text,
+  
+  -- Notes
+  issuer_notes text,
+  violator_statement text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_citations_portal ON cc_citations(portal_id, status);
+CREATE INDEX idx_citations_property ON cc_citations(property_id) WHERE property_id IS NOT NULL;
+CREATE INDEX idx_citations_violator ON cc_citations(violator_email) WHERE violator_email IS NOT NULL;
+CREATE INDEX idx_citations_date ON cc_citations(violation_date DESC);
+CREATE INDEX idx_citations_payment ON cc_citations(payment_status) WHERE payment_status = 'unpaid';
+CREATE INDEX idx_citations_number ON cc_citations(citation_number);
+
+ALTER TABLE cc_citations ENABLE ROW LEVEL SECURITY;
+
+-- ============ CITATION APPEALS ============
+-- Appeals against citations
+
+CREATE TABLE IF NOT EXISTS cc_citation_appeals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  citation_id uuid NOT NULL REFERENCES cc_citations(id) ON DELETE CASCADE,
+  
+  -- Identity
+  appeal_number varchar(20) NOT NULL UNIQUE,
+  -- Format: APL-YYMMDD-XXXX
+  
+  -- Appellant
+  appellant_name text NOT NULL,
+  appellant_email text,
+  appellant_phone text,
+  
+  -- Appeal details
+  filed_at timestamptz DEFAULT now(),
+  grounds text NOT NULL,  -- Reason for appeal
+  supporting_evidence text,
+  documents_json jsonb DEFAULT '[]'::jsonb,
+  
+  -- Status
+  status varchar DEFAULT 'filed' CHECK (status IN (
+    'filed',          -- Just submitted
+    'under_review',   -- Being reviewed
+    'hearing_scheduled', -- Hearing date set
+    'decided',        -- Decision made
+    'withdrawn'       -- Appellant withdrew
+  )),
+  
+  -- Review
+  assigned_to text,
+  assigned_at timestamptz,
+  
+  -- Hearing
+  hearing_date date,
+  hearing_time time,
+  hearing_location text,
+  hearing_notes text,
+  
+  -- Decision
+  decision varchar CHECK (decision IN (
+    'upheld',         -- Citation stands
+    'reduced',        -- Fine reduced
+    'dismissed',      -- Citation dismissed
+    'modified'        -- Other modification
+  )),
+  decision_reason text,
+  decided_by text,
+  decided_at timestamptz,
+  
+  -- If reduced/modified
+  new_fine_amount_cad numeric(10,2),
+  new_due_date date,
+  
+  -- Notes
+  internal_notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_appeals_citation ON cc_citation_appeals(citation_id);
+CREATE INDEX idx_appeals_status ON cc_citation_appeals(status);
+
+ALTER TABLE cc_citation_appeals ENABLE ROW LEVEL SECURITY;
+
+-- ============ VIOLATION HISTORY ============
+-- Track repeat offenders across reservations
+
+CREATE TABLE IF NOT EXISTS cc_violation_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
+  
+  -- Identifier (email is primary key for guests)
+  identifier_type varchar NOT NULL CHECK (identifier_type IN (
+    'email', 'phone', 'vessel_registration', 'vehicle_plate', 'name'
+  )),
+  identifier_value text NOT NULL,
+  
+  -- Stats
+  total_citations integer DEFAULT 0,
+  total_warnings integer DEFAULT 0,
+  total_fines_cad numeric(10,2) DEFAULT 0,
+  unpaid_fines_cad numeric(10,2) DEFAULT 0,
+  
+  -- Most recent
+  last_citation_id uuid REFERENCES cc_citations(id),
+  last_citation_date date,
+  last_violation_type varchar,
+  
+  -- Status
+  standing varchar DEFAULT 'good' CHECK (standing IN (
+    'good',           -- No issues
+    'warned',         -- Has warnings
+    'probation',      -- On probation
+    'restricted',     -- Limited booking
+    'banned'          -- Cannot book
+  )),
+  
+  ban_reason text,
+  ban_until date,
+  
+  -- Notes
+  notes text,
+  
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  
+  UNIQUE(portal_id, identifier_type, identifier_value)
+);
+
+CREATE INDEX idx_violation_history_portal ON cc_violation_history(portal_id, standing);
+CREATE INDEX idx_violation_history_identifier ON cc_violation_history(identifier_type, identifier_value);
+
+ALTER TABLE cc_violation_history ENABLE ROW LEVEL SECURITY;
+
+COMMIT;
+```
+
+## Create server/services/citationService.ts
+```typescript
+// server/services/citationService.ts
+
+import { db } from '../db';
+import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+import { logActivity } from './activityService';
+
+// ============ TYPES ============
+
+interface CreateCitationRequest {
+  portalSlug: string;
+  propertyId?: string;
+  unitId?: string;
+  reservationId?: string;
+  complianceRuleId?: string;
+  complianceCheckId?: string;
+  incidentReportId?: string;
+  
+  violatorType?: string;
+  violatorName: string;
+  violatorEmail?: string;
+  violatorPhone?: string;
+  violatorAddress?: string;
+  guestReservationId?: string;
+  
+  vesselName?: string;
+  vesselRegistration?: string;
+  vehiclePlate?: string;
+  vehicleDescription?: string;
+  
+  violationDate: Date;
+  violationTime?: string;
+  violationLocation?: string;
+  lat?: number;
+  lon?: number;
+  
+  ruleCode?: string;
+  ruleName: string;
+  violationDescription: string;
+  
+  evidenceDescription?: string;
+  photos?: string[];
+  witnessNames?: string[];
+  
+  fineAmount?: number;
+  fineDueDate?: Date;
+  
+  additionalAction?: string;
+  actionNotes?: string;
+  
+  issuedBy: string;
+  issuerNotes?: string;
+}
+
+// ============ HELPERS ============
+
+function generateCitationNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `CIT-${dateStr}-${suffix}`;
+}
+
+function generateAppealNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(2, 10).replace(/-/g, '');
+  const suffix = nanoid(4).toUpperCase();
+  return `APL-${dateStr}-${suffix}`;
+}
+
+// ============ VIOLATION HISTORY HELPERS ============
+
+async function getViolationHistory(
+  portalId: string,
+  identifierType: string,
+  identifierValue: string
+): Promise<any | null> {
+  return db.query.ccViolationHistory.findFirst({
+    where: and(
+      eq(ccViolationHistory.portalId, portalId),
+      eq(ccViolationHistory.identifierType, identifierType),
+      eq(ccViolationHistory.identifierValue, identifierValue.toLowerCase())
+    )
+  });
+}
+
+async function updateViolationHistory(
+  portalId: string,
+  identifierType: string,
+  identifierValue: string,
+  citation: any
+): Promise<void> {
+  const existing = await getViolationHistory(portalId, identifierType, identifierValue.toLowerCase());
+  
+  const fineAmount = Number(citation.fineAmountCad) || 0;
+  
+  if (existing) {
+    // Update existing record
+    const newTotalCitations = (existing.totalCitations || 0) + 1;
+    const newTotalFines = Number(existing.totalFinesCad || 0) + fineAmount;
+    const newUnpaidFines = Number(existing.unpaidFinesCad || 0) + fineAmount;
+    
+    // Determine standing based on citation count
+    let standing = existing.standing;
+    if (newTotalCitations >= 3) {
+      standing = 'restricted';
+    } else if (newTotalCitations >= 2) {
+      standing = 'probation';
+    } else if (newTotalCitations >= 1) {
+      standing = 'warned';
+    }
+    
+    await db.update(ccViolationHistory)
+      .set({
+        totalCitations: newTotalCitations,
+        totalFinesCad: newTotalFines,
+        unpaidFinesCad: newUnpaidFines,
+        lastCitationId: citation.id,
+        lastCitationDate: citation.violationDate,
+        lastViolationType: citation.ruleCode,
+        standing,
+        updatedAt: new Date()
+      })
+      .where(eq(ccViolationHistory.id, existing.id));
+  } else {
+    // Create new record
+    await db.insert(ccViolationHistory).values({
+      portalId,
+      identifierType,
+      identifierValue: identifierValue.toLowerCase(),
+      totalCitations: 1,
+      totalWarnings: 0,
+      totalFinesCad: fineAmount,
+      unpaidFinesCad: fineAmount,
+      lastCitationId: citation.id,
+      lastCitationDate: citation.violationDate,
+      lastViolationType: citation.ruleCode,
+      standing: 'warned'
+    });
+  }
+}
+
+async function getPriorCitations(
+  portalId: string,
+  violatorEmail?: string
+): Promise<any[]> {
+  if (!violatorEmail) return [];
+  
+  return db.query.ccCitations.findMany({
+    where: and(
+      eq(ccCitations.portalId, portalId),
+      eq(ccCitations.violatorEmail, violatorEmail.toLowerCase())
+    ),
+    orderBy: [desc(ccCitations.violationDate)],
+    limit: 10
+  });
+}
+
+// ============ CITATION FUNCTIONS ============
+
+export async function createCitation(req: CreateCitationRequest): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, req.portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Validate property if provided
+  if (req.propertyId) {
+    const property = await db.query.ccProperties.findFirst({
+      where: and(
+        eq(ccProperties.id, req.propertyId),
+        eq(ccProperties.portalId, portal.id)
+      )
+    });
+    if (!property) throw new Error('Property not found');
+  }
+  
+  // Get prior citations for offense number
+  const priorCitations = await getPriorCitations(portal.id, req.violatorEmail);
+  const offenseNumber = priorCitations.length + 1;
+  
+  const priorCitationsJson = priorCitations.map(c => ({
+    citationNumber: c.citationNumber,
+    date: c.violationDate,
+    ruleCode: c.ruleCode
+  }));
+  
+  // Get rule details if provided
+  let fineAmount = req.fineAmount || 0;
+  if (req.complianceRuleId && !req.fineAmount) {
+    const rule = await db.query.ccComplianceRules.findFirst({
+      where: eq(ccComplianceRules.id, req.complianceRuleId)
+    });
+    if (rule?.fineAmountCad) {
+      fineAmount = Number(rule.fineAmountCad);
+    }
+  }
+  
+  // Calculate due date (30 days from now if not specified)
+  const fineDueDate = req.fineDueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  
+  const citationNumber = generateCitationNumber();
+  
+  const [citation] = await db.insert(ccCitations).values({
+    portalId: portal.id,
+    propertyId: req.propertyId,
+    unitId: req.unitId,
+    reservationId: req.reservationId,
+    complianceRuleId: req.complianceRuleId,
+    complianceCheckId: req.complianceCheckId,
+    incidentReportId: req.incidentReportId,
+    citationNumber,
+    violatorType: req.violatorType || 'guest',
+    violatorName: req.violatorName,
+    violatorEmail: req.violatorEmail?.toLowerCase(),
+    violatorPhone: req.violatorPhone,
+    violatorAddress: req.violatorAddress,
+    guestReservationId: req.guestReservationId,
+    vesselName: req.vesselName,
+    vesselRegistration: req.vesselRegistration,
+    vehiclePlate: req.vehiclePlate,
+    vehicleDescription: req.vehicleDescription,
+    violationDate: req.violationDate,
+    violationTime: req.violationTime,
+    violationLocation: req.violationLocation,
+    lat: req.lat,
+    lon: req.lon,
+    ruleCode: req.ruleCode,
+    ruleName: req.ruleName,
+    violationDescription: req.violationDescription,
+    evidenceDescription: req.evidenceDescription,
+    photosJson: req.photos || [],
+    witnessNames: req.witnessNames,
+    offenseNumber,
+    priorCitationsJson,
+    fineAmountCad: fineAmount,
+    fineDueDate,
+    additionalAction: req.additionalAction || 'none',
+    actionNotes: req.actionNotes,
+    issuedBy: req.issuedBy,
+    issuerNotes: req.issuerNotes,
+    status: 'issued'
+  }).returning();
+  
+  // Update violation history
+  if (req.violatorEmail) {
+    await updateViolationHistory(portal.id, 'email', req.violatorEmail, citation);
+  }
+  if (req.vesselRegistration) {
+    await updateViolationHistory(portal.id, 'vessel_registration', req.vesselRegistration, citation);
+  }
+  if (req.vehiclePlate) {
+    await updateViolationHistory(portal.id, 'vehicle_plate', req.vehiclePlate, citation);
+  }
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: req.issuedBy,
+    action: 'citation.issued',
+    resourceType: 'citation',
+    resourceId: citation.id,
+    metadata: { 
+      citationNumber, 
+      violator: req.violatorName, 
+      rule: req.ruleName,
+      offenseNumber,
+      fineAmount
+    }
+  });
+  
+  return { citation, offenseNumber, priorCitations: priorCitationsJson };
+}
+
+export async function getCitation(
+  portalSlug: string,
+  citationId: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const citation = await db.query.ccCitations.findFirst({
+    where: and(
+      eq(ccCitations.id, citationId),
+      eq(ccCitations.portalId, portal.id)
+    )
+  });
+  
+  if (!citation) return null;
+  
+  // Get related records
+  let property = null;
+  let unit = null;
+  let rule = null;
+  let appeals = [];
+  
+  if (citation.propertyId) {
+    property = await db.query.ccProperties.findFirst({
+      where: eq(ccProperties.id, citation.propertyId)
+    });
+  }
+  
+  if (citation.unitId) {
+    unit = await db.query.ccUnits.findFirst({
+      where: eq(ccUnits.id, citation.unitId)
+    });
+  }
+  
+  if (citation.complianceRuleId) {
+    rule = await db.query.ccComplianceRules.findFirst({
+      where: eq(ccComplianceRules.id, citation.complianceRuleId)
+    });
+  }
+  
+  appeals = await db.query.ccCitationAppeals.findMany({
+    where: eq(ccCitationAppeals.citationId, citation.id),
+    orderBy: [desc(ccCitationAppeals.filedAt)]
+  });
+  
+  return { citation, property, unit, rule, appeals };
+}
+
+export async function getCitationByNumber(
+  portalSlug: string,
+  citationNumber: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const citation = await db.query.ccCitations.findFirst({
+    where: and(
+      eq(ccCitations.citationNumber, citationNumber),
+      eq(ccCitations.portalId, portal.id)
+    )
+  });
+  
+  if (!citation) return null;
+  
+  return getCitation(portalSlug, citation.id);
+}
+
+export async function searchCitations(
+  portalSlug: string,
+  options?: {
+    propertyId?: string;
+    status?: string;
+    paymentStatus?: string;
+    violatorEmail?: string;
+    fromDate?: Date;
+    toDate?: Date;
+    limit?: number;
+  }
+): Promise<any[]> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return [];
+  
+  const conditions: any[] = [eq(ccCitations.portalId, portal.id)];
+  
+  if (options?.propertyId) {
+    conditions.push(eq(ccCitations.propertyId, options.propertyId));
+  }
+  
+  if (options?.status) {
+    conditions.push(eq(ccCitations.status, options.status));
+  }
+  
+  if (options?.paymentStatus) {
+    conditions.push(eq(ccCitations.paymentStatus, options.paymentStatus));
+  }
+  
+  if (options?.violatorEmail) {
+    conditions.push(eq(ccCitations.violatorEmail, options.violatorEmail.toLowerCase()));
+  }
+  
+  if (options?.fromDate) {
+    conditions.push(gte(ccCitations.violationDate, options.fromDate));
+  }
+  
+  if (options?.toDate) {
+    conditions.push(lte(ccCitations.violationDate, options.toDate));
+  }
+  
+  return db.query.ccCitations.findMany({
+    where: and(...conditions),
+    orderBy: [desc(ccCitations.violationDate)],
+    limit: options?.limit || 50
+  });
+}
+
+// ============ PAYMENT ============
+
+export async function recordPayment(
+  portalSlug: string,
+  citationId: string,
+  data: {
+    amount: number;
+    paymentReference?: string;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const citation = await db.query.ccCitations.findFirst({
+    where: and(
+      eq(ccCitations.id, citationId),
+      eq(ccCitations.portalId, portal.id)
+    )
+  });
+  
+  if (!citation) throw new Error('Citation not found');
+  
+  const newAmountPaid = Number(citation.amountPaidCad || 0) + data.amount;
+  const fineAmount = Number(citation.fineAmountCad) || 0;
+  
+  const paymentStatus = newAmountPaid >= fineAmount ? 'paid' : 'partial';
+  const status = newAmountPaid >= fineAmount ? 'paid' : citation.status;
+  
+  const [updated] = await db.update(ccCitations)
+    .set({
+      amountPaidCad: newAmountPaid,
+      paymentStatus,
+      status,
+      paymentDate: new Date(),
+      paymentReference: data.paymentReference,
+      updatedAt: new Date()
+    })
+    .where(eq(ccCitations.id, citationId))
+    .returning();
+  
+  // Update violation history
+  if (citation.violatorEmail && paymentStatus === 'paid') {
+    const history = await getViolationHistory(portal.id, 'email', citation.violatorEmail);
+    if (history) {
+      const newUnpaid = Math.max(0, Number(history.unpaidFinesCad || 0) - fineAmount);
+      await db.update(ccViolationHistory)
+        .set({
+          unpaidFinesCad: newUnpaid,
+          updatedAt: new Date()
+        })
+        .where(eq(ccViolationHistory.id, history.id));
+    }
+  }
+  
+  return updated;
+}
+
+// ============ APPEALS ============
+
+export async function fileAppeal(
+  portalSlug: string,
+  citationId: string,
+  data: {
+    appellantName: string;
+    appellantEmail?: string;
+    appellantPhone?: string;
+    grounds: string;
+    supportingEvidence?: string;
+    documents?: string[];
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  // Verify citation exists and belongs to portal
+  const citation = await db.query.ccCitations.findFirst({
+    where: and(
+      eq(ccCitations.id, citationId),
+      eq(ccCitations.portalId, portal.id)
+    )
+  });
+  
+  if (!citation) throw new Error('Citation not found');
+  
+  const appealNumber = generateAppealNumber();
+  
+  const [appeal] = await db.insert(ccCitationAppeals).values({
+    citationId,
+    appealNumber,
+    appellantName: data.appellantName,
+    appellantEmail: data.appellantEmail,
+    appellantPhone: data.appellantPhone,
+    grounds: data.grounds,
+    supportingEvidence: data.supportingEvidence,
+    documentsJson: data.documents || [],
+    status: 'filed'
+  }).returning();
+  
+  // Update citation status
+  await db.update(ccCitations)
+    .set({
+      status: 'contested',
+      paymentStatus: 'appealed',
+      updatedAt: new Date()
+    })
+    .where(eq(ccCitations.id, citationId));
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: data.appellantEmail || 'appellant',
+    action: 'citation.appealed',
+    resourceType: 'citation_appeal',
+    resourceId: appeal.id,
+    metadata: { appealNumber, citationNumber: citation.citationNumber }
+  });
+  
+  return { appeal, citation };
+}
+
+export async function getAppeal(
+  portalSlug: string,
+  appealId: string
+): Promise<any | null> {
+  const appeal = await db.query.ccCitationAppeals.findFirst({
+    where: eq(ccCitationAppeals.id, appealId)
+  });
+  
+  if (!appeal) return null;
+  
+  // Get citation and verify portal
+  const citationResult = await getCitation(portalSlug, appeal.citationId);
+  if (!citationResult) return null;
+  
+  return { appeal, ...citationResult };
+}
+
+export async function updateAppealStatus(
+  portalSlug: string,
+  appealId: string,
+  status: string,
+  data?: {
+    assignedTo?: string;
+    hearingDate?: Date;
+    hearingTime?: string;
+    hearingLocation?: string;
+    hearingNotes?: string;
+  }
+): Promise<any> {
+  const appeal = await db.query.ccCitationAppeals.findFirst({
+    where: eq(ccCitationAppeals.id, appealId)
+  });
+  
+  if (!appeal) throw new Error('Appeal not found');
+  
+  // Verify portal ownership via citation
+  const citationResult = await getCitation(portalSlug, appeal.citationId);
+  if (!citationResult) throw new Error('Citation not found');
+  
+  const updates: Record<string, any> = {
+    status,
+    updatedAt: new Date()
+  };
+  
+  if (data?.assignedTo) {
+    updates.assignedTo = data.assignedTo;
+    updates.assignedAt = new Date();
+  }
+  
+  if (data?.hearingDate) updates.hearingDate = data.hearingDate;
+  if (data?.hearingTime) updates.hearingTime = data.hearingTime;
+  if (data?.hearingLocation) updates.hearingLocation = data.hearingLocation;
+  if (data?.hearingNotes) updates.hearingNotes = data.hearingNotes;
+  
+  const [updated] = await db.update(ccCitationAppeals)
+    .set(updates)
+    .where(eq(ccCitationAppeals.id, appealId))
+    .returning();
+  
+  return updated;
+}
+
+export async function decideAppeal(
+  portalSlug: string,
+  appealId: string,
+  data: {
+    decision: string;
+    decisionReason: string;
+    decidedBy: string;
+    newFineAmount?: number;
+    newDueDate?: Date;
+  }
+): Promise<any> {
+  const appeal = await db.query.ccCitationAppeals.findFirst({
+    where: eq(ccCitationAppeals.id, appealId)
+  });
+  
+  if (!appeal) throw new Error('Appeal not found');
+  
+  // Verify portal ownership
+  const citationResult = await getCitation(portalSlug, appeal.citationId);
+  if (!citationResult) throw new Error('Citation not found');
+  
+  const [updatedAppeal] = await db.update(ccCitationAppeals)
+    .set({
+      status: 'decided',
+      decision: data.decision,
+      decisionReason: data.decisionReason,
+      decidedBy: data.decidedBy,
+      decidedAt: new Date(),
+      newFineAmountCad: data.newFineAmount,
+      newDueDate: data.newDueDate,
+      updatedAt: new Date()
+    })
+    .where(eq(ccCitationAppeals.id, appealId))
+    .returning();
+  
+  // Update citation based on decision
+  const citationUpdates: Record<string, any> = {
+    updatedAt: new Date()
+  };
+  
+  if (data.decision === 'upheld') {
+    citationUpdates.status = 'upheld';
+    citationUpdates.paymentStatus = 'unpaid';
+  } else if (data.decision === 'dismissed') {
+    citationUpdates.status = 'dismissed';
+    citationUpdates.paymentStatus = 'waived';
+  } else if (data.decision === 'reduced' && data.newFineAmount !== undefined) {
+    citationUpdates.status = 'reduced';
+    citationUpdates.fineAmountCad = data.newFineAmount;
+    citationUpdates.paymentStatus = data.newFineAmount === 0 ? 'waived' : 'unpaid';
+    if (data.newDueDate) citationUpdates.fineDueDate = data.newDueDate;
+  }
+  
+  await db.update(ccCitations)
+    .set(citationUpdates)
+    .where(eq(ccCitations.id, appeal.citationId));
+  
+  await logActivity({
+    tenantId: 'system',
+    actorId: data.decidedBy,
+    action: 'appeal.decided',
+    resourceType: 'citation_appeal',
+    resourceId: appealId,
+    metadata: { decision: data.decision, newFineAmount: data.newFineAmount }
+  });
+  
+  return { appeal: updatedAppeal, citation: citationResult.citation };
+}
+
+// ============ VIOLATION HISTORY ============
+
+export async function checkViolatorStanding(
+  portalSlug: string,
+  identifierType: string,
+  identifierValue: string
+): Promise<any | null> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) return null;
+  
+  const history = await getViolationHistory(portal.id, identifierType, identifierValue.toLowerCase());
+  
+  if (!history) {
+    return {
+      standing: 'good',
+      totalCitations: 0,
+      totalFines: 0,
+      unpaidFines: 0,
+      canBook: true
+    };
+  }
+  
+  return {
+    standing: history.standing,
+    totalCitations: history.totalCitations,
+    totalFines: Number(history.totalFinesCad),
+    unpaidFines: Number(history.unpaidFinesCad),
+    lastViolation: history.lastCitationDate,
+    canBook: !['restricted', 'banned'].includes(history.standing),
+    banUntil: history.banUntil,
+    banReason: history.banReason
+  };
+}
+
+export async function updateViolatorStanding(
+  portalSlug: string,
+  identifierType: string,
+  identifierValue: string,
+  standing: string,
+  data?: {
+    banReason?: string;
+    banUntil?: Date;
+    notes?: string;
+  }
+): Promise<any> {
+  const portal = await db.query.ccPortals.findFirst({
+    where: eq(ccPortals.slug, portalSlug)
+  });
+  
+  if (!portal) throw new Error('Portal not found');
+  
+  const history = await getViolationHistory(portal.id, identifierType, identifierValue.toLowerCase());
+  
+  if (!history) {
+    // Create new record with standing
+    const [created] = await db.insert(ccViolationHistory).values({
+      portalId: portal.id,
+      identifierType,
+      identifierValue: identifierValue.toLowerCase(),
+      standing,
+      banReason: data?.banReason,
+      banUntil: data?.banUntil,
+      notes: data?.notes
+    }).returning();
+    return created;
+  }
+  
+  const [updated] = await db.update(ccViolationHistory)
+    .set({
+      standing,
+      banReason: data?.banReason,
+      banUntil: data?.banUntil,
+      notes: data?.notes,
+      updatedAt: new Date()
+    })
+    .where(eq(ccViolationHistory.id, history.id))
+    .returning();
+  
+  return updated;
+}
+```
+
+## Create server/routes/citations.ts
+```typescript
+// server/routes/citations.ts
+
+import { Router } from 'express';
+import {
+  createCitation, getCitation, getCitationByNumber, searchCitations,
+  recordPayment, fileAppeal, getAppeal, updateAppealStatus, decideAppeal,
+  checkViolatorStanding, updateViolatorStanding
+} from '../services/citationService';
+
+const router = Router();
+
+// ============ CITATION ENDPOINTS ============
+
+// POST /api/citations/portals/:slug/citations - Create citation
+router.post('/portals/:slug/citations', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.violatorName || !b.ruleName || !b.violationDescription || !b.violationDate || !b.issuedBy) {
+    return res.status(400).json({ 
+      error: 'violatorName, ruleName, violationDescription, violationDate, issuedBy required' 
+    });
+  }
+  
+  try {
+    const result = await createCitation({
+      portalSlug: slug,
+      propertyId: b.propertyId,
+      unitId: b.unitId,
+      reservationId: b.reservationId,
+      complianceRuleId: b.complianceRuleId,
+      complianceCheckId: b.complianceCheckId,
+      incidentReportId: b.incidentReportId,
+      violatorType: b.violatorType,
+      violatorName: b.violatorName,
+      violatorEmail: b.violatorEmail,
+      violatorPhone: b.violatorPhone,
+      violatorAddress: b.violatorAddress,
+      guestReservationId: b.guestReservationId,
+      vesselName: b.vesselName,
+      vesselRegistration: b.vesselRegistration,
+      vehiclePlate: b.vehiclePlate,
+      vehicleDescription: b.vehicleDescription,
+      violationDate: new Date(b.violationDate),
+      violationTime: b.violationTime,
+      violationLocation: b.violationLocation,
+      lat: b.lat,
+      lon: b.lon,
+      ruleCode: b.ruleCode,
+      ruleName: b.ruleName,
+      violationDescription: b.violationDescription,
+      evidenceDescription: b.evidenceDescription,
+      photos: b.photos,
+      witnessNames: b.witnessNames,
+      fineAmount: b.fineAmount,
+      fineDueDate: b.fineDueDate ? new Date(b.fineDueDate) : undefined,
+      additionalAction: b.additionalAction,
+      actionNotes: b.actionNotes,
+      issuedBy: b.issuedBy,
+      issuerNotes: b.issuerNotes
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    console.error('Create citation error:', e);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/citations/portals/:slug/citations - Search citations
+router.get('/portals/:slug/citations', async (req, res) => {
+  const { slug } = req.params;
+  const { property, status, payment, email, from, to, limit } = req.query;
+  
+  try {
+    const citations = await searchCitations(slug, {
+      propertyId: property as string,
+      status: status as string,
+      paymentStatus: payment as string,
+      violatorEmail: email as string,
+      fromDate: from ? new Date(from as string) : undefined,
+      toDate: to ? new Date(to as string) : undefined,
+      limit: limit ? parseInt(limit as string) : undefined
+    });
+    
+    res.json({ citations, count: citations.length });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to search citations' });
+  }
+});
+
+// GET /api/citations/portals/:slug/citations/:id - Get citation
+router.get('/portals/:slug/citations/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getCitation(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Citation not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get citation' });
+  }
+});
+
+// GET /api/citations/portals/:slug/citations/by-number/:number
+router.get('/portals/:slug/citations/by-number/:number', async (req, res) => {
+  const { slug, number } = req.params;
+  
+  try {
+    const result = await getCitationByNumber(slug, number);
+    if (!result) {
+      return res.status(404).json({ error: 'Citation not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get citation' });
+  }
+});
+
+// POST /api/citations/portals/:slug/citations/:id/payment - Record payment
+router.post('/portals/:slug/citations/:id/payment', async (req, res) => {
+  const { slug, id } = req.params;
+  const { amount, paymentReference } = req.body || {};
+  
+  if (!amount) {
+    return res.status(400).json({ error: 'amount required' });
+  }
+  
+  try {
+    const citation = await recordPayment(slug, id, { amount, paymentReference });
+    res.json({ citation });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ APPEAL ENDPOINTS ============
+
+// POST /api/citations/portals/:slug/citations/:id/appeal - File appeal
+router.post('/portals/:slug/citations/:id/appeal', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.appellantName || !b.grounds) {
+    return res.status(400).json({ error: 'appellantName and grounds required' });
+  }
+  
+  try {
+    const result = await fileAppeal(slug, id, {
+      appellantName: b.appellantName,
+      appellantEmail: b.appellantEmail,
+      appellantPhone: b.appellantPhone,
+      grounds: b.grounds,
+      supportingEvidence: b.supportingEvidence,
+      documents: b.documents
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// GET /api/citations/portals/:slug/appeals/:id - Get appeal
+router.get('/portals/:slug/appeals/:id', async (req, res) => {
+  const { slug, id } = req.params;
+  
+  try {
+    const result = await getAppeal(slug, id);
+    if (!result) {
+      return res.status(404).json({ error: 'Appeal not found' });
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to get appeal' });
+  }
+});
+
+// POST /api/citations/portals/:slug/appeals/:id/status - Update appeal status
+router.post('/portals/:slug/appeals/:id/status', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.status) {
+    return res.status(400).json({ error: 'status required' });
+  }
+  
+  try {
+    const appeal = await updateAppealStatus(slug, id, b.status, {
+      assignedTo: b.assignedTo,
+      hearingDate: b.hearingDate ? new Date(b.hearingDate) : undefined,
+      hearingTime: b.hearingTime,
+      hearingLocation: b.hearingLocation,
+      hearingNotes: b.hearingNotes
+    });
+    
+    res.json({ appeal });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /api/citations/portals/:slug/appeals/:id/decide - Decide appeal
+router.post('/portals/:slug/appeals/:id/decide', async (req, res) => {
+  const { slug, id } = req.params;
+  const b = req.body || {};
+  
+  if (!b.decision || !b.decisionReason || !b.decidedBy) {
+    return res.status(400).json({ error: 'decision, decisionReason, decidedBy required' });
+  }
+  
+  try {
+    const result = await decideAppeal(slug, id, {
+      decision: b.decision,
+      decisionReason: b.decisionReason,
+      decidedBy: b.decidedBy,
+      newFineAmount: b.newFineAmount,
+      newDueDate: b.newDueDate ? new Date(b.newDueDate) : undefined
+    });
+    
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ============ VIOLATOR STANDING ============
+
+// GET /api/citations/portals/:slug/standing - Check standing
+router.get('/portals/:slug/standing', async (req, res) => {
+  const { slug } = req.params;
+  const { type, value } = req.query;
+  
+  if (!type || !value) {
+    return res.status(400).json({ error: 'type and value query params required' });
+  }
+  
+  try {
+    const result = await checkViolatorStanding(slug, type as string, value as string);
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to check standing' });
+  }
+});
+
+// POST /api/citations/portals/:slug/standing - Update standing
+router.post('/portals/:slug/standing', async (req, res) => {
+  const { slug } = req.params;
+  const b = req.body || {};
+  
+  if (!b.identifierType || !b.identifierValue || !b.standing) {
+    return res.status(400).json({ error: 'identifierType, identifierValue, standing required' });
+  }
+  
+  try {
+    const history = await updateViolatorStanding(slug, b.identifierType, b.identifierValue, b.standing, {
+      banReason: b.banReason,
+      banUntil: b.banUntil ? new Date(b.banUntil) : undefined,
+      notes: b.notes
+    });
+    
+    res.json({ history });
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+export default router;
+```
+
+### Register routes in server/index.ts
+```typescript
+import citationRoutes from './routes/citations';
+
+// Add with other routes
+app.use('/api/citations', citationRoutes);
+```
+
+## Drizzle Schema Exports
+
+Add to shared/schema.ts:
+- Citation, InsertCitation
+- CitationAppeal, InsertCitationAppeal
+- ViolationHistory, InsertViolationHistory
+
+## Deliverables
+- [ ] Migration 094_citations.sql
+- [ ] cc_citations table with RLS
+- [ ] cc_citation_appeals table with RLS
+- [ ] cc_violation_history table with RLS
+- [ ] server/services/citationService.ts
+- [ ] server/routes/citations.ts
+- [ ] Routes registered in server/index.ts
+- [ ] API Endpoints:
+  - Citations: create, search, get, get by number, record payment
+  - Appeals: file, get, update status, decide
+  - Standing: check, update
+- [ ] Citation number format: CIT-YYMMDD-XXXX
+- [ ] Appeal number format: APL-YYMMDD-XXXX
+- [ ] Offense tracking: auto-counts prior citations for same violator
+- [ ] Violation history: auto-updates standing (good → warned → probation → restricted)
+- [ ] Payment tracking: updates history unpaid fines when paid
+- [ ] Appeal decision updates citation status and fine amount
+- [ ] Test: Create citation → offense number = 1, standing = warned
+- [ ] Test: Create second citation same email → offense number = 2, standing = probation
+- [ ] Test: File appeal → citation status = contested
+- [ ] Test: Decide appeal (reduced) → citation fine updated
+
+Report with citation showing offense tracking and appeal decision result.
