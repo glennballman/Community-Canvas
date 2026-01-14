@@ -10,24 +10,27 @@ router.get('/transfers/:id', async (req: Request, res: Response) => {
     const transferResult = await tenantQuery(req, `
       SELECT 
         id, client_request_id, direction, status,
-        amount_cents, currency, memo, reference_text,
+        amount_cents, currency, memo,
         from_rail_account_id, to_rail_account_id,
         provider_transfer_id, provider_status,
-        requested_at, submitted_at, completed_at,
+        reference_type, reference_id,
+        requested_at, submitted_at, completed_at as settled_at,
         created_at, updated_at
       FROM cc_rail_transfers
       WHERE id = $1
     `, [transferId]);
 
     if (transferResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Transfer not found' });
+      return res.status(404).json({ error: 'Transfer not found', code: 'NOT_FOUND' });
     }
 
     const eventsResult = await tenantQuery(req, `
       SELECT 
-        id, event_type, previous_status, new_status,
-        provider_status, provider_reason_code, provider_reason_message,
-        event_data, created_at
+        id, event_type, 
+        created_at as event_at,
+        event_data->>'provider_event_id' as provider_event_id,
+        provider_status, new_status,
+        provider_reason_message as message
       FROM cc_rail_transfer_events
       WHERE transfer_id = $1
       ORDER BY created_at DESC
@@ -40,7 +43,7 @@ router.get('/transfers/:id', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Failed to get transfer:', error);
-    res.status(500).json({ error: 'Failed to retrieve transfer' });
+    res.status(500).json({ error: 'Failed to retrieve transfer', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -59,7 +62,7 @@ router.get('/accounts', async (req: Request, res: Response) => {
     res.json({ accounts: result.rows });
   } catch (error) {
     console.error('Failed to get rail accounts:', error);
-    res.status(500).json({ error: 'Failed to retrieve rail accounts' });
+    res.status(500).json({ error: 'Failed to retrieve rail accounts', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -77,7 +80,7 @@ router.get('/connectors', async (req: Request, res: Response) => {
     res.json({ connectors: result.rows });
   } catch (error) {
     console.error('Failed to get rail connectors:', error);
-    res.status(500).json({ error: 'Failed to retrieve rail connectors' });
+    res.status(500).json({ error: 'Failed to retrieve rail connectors', code: 'INTERNAL_ERROR' });
   }
 });
 

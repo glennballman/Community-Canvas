@@ -10,15 +10,16 @@ router.post('/topups', async (req: Request, res: Response) => {
       amount_cents,
       to_rail_account_id,
       client_request_id,
-      memo
+      memo,
+      reference_text
     } = req.body;
 
     if (!wallet_account_id || !amount_cents || !to_rail_account_id || !client_request_id) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(422).json({ error: 'Missing required fields', code: 'VALIDATION_ERROR' });
     }
 
     if (amount_cents <= 0) {
-      return res.status(400).json({ error: 'Amount must be positive' });
+      return res.status(422).json({ error: 'Amount must be positive', code: 'INVALID_AMOUNT' });
     }
 
     const result = await tenantQuery(req, `
@@ -32,21 +33,41 @@ router.post('/topups', async (req: Request, res: Response) => {
         $3::uuid,
         $4::text,
         'wallet_topup',
-        $5::uuid
+        $5::uuid,
+        $6::text
       ) as transfer_id
-    `, [client_request_id, amount_cents, to_rail_account_id, memo || '', wallet_account_id]);
+    `, [client_request_id, amount_cents, to_rail_account_id, memo || '', wallet_account_id, reference_text || null]);
+
+    const transferId = result.rows[0].transfer_id;
 
     res.status(201).json({
-      transfer_id: result.rows[0].transfer_id,
+      transfer_id: transferId,
       status: 'created',
-      message: 'Top-up transfer created. Awaiting RTR submission.'
+      direction: 'inbound',
+      amount_cents: amount_cents,
+      currency: 'CAD',
+      client_request_id: client_request_id,
+      created_at: new Date().toISOString()
     });
   } catch (error: any) {
-    if (error.message?.includes('duplicate')) {
-      return res.status(409).json({ error: 'Duplicate client_request_id' });
+    if (error.message?.includes('duplicate') || error.code === '23505') {
+      try {
+        const existing = await tenantQuery(req, `
+          SELECT id FROM cc_rail_transfers 
+          WHERE client_request_id = $1
+        `, [req.body.client_request_id]);
+        
+        if (existing.rows.length > 0) {
+          return res.status(409).json({ 
+            error: 'Duplicate client_request_id',
+            transfer_id: existing.rows[0].id,
+            code: 'DUPLICATE_REQUEST'
+          });
+        }
+      } catch {}
     }
     console.error('Top-up creation failed:', error);
-    res.status(500).json({ error: 'Failed to create top-up' });
+    res.status(500).json({ error: 'Failed to create top-up', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -58,15 +79,16 @@ router.post('/cashouts', async (req: Request, res: Response) => {
       from_rail_account_id,
       to_rail_account_id,
       client_request_id,
-      memo
+      memo,
+      expires_at
     } = req.body;
 
     if (!wallet_account_id || !amount_cents || !from_rail_account_id || !to_rail_account_id || !client_request_id) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(422).json({ error: 'Missing required fields', code: 'VALIDATION_ERROR' });
     }
 
     if (amount_cents <= 0) {
-      return res.status(400).json({ error: 'Amount must be positive' });
+      return res.status(422).json({ error: 'Amount must be positive', code: 'INVALID_AMOUNT' });
     }
 
     const result = await withTenantTransaction(req, async (client) => {
@@ -78,9 +100,9 @@ router.post('/cashouts', async (req: Request, res: Response) => {
           'cashout',
           'rail_transfer_intent',
           NULL::uuid,
-          NULL::timestamptz
+          $3::timestamptz
         ) as hold_id
-      `, [wallet_account_id, amount_cents]);
+      `, [wallet_account_id, amount_cents, expires_at || null]);
 
       const holdId = holdResult.rows[0].hold_id;
 
@@ -95,7 +117,8 @@ router.post('/cashouts', async (req: Request, res: Response) => {
           $4::uuid,
           $5::text,
           'wallet_cashout',
-          $6::uuid
+          $6::uuid,
+          NULL
         ) as transfer_id
       `, [client_request_id, amount_cents, from_rail_account_id, to_rail_account_id, memo || '', holdId]);
 
@@ -111,19 +134,43 @@ router.post('/cashouts', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({
-      ...result,
-      status: 'created',
-      message: 'Cash-out transfer created with hold. Awaiting RTR submission.'
+      transfer_id: result.transfer_id,
+      hold_id: result.hold_id,
+      transfer_status: 'created',
+      hold_status: 'active',
+      amount_cents: amount_cents,
+      currency: 'CAD',
+      client_request_id: client_request_id,
+      created_at: new Date().toISOString()
     });
   } catch (error: any) {
     if (error.message?.includes('Insufficient available balance')) {
-      return res.status(400).json({ error: 'Insufficient wallet balance' });
+      return res.status(402).json({ 
+        error: 'Insufficient available balance', 
+        code: 'INSUFFICIENT_BALANCE' 
+      });
     }
-    if (error.message?.includes('duplicate')) {
-      return res.status(409).json({ error: 'Duplicate client_request_id' });
+    if (error.message?.includes('duplicate') || error.code === '23505') {
+      try {
+        const existing = await tenantQuery(req, `
+          SELECT rt.id as transfer_id, wh.id as hold_id
+          FROM cc_rail_transfers rt
+          LEFT JOIN cc_wallet_holds wh ON wh.reference_id = rt.id
+          WHERE rt.client_request_id = $1
+        `, [req.body.client_request_id]);
+        
+        if (existing.rows.length > 0) {
+          return res.status(409).json({ 
+            error: 'Duplicate client_request_id',
+            transfer_id: existing.rows[0].transfer_id,
+            hold_id: existing.rows[0].hold_id,
+            code: 'DUPLICATE_REQUEST'
+          });
+        }
+      } catch {}
     }
     console.error('Cash-out creation failed:', error);
-    res.status(500).json({ error: 'Failed to create cash-out' });
+    res.status(500).json({ error: 'Failed to create cash-out', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -141,7 +188,7 @@ router.get('/accounts/:id', async (req: Request, res: Response) => {
     `, [walletAccountId]);
 
     if (accountResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Wallet account not found' });
+      return res.status(404).json({ error: 'Wallet account not found', code: 'NOT_FOUND' });
     }
 
     const entriesResult = await tenantQuery(req, `
@@ -152,7 +199,7 @@ router.get('/accounts/:id', async (req: Request, res: Response) => {
       FROM cc_wallet_entries
       WHERE wallet_account_id = $1
       ORDER BY sequence_number DESC
-      LIMIT 20
+      LIMIT 50
     `, [walletAccountId]);
 
     const holdsResult = await tenantQuery(req, `
@@ -165,12 +212,12 @@ router.get('/accounts/:id', async (req: Request, res: Response) => {
 
     res.json({
       account: accountResult.rows[0],
-      recent_entries: entriesResult.rows,
-      active_holds: holdsResult.rows
+      entries: entriesResult.rows,
+      holds: holdsResult.rows
     });
   } catch (error) {
     console.error('Failed to get wallet account:', error);
-    res.status(500).json({ error: 'Failed to retrieve wallet account' });
+    res.status(500).json({ error: 'Failed to retrieve wallet account', code: 'INTERNAL_ERROR' });
   }
 });
 
@@ -179,7 +226,7 @@ router.post('/accounts', async (req: Request, res: Response) => {
     const { account_name, party_id, individual_id, currency, metadata } = req.body;
 
     if (!account_name) {
-      return res.status(400).json({ error: 'account_name is required' });
+      return res.status(422).json({ error: 'account_name is required', code: 'VALIDATION_ERROR' });
     }
 
     const result = await tenantQuery(req, `
@@ -195,11 +242,13 @@ router.post('/accounts', async (req: Request, res: Response) => {
 
     res.status(201).json({
       wallet_id: result.rows[0].wallet_id,
-      message: 'Wallet account created'
+      status: 'active',
+      currency: currency || 'CAD',
+      created_at: new Date().toISOString()
     });
   } catch (error) {
     console.error('Failed to create wallet account:', error);
-    res.status(500).json({ error: 'Failed to create wallet account' });
+    res.status(500).json({ error: 'Failed to create wallet account', code: 'INTERNAL_ERROR' });
   }
 });
 

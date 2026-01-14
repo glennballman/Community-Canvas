@@ -1,0 +1,253 @@
+{
+  "info": {
+    "_postman_id": "b4d5c2aa-0000-4000-9000-111111111111",
+    "name": "Community Canvas - RTR Adaptor",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "App + Service endpoints for Wallet + Rail + RTR adaptor."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "serviceBaseUrl", "value": "http://localhost:5000" },
+    { "key": "appBearerToken", "value": "REPLACE_ME" },
+    { "key": "serviceBearerToken", "value": "REPLACE_ME" },
+    { "key": "tenantId", "value": "00000000-0000-0000-0000-000000000001" },
+    { "key": "walletAccountId", "value": "REPLACE_ME" },
+    { "key": "fromRailAccountId", "value": "REPLACE_ME" },
+    { "key": "toRailAccountId", "value": "REPLACE_ME" },
+    { "key": "transferId", "value": "REPLACE_ME" },
+    { "key": "holdId", "value": "REPLACE_ME" },
+    { "key": "rtrProfileId", "value": "REPLACE_ME" }
+  ],
+  "item": [
+    {
+      "name": "App - Wallet",
+      "item": [
+        {
+          "name": "Create Top-up (inbound transfer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{appBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/topups",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "topups"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_account_id\": \"{{walletAccountId}}\",\n  \"amount_cents\": 2500,\n  \"to_rail_account_id\": \"{{toRailAccountId}}\",\n  \"client_request_id\": \"topup_{{$timestamp}}\",\n  \"memo\": \"Top-up\",\n  \"reference_text\": \"Test top-up\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create Cash-out (hold + outbound transfer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{appBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/cashouts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "cashouts"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_account_id\": \"{{walletAccountId}}\",\n  \"amount_cents\": 2500,\n  \"from_rail_account_id\": \"{{fromRailAccountId}}\",\n  \"to_rail_account_id\": \"{{toRailAccountId}}\",\n  \"client_request_id\": \"cashout_{{$timestamp}}\",\n  \"memo\": \"Cash-out\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Wallet Account",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{appBearerToken}}" },
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/accounts/{{walletAccountId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "accounts", "{{walletAccountId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Wallet Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{appBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "accounts"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_name\": \"Test Wallet Account\",\n  \"currency\": \"CAD\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "App - Rail",
+      "item": [
+        {
+          "name": "Get Rail Transfer",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{appBearerToken}}" },
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rail/transfers/{{transferId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rail", "transfers", "{{transferId}}"]
+            }
+          }
+        },
+        {
+          "name": "List Rail Accounts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{appBearerToken}}" },
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rail/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rail", "accounts"]
+            }
+          }
+        },
+        {
+          "name": "List Rail Connectors",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{appBearerToken}}" },
+              { "key": "X-Tenant-Id", "value": "{{tenantId}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/rail/connectors",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rail", "connectors"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Service - RTR Worker",
+      "item": [
+        {
+          "name": "Submit Transfer to RTR",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Service-Key", "value": "{{serviceBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{serviceBaseUrl}}/internal/rtr/submit-transfer",
+              "host": ["{{serviceBaseUrl}}"],
+              "path": ["internal", "rtr", "submit-transfer"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"transfer_id\": \"{{transferId}}\",\n  \"rtr_profile_id\": \"{{rtrProfileId}}\",\n  \"dry_run\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Simulate Webhook (ACCEPTED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Service-Key", "value": "{{serviceBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{serviceBaseUrl}}/internal/rtr/webhook",
+              "host": ["{{serviceBaseUrl}}"],
+              "path": ["internal", "rtr", "webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"rtr_profile_id\": \"{{rtrProfileId}}\",\n  \"provider_event_id\": \"evt_accepted_{{$timestamp}}\",\n  \"received_at\": \"2026-01-14T12:00:00.000Z\",\n  \"headers\": {\n    \"content-type\": \"application/json\",\n    \"x-signature\": \"redacted\"\n  },\n  \"payload\": {\n    \"provider_transfer_id\": \"RTR_{{transferId}}\",\n    \"status\": \"ACCEPTED\",\n    \"client_request_id\": \"test\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Simulate Webhook (SETTLED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Service-Key", "value": "{{serviceBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{serviceBaseUrl}}/internal/rtr/webhook",
+              "host": ["{{serviceBaseUrl}}"],
+              "path": ["internal", "rtr", "webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"rtr_profile_id\": \"{{rtrProfileId}}\",\n  \"provider_event_id\": \"evt_settled_{{$timestamp}}\",\n  \"received_at\": \"2026-01-14T12:00:00.000Z\",\n  \"headers\": {\n    \"content-type\": \"application/json\",\n    \"x-signature\": \"redacted\"\n  },\n  \"payload\": {\n    \"provider_transfer_id\": \"RTR_{{transferId}}\",\n    \"status\": \"SETTLED\",\n    \"client_request_id\": \"test\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Simulate Webhook (REJECTED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Service-Key", "value": "{{serviceBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{serviceBaseUrl}}/internal/rtr/webhook",
+              "host": ["{{serviceBaseUrl}}"],
+              "path": ["internal", "rtr", "webhook"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"rtr_profile_id\": \"{{rtrProfileId}}\",\n  \"provider_event_id\": \"evt_rejected_{{$timestamp}}\",\n  \"received_at\": \"2026-01-14T12:00:00.000Z\",\n  \"headers\": {\n    \"content-type\": \"application/json\",\n    \"x-signature\": \"redacted\"\n  },\n  \"payload\": {\n    \"provider_transfer_id\": \"RTR_{{transferId}}\",\n    \"status\": \"REJECTED\",\n    \"reason_code\": \"AC01\",\n    \"reason_message\": \"Incorrect account\",\n    \"client_request_id\": \"test\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Reconcile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Service-Key", "value": "{{serviceBearerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{serviceBaseUrl}}/internal/rtr/reconcile",
+              "host": ["{{serviceBaseUrl}}"],
+              "path": ["internal", "rtr", "reconcile"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"rtr_profile_id\": \"{{rtrProfileId}}\",\n  \"since\": \"2026-01-01T00:00:00Z\",\n  \"limit\": 200\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

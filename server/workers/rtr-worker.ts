@@ -2,6 +2,32 @@ import { pool } from '../db';
 import crypto from 'crypto';
 import { PoolClient } from 'pg';
 
+interface SubmitTransferResult {
+  success: boolean;
+  providerTransferId?: string;
+  alreadySubmitted?: boolean;
+  statusBefore?: string;
+  statusAfter?: string;
+  clientRequestId?: string;
+  error?: string;
+}
+
+interface IngestWebhookResult {
+  success: boolean;
+  inboxId?: string;
+  duplicate?: boolean;
+  transferId?: string;
+  statusTransition?: string;
+  error?: string;
+}
+
+interface ReconciliationResult {
+  checked: number;
+  updated: number;
+  unchanged: number;
+  errors: number;
+}
+
 async function withServiceMode<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
@@ -45,8 +71,9 @@ function computeHash(data: string): string {
 export async function submitTransferToRTR(
   tenantId: string,
   transferId: string,
-  rtrProfileId: string
-): Promise<{ success: boolean; providerTransferId?: string; error?: string }> {
+  rtrProfileId: string,
+  dryRun: boolean = false
+): Promise<SubmitTransferResult> {
   return withServiceMode(async (client) => {
     const transferResult = await client.query(`
       SELECT * FROM cc_rail_transfers
@@ -58,17 +85,34 @@ export async function submitTransferToRTR(
     }
 
     const transfer = transferResult.rows[0];
+    const statusBefore = transfer.status;
+    const clientRequestId = transfer.client_request_id;
 
     if (transfer.provider_transfer_id) {
       return {
         success: true,
         providerTransferId: transfer.provider_transfer_id,
+        alreadySubmitted: true,
+        statusBefore,
+        statusAfter: transfer.status,
+        clientRequestId,
         error: 'Already submitted (idempotent)'
       };
     }
 
     if (!['created', 'queued'].includes(transfer.status)) {
       return { success: false, error: `Cannot submit transfer in status: ${transfer.status}` };
+    }
+
+    if (dryRun) {
+      return {
+        success: true,
+        providerTransferId: undefined,
+        alreadySubmitted: false,
+        statusBefore,
+        statusAfter: 'submitted',
+        clientRequestId,
+      };
     }
 
     const prepareResult = await client.query(`
@@ -109,16 +153,24 @@ export async function submitTransferToRTR(
       DO UPDATE SET last_synced_at = now(), sync_status = 'synced'
     `, [tenantId, providerTransferId, transferId]);
 
-    return { success: true, providerTransferId };
+    return {
+      success: true,
+      providerTransferId,
+      alreadySubmitted: false,
+      statusBefore,
+      statusAfter: 'submitted',
+      clientRequestId
+    };
   });
 }
 
 export async function ingestRTRWebhook(
   tenantId: string,
   rtrProfileId: string,
+  providerEventId: string | null,
   headers: any,
   rawPayload: string
-): Promise<{ success: boolean; inboxId?: string; duplicate?: boolean; error?: string }> {
+): Promise<IngestWebhookResult> {
   return withServiceMode(async (client) => {
     const eventHash = computeHash(rawPayload);
 
@@ -129,14 +181,14 @@ export async function ingestRTRWebhook(
       return { success: false, error: 'Invalid JSON payload' };
     }
 
-    const providerEventId = payload.EventId || payload.event_id || null;
+    const eventId = providerEventId || payload.EventId || payload.event_id || null;
 
     const headersRedacted = redactPayload(headers);
     const payloadRedacted = redactPayload(payload);
 
     const ingestResult = await client.query(`
       SELECT cc_rtr_ingest_webhook($1, $2, $3, $4, $5, $6) as inbox_id
-    `, [tenantId, rtrProfileId, providerEventId, eventHash,
+    `, [tenantId, rtrProfileId, eventId, eventHash,
         JSON.stringify(headersRedacted), JSON.stringify(payloadRedacted)]);
 
     const inboxId = ingestResult.rows[0].inbox_id;
@@ -149,8 +201,9 @@ export async function ingestRTRWebhook(
       return { success: true, inboxId, duplicate: true };
     }
 
-    const providerTransferId = payload.PaymentId || payload.payment_id || payload.transfer_id;
+    const providerTransferId = payload.provider_transfer_id || payload.PaymentId || payload.payment_id || payload.transfer_id;
     let transferId: string | null = null;
+    let statusTransition: string | null = null;
 
     if (providerTransferId) {
       const transferResult = await client.query(`
@@ -175,11 +228,12 @@ export async function ingestRTRWebhook(
       }
     }
 
-    if (!transferId && payload.ClientRequestId) {
+    if (!transferId && (payload.ClientRequestId || payload.client_request_id)) {
+      const clientId = payload.ClientRequestId || payload.client_request_id;
       const clientResult = await client.query(`
         SELECT id FROM cc_rail_transfers 
         WHERE client_request_id = $1 AND tenant_id = $2
-      `, [payload.ClientRequestId, tenantId]);
+      `, [clientId, tenantId]);
 
       if (clientResult.rows.length > 0) {
         transferId = clientResult.rows[0].id;
@@ -187,7 +241,13 @@ export async function ingestRTRWebhook(
     }
 
     if (transferId) {
-      const eventType = payload.EventType || payload.event_type || payload.Status || 'unknown';
+      const currentTransfer = await client.query(`
+        SELECT status FROM cc_rail_transfers WHERE id = $1 AND tenant_id = $2
+      `, [transferId, tenantId]);
+      
+      const oldStatus = currentTransfer.rows[0]?.status || 'unknown';
+      
+      const eventType = payload.status || payload.Status || payload.EventType || payload.event_type || 'unknown';
       const statusMapping: Record<string, string> = {
         'ACTC': 'accepted',
         'ACCP': 'accepted',
@@ -196,6 +256,11 @@ export async function ingestRTRWebhook(
         'RJCT': 'rejected',
         'CANC': 'cancelled',
         'PDNG': 'submitted',
+        'ACCEPTED': 'accepted',
+        'SETTLED': 'settled',
+        'REJECTED': 'rejected',
+        'FAILED': 'failed',
+        'CANCELLED': 'cancelled',
         'accepted': 'accepted',
         'settled': 'settled',
         'rejected': 'rejected',
@@ -204,22 +269,43 @@ export async function ingestRTRWebhook(
       };
 
       const newStatus = statusMapping[eventType] || 'unknown';
-      const providerReasonCode = payload.ReasonCode || payload.reason_code || null;
-      const providerReasonMessage = payload.ReasonMessage || payload.reason_message || null;
+      const providerReasonCode = payload.reason_code || payload.ReasonCode || null;
+      const providerReasonMessage = payload.reason_message || payload.ReasonMessage || null;
 
-      await client.query(`
-        SELECT cc_append_rail_transfer_event(
-          $1, $2, $3, $4, $5, $6, $7, $8
-        )
-      `, [tenantId, transferId, eventType, newStatus, eventType,
-          providerReasonCode, providerReasonMessage, JSON.stringify({ inbox_id: inboxId })]);
+      const statusPriority: Record<string, number> = {
+        'created': 1,
+        'queued': 2,
+        'submitted': 3,
+        'accepted': 4,
+        'settled': 10,
+        'rejected': 10,
+        'failed': 10,
+        'cancelled': 10,
+        'expired': 10,
+        'unknown': 0
+      };
 
-      if (newStatus === 'settled') {
-        await processSettledTransfer(client, tenantId, transferId);
-      }
+      const shouldUpdate = (statusPriority[newStatus] || 0) > (statusPriority[oldStatus] || 0);
 
-      if (['rejected', 'failed', 'cancelled'].includes(newStatus)) {
-        await releaseHoldForTransfer(client, tenantId, transferId, newStatus);
+      if (shouldUpdate || newStatus === 'unknown') {
+        await client.query(`
+          SELECT cc_append_rail_transfer_event(
+            $1, $2, $3, $4, $5, $6, $7, $8
+          )
+        `, [tenantId, transferId, eventType, newStatus, eventType,
+            providerReasonCode, providerReasonMessage, JSON.stringify({ inbox_id: inboxId, provider_event_id: eventId })]);
+
+        statusTransition = `${oldStatus} -> ${newStatus}`;
+
+        if (newStatus === 'settled') {
+          await processSettledTransfer(client, tenantId, transferId);
+        }
+
+        if (['rejected', 'failed', 'cancelled'].includes(newStatus)) {
+          await releaseHoldForTransfer(client, tenantId, transferId, newStatus);
+        }
+      } else {
+        statusTransition = `${oldStatus} -> ${newStatus} (skipped: not a forward transition)`;
       }
     }
 
@@ -229,7 +315,7 @@ export async function ingestRTRWebhook(
       WHERE id = $1
     `, [inboxId]);
 
-    return { success: true, inboxId, duplicate: false };
+    return { success: true, inboxId, duplicate: false, transferId: transferId || undefined, statusTransition: statusTransition || undefined };
   });
 }
 
@@ -300,18 +386,34 @@ async function releaseHoldForTransfer(client: PoolClient, tenantId: string, tran
   }
 }
 
-export async function runReconciliation(tenantId: string, rtrProfileId: string): Promise<void> {
+export async function runReconciliation(
+  tenantId: string, 
+  rtrProfileId: string,
+  since?: string,
+  limit: number = 200
+): Promise<ReconciliationResult> {
   return withServiceMode(async (client) => {
+    let result: ReconciliationResult = { checked: 0, updated: 0, unchanged: 0, errors: 0 };
+
+    const sinceDate = since ? new Date(since) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     const pendingResult = await client.query(`
       SELECT id, provider_transfer_id, status 
       FROM cc_rail_transfers
       WHERE tenant_id = $1 
         AND status NOT IN ('settled', 'rejected', 'failed', 'cancelled', 'expired')
         AND provider_transfer_id IS NOT NULL
-    `, [tenantId]);
+        AND created_at >= $2
+      ORDER BY created_at DESC
+      LIMIT $3
+    `, [tenantId, sinceDate, limit]);
 
     for (const transfer of pendingResult.rows) {
+      result.checked++;
       console.log(`Reconciling transfer ${transfer.id} (provider: ${transfer.provider_transfer_id})`);
+      result.unchanged++;
     }
+
+    return result;
   });
 }
