@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey, char } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey, char, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -3776,3 +3776,155 @@ export const insertConversationParticipantSchema = createInsertSchema(ccConversa
 });
 export type ConversationParticipant = typeof ccConversationParticipants.$inferSelect;
 export type InsertConversationParticipant = z.infer<typeof insertConversationParticipantSchema>;
+
+// ============================================================================
+// ACTOR TYPES (Bundle 100)
+// ============================================================================
+
+export const ccActorTypes = pgTable("cc_actor_types", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  codeIdx: index("idx_cc_actor_types_code").on(table.code),
+  activeIdx: index("idx_cc_actor_types_active").on(table.isActive),
+}));
+
+export const insertActorTypeSchema = createInsertSchema(ccActorTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ActorType = typeof ccActorTypes.$inferSelect;
+export type InsertActorType = z.infer<typeof insertActorTypeSchema>;
+
+// ============================================================================
+// TENANT ACTOR ROLES (Bundle 100)
+// ============================================================================
+
+export const ccTenantActorRoles = pgTable("cc_tenant_actor_roles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  actorTypeId: uuid("actor_type_id").notNull().references(() => ccActorTypes.id, { onDelete: "cascade" }),
+  isPrimary: boolean("is_primary").notNull().default(false),
+  activatedAt: timestamp("activated_at", { withTimezone: true }).notNull().defaultNow(),
+  deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_tenant_actor_roles_tenant").on(table.tenantId),
+  actorIdx: index("idx_cc_tenant_actor_roles_actor").on(table.actorTypeId),
+  uniqueTenantActor: uniqueIndex("cc_tenant_actor_roles_tenant_actor_unique").on(table.tenantId, table.actorTypeId),
+}));
+
+export const insertTenantActorRoleSchema = createInsertSchema(ccTenantActorRoles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TenantActorRole = typeof ccTenantActorRoles.$inferSelect;
+export type InsertTenantActorRole = z.infer<typeof insertTenantActorRoleSchema>;
+
+// ============================================================================
+// PLANS (Bundle 100)
+// ============================================================================
+
+export const ccPlans = pgTable("cc_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorTypeId: uuid("actor_type_id").notNull().references(() => ccActorTypes.id, { onDelete: "cascade" }),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  monthlyPrice: numeric("monthly_price").notNull().default("0"),
+  annualPrice: numeric("annual_price"),
+  seasonalPrice: numeric("seasonal_price"),
+  billingInterval: text("billing_interval").notNull().default("monthly"),
+  currency: text("currency").notNull().default("CAD"),
+  tierLevel: integer("tier_level").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  isPublic: boolean("is_public").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  actorIdx: index("idx_cc_plans_actor").on(table.actorTypeId),
+  codeIdx: index("idx_cc_plans_code").on(table.code),
+  tierIdx: index("idx_cc_plans_tier").on(table.actorTypeId, table.tierLevel),
+}));
+
+export const insertPlanSchema = createInsertSchema(ccPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Plan = typeof ccPlans.$inferSelect;
+export type InsertPlan = z.infer<typeof insertPlanSchema>;
+
+// ============================================================================
+// PLAN ENTITLEMENTS (Bundle 100)
+// ============================================================================
+
+export const ccPlanEntitlements = pgTable("cc_plan_entitlements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  planId: uuid("plan_id").notNull().references(() => ccPlans.id, { onDelete: "cascade" }),
+  entitlementKey: text("entitlement_key").notNull(),
+  valueType: text("value_type").notNull().default("boolean"),
+  booleanValue: boolean("boolean_value"),
+  numericValue: integer("numeric_value"),
+  textValue: text("text_value"),
+  displayName: text("display_name"),
+  description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  planIdx: index("idx_cc_plan_entitlements_plan").on(table.planId),
+  keyIdx: index("idx_cc_plan_entitlements_key").on(table.entitlementKey),
+  uniquePlanKey: uniqueIndex("cc_plan_entitlements_plan_key_unique").on(table.planId, table.entitlementKey),
+}));
+
+export const insertPlanEntitlementSchema = createInsertSchema(ccPlanEntitlements).omit({
+  id: true,
+  createdAt: true,
+});
+export type PlanEntitlement = typeof ccPlanEntitlements.$inferSelect;
+export type InsertPlanEntitlement = z.infer<typeof insertPlanEntitlementSchema>;
+
+// ============================================================================
+// SUBSCRIPTIONS (Bundle 100)
+// V3+: Tenant-owned only (party/individual can be added later)
+// ============================================================================
+
+export const ccSubscriptions = pgTable("cc_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  planId: uuid("plan_id").notNull().references(() => ccPlans.id),
+  actorTypeId: uuid("actor_type_id").notNull().references(() => ccActorTypes.id),
+  status: text("status").notNull().default("active"),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull().defaultNow(),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  billingMethod: text("billing_method").notNull().default("invoice"),
+  billingEmail: text("billing_email"),
+  externalCustomerId: text("external_customer_id"),
+  externalSubscriptionId: text("external_subscription_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+}, (table) => ({
+  tenantIdx: index("idx_cc_subscriptions_tenant").on(table.tenantId),
+  planIdx: index("idx_cc_subscriptions_plan").on(table.planId),
+  statusIdx: index("idx_cc_subscriptions_status").on(table.status),
+  uniqueTenantActor: uniqueIndex("cc_subscriptions_tenant_actor_unique").on(table.tenantId, table.actorTypeId),
+}));
+
+export const insertSubscriptionSchema = createInsertSchema(ccSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Subscription = typeof ccSubscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
