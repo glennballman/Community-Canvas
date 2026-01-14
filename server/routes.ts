@@ -74,6 +74,9 @@ import dashboardRouter from "./routes/dashboard";
 import authAccountsRouter from "./routes/authAccounts";
 import rolesRouter from "./routes/roles";
 import businessOperatorsRouter from "./routes/businessOperators";
+import walletRouter from "./routes/wallet";
+import railRouter from "./routes/rail";
+import internalRtrRouter from "./routes/internal-rtr";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -233,6 +236,11 @@ export async function registerRoutes(
   app.use('/api/auth-accounts', authAccountsRouter);
   app.use('/api/roles', rolesRouter);
   app.use('/api/business-operators', businessOperatorsRouter);
+
+  // Register stored value / payment rail routes (V3 stack)
+  app.use('/api/wallet', walletRouter);
+  app.use('/api/rail', railRouter);
+  app.use('/internal/rtr', internalRtrRouter);
 
   // Register CRM routes (Places, People, Organizations)
   app.use('/api/crm', crmRouter);

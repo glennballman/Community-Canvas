@@ -49,6 +49,12 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Authority & Permits System**: Multi-authority permit management with lifecycle management and QR code verification.
 - **Trip Permit Orchestration**: Links permits to trips with automatic requirement detection and status tracking.
 - **Business Operator Onboarding**: Application workflow system for registering 11 operator types (accommodation, transport, tour, rental, food_beverage, retail, service, contractor, guide, artisan, other) with unique numbering (OPA-YYMMDD-XXXX for applications, OPR-TYPE-YYMMDD-XXXX for approved operators), document verification, and auto-provisioning of operator records and role assignments upon approval.
+- **V3 Stored Value Stack**: PSP-agnostic payment infrastructure with append-only ledgers and FORCE RLS:
+  - **Payment Rail Spine** (Migration 118): `cc_rail_connectors`, `cc_rail_accounts`, `cc_rail_transfers`, `cc_rail_transfer_events`
+  - **Wallet Ledger Spine** (Migration 119): `cc_wallet_accounts`, `cc_wallet_entries`, `cc_wallet_holds`, `cc_wallet_balance_snapshots`
+  - **RTR Connector Pack** (Migration 120): `cc_rtr_profiles`, `cc_rtr_message_log`, `cc_rtr_webhook_inbox`
+  - **RTR Adaptor Layer**: Routes (`/api/wallet`, `/api/rail`, `/internal/rtr`) and worker (`server/workers/rtr-worker.ts`)
+  - **Append-Only Tables**: 5 tables with FORCE RLS (cc_audit_trail, cc_folio_ledger, cc_rail_transfer_events, cc_wallet_entries, cc_rtr_message_log)
 
 ### Feature Specifications
 - **Dual-view Mode**: Sources View (data source URLs) and Data View (live monitoring).
