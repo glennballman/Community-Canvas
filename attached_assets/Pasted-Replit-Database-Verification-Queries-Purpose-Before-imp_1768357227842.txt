@@ -1,0 +1,135 @@
+Replit Database Verification Queries
+Purpose
+Before implementing Prompt 24A/24B/24C, we need to verify the exact current state of the database to avoid conflicts and ensure we build correctly.
+Please run each query and provide the results.
+
+Query 1: cc_tenants Table Structure
+We need to verify the current structure of cc_tenants (ChatGPT says we should NOT add actor_type_id to this table).
+sqlSELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+  AND table_name = 'cc_tenants'
+ORDER BY ordinal_position;
+
+Query 2: Folio Tables Check
+ChatGPT says we should use existing folio tables instead of creating a new invoicing system. Please verify if these tables exist:
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND table_name IN (
+    'cc_folios',
+    'cc_folio_lines', 
+    'cc_folio_line_items',
+    'cc_folio_payments',
+    'cc_folio_adjustments'
+  );
+If they exist, show the structure of the main folio table:
+sqlSELECT column_name, data_type, is_nullable
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+  AND table_name LIKE 'cc_folio%'
+ORDER BY table_name, ordinal_position;
+
+Query 3: Existing Membership/Subscription Tables
+Check if any membership-related tables already exist from original Prompt 24 (which was paused):
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND (
+    table_name LIKE '%membership%' OR
+    table_name LIKE '%subscription%' OR
+    table_name LIKE '%plan%' OR
+    table_name LIKE '%actor_type%' OR
+    table_name LIKE '%entitlement%'
+  );
+
+Query 4: cc_messages Table Structure
+ChatGPT mentions adding sender_role and acting_as columns. Check current structure:
+sqlSELECT column_name, data_type, is_nullable
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+  AND table_name = 'cc_messages'
+ORDER BY ordinal_position;
+
+Query 5: Invitations Table Check
+Check if cc_invitations already exists:
+sqlSELECT column_name, data_type, is_nullable
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+  AND table_name = 'cc_invitations'
+ORDER BY ordinal_position;
+
+Query 6: Jobs Table Check
+ChatGPT says Jobs should be a first-class object. Check if cc_jobs exists:
+sqlSELECT column_name, data_type, is_nullable
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+  AND table_name = 'cc_jobs'
+ORDER BY ordinal_position;
+Also check for related job tables:
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND table_name LIKE '%job%';
+
+Query 7: Latest Migration Number
+Confirm the highest migration number:
+bashls -la server/migrations/*.sql | tail -10
+Also show the content of the last migration file name:
+bashls server/migrations/*.sql | sort | tail -1
+
+Query 8: Existing Outcome/Event Tables
+Check if any outcome or event tracking tables exist:
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND (
+    table_name LIKE '%outcome%' OR
+    table_name LIKE '%monetization%' OR
+    table_name LIKE '%hook%'
+  );
+
+Query 9: Bench/Standby Pool Tables
+Check if standby pool infrastructure exists:
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND (
+    table_name LIKE '%standby%' OR
+    table_name LIKE '%bench%' OR
+    table_name LIKE '%pool%'
+  );
+
+Query 10: PIC-Related Tables
+Check if PIC (Property Infrastructure Coordinator) tables exist:
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND table_name LIKE '%pic%';
+
+Query 11: Cold Start / Claim Link Tables
+Check if cold start infrastructure exists:
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND (
+    table_name LIKE '%claim%' OR
+    table_name LIKE '%cold_start%'
+  );
+
+Query 12: Portal Job Feed Tables
+Check if portal job syndication exists:
+sqlSELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND table_name LIKE '%portal_job%';
+
+Summary Request
+After running all queries, please provide:
+
+Total table count (should be 448 as reported)
+Last migration file name and number
+List of any tables that DO exist from queries 2-12
+List of any tables that DO NOT exist from queries 2-12
+
+This will help us create the correct Prompt 24A/24B/24C without conflicts.
