@@ -4,7 +4,8 @@ set -euo pipefail
 # Terminology Drift Check
 # This script scans ACTIVE CODE for banned terms.
 # 
-# Banned terms: booking, booked, bookings, is_booked, instant_book
+# Banned terms (whole-word matches only):
+#   booking, bookings, booked, is_booked, instant_book
 # 
 # EXCLUDED from scan:
 # - Documentation (docs/, *.md)
@@ -15,7 +16,7 @@ set -euo pipefail
 # - QA test scripts (scripts/qa*.sh) - test existing endpoints
 # - This script and rule docs
 
-BANNED='(\bbooking(s)?\b|\bbooked\b|\bis_booked\b|\binstant_book\b)'
+BANNED='(\bbooking\b|\bbookings\b|\bbooked\b|\bis_booked\b|\binstant_book\b)'
 
 echo "Scanning active code for terminology drift..."
 
@@ -39,7 +40,7 @@ VIOLATIONS=$(rg -n --hidden \
   --glob '!**/sample*.ts' \
   -i "$BANNED" . 2>/dev/null || true)
 
-# Filter out remaining false positives
+# Filter out remaining false positives (external URLs, iCal parsing)
 REAL_VIOLATIONS=$(echo "$VIOLATIONS" | grep -v -E \
   -e 'bcferries\.com/manage-booking' \
   -e 'Booking\.com' \
@@ -48,7 +49,6 @@ REAL_VIOLATIONS=$(echo "$VIOLATIONS" | grep -v -E \
   -e "summaryLower\.includes\('booking\.com'\)" \
   -e "blockType.*\|\|.*'booked'" \
   -e "block\.blockType.*'booked'" \
-  -e 'facebook' \
   -e '^$' \
   || true)
 
