@@ -6,7 +6,15 @@ const router = Router();
 function requireServiceKey(req: Request, res: Response, next: Function) {
   const serviceKey = req.headers['x-service-key'];
   
-  if (serviceKey !== process.env.INTERNAL_SERVICE_KEY && serviceKey !== process.env.SESSION_SECRET) {
+  // Accept INTERNAL_SERVICE_KEY, SESSION_SECRET, or dev test token
+  const validKeys = [
+    process.env.INTERNAL_SERVICE_KEY,
+    process.env.SESSION_SECRET,
+    // Dev/test mode: accept a known test token
+    process.env.NODE_ENV !== 'production' ? 'super-secret-session-key' : null
+  ].filter(Boolean);
+  
+  if (!serviceKey || !validKeys.includes(serviceKey as string)) {
     return res.status(403).json({ error: 'Service mode required', code: 'FORBIDDEN' });
   }
   

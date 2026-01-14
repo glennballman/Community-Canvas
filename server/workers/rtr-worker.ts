@@ -31,9 +31,10 @@ interface ReconciliationResult {
 async function withServiceMode<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
-    await client.query("SELECT set_config('app.tenant_id', '__SERVICE__', true)");
-    await client.query("SELECT set_config('app.portal_id', '__SERVICE__', true)");
-    await client.query("SELECT set_config('app.individual_id', '__SERVICE__', true)");
+    // Use false for is_local to make settings session-scoped
+    await client.query("SELECT set_config('app.tenant_id', '__SERVICE__', false)");
+    await client.query("SELECT set_config('app.portal_id', '__SERVICE__', false)");
+    await client.query("SELECT set_config('app.individual_id', '__SERVICE__', false)");
     return await fn(client);
   } finally {
     await client.query("SELECT set_config('app.tenant_id', '', false)").catch(() => {});
@@ -147,10 +148,10 @@ export async function submitTransferToRTR(
         tenant_id, external_system, external_object_type, external_object_id,
         local_table, local_id, sync_status, last_synced_at
       ) VALUES (
-        $1, 'rtr', 'transfer', $2, 'cc_rail_transfers', $3, 'synced', now()
+        $1, 'rtr', 'transfer', $2, 'cc_rail_transfers', $3, 'active', now()
       )
       ON CONFLICT (tenant_id, external_system, external_object_type, external_object_id)
-      DO UPDATE SET last_synced_at = now(), sync_status = 'synced'
+      DO UPDATE SET last_synced_at = now(), sync_status = 'active'
     `, [tenantId, providerTransferId, transferId]);
 
     return {
@@ -247,7 +248,9 @@ export async function ingestRTRWebhook(
       
       const oldStatus = currentTransfer.rows[0]?.status || 'unknown';
       
-      const eventType = payload.status || payload.Status || payload.EventType || payload.event_type || 'unknown';
+      const providerStatusCode = payload.status || payload.Status || payload.EventType || payload.event_type || 'unknown';
+      
+      // Map provider status to internal transfer status
       const statusMapping: Record<string, string> = {
         'ACTC': 'accepted',
         'ACCP': 'accepted',
@@ -268,7 +271,30 @@ export async function ingestRTRWebhook(
         'cancelled': 'cancelled'
       };
 
-      const newStatus = statusMapping[eventType] || 'unknown';
+      const newStatus = statusMapping[providerStatusCode] || 'unknown';
+      
+      // Map provider status to internal rail_event_type enum
+      const eventTypeMapping: Record<string, string> = {
+        'ACTC': 'provider_ack',
+        'ACCP': 'provider_ack',
+        'ACSP': 'provider_ack',
+        'ACSC': 'settled',
+        'RJCT': 'rejected',
+        'CANC': 'cancelled',
+        'PDNG': 'provider_update',
+        'ACCEPTED': 'provider_ack',
+        'SETTLED': 'settled',
+        'REJECTED': 'rejected',
+        'FAILED': 'failed',
+        'CANCELLED': 'cancelled',
+        'accepted': 'provider_ack',
+        'settled': 'settled',
+        'rejected': 'rejected',
+        'failed': 'failed',
+        'cancelled': 'cancelled'
+      };
+      
+      const internalEventType = eventTypeMapping[providerStatusCode] || 'webhook_received';
       const providerReasonCode = payload.reason_code || payload.ReasonCode || null;
       const providerReasonMessage = payload.reason_message || payload.ReasonMessage || null;
 
@@ -288,12 +314,19 @@ export async function ingestRTRWebhook(
       const shouldUpdate = (statusPriority[newStatus] || 0) > (statusPriority[oldStatus] || 0);
 
       if (shouldUpdate || newStatus === 'unknown') {
+        // cc_append_rail_transfer_event params:
+        // 1: p_tenant_id, 2: p_transfer_id, 3: p_event_type, 4: p_provider_event_id,
+        // 5: p_provider_status, 6: p_provider_payload, 7: p_new_status, 
+        // 8: p_message, 9: p_error_code, 10: p_error_message
         await client.query(`
           SELECT cc_append_rail_transfer_event(
-            $1, $2, $3, $4, $5, $6, $7, $8
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
           )
-        `, [tenantId, transferId, eventType, newStatus, eventType,
-            providerReasonCode, providerReasonMessage, JSON.stringify({ inbox_id: inboxId, provider_event_id: eventId })]);
+        `, [
+          tenantId, transferId, internalEventType, eventId,
+          providerStatusCode, JSON.stringify({ inbox_id: inboxId, provider_event_id: eventId }),
+          newStatus, null, providerReasonCode, providerReasonMessage
+        ]);
 
         statusTransition = `${oldStatus} -> ${newStatus}`;
 

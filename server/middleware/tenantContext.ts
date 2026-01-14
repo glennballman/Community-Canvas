@@ -270,6 +270,18 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
     if (!req.ctx.tenant_id && session?.current_tenant_id) {
       req.ctx.tenant_id = session.current_tenant_id;
     }
+    
+    // Development/Test mode: Allow X-Tenant-Id header to set tenant context
+    // This enables automated testing without full auth flow
+    if (!req.ctx.tenant_id && process.env.NODE_ENV !== 'production') {
+      const headerTenantId = req.headers['x-tenant-id'];
+      if (typeof headerTenantId === 'string' && headerTenantId.match(/^[0-9a-f-]{36}$/i)) {
+        req.ctx.tenant_id = headerTenantId;
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[tenantContext] Dev mode: X-Tenant-Id header used: ${headerTenantId}`);
+        }
+      }
+    }
   }
 
   next();

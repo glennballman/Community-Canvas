@@ -14,7 +14,7 @@ router.get('/transfers/:id', async (req: Request, res: Response) => {
         from_rail_account_id, to_rail_account_id,
         provider_transfer_id, provider_status,
         reference_type, reference_id,
-        requested_at, submitted_at, completed_at as settled_at,
+        requested_at, submitted_at, settled_at,
         created_at, updated_at
       FROM cc_rail_transfers
       WHERE id = $1
@@ -27,13 +27,13 @@ router.get('/transfers/:id', async (req: Request, res: Response) => {
     const eventsResult = await tenantQuery(req, `
       SELECT 
         id, event_type, 
-        created_at as event_at,
-        event_data->>'provider_event_id' as provider_event_id,
+        event_at,
+        provider_event_id,
         provider_status, new_status,
-        provider_reason_message as message
+        message
       FROM cc_rail_transfer_events
       WHERE transfer_id = $1
-      ORDER BY created_at DESC
+      ORDER BY event_at DESC
       LIMIT 50
     `, [transferId]);
 

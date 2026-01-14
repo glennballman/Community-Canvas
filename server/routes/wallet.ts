@@ -22,21 +22,31 @@ router.post('/topups', async (req: Request, res: Response) => {
       return res.status(422).json({ error: 'Amount must be positive', code: 'INVALID_AMOUNT' });
     }
 
+    const connectorResult = await tenantQuery(req, `
+      SELECT connector_id FROM cc_rail_accounts WHERE id = $1
+    `, [to_rail_account_id]);
+    
+    if (connectorResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Rail account not found', code: 'NOT_FOUND' });
+    }
+    
+    const connectorId = connectorResult.rows[0].connector_id;
+    
     const result = await tenantQuery(req, `
-      SELECT cc_create_rail_transfer(
+      SELECT transfer_id, already_exists FROM cc_create_rail_transfer(
         current_tenant_id(),
-        $1::text,
+        $1::uuid,
         'inbound'::rail_direction,
-        $2::bigint,
-        'CAD',
+        $2::text,
         NULL::uuid,
         $3::uuid,
-        $4::text,
-        'wallet_topup',
-        $5::uuid,
-        $6::text
-      ) as transfer_id
-    `, [client_request_id, amount_cents, to_rail_account_id, memo || '', wallet_account_id, reference_text || null]);
+        $4::integer,
+        'CAD'::text,
+        $5::text,
+        'wallet_topup'::text,
+        $6::uuid
+      )
+    `, [connectorId, client_request_id, to_rail_account_id, amount_cents, memo || null, wallet_account_id]);
 
     const transferId = result.rows[0].transfer_id;
 
@@ -106,29 +116,39 @@ router.post('/cashouts', async (req: Request, res: Response) => {
 
       const holdId = holdResult.rows[0].hold_id;
 
+      const connectorResult = await client.query(`
+        SELECT connector_id FROM cc_rail_accounts WHERE id = $1
+      `, [from_rail_account_id]);
+      
+      if (connectorResult.rows.length === 0) {
+        throw new Error('Rail account not found');
+      }
+      
+      const connectorId = connectorResult.rows[0].connector_id;
+      
       const transferResult = await client.query(`
-        SELECT cc_create_rail_transfer(
+        SELECT transfer_id, already_exists FROM cc_create_rail_transfer(
           current_tenant_id(),
-          $1::text,
+          $1::uuid,
           'outbound'::rail_direction,
-          $2::bigint,
-          'CAD',
+          $2::text,
           $3::uuid,
           $4::uuid,
-          $5::text,
-          'wallet_cashout',
-          $6::uuid,
-          NULL
-        ) as transfer_id
-      `, [client_request_id, amount_cents, from_rail_account_id, to_rail_account_id, memo || '', holdId]);
+          $5::integer,
+          'CAD'::text,
+          $6::text,
+          'wallet_cashout'::text,
+          $7::uuid
+        )
+      `, [connectorId, client_request_id, from_rail_account_id, to_rail_account_id, amount_cents, memo || null, holdId]);
 
       const transferId = transferResult.rows[0].transfer_id;
 
       await client.query(`
         UPDATE cc_wallet_holds 
-        SET reference_id = $1, metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('transfer_id', $1::text)
-        WHERE id = $2
-      `, [transferId, holdId]);
+        SET reference_id = $1::uuid, metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('transfer_id', $2::text)
+        WHERE id = $3
+      `, [transferId, transferId, holdId]);
 
       return { transfer_id: transferId, hold_id: holdId };
     });

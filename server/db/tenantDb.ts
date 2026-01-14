@@ -15,19 +15,21 @@ export interface ActorContext {
 }
 
 async function setSessionVars(client: PoolClient, ctx: TenantContext): Promise<void> {
-  await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [ctx.tenant_id || '']);
-  await client.query(`SELECT set_config('app.portal_id', $1, true)`, [ctx.portal_id || '']);
-  await client.query(`SELECT set_config('app.individual_id', $1, true)`, [ctx.individual_id || '']);
-  await client.query(`SELECT set_config('app.platform_staff_id', $1, true)`, ['']);
-  await client.query(`SELECT set_config('app.impersonation_session_id', $1, true)`, ['']);
+  // Use false for is_local to make settings session-scoped (not transaction-local)
+  // This ensures the setting persists for the duration of the connection
+  await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [ctx.tenant_id || '']);
+  await client.query(`SELECT set_config('app.portal_id', $1, false)`, [ctx.portal_id || '']);
+  await client.query(`SELECT set_config('app.individual_id', $1, false)`, [ctx.individual_id || '']);
+  await client.query(`SELECT set_config('app.platform_staff_id', $1, false)`, ['']);
+  await client.query(`SELECT set_config('app.impersonation_session_id', $1, false)`, ['']);
 }
 
 async function setActorSessionVars(client: PoolClient, actor: ActorContext): Promise<void> {
-  await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [actor.tenant_id || '']);
-  await client.query(`SELECT set_config('app.portal_id', $1, true)`, [actor.portal_id || '']);
-  await client.query(`SELECT set_config('app.individual_id', $1, true)`, [actor.individual_id || '']);
-  await client.query(`SELECT set_config('app.platform_staff_id', $1, true)`, [actor.platform_staff_id || '']);
-  await client.query(`SELECT set_config('app.impersonation_session_id', $1, true)`, [actor.impersonation_session_id || '']);
+  await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [actor.tenant_id || '']);
+  await client.query(`SELECT set_config('app.portal_id', $1, false)`, [actor.portal_id || '']);
+  await client.query(`SELECT set_config('app.individual_id', $1, false)`, [actor.individual_id || '']);
+  await client.query(`SELECT set_config('app.platform_staff_id', $1, false)`, [actor.platform_staff_id || '']);
+  await client.query(`SELECT set_config('app.impersonation_session_id', $1, false)`, [actor.impersonation_session_id || '']);
 }
 
 async function clearSessionVars(client: PoolClient): Promise<void> {
