@@ -3746,3 +3746,33 @@ export const insertOperatorDocumentSchema = createInsertSchema(ccOperatorDocumen
 });
 export type OperatorDocument = typeof ccOperatorDocuments.$inferSelect;
 export type InsertOperatorDocument = z.infer<typeof insertOperatorDocumentSchema>;
+
+// ============================================================================
+// CONVERSATION PARTICIPANTS (Bundle 099)
+// ============================================================================
+
+export const ccConversationParticipants = pgTable("cc_conversation_participants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  conversationId: uuid("conversation_id").notNull(),
+  
+  partyId: uuid("party_id"),
+  individualId: uuid("individual_id"),
+  
+  actorRole: text("actor_role"),
+  
+  canSend: boolean("can_send").notNull().default(true),
+  canSeeHistory: boolean("can_see_history").notNull().default(true),
+  
+  joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  leftAt: timestamp("left_at", { withTimezone: true }),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertConversationParticipantSchema = createInsertSchema(ccConversationParticipants).omit({
+  id: true,
+  createdAt: true,
+});
+export type ConversationParticipant = typeof ccConversationParticipants.$inferSelect;
+export type InsertConversationParticipant = z.infer<typeof insertConversationParticipantSchema>;
