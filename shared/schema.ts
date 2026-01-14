@@ -4249,3 +4249,184 @@ export const insertLedgerEntrySchema = createInsertSchema(ccLedgerEntries).omit(
 });
 export type LedgerEntry = typeof ccLedgerEntries.$inferSelect;
 export type InsertLedgerEntry = z.infer<typeof insertLedgerEntrySchema>;
+
+// ============================================================================
+// INVITATIONS (Bundle 104)
+// ============================================================================
+
+export const invitationContextTypeEnum = pgEnum("invitation_context_type", [
+  "job", "service_run", "property", "crew", "conversation", 
+  "portal", "community", "tenant", "standby_pool"
+]);
+
+export const invitationStatusEnum = pgEnum("invitation_status", [
+  "pending", "sent", "viewed", "claimed", "expired", "revoked"
+]);
+
+export const inviteeRoleEnum = pgEnum("invitee_role", [
+  "employer", "worker", "property_owner", "pic", "coordinator", "crew_member", "guest"
+]);
+
+export const ccInvitations = pgTable("cc_invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  inviterTenantId: uuid("inviter_tenant_id"),
+  inviterPartyId: uuid("inviter_party_id"),
+  inviterIndividualId: uuid("inviter_individual_id"),
+  
+  contextType: invitationContextTypeEnum("context_type").notNull(),
+  contextId: uuid("context_id").notNull(),
+  contextName: text("context_name"),
+  
+  inviteeRole: inviteeRoleEnum("invitee_role").notNull(),
+  inviteeEmail: text("invitee_email"),
+  inviteePhone: text("invitee_phone"),
+  inviteeName: text("invitee_name"),
+  
+  claimToken: text("claim_token").notNull().unique(),
+  claimTokenExpiresAt: timestamp("claim_token_expires_at", { withTimezone: true }).notNull(),
+  
+  status: invitationStatusEnum("status").notNull().default("pending"),
+  
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  sentVia: text("sent_via"),
+  viewedAt: timestamp("viewed_at", { withTimezone: true }),
+  
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
+  claimedByTenantId: uuid("claimed_by_tenant_id"),
+  claimedByPartyId: uuid("claimed_by_party_id"),
+  claimedByIndividualId: uuid("claimed_by_individual_id"),
+  
+  grantedAccessType: text("granted_access_type"),
+  grantedActorTypeId: uuid("granted_actor_type_id").references(() => ccActorTypes.id),
+  
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  revokedByUserId: uuid("revoked_by_user_id"),
+  revocationReason: text("revocation_reason"),
+  isSilentRevocation: boolean("is_silent_revocation").default(true),
+  
+  message: text("message"),
+  metadata: jsonb("metadata").default({}),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tokenIdx: index("idx_cc_invitations_token").on(table.claimToken),
+  contextIdx: index("idx_cc_invitations_context").on(table.contextType, table.contextId),
+  inviterTenantIdx: index("idx_cc_invitations_inviter_tenant").on(table.inviterTenantId),
+  inviteeEmailIdx: index("idx_cc_invitations_invitee_email").on(table.inviteeEmail),
+  statusIdx: index("idx_cc_invitations_status").on(table.status),
+}));
+
+export const insertInvitationSchema = createInsertSchema(ccInvitations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Invitation = typeof ccInvitations.$inferSelect;
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
+
+// ============================================================================
+// REFERRALS (Bundle 104)
+// ============================================================================
+
+export const ccReferrals = pgTable("cc_referrals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  invitationId: uuid("invitation_id").references(() => ccInvitations.id),
+  
+  referrerTenantId: uuid("referrer_tenant_id"),
+  referrerPartyId: uuid("referrer_party_id"),
+  referrerIndividualId: uuid("referrer_individual_id"),
+  
+  referredTenantId: uuid("referred_tenant_id"),
+  referredPartyId: uuid("referred_party_id"),
+  referredIndividualId: uuid("referred_individual_id"),
+  
+  referralType: text("referral_type").notNull(),
+  contextType: invitationContextTypeEnum("context_type"),
+  contextId: uuid("context_id"),
+  
+  attributedValue: numeric("attributed_value").default("0"),
+  rewardEligible: boolean("reward_eligible").default(false),
+  rewardPaid: boolean("reward_paid").default(false),
+  rewardPaidAt: timestamp("reward_paid_at", { withTimezone: true }),
+  rewardAmount: numeric("reward_amount"),
+  
+  referredAt: timestamp("referred_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  referrerIdx: index("idx_cc_referrals_referrer").on(table.referrerTenantId),
+  referredIdx: index("idx_cc_referrals_referred").on(table.referredTenantId),
+  invitationIdx: index("idx_cc_referrals_invitation").on(table.invitationId),
+  typeIdx: index("idx_cc_referrals_type").on(table.referralType),
+}));
+
+export const insertReferralSchema = createInsertSchema(ccReferrals).omit({
+  id: true,
+  createdAt: true,
+});
+export type Referral = typeof ccReferrals.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
+
+// ============================================================================
+// CLAIM LINKS (Bundle 104)
+// ============================================================================
+
+export const claimLinkTypeEnum = pgEnum("claim_link_type", [
+  "job", "property", "business", "service_listing", "equipment"
+]);
+
+export const claimLinkStatusEnum = pgEnum("claim_link_status", [
+  "active", "claimed", "expired", "revoked"
+]);
+
+export const ccClaimLinks = pgTable("cc_claim_links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  claimType: claimLinkTypeEnum("claim_type").notNull(),
+  entityId: uuid("entity_id").notNull(),
+  entityName: text("entity_name"),
+  
+  token: text("token").notNull().unique(),
+  tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
+  
+  allowedEmailDomain: text("allowed_email_domain"),
+  allowedEmail: text("allowed_email"),
+  
+  verificationMethod: text("verification_method").default("email"),
+  requiresDocument: boolean("requires_document").default(false),
+  documentType: text("document_type"),
+  
+  status: claimLinkStatusEnum("status").notNull().default("active"),
+  
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
+  claimedByTenantId: uuid("claimed_by_tenant_id"),
+  claimedByPartyId: uuid("claimed_by_party_id"),
+  claimedByIndividualId: uuid("claimed_by_individual_id"),
+  verificationCompletedAt: timestamp("verification_completed_at", { withTimezone: true }),
+  
+  autoCreateTenant: boolean("auto_create_tenant").default(false),
+  autoCreateOperator: boolean("auto_create_operator").default(false),
+  autoAssignRole: text("auto_assign_role"),
+  
+  createdByTenantId: uuid("created_by_tenant_id"),
+  createdByUserId: uuid("created_by_user_id"),
+  
+  metadata: jsonb("metadata").default({}),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tokenIdx: index("idx_cc_claim_links_token").on(table.token),
+  entityIdx: index("idx_cc_claim_links_entity").on(table.claimType, table.entityId),
+  statusIdx: index("idx_cc_claim_links_status").on(table.status),
+}));
+
+export const insertClaimLinkSchema = createInsertSchema(ccClaimLinks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ClaimLink = typeof ccClaimLinks.$inferSelect;
+export type InsertClaimLink = z.infer<typeof insertClaimLinkSchema>;
