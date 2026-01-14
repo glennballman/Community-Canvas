@@ -9,7 +9,8 @@ export class EntitlementService {
     const result = await db.execute(
       sql`SELECT cc_has_entitlement(${tenantId}::uuid, ${entitlementKey}) as has_it`
     );
-    return result.rows[0]?.has_it ?? false;
+    const row = result.rows[0] as { has_it?: boolean } | undefined;
+    return row?.has_it ?? false;
   }
 
   /**
@@ -19,7 +20,8 @@ export class EntitlementService {
     const result = await db.execute(
       sql`SELECT cc_entitlement_value(${tenantId}::uuid, ${entitlementKey}) as value`
     );
-    return result.rows[0]?.value ?? null;
+    const row = result.rows[0] as { value?: number | null } | undefined;
+    return row?.value ?? null;
   }
 
   /**
@@ -63,7 +65,8 @@ export class EntitlementService {
         ${params.createLedgerEntry ?? true}
       ) as event_id
     `);
-    return result.rows[0]?.event_id;
+    const row = result.rows[0] as { event_id?: string } | undefined;
+    return row?.event_id ?? "";
   }
 }
 

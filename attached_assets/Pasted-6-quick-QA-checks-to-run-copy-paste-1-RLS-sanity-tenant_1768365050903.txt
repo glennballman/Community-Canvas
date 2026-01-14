@@ -1,0 +1,89 @@
+6 quick QA checks to run (copy/paste)
+1) RLS sanity: tenant with no app.tenant_id sees nothing
+
+This confirms the RLS posture is actually working and not accidentally permissive.
+
+RESET app.tenant_id;
+SELECT count(*) FROM cc_conversations;
+SELECT count(*) FROM cc_messages;
+SELECT count(*) FROM cc_jobs;
+
+
+Expected: 0 rows (or permission denied depending on role), not “everything”.
+
+2) Conversation visibility policy: still works without participants
+
+Since 099 introduced participants, ensure conversations remain visible even if participants aren’t populated (depending on Replit’s chosen policy).
+
+-- Put a real tenant UUID here:
+SELECT set_config('app.tenant_id', '<TENANT_UUID>', true);
+
+SELECT c.id
+FROM cc_conversations c
+LIMIT 10;
+
+
+If this returns 0 but you know the DB has conversations for that tenant, your policy might be mistakenly participant-dependent.
+
+3) Subscriptions RLS: tenant can read/write its own subs
+
+You explicitly required tenant-owned-only subscriptions. Confirm both policies actually allow writes.
+
+SELECT set_config('app.tenant_id', '<TENANT_UUID>', true);
+
+SELECT * FROM cc_subscriptions WHERE tenant_id = current_tenant_id();
+
+-- Attempt an insert (use an existing plan_id):
+INSERT INTO cc_subscriptions (tenant_id, plan_id, actor_type_id, status)
+VALUES (current_tenant_id(), '<PLAN_UUID>', '<ACTOR_TYPE_UUID>', 'active')
+RETURNING id;
+
+
+Expected: insert succeeds.
+
+4) Seed idempotency: 101 can be re-run safely
+
+You said it’s ON CONFLICT DO UPDATE; verify no duplicates.
+
+SELECT key, count(*)
+FROM cc_plans
+GROUP BY key
+HAVING count(*) > 1;
+
+SELECT key, count(*)
+FROM cc_actor_types
+GROUP BY key
+HAVING count(*) > 1;
+
+
+Expected: no rows.
+
+5) Jobs: tenant_id nullable truly works + RLS allows service-mode creation
+
+This is the cold-start wedge. Confirm you can create a job with tenant_id NULL in service mode.
+
+SELECT set_config('app.tenant_id', '__SERVICE__', true);
+
+INSERT INTO cc_jobs (community_id, title, description, verification_state, status)
+VALUES ((SELECT id FROM cc_communities LIMIT 1), 'Test Job', 'Test', 'awaiting_employer', 'open')
+RETURNING id, tenant_id;
+
+
+Expected: returns id and tenant_id = NULL.
+
+6) Value events function correctness: entitlement NULL = “unlimited”
+
+Replit said cc_entitlement_value returns NULL = unlimited. Confirm cc_record_value_event handles that correctly.
+
+SELECT set_config('app.tenant_id', '<TENANT_UUID>', true);
+
+SELECT cc_record_value_event(
+  current_tenant_id(),
+  'worker_placed',          -- example enum
+  100,
+  'CAD',
+  '{}'::jsonb
+);
+
+
+Expected: succeeds and writes into cc_value_events (and ledger if designed to).
