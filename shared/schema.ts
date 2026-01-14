@@ -5208,3 +5208,182 @@ export const insertActivityBookmarkSchema = createInsertSchema(ccActivityBookmar
 });
 export type ActivityBookmark = typeof ccActivityBookmarks.$inferSelect;
 export type InsertActivityBookmark = z.infer<typeof insertActivityBookmarkSchema>;
+
+// ============================================================================
+// PMS SPINE - RATE PLANS (Migration 110)
+// Pricing strategies for accommodation stays
+// ============================================================================
+
+export const ratePlanTypeEnum = pgEnum("rate_plan_type", [
+  "standard", "seasonal", "length_stay", "member", "corporate", "promotional"
+]);
+
+export const ratePlanStatusEnum = pgEnum("rate_plan_status", [
+  "draft", "active", "suspended", "archived"
+]);
+
+export const ccRatePlans = pgTable("cc_rate_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  planType: ratePlanTypeEnum("plan_type").notNull().default("standard"),
+  status: ratePlanStatusEnum("status").notNull().default("draft"),
+  
+  assetTypeId: uuid("asset_type_id"),
+  facilityId: uuid("facility_id"),
+  offerId: uuid("offer_id"),
+  
+  validFrom: date("valid_from"),
+  validTo: date("valid_to"),
+  
+  minNights: integer("min_nights").default(1),
+  maxNights: integer("max_nights"),
+  
+  baseRateCents: integer("base_rate_cents").notNull(),
+  currency: text("currency").notNull().default("CAD"),
+  
+  weekendRateCents: integer("weekend_rate_cents"),
+  weeklyDiscountPct: numeric("weekly_discount_pct", { precision: 5, scale: 2 }).default("0"),
+  monthlyDiscountPct: numeric("monthly_discount_pct", { precision: 5, scale: 2 }).default("0"),
+  
+  requiresMembership: boolean("requires_membership").default(false),
+  memberPlanId: uuid("member_plan_id"),
+  
+  priority: integer("priority").notNull().default(0),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: uuid("created_by"),
+}, (table) => ({
+  tenantStatusIdx: index("idx_rate_plans_tenant_status").on(table.tenantId, table.status),
+}));
+
+export const insertRatePlanSchema = createInsertSchema(ccRatePlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type RatePlan = typeof ccRatePlans.$inferSelect;
+export type InsertRatePlan = z.infer<typeof insertRatePlanSchema>;
+
+// ============================================================================
+// PMS SPINE - FOLIOS (Migration 110)
+// Invoice pattern: aggregates charges for a stay
+// ============================================================================
+
+export const folioStatusEnum = pgEnum("folio_status", [
+  "open", "checked_out", "settled", "disputed", "void"
+]);
+
+export const ccFolios = pgTable("cc_folios", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  
+  folioNumber: text("folio_number").notNull(),
+  status: folioStatusEnum("status").notNull().default("open"),
+  
+  guestPartyId: uuid("guest_party_id").notNull(),
+  guestName: text("guest_name").notNull(),
+  guestEmail: text("guest_email"),
+  guestPhone: text("guest_phone"),
+  
+  reservationId: uuid("reservation_id"),
+  assetId: uuid("asset_id"),
+  facilityId: uuid("facility_id"),
+  
+  ratePlanId: uuid("rate_plan_id"),
+  nightlyRateCents: integer("nightly_rate_cents").notNull(),
+  currency: text("currency").notNull().default("CAD"),
+  
+  checkInDate: date("check_in_date").notNull(),
+  checkOutDate: date("check_out_date").notNull(),
+  actualCheckIn: timestamp("actual_check_in", { withTimezone: true }),
+  actualCheckOut: timestamp("actual_check_out", { withTimezone: true }),
+  nightsStayed: integer("nights_stayed"),
+  
+  roomChargesCents: integer("room_charges_cents").notNull().default(0),
+  serviceChargesCents: integer("service_charges_cents").notNull().default(0),
+  taxChargesCents: integer("tax_charges_cents").notNull().default(0),
+  paymentsReceivedCents: integer("payments_received_cents").notNull().default(0),
+  adjustmentsCents: integer("adjustments_cents").notNull().default(0),
+  balanceDueCents: integer("balance_due_cents"),
+  
+  depositRequiredCents: integer("deposit_required_cents").default(0),
+  depositCollectedCents: integer("deposit_collected_cents").default(0),
+  
+  settledAt: timestamp("settled_at", { withTimezone: true }),
+  settledBy: uuid("settled_by"),
+  
+  internalNotes: text("internal_notes"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: uuid("created_by"),
+}, (table) => ({
+  tenantStatusIdx: index("idx_folios_tenant_status").on(table.tenantId, table.status),
+  guestIdx: index("idx_folios_guest").on(table.guestPartyId),
+}));
+
+export const insertFolioSchema = createInsertSchema(ccFolios).omit({
+  id: true,
+  nightsStayed: true,
+  balanceDueCents: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Folio = typeof ccFolios.$inferSelect;
+export type InsertFolio = z.infer<typeof insertFolioSchema>;
+
+// ============================================================================
+// PMS SPINE - FOLIO LEDGER (Migration 110)
+// IMMUTABLE ledger: never update or delete, only insert reversals
+// ============================================================================
+
+export const folioLedgerEntryTypeEnum = pgEnum("folio_ledger_entry_type", [
+  "charge", "payment", "adjustment", "reversal", "tax", "deposit", "refund"
+]);
+
+export const ccFolioLedger = pgTable("cc_folio_ledger", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  folioId: uuid("folio_id").notNull(),
+  
+  entryType: folioLedgerEntryTypeEnum("entry_type").notNull(),
+  
+  referenceType: text("reference_type"),
+  referenceId: uuid("reference_id"),
+  reversesEntryId: uuid("reverses_entry_id"),
+  
+  description: text("description").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  currency: text("currency").notNull().default("CAD"),
+  
+  taxRuleId: uuid("tax_rule_id"),
+  taxRatePct: numeric("tax_rate_pct", { precision: 5, scale: 2 }),
+  
+  serviceDate: date("service_date"),
+  
+  postedBy: uuid("posted_by"),
+  postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+  
+  paymentMethod: text("payment_method"),
+  paymentReference: text("payment_reference"),
+  
+  entryHash: text("entry_hash"),
+  sequenceNumber: integer("sequence_number").notNull(),
+}, (table) => ({
+  folioIdx: index("idx_folio_ledger_folio").on(table.folioId, table.sequenceNumber),
+  tenantIdx: index("idx_folio_ledger_tenant").on(table.tenantId, table.postedAt),
+}));
+
+export const insertFolioLedgerEntrySchema = createInsertSchema(ccFolioLedger).omit({
+  id: true,
+  postedAt: true,
+  entryHash: true,
+});
+export type FolioLedgerEntry = typeof ccFolioLedger.$inferSelect;
+export type InsertFolioLedgerEntry = z.infer<typeof insertFolioLedgerEntrySchema>;
