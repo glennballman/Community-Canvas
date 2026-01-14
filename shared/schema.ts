@@ -4140,3 +4140,112 @@ export const insertJobApplicantSchema = createInsertSchema(ccJobApplicants).omit
 });
 export type JobApplicant = typeof ccJobApplicants.$inferSelect;
 export type InsertJobApplicant = z.infer<typeof insertJobApplicantSchema>;
+
+// ============================================================================
+// VALUE EVENTS (Bundle 103)
+// ============================================================================
+
+export const valueEventTypeEnum = pgEnum("value_event_type", [
+  "worker_placed", "run_filled", "emergency_replacement", "materials_routed",
+  "occupancy_unlocked", "bundle_confirmed",
+  "cross_tenant_reservation", "incident_resolved",
+  "turnover_orchestrated", "workforce_cluster", "housing_bundle", "emergency_coverage",
+  "subscription_charge", "usage_overage", "premium_feature", "custom"
+]);
+
+export const ccValueEvents = pgTable("cc_value_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventType: text("event_type").notNull(),
+  eventCode: text("event_code"),
+  
+  tenantId: uuid("tenant_id"),
+  partyId: uuid("party_id"),
+  individualId: uuid("individual_id"),
+  actorTypeId: uuid("actor_type_id").references(() => ccActorTypes.id),
+  
+  relatedEntityType: text("related_entity_type"),
+  relatedEntityId: uuid("related_entity_id"),
+  
+  baseAmount: numeric("base_amount").notNull().default("0"),
+  scarcityMultiplier: numeric("scarcity_multiplier").default("1.0"),
+  urgencyMultiplier: numeric("urgency_multiplier").default("1.0"),
+  finalAmount: numeric("final_amount").notNull().default("0"),
+  currency: text("currency").default("CAD"),
+  
+  isBillable: boolean("is_billable").notNull().default(true),
+  isBilled: boolean("is_billed").default(false),
+  billedAt: timestamp("billed_at", { withTimezone: true }),
+  ledgerEntryId: uuid("ledger_entry_id"),
+  
+  status: text("status").notNull().default("pending"),
+  waived: boolean("waived").default(false),
+  waivedReason: text("waived_reason"),
+  waivedByUserId: uuid("waived_by_user_id"),
+  
+  metadata: jsonb("metadata").default({}),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_value_events_tenant").on(table.tenantId),
+  typeIdx: index("idx_cc_value_events_type").on(table.eventType),
+  statusIdx: index("idx_cc_value_events_status").on(table.status),
+}));
+
+export const insertValueEventSchema = createInsertSchema(ccValueEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type ValueEvent = typeof ccValueEvents.$inferSelect;
+export type InsertValueEvent = z.infer<typeof insertValueEventSchema>;
+
+// ============================================================================
+// LEDGER ENTRIES (Bundle 103)
+// ============================================================================
+
+export const ledgerEntryTypeEnum = pgEnum("ledger_entry_type", [
+  "charge", "payment", "credit", "adjustment", "refund", "writeoff"
+]);
+
+export const ccLedgerEntries = pgTable("cc_ledger_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  tenantId: uuid("tenant_id"),
+  partyId: uuid("party_id"),
+  individualId: uuid("individual_id"),
+  
+  entryType: text("entry_type").notNull(),
+  amount: numeric("amount").notNull(),
+  currency: text("currency").default("CAD"),
+  
+  description: text("description").notNull(),
+  lineItemCode: text("line_item_code"),
+  
+  sourceType: text("source_type"),
+  sourceId: uuid("source_id"),
+  valueEventId: uuid("value_event_id").references(() => ccValueEvents.id),
+  
+  periodStart: date("period_start"),
+  periodEnd: date("period_end"),
+  
+  invoiceNumber: text("invoice_number"),
+  invoiceDate: date("invoice_date"),
+  
+  paymentMethod: text("payment_method"),
+  paymentReference: text("payment_reference"),
+  
+  status: text("status").notNull().default("pending"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_ledger_entries_tenant").on(table.tenantId),
+  typeIdx: index("idx_cc_ledger_entries_type").on(table.entryType),
+  statusIdx: index("idx_cc_ledger_entries_status").on(table.status),
+  valueEventIdx: index("idx_cc_ledger_entries_value_event").on(table.valueEventId),
+}));
+
+export const insertLedgerEntrySchema = createInsertSchema(ccLedgerEntries).omit({
+  id: true,
+  createdAt: true,
+});
+export type LedgerEntry = typeof ccLedgerEntries.$inferSelect;
+export type InsertLedgerEntry = z.infer<typeof insertLedgerEntrySchema>;
