@@ -117,7 +117,7 @@ CREATE INDEX IF NOT EXISTS idx_cc_activity_events_entity ON cc_activity_events(e
 CREATE INDEX IF NOT EXISTS idx_cc_activity_events_aggregation ON cc_activity_events(aggregation_key, occurred_at DESC)
   WHERE aggregation_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_cc_activity_events_recent ON cc_activity_events(occurred_at DESC)
-  WHERE expires_at IS NULL OR expires_at > now();
+  WHERE expires_at IS NULL;
 
 -- Enable RLS
 ALTER TABLE cc_activity_events ENABLE ROW LEVEL SECURITY;
@@ -143,11 +143,12 @@ CREATE POLICY cc_activity_events_tenant_read ON cc_activity_events
       WHERE pm.portal_id = cc_activity_events.portal_id
         AND pm.tenant_id = current_tenant_id()
     ))
-    -- Community: if they're a community member (via tenant location or explicit membership)
+    -- Community: if they're a community member (via portal membership)
     OR (visibility = 'community' AND community_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM cc_tenants t
-      WHERE t.id = current_tenant_id()
-        AND t.primary_community_id = cc_activity_events.community_id
+      SELECT 1 FROM cc_communities c
+      JOIN cc_portal_members pm ON pm.portal_id = c.portal_id
+      WHERE c.id = cc_activity_events.community_id
+        AND pm.tenant_id = current_tenant_id()
     ))
     -- Public: everyone
     OR visibility = 'public'
@@ -534,8 +535,9 @@ BEGIN
         WHERE pm.portal_id = ae.portal_id AND pm.tenant_id = v_tenant_id
       ))
       OR (ae.visibility = 'community' AND ae.community_id IS NOT NULL AND EXISTS (
-        SELECT 1 FROM cc_tenants t
-        WHERE t.id = v_tenant_id AND t.primary_community_id = ae.community_id
+        SELECT 1 FROM cc_communities c
+        JOIN cc_portal_members pm ON pm.portal_id = c.portal_id
+        WHERE c.id = ae.community_id AND pm.tenant_id = v_tenant_id
       ))
       OR ae.visibility = 'public'
     )
@@ -566,8 +568,9 @@ BEGIN
       WHERE pm.portal_id = ae.portal_id AND pm.tenant_id = v_tenant_id
     ))
     OR (ae.visibility = 'community' AND EXISTS (
-      SELECT 1 FROM cc_tenants t
-      WHERE t.id = v_tenant_id AND t.primary_community_id = ae.community_id
+      SELECT 1 FROM cc_communities c
+      JOIN cc_portal_members pm ON pm.portal_id = c.portal_id
+      WHERE c.id = ae.community_id AND pm.tenant_id = v_tenant_id
     ))
     OR ae.visibility = 'public'
   )
@@ -593,8 +596,9 @@ BEGIN
       WHERE pm.portal_id = ae.portal_id AND pm.tenant_id = v_tenant_id
     ))
     OR (ae.visibility = 'community' AND EXISTS (
-      SELECT 1 FROM cc_tenants t
-      WHERE t.id = v_tenant_id AND t.primary_community_id = ae.community_id
+      SELECT 1 FROM cc_communities c
+      JOIN cc_portal_members pm ON pm.portal_id = c.portal_id
+      WHERE c.id = ae.community_id AND pm.tenant_id = v_tenant_id
     ))
     OR ae.visibility = 'public'
   )
@@ -825,7 +829,8 @@ BEGIN
       ))
       OR (ae.visibility = 'community' AND EXISTS (
         SELECT 1 FROM cc_tenants t
-        WHERE t.id = v_tenant_id AND t.primary_community_id = ae.community_id
+        JOIN cc_portal_members pm ON pm.portal_id = c.portal_id
+        WHERE c.id = ae.community_id AND pm.tenant_id = v_tenant_id
       ))
       OR ae.visibility = 'public'
     )
