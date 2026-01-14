@@ -218,7 +218,7 @@ export default function MobileNav() {
                                 isActive('/staging/reservations') ? 'text-primary' : 'text-muted-foreground'
                             }`}>
                                 <Calendar className="h-5 w-5" />
-                                <<span className="text-xs mt-1">Reservations</span>
+                                <span className="text-xs mt-1">Reservations</span>
                             </div>
                         </Link>
                     )}
