@@ -4815,3 +4815,254 @@ export const insertTenantChecklistProgressSchema = createInsertSchema(ccTenantCh
 });
 export type TenantChecklistProgress = typeof ccTenantChecklistProgress.$inferSelect;
 export type InsertTenantChecklistProgress = z.infer<typeof insertTenantChecklistProgressSchema>;
+
+// ============================================================================
+// TENANT-INDIVIDUAL SCOPE (Bundle 107 - Foundational)
+// ============================================================================
+
+export const ccTenantIndividuals = pgTable("cc_tenant_individuals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  individualId: uuid("individual_id").notNull(),
+  role: text("role"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_tenant_individuals_tenant").on(table.tenantId),
+  individualIdx: index("idx_cc_tenant_individuals_individual").on(table.individualId),
+  uniqueTenantIndividual: uniqueIndex("cc_tenant_individuals_unique").on(table.tenantId, table.individualId),
+}));
+
+export const insertTenantIndividualSchema = createInsertSchema(ccTenantIndividuals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TenantIndividual = typeof ccTenantIndividuals.$inferSelect;
+export type InsertTenantIndividual = z.infer<typeof insertTenantIndividualSchema>;
+
+// ============================================================================
+// NOTIFICATION ENUMS (Bundle 107)
+// ============================================================================
+
+export const notificationChannelEnum = pgEnum("notification_channel", [
+  "in_app", "email", "sms", "push", "webhook"
+]);
+
+export const notificationPriorityEnum = pgEnum("notification_priority", [
+  "low", "normal", "high", "urgent"
+]);
+
+export const notificationStatusEnum = pgEnum("notification_status", [
+  "pending", "queued", "sent", "delivered", "read", "failed", "cancelled"
+]);
+
+export const notificationCategoryEnum = pgEnum("notification_category", [
+  "system", "invitation", "job", "moderation", "onboarding", 
+  "message", "reservation", "payment", "alert", "reminder", "marketing"
+]);
+
+export const digestFrequencyEnum = pgEnum("digest_frequency", [
+  "immediate", "hourly", "daily", "weekly", "never"
+]);
+
+// ============================================================================
+// NOTIFICATION TEMPLATES (Bundle 107)
+// ============================================================================
+
+export const ccNotificationTemplates = pgTable("cc_notification_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: notificationCategoryEnum("category").notNull(),
+  subjectTemplate: text("subject_template"),
+  bodyTemplate: text("body_template").notNull(),
+  shortBodyTemplate: text("short_body_template"),
+  emailTemplateId: text("email_template_id"),
+  smsTemplateId: text("sms_template_id"),
+  pushTemplate: jsonb("push_template"),
+  defaultChannels: text("default_channels").array().default(["in_app"]),
+  defaultPriority: notificationPriorityEnum("default_priority").default("normal"),
+  isActionable: boolean("is_actionable").default(false),
+  actionUrlTemplate: text("action_url_template"),
+  actionLabel: text("action_label"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  codeIdx: index("idx_cc_notification_templates_code").on(table.code),
+  categoryIdx: index("idx_cc_notification_templates_category").on(table.category),
+}));
+
+export const insertNotificationTemplateSchema = createInsertSchema(ccNotificationTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type NotificationTemplate = typeof ccNotificationTemplates.$inferSelect;
+export type InsertNotificationTemplate = z.infer<typeof insertNotificationTemplateSchema>;
+
+// ============================================================================
+// NOTIFICATION PREFERENCES (Bundle 107)
+// ============================================================================
+
+export const ccNotificationPreferences = pgTable("cc_notification_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").unique(),
+  partyId: uuid("party_id").unique(),
+  individualId: uuid("individual_id").unique(),
+  emailEnabled: boolean("email_enabled").default(true),
+  smsEnabled: boolean("sms_enabled").default(false),
+  pushEnabled: boolean("push_enabled").default(true),
+  inAppEnabled: boolean("in_app_enabled").default(true),
+  emailAddress: text("email_address"),
+  phoneNumber: text("phone_number"),
+  pushToken: text("push_token"),
+  digestFrequency: digestFrequencyEnum("digest_frequency").default("immediate"),
+  digestHour: integer("digest_hour").default(9),
+  digestDay: integer("digest_day").default(1),
+  timezone: text("timezone").default("America/Vancouver"),
+  enabledCategories: text("enabled_categories").array().default([
+    "system", "invitation", "job", "moderation", "onboarding",
+    "message", "reservation", "payment", "alert", "reminder"
+  ]),
+  quietHoursEnabled: boolean("quiet_hours_enabled").default(false),
+  quietHoursStart: text("quiet_hours_start").default("22:00"),
+  quietHoursEnd: text("quiet_hours_end").default("07:00"),
+  unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+  unsubscribeReason: text("unsubscribe_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_notification_preferences_tenant").on(table.tenantId),
+  partyIdx: index("idx_cc_notification_preferences_party").on(table.partyId),
+  individualIdx: index("idx_cc_notification_preferences_individual").on(table.individualId),
+}));
+
+export const insertNotificationPreferencesSchema = createInsertSchema(ccNotificationPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type NotificationPreferences = typeof ccNotificationPreferences.$inferSelect;
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+
+// ============================================================================
+// NOTIFICATIONS (Bundle 107)
+// ============================================================================
+
+export const ccNotifications = pgTable("cc_notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").references(() => ccNotificationTemplates.id),
+  templateCode: text("template_code"),
+  recipientTenantId: uuid("recipient_tenant_id"),
+  recipientPartyId: uuid("recipient_party_id"),
+  recipientIndividualId: uuid("recipient_individual_id"),
+  subject: text("subject"),
+  body: text("body").notNull(),
+  shortBody: text("short_body"),
+  category: notificationCategoryEnum("category").notNull(),
+  priority: notificationPriorityEnum("priority").notNull().default("normal"),
+  channels: text("channels").array().notNull().default(["in_app"]),
+  contextType: text("context_type"),
+  contextId: uuid("context_id"),
+  contextData: jsonb("context_data").default({}),
+  actionUrl: text("action_url"),
+  actionLabel: text("action_label"),
+  senderTenantId: uuid("sender_tenant_id"),
+  senderName: text("sender_name"),
+  status: notificationStatusEnum("status").notNull().default("pending"),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }).defaultNow(),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  failedAt: timestamp("failed_at", { withTimezone: true }),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  failureReason: text("failure_reason"),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  digestId: uuid("digest_id"),
+  isDigestEligible: boolean("is_digest_eligible").default(true),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  recipientTenantIdx: index("idx_cc_notifications_recipient_tenant").on(table.recipientTenantId),
+  recipientPartyIdx: index("idx_cc_notifications_recipient_party").on(table.recipientPartyId),
+  statusIdx: index("idx_cc_notifications_status").on(table.status),
+  categoryIdx: index("idx_cc_notifications_category").on(table.category),
+  contextIdx: index("idx_cc_notifications_context").on(table.contextType, table.contextId),
+}));
+
+export const insertNotificationSchema = createInsertSchema(ccNotifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Notification = typeof ccNotifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// ============================================================================
+// NOTIFICATION DELIVERIES (Bundle 107)
+// ============================================================================
+
+export const ccNotificationDeliveries = pgTable("cc_notification_deliveries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  notificationId: uuid("notification_id").notNull().references(() => ccNotifications.id, { onDelete: "cascade" }),
+  channel: notificationChannelEnum("channel").notNull(),
+  recipientAddress: text("recipient_address"),
+  status: notificationStatusEnum("status").notNull().default("pending"),
+  attemptedAt: timestamp("attempted_at", { withTimezone: true }),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  failedAt: timestamp("failed_at", { withTimezone: true }),
+  providerName: text("provider_name"),
+  providerMessageId: text("provider_message_id"),
+  providerResponse: jsonb("provider_response"),
+  failureReason: text("failure_reason"),
+  failureCode: text("failure_code"),
+  isPermanentFailure: boolean("is_permanent_failure").default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  notificationIdx: index("idx_cc_notification_deliveries_notification").on(table.notificationId),
+  statusIdx: index("idx_cc_notification_deliveries_status").on(table.status),
+  providerIdx: index("idx_cc_notification_deliveries_provider").on(table.providerMessageId),
+  uniqueChannelDelivery: uniqueIndex("cc_notification_deliveries_unique").on(table.notificationId, table.channel),
+}));
+
+export const insertNotificationDeliverySchema = createInsertSchema(ccNotificationDeliveries).omit({
+  id: true,
+  createdAt: true,
+});
+export type NotificationDelivery = typeof ccNotificationDeliveries.$inferSelect;
+export type InsertNotificationDelivery = z.infer<typeof insertNotificationDeliverySchema>;
+
+// ============================================================================
+// NOTIFICATION DIGESTS (Bundle 107)
+// ============================================================================
+
+export const ccNotificationDigests = pgTable("cc_notification_digests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  recipientTenantId: uuid("recipient_tenant_id"),
+  recipientPartyId: uuid("recipient_party_id"),
+  recipientIndividualId: uuid("recipient_individual_id"),
+  frequency: digestFrequencyEnum("frequency").notNull(),
+  periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+  periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+  notificationCount: integer("notification_count").default(0),
+  status: notificationStatusEnum("status").notNull().default("pending"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  subject: text("subject"),
+  body: text("body"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  recipientIdx: index("idx_cc_notification_digests_recipient").on(table.recipientTenantId),
+}));
+
+export const insertNotificationDigestSchema = createInsertSchema(ccNotificationDigests).omit({
+  id: true,
+  createdAt: true,
+});
+export type NotificationDigest = typeof ccNotificationDigests.$inferSelect;
+export type InsertNotificationDigest = z.infer<typeof insertNotificationDigestSchema>;
