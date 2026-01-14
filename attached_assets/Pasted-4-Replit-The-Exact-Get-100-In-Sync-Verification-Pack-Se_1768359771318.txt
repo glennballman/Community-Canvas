@@ -1,0 +1,92 @@
+4) Replit: The Exact “Get 100% In Sync” Verification Pack
+
+Send Replit this as a single request. It’s designed to remove every remaining ambiguity before Prompt 24.
+
+A) Foundational entity tables (existence + primary keys)
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND table_name IN (
+    'cc_parties','cc_individuals','cc_communities','cc_portals',
+    'cc_tenant_actor_roles','cc_actor_types'
+  )
+ORDER BY table_name;
+
+B) If they exist, describe their columns
+SELECT table_name, column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema='public'
+  AND table_name IN ('cc_parties','cc_individuals','cc_communities','cc_portals','cc_tenant_actor_roles','cc_actor_types')
+ORDER BY table_name, ordinal_position;
+
+C) Check current “role model” reality (do we already have a join table?)
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND table_name ILIKE '%actor%'
+     OR table_name ILIKE '%role%'
+     OR table_name ILIKE '%membership%'
+ORDER BY table_name;
+
+D) Constraints & foreign keys for cc_tenants (so we don’t break it)
+SELECT
+  tc.constraint_name, tc.constraint_type, kcu.column_name,
+  ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints tc
+LEFT JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+LEFT JOIN information_schema.constraint_column_usage ccu
+  ON ccu.constraint_name = tc.constraint_name
+WHERE tc.table_schema='public'
+  AND tc.table_name='cc_tenants'
+ORDER BY tc.constraint_type, tc.constraint_name;
+
+E) Message enums / types (so Prompt 24 doesn’t invent types wrong)
+SELECT t.typname AS enum_name, e.enumlabel AS enum_value
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+WHERE t.typname ILIKE '%message%'
+   OR t.typname ILIKE '%role%'
+   OR t.typname ILIKE '%tenant%'
+ORDER BY enum_name, e.enumsortorder;
+
+F) RLS posture (Prompt 24 will add tables; we must match existing RLS patterns)
+SELECT schemaname, tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname='public'
+  AND tablename IN ('cc_tenants','cc_messages','cc_operators','cc_operator_applications')
+ORDER BY tablename;
+
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+FROM pg_policies
+WHERE schemaname='public'
+  AND tablename IN ('cc_tenants','cc_messages','cc_operators','cc_operator_applications')
+ORDER BY tablename, policyname;
+
+G) Confirm no prior folio/billing spine exists under a different name
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%folio%'
+    OR table_name ILIKE '%invoice%'
+    OR table_name ILIKE '%ledger%'
+    OR table_name ILIKE '%billing%'
+    OR table_name ILIKE '%payment%'
+    OR table_name ILIKE '%charge%'
+  )
+ORDER BY table_name;
+
+H) Migration numbering + file truth
+
+Ask Replit to run in the repo (not SQL):
+
+ls -la drizzle/
+
+ls -la drizzle/migrations | tail -n 30
+
+sed -n '1,200p' drizzle/migrations/098_operators.sql
+
+sed -n '1,200p' shared/schema.ts
+
+That gives us DB + app alignment.
