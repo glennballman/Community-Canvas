@@ -358,7 +358,7 @@ export const insertTripTimepointSchema = createInsertSchema(ccTripTimepoints).om
 export type TripTimepoint = typeof ccTripTimepoints.$inferSelect;
 export type InsertTripTimepoint = z.infer<typeof insertTripTimepointSchema>;
 
-// Portal Moments (bookable experiences)
+// Portal Moments (reservable experiences)
 export const ccPortalMoments = pgTable('cc_portal_moments', {
   id: uuid('id').primaryKey().defaultRandom(),
   portalId: uuid('portal_id').notNull(),
@@ -381,7 +381,7 @@ export const ccPortalMoments = pgTable('cc_portal_moments', {
   availableDays: integer('available_days').array(),
   availableStartTime: time('available_start_time'),
   availableEndTime: time('available_end_time'),
-  advanceBookingDays: integer('advance_booking_days').default(1),
+  advanceReservationDays: integer('advance_reservation_days').default(1),
   maxAdvanceDays: integer('max_advance_days').default(90),
   
   minParticipants: integer('min_participants').default(1),
@@ -400,7 +400,7 @@ export const ccPortalMoments = pgTable('cc_portal_moments', {
   providerName: varchar('provider_name'),
   providerEmail: varchar('provider_email'),
   providerPhone: varchar('provider_phone'),
-  externalBookingUrl: text('external_booking_url'),
+  externalReservationUrl: text('external_reservation_url'),
   
   weatherJson: jsonb('weather_json').default({}),
   constraintsJson: jsonb('constraints_json').default({}),
@@ -534,7 +534,7 @@ export const ccTripHandoffs = pgTable('cc_trip_handoffs', {
   
   transportMode: varchar('transport_mode'),
   transportDetails: text('transport_details'),
-  transportBookingRef: varchar('transport_booking_ref'),
+  transportReservationRef: varchar('transport_reservation_ref'),
   
   consentShareDietary: boolean('consent_share_dietary').default(false),
   consentShareAccessibility: boolean('consent_share_accessibility').default(false),
@@ -780,7 +780,7 @@ export const cc_federation_agreements = pgTable('cc_federation_agreements', {
   scopes: text('scopes').array().notNull().default([]),
   
   shareAvailability: boolean('share_availability').default(false),
-  allowBookingRequests: boolean('allow_booking_requests').default(true),
+  allowReservationRequests: boolean('allow_reservation_requests').default(true),
   allowIncidentOps: boolean('allow_incident_ops').default(false),
   anonymizePublic: boolean('anonymize_public').default(true),
   requiresProviderConfirmation: boolean('requires_provider_confirmation').default(true),
@@ -1106,7 +1106,7 @@ export type InsertAccessEvent = z.infer<typeof insertAccessEventSchema>;
 // 30-PROMPT PACK - PROMPT 01: Cart Foundation Tables
 // ============================================================================
 
-// Reservation Carts - shopping cart for multi-item bookings
+// Reservation Carts - shopping cart for multi-item reservations
 export const cc_reservation_carts = pgTable('cc_reservation_carts', {
   id: uuid('id').primaryKey().defaultRandom(),
   
@@ -1491,13 +1491,13 @@ export const ccTransportOperators = pgTable('cc_transport_operators', {
   
   serviceAreaJson: jsonb('service_area_json').default({}),
   operatingHoursJson: jsonb('operating_hours_json').default({}),
-  bookingSettingsJson: jsonb('booking_settings_json').default({}),
+  reservationSettingsJson: jsonb('reservation_settings_json').default({}),
   
   settlementMethod: varchar('settlement_method', { length: 50 }).default('invoice'),
   settlementAccountJson: jsonb('settlement_account_json').default({}),
   commissionPercent: numeric('commission_percent', { precision: 5, scale: 2 }).default('0'),
   
-  externalBookingUrl: text('external_booking_url'),
+  externalReservationUrl: text('external_reservation_url'),
   apiEndpoint: text('api_endpoint'),
   
   status: varchar('status', { length: 50 }).default('active'),
@@ -1638,7 +1638,7 @@ export const insertPortCallSchema = createInsertSchema(ccPortCalls).omit({ id: t
 export type PortCall = typeof ccPortCalls.$inferSelect;
 export type InsertPortCall = z.infer<typeof insertPortCallSchema>;
 
-// Transport Requests - bookings for sailings
+// Transport Requests - reservations for sailings
 export const ccTransportRequests = pgTable('cc_transport_requests', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id'),
@@ -1753,7 +1753,7 @@ export const insertTransportAlertSchema = createInsertSchema(ccTransportAlerts).
 export type TransportAlert = typeof ccTransportAlerts.$inferSelect;
 export type InsertTransportAlert = z.infer<typeof insertTransportAlertSchema>;
 
-// Transport Confirmations - booking confirmations with QR codes
+// Transport Confirmations - reservation confirmations with QR codes
 export const ccTransportConfirmations = pgTable('cc_transport_confirmations', {
   id: uuid('id').primaryKey().defaultRandom(),
   
@@ -2054,7 +2054,7 @@ export const ccPermitTypes = pgTable('cc_permit_types', {
   perDayFeeCad: numeric('per_day_fee_cad', { precision: 10, scale: 2 }).default('0'),
   perNightFeeCad: numeric('per_night_fee_cad', { precision: 10, scale: 2 }).default('0'),
   
-  bookingRulesJson: jsonb('booking_rules_json').default({}),
+  reservationRulesJson: jsonb('reservation_rules_json').default({}),
   
   validityType: varchar('validity_type', { length: 50 }).default('date_range'),
   defaultValidityDays: integer('default_validity_days').default(1),
@@ -2329,7 +2329,7 @@ export const ccProperties = pgTable('cc_properties', {
   
   status: varchar('status').default('active'),
   
-  acceptsInstantBook: boolean('accepts_instant_book').default(false),
+  acceptsInstantReserve: boolean('accepts_instant_reserve').default(false),
   requiresApproval: boolean('requires_approval').default(true),
   leadTimeHours: integer('lead_time_hours').default(24),
   
@@ -2527,7 +2527,7 @@ export const ccSeasonalRules = pgTable('cc_seasonal_rules', {
   minStayNights: integer('min_stay_nights'),
   maxStayNights: integer('max_stay_nights'),
   
-  bookingWindowDays: integer('booking_window_days'),
+  reservationWindowDays: integer('reservation_window_days'),
   noCheckInDays: integer('no_check_in_days').array(),
   noCheckOutDays: integer('no_check_out_days').array(),
   
@@ -3687,7 +3687,7 @@ export const ccOperators = pgTable('cc_operators', {
   status: varchar('status').default('active'),
   
   featured: boolean('featured').default(false),
-  acceptsOnlineBooking: boolean('accepts_online_booking').default(true),
+  acceptsOnlineReservation: boolean('accepts_online_reservation').default(true),
   instantConfirmation: boolean('instant_confirmation').default(false),
   
   commissionRatePercent: numeric('commission_rate_percent', { precision: 5, scale: 2 }).default('10.00'),

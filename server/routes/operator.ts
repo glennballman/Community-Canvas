@@ -656,7 +656,7 @@ router.post('/reservations/bundle', authenticateToken, async (req: AuthRequest, 
       await logActivity({
         tenantId: tenant_id,
         actorId: userId,
-        action: 'federation.booking',
+        action: 'federation.reservation',
         resourceType: 'reservation',
         resourceId: reservation.reservationId,
         metadata: { bundleId, providerTenantId: item.providerTenantId },

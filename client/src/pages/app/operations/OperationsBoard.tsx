@@ -169,7 +169,7 @@ export default function OperationsBoard() {
         const data = await error.json?.() || error;
         if (data.code === 'RESOURCE_TIME_CONFLICT') {
           setConflictError({
-            message: data.error || 'That time is already booked out.',
+            message: data.error || 'That time is already reserved.',
             conflicts: data.conflict_with || [],
           });
         } else {

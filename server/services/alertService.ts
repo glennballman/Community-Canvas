@@ -5,7 +5,7 @@ import { getTrip } from './tripService';
 
 interface CreateAlertRequest {
   tripId: string;
-  alertType: 'weather' | 'ferry' | 'flight' | 'road' | 'activity_cancelled' | 'booking_change' | 'provider_message' | 'emergency' | 'reminder' | 'system';
+  alertType: 'weather' | 'ferry' | 'flight' | 'road' | 'activity_cancelled' | 'reservation_change' | 'provider_message' | 'emergency' | 'reminder' | 'system';
   severity: 'info' | 'warning' | 'critical' | 'emergency';
   title: string;
   message: string;

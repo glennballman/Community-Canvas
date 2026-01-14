@@ -449,7 +449,7 @@ export default function RentalBrowser() {
                     </div>
                   </div>
                   <Badge variant={item.isAvailable ? 'default' : 'secondary'}>
-                    {item.isAvailable ? 'Available' : 'Booked'}
+                    {item.isAvailable ? 'Available' : 'Reserved'}
                   </Badge>
                 </div>
                 

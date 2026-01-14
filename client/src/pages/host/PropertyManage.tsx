@@ -347,14 +347,14 @@ function PropertyManageContent() {
     return months;
   }, [calendarMonth]);
 
-  const getDateStatus = (date: Date): 'available' | 'blocked' | 'booked' => {
+  const getDateStatus = (date: Date): 'available' | 'blocked' | 'reserved' => {
     const dateStr = date.toISOString().split('T')[0];
     const blocks = calendarData?.blocks || [];
     const reservations = calendarData?.reservations || [];
     
     for (const reservation of reservations) {
       if (dateStr >= reservation.checkInDate && dateStr < reservation.checkOutDate) {
-        return 'booked';
+        return 'reserved';
       }
     }
     
@@ -475,7 +475,7 @@ function PropertyManageContent() {
                   ${selected ? 'ring-2 ring-primary' : ''}
                   ${status === 'available' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : ''}
                   ${status === 'blocked' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' : ''}
-                  ${status === 'booked' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}
+                  ${status === 'reserved' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}
                 `}
                 data-testid={`calendar-day-${date.toISOString().split('T')[0]}`}
               >
@@ -635,7 +635,7 @@ function PropertyManageContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30" />
-                    <span className="text-sm">Booked</span>
+                    <span className="text-sm">Reserved</span>
                   </div>
                 </div>
                 

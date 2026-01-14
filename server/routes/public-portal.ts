@@ -1269,7 +1269,7 @@ router.get('/cc_portals/:slug/availability', async (req: Request, res: Response)
       summary: {
         total: results.length,
         available: results.filter(r => r.available).length,
-        booked: results.filter(r => !r.available).length
+        reserved: results.filter(r => !r.available).length
       }
     });
     
@@ -1361,7 +1361,7 @@ router.get('/cc_portals/:slug/availability/calendar', async (req: Request, res: 
       
       days.push({
         date: `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        status: dayEvents.length > 0 ? 'booked' : 'available',
+        status: dayEvents.length > 0 ? 'reserved' : 'available',
         events_count: dayEvents.length
       });
     }
@@ -1507,7 +1507,7 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
       INSERT INTO cc_resource_schedule_events (
         tenant_id, resource_id, event_type, start_date, end_date, 
         status, title, related_entity_type, related_entity_id
-      ) VALUES ($1, $2, 'booked', $3, $4, 'active', $5, 'reservation', $6)
+      ) VALUES ($1, $2, 'reserved', $3, $4, 'active', $5, 'reservation', $6)
     `, [tenantId, asset_id, scheduleStart, scheduleEnd, `${customer.name} - ${asset.name}`, reservation.id]);
     
     res.status(201).json({
@@ -2271,7 +2271,7 @@ router.post('/carts/:cartId/checkout', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/public/carts/:cartId/confirm-quote - Convert quote to booking
+// POST /api/public/carts/:cartId/confirm-quote - Convert quote to reservation
 router.post('/carts/:cartId/confirm-quote', async (req: Request, res: Response) => {
   const { cartId } = req.params;
   const token = req.headers['x-cart-token'] as string;

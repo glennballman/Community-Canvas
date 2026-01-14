@@ -73,10 +73,10 @@ async function calculateFare(
     .where(eq(ccTransportOperators.id, operatorId))
     .limit(1);
   
-  const bookingSettings = (operator?.bookingSettingsJson as any) || {};
+  const reservationSettings = (operator?.reservationSettingsJson as any) || {};
   
   const baseFare = 45;
-  const kayakFee = bookingSettings.kayak_fee_cad || 25;
+  const kayakFee = reservationSettings.kayak_fee_cad || 25;
   const bikeFee = 15;
   const freightPerLb = 0.10;
   
@@ -109,17 +109,17 @@ async function updateSailingCapacity(
   const multiplier = action === 'book' ? -1 : 1;
   
   if (capacity.passengers) {
-    capacity.passengers.booked += amounts.passengers * (action === 'book' ? 1 : -1);
+    capacity.passengers.reserved += amounts.passengers * (action === 'book' ? 1 : -1);
     capacity.passengers.available += amounts.passengers * multiplier;
   }
   
   if (capacity.freight_lbs) {
-    capacity.freight_lbs.booked += amounts.freightLbs * (action === 'book' ? 1 : -1);
+    capacity.freight_lbs.reserved += amounts.freightLbs * (action === 'book' ? 1 : -1);
     capacity.freight_lbs.available += amounts.freightLbs * multiplier;
   }
   
   if (capacity.kayaks) {
-    capacity.kayaks.booked += amounts.kayaks * (action === 'book' ? 1 : -1);
+    capacity.kayaks.reserved += amounts.kayaks * (action === 'book' ? 1 : -1);
     capacity.kayaks.available += amounts.kayaks * multiplier;
   }
   

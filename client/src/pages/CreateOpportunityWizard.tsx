@@ -727,7 +727,7 @@ export default function CreateOpportunityWizard() {
                     </div>
                     <div>
                       <label className="text-xs text-slate-400">Transport notes</label>
-                      <textarea value={transportNotes} onChange={(e) => setTransportNotes(e.target.value)} rows={4} placeholder="e.g., Lucky Lander must be booked weeks ahead..."
+                      <textarea value={transportNotes} onChange={(e) => setTransportNotes(e.target.value)} rows={4} placeholder="e.g., Lucky Lander must be reserved weeks ahead..."
                         data-testid="input-transport-notes"
                         className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>

@@ -52,7 +52,7 @@ interface AvailabilityResult {
     available: boolean;
     busy_periods: Array<{ start: string; end: string }>;
   }>;
-  summary: { total: number; available: number; booked: number };
+  summary: { total: number; available: number; reserved: number };
 }
 
 function DateRangePicker({ 
@@ -180,7 +180,7 @@ function AssetCard({
           variant={available ? "default" : "secondary"} 
           className="absolute top-2 right-2"
         >
-          {available ? "Available" : "Booked"}
+          {available ? "Available" : "Reserved"}
         </Badge>
       </div>
       <CardHeader className="pb-2">

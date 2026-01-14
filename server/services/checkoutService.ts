@@ -242,7 +242,7 @@ export async function checkout(req: CheckoutRequest): Promise<CheckoutResult> {
           JSON.stringify(item.needs_json || {}),
           item.dietary_requirements,
           item.special_requests,
-          `Booking via Community Canvas cart ${req.cartId}`,
+          `Reservation via Community Canvas cart ${req.cartId}`,
           expiresAt
         ]);
         
@@ -374,7 +374,7 @@ export async function checkout(req: CheckoutRequest): Promise<CheckoutResult> {
   return result;
 }
 
-// Convert quote to confirmed booking
+// Convert quote to confirmed reservation
 export async function confirmQuote(
   cartId: string, 
   accessToken: string

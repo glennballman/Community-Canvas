@@ -295,7 +295,7 @@ export async function syncReservationToCalendar(
   
   const availability = ['cancelled', 'no_show'].includes(reservation.status || '') 
     ? 'available' 
-    : 'booked';
+    : 'reserved';
   
   const current = new Date(reservation.checkInDate);
   const end = new Date(reservation.checkOutDate);
@@ -337,13 +337,13 @@ export async function getPropertyAvailability(
     unit: any;
     availableDates: string[];
     blockedDates: string[];
-    bookedDates: string[];
+    reservedDates: string[];
   }[];
   summary: {
     totalUnits: number;
     fullyAvailable: number;
     partiallyAvailable: number;
-    fullyBooked: number;
+    fullyReserved: number;
   };
 }> {
   const portal = await db.query.ccPortals.findFirst({
@@ -354,7 +354,7 @@ export async function getPropertyAvailability(
     return {
       property: null,
       unitAvailability: [],
-      summary: { totalUnits: 0, fullyAvailable: 0, partiallyAvailable: 0, fullyBooked: 0 }
+      summary: { totalUnits: 0, fullyAvailable: 0, partiallyAvailable: 0, fullyReserved: 0 }
     };
   }
   
@@ -369,7 +369,7 @@ export async function getPropertyAvailability(
     return {
       property: null,
       unitAvailability: [],
-      summary: { totalUnits: 0, fullyAvailable: 0, partiallyAvailable: 0, fullyBooked: 0 }
+      summary: { totalUnits: 0, fullyAvailable: 0, partiallyAvailable: 0, fullyReserved: 0 }
     };
   }
   
@@ -381,7 +381,7 @@ export async function getPropertyAvailability(
   const unitAvailability: any[] = [];
   let fullyAvailable = 0;
   let partiallyAvailable = 0;
-  let fullyBooked = 0;
+  let fullyReserved = 0;
   
   const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   
@@ -390,19 +390,19 @@ export async function getPropertyAvailability(
     
     const availableDates = calendar.filter(d => d.availability === 'available').map(d => d.date);
     const blockedDates = calendar.filter(d => ['blocked', 'owner_use', 'maintenance', 'seasonal_close'].includes(d.availability)).map(d => d.date);
-    const bookedDates = calendar.filter(d => d.availability === 'booked').map(d => d.date);
+    const reservedDates = calendar.filter(d => d.availability === 'reserved').map(d => d.date);
     
     unitAvailability.push({
       unit,
       availableDates,
       blockedDates,
-      bookedDates
+      reservedDates
     });
     
     if (availableDates.length === totalDays) {
       fullyAvailable++;
-    } else if (bookedDates.length + blockedDates.length === totalDays) {
-      fullyBooked++;
+    } else if (reservedDates.length + blockedDates.length === totalDays) {
+      fullyReserved++;
     } else {
       partiallyAvailable++;
     }
@@ -415,7 +415,7 @@ export async function getPropertyAvailability(
       totalUnits: units.length,
       fullyAvailable,
       partiallyAvailable,
-      fullyBooked
+      fullyReserved
     }
   };
 }

@@ -306,7 +306,7 @@ function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
       );
     case 'not_booked':
       return (
-        <Badge variant="secondary">Not Booked</Badge>
+        <Badge variant="secondary">Not Reserved</Badge>
       );
     case 'cancelled':
       return (

@@ -100,7 +100,7 @@ export interface AvailabilityBlock {
   feedId?: number;
   startDate: string;
   endDate: string;
-  blockType: 'booked' | 'blocked' | 'maintenance';
+  blockType: 'reserved' | 'blocked' | 'maintenance';
   summary?: string;
   uid?: string;
   createdAt: string;

@@ -382,7 +382,7 @@ export async function checkInByQR(qrToken: string): Promise<{
   }
   
   if (confirmation.status === 'cancelled') {
-    throw new Error('Booking has been cancelled');
+    throw new Error('Reservation has been cancelled');
   }
   
   const [updated] = await db.update(ccTransportConfirmations)

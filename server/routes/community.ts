@@ -1,7 +1,7 @@
 /**
  * V3.3.1 Community Routes
- * Cross-tenant Chamber operations for federated booking
- * "Bamfield as one resort" - unified search and booking across all providers
+ * Cross-tenant Chamber operations for federated reservations
+ * "Bamfield as one resort" - unified search and reservation across all providers
  */
 
 import { Router, Request, Response } from 'express';
@@ -147,7 +147,7 @@ router.post('/reservations/bundle', async (req: Request, res: Response) => {
       const canBook = await hasScope(ctx, providerTenantId, 'reservation:create');
       if (!canBook) {
         return res.status(403).json({ 
-          error: `No booking permission for facility ${item.facilityId}` 
+          error: `No reservation permission for facility ${item.facilityId}` 
         });
       }
       

@@ -37,7 +37,7 @@ export type ZoomLevel = '15m' | '1h' | 'day' | 'week' | 'month' | 'season' | 'ye
 export interface ScheduleEvent {
   id: string;
   resource_id: string;
-  event_type: 'booked' | 'hold' | 'maintenance' | 'buffer' | 'reservation';
+  event_type: 'reserved' | 'hold' | 'maintenance' | 'buffer' | 'reservation';
   start_date: string;
   end_date: string;
   status: string;
@@ -174,7 +174,7 @@ export const ZOOM_CONFIGS: Record<ZoomLevel, { label: string; slotMinutes: numbe
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  booked: 'bg-blue-500/90 border-blue-600',
+  reserved: 'bg-blue-500/90 border-blue-600',
   reservation: 'bg-blue-500/90 border-blue-600',
   hold: 'bg-amber-500/90 border-amber-600',
   maintenance: 'bg-red-500/90 border-red-600',
@@ -742,7 +742,7 @@ export default function ScheduleBoard({
                                   {resourceEvents.map((event) => {
                                     const pos = getEventPosition(event, slot, slotEnd);
                                     if (!pos) return null;
-                                    const colorClass = EVENT_COLORS[event.event_type] || EVENT_COLORS[event.status] || EVENT_COLORS.booked;
+                                    const colorClass = EVENT_COLORS[event.event_type] || EVENT_COLORS[event.status] || EVENT_COLORS.reserved;
                                     return (
                                       <div
                                         key={`${event.id}-${idx}`}

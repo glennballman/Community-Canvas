@@ -98,7 +98,7 @@ async function checkTimeConflicts(
   }
 
   const reservationsResult = await pool.query(`
-    SELECT b.id, 'booked' as event_type, 
+    SELECT b.id, 'reserved' as event_type, 
            COALESCE(b.primary_guest_name, 'Reservation') as title,
            b.start_date as start_date, b.end_date as end_date
     FROM cc_reservations b
@@ -210,7 +210,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       SELECT 
         b.id,
         b.asset_id as resource_id,
-        'booked' as event_type,
+        'reserved' as event_type,
         b.start_date as start_date,
         b.end_date as end_date,
         'active' as status,
@@ -306,7 +306,7 @@ router.post('/cc_events', requireAuth, async (req: Request, res: Response) => {
     if (conflicts.length > 0) {
       return res.status(409).json({
         success: false,
-        error: 'That time is already booked out.',
+        error: 'That time is already reserved.',
         code: 'RESOURCE_TIME_CONFLICT',
         conflict_with: conflicts,
       });
@@ -416,7 +416,7 @@ router.patch('/cc_events/:id', requireAuth, async (req: Request, res: Response) 
     if (conflicts.length > 0) {
       return res.status(409).json({
         success: false,
-        error: 'That time is already booked out.',
+        error: 'That time is already reserved.',
         code: 'RESOURCE_TIME_CONFLICT',
         conflict_with: conflicts,
       });

@@ -74,7 +74,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         COUNT(*) FILTER (WHERE status = 'new') as count_new,
         COUNT(*) FILTER (WHERE status = 'contacted') as count_contacted,
         COUNT(*) FILTER (WHERE status = 'quoted') as count_quoted,
-        COUNT(*) FILTER (WHERE status = 'booked') as count_booked,
+        COUNT(*) FILTER (WHERE status = 'scheduled') as count_scheduled,
         COUNT(*) FILTER (WHERE status = 'completed') as count_completed,
         COUNT(*) FILTER (WHERE status = 'dropped') as count_dropped,
         COUNT(*) FILTER (WHERE status = 'spam') as count_spam
@@ -90,7 +90,7 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         new: parseInt(countResult.rows[0].count_new, 10),
         contacted: parseInt(countResult.rows[0].count_contacted, 10),
         quoted: parseInt(countResult.rows[0].count_quoted, 10),
-        booked: parseInt(countResult.rows[0].count_booked, 10),
+        scheduled: parseInt(countResult.rows[0].count_scheduled, 10),
         completed: parseInt(countResult.rows[0].count_completed, 10),
         dropped: parseInt(countResult.rows[0].count_dropped, 10),
         spam: parseInt(countResult.rows[0].count_spam, 10)
@@ -283,8 +283,8 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
 
     const wr = wrResult.rows[0];
 
-    if (wr.status === 'booked') {
-      return res.status(400).json({ error: 'Work request already booked' });
+    if (wr.status === 'scheduled') {
+      return res.status(400).json({ error: 'Work request already scheduled' });
     }
 
     // Create the project
@@ -314,10 +314,10 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
 
     const project = projectResult.rows[0];
 
-    // Update work request status to reserveed
+    // Update work request status to scheduled
     await tenantReq.tenantQuery!(
       `UPDATE cc_work_requests SET 
-        status = 'booked',
+        status = 'scheduled',
         converted_to_project_id = $2,
         converted_at = NOW(),
         converted_by_actor_id = $3
@@ -328,7 +328,7 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
     res.status(201).json({ 
       project,
       project_id: project.id,
-      message: 'Work request booked as project'
+      message: 'Work request scheduled as project'
     });
   } catch (error) {
     console.error('Error reserving work request:', error);

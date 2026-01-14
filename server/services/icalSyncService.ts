@@ -5,7 +5,7 @@ interface ICalEvent {
   summary?: string;
   startDate: string;
   endDate: string;
-  blockType: 'booked' | 'blocked';
+  blockType: 'reserved' | 'blocked';
 }
 
 interface SyncResult {
@@ -68,12 +68,12 @@ function parseICalEvents(icalData: string): ICalEvent[] {
     const summary = summaryMatch ? summaryMatch[1].trim() : undefined;
     
     const summaryLower = (summary || '').toLowerCase();
-    const blockType: 'booked' | 'blocked' = 
+    const blockType: 'reserved' | 'blocked' = 
       summaryLower.includes('reserved') || 
       summaryLower.includes('booked') || 
       summaryLower.includes('airbnb') ||
       summaryLower.includes('booking.com')
-        ? 'booked' 
+        ? 'reserved' 
         : 'blocked';
     
     cc_events.push({

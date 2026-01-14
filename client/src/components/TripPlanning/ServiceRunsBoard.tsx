@@ -169,13 +169,13 @@ export function ServiceRunsBoard({ onBack }: ServiceRunsBoardProps) {
 
                 <div className="flex gap-2">
                   {run.slots_available > 0 ? (
-                    <Button className="flex-1" data-testid={`button-book-${run.id}`}>
+                    <Button className="flex-1" data-testid={`button-reserve-${run.id}`}>
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Book Slot
+                      Reserve Slot
                     </Button>
                   ) : (
                     <Button className="flex-1" variant="secondary" disabled>
-                      Fully Booked
+                      Fully Reserved
                     </Button>
                   )}
                   {(run.contact_email || run.contact_phone) && (

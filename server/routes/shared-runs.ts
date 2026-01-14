@@ -54,7 +54,7 @@ async function resolveTenant(req: any): Promise<{ id: string }> {
 }
 
 // ============================================================
-// CREATE SHARED RUN (Customer who booked a contractor)
+// CREATE SHARED RUN (Customer who scheduled a contractor)
 // ============================================================
 router.post('/', async (req: Request, res: Response) => {
   try {

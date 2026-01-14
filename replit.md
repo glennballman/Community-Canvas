@@ -35,6 +35,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Storage Abstraction**: `IStorage` interface for flexible storage implementations.
 - **Geographic Hierarchy**: Provincial → Regional → Municipal data inheritance.
 - **Multi-Tenant Security**: RLS-based tenant isolation with `is_service_mode()` bypass, tenant context middleware, and route guards.
+- **Terminology Standards**: NEVER use "booking/booked" → ALWAYS use "reservation/reserved/scheduled". See `docs/TERMINOLOGY_STANDARDS.md` for canon. Run `./scripts/check-terminology.sh` as guardrail before commits.
 - **External Data Lake V2**: Entity-graph architecture for managing scraped external data.
 - **Unified Assets Registry**: Central registry for all rentable assets with unified reservations.
 - **Capability Architecture**: Operational layer for work order planning and asset linking.

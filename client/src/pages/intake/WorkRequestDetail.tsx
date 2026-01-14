@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface WorkRequest {
   id: string;
-  status: 'new' | 'contacted' | 'quoted' | 'booked' | 'completed' | 'dropped' | 'spam';
+  status: 'new' | 'contacted' | 'quoted' | 'scheduled' | 'completed' | 'dropped' | 'spam';
   contact_channel_type: string;
   contact_channel_value: string;
   person_id: string | null;
@@ -66,7 +66,7 @@ const STATUS_CONFIG = {
   new: { label: 'New', color: 'bg-blue-500/20 text-blue-400' },
   contacted: { label: 'Contacted', color: 'bg-yellow-500/20 text-yellow-400' },
   quoted: { label: 'Quoted', color: 'bg-purple-500/20 text-purple-400' },
-  booked: { label: 'Booked', color: 'bg-green-500/20 text-green-400' },
+  scheduled: { label: 'Scheduled', color: 'bg-green-500/20 text-green-400' },
   completed: { label: 'Completed', color: 'bg-emerald-500/20 text-emerald-400' },
   dropped: { label: 'Dropped', color: 'bg-muted text-muted-foreground' },
   spam: { label: 'Spam', color: 'bg-red-500/20 text-red-400' },
@@ -101,7 +101,7 @@ export default function WorkRequestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [bookDialogOpen, setBookDialogOpen] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [dropDialogOpen, setDropDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [dropReason, setDropReason] = useState('');
@@ -151,8 +151,8 @@ export default function WorkRequestDetail() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/work-requests'] });
-      toast({ title: 'Booked', description: 'Work request booked as project' });
-      setBookDialogOpen(false);
+      toast({ title: 'Scheduled', description: 'Work request scheduled as project' });
+      setScheduleDialogOpen(false);
       if (data.project_id) {
         navigate(`/app/projects/${data.project_id}`);
       }
@@ -226,9 +226,9 @@ export default function WorkRequestDetail() {
   const statusConfig = STATUS_CONFIG[request.status];
   const notes = notesData?.notes || [];
 
-  const canBook = ['new', 'contacted', 'quoted'].includes(request.status);
+  const canSchedule = ['new', 'contacted', 'quoted'].includes(request.status);
   const canDrop = ['new', 'contacted', 'quoted'].includes(request.status);
-  const canComplete = ['new', 'contacted', 'quoted', 'booked'].includes(request.status);
+  const canComplete = ['new', 'contacted', 'quoted', 'scheduled'].includes(request.status);
 
   return (
     <div className="flex-1 p-4 space-y-6" data-testid="page-work-request-detail">
@@ -250,21 +250,21 @@ export default function WorkRequestDetail() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {canBook && (
-            <Dialog open={bookDialogOpen} onOpenChange={setBookDialogOpen}>
+          {canSchedule && (
+            <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="default" data-testid="button-book">
+                <Button variant="default" data-testid="button-schedule">
                   <Briefcase className="w-4 h-4 mr-2" />
-                  Book Project
+                  Schedule Project
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Book as Project</DialogTitle>
+                  <DialogTitle>Schedule as Project</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    This will create a new project from this work request and mark it as booked.
+                    This will create a new project from this work request and mark it as scheduled.
                   </p>
                   <div className="space-y-2">
                     <Label htmlFor="project_title">Project Title (optional)</Label>
@@ -277,11 +277,11 @@ export default function WorkRequestDetail() {
                     />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setBookDialogOpen(false)} data-testid="button-book-cancel">
+                    <Button variant="outline" onClick={() => setScheduleDialogOpen(false)} data-testid="button-schedule-cancel">
                       Cancel
                     </Button>
-                    <Button onClick={() => reserveMutation.mutate()} disabled={reserveMutation.isPending} data-testid="button-book-confirm">
-                      {reserveMutation.isPending ? 'Reserving...' : 'Book'}
+                    <Button onClick={() => reserveMutation.mutate()} disabled={reserveMutation.isPending} data-testid="button-schedule-confirm">
+                      {reserveMutation.isPending ? 'Scheduling...' : 'Schedule'}
                     </Button>
                   </div>
                 </div>
@@ -403,7 +403,7 @@ export default function WorkRequestDetail() {
               <div className="p-3 rounded-md bg-green-500/10 border border-green-500/20">
                 <p className="text-sm text-green-400 flex items-center gap-2">
                   <Check className="w-4 h-4" />
-                  Booked as project
+                  Scheduled as project
                 </p>
                 <Button 
                   variant="ghost" 
