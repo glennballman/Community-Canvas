@@ -1,0 +1,139 @@
+Replit Prompt: Taxonomy Standards + Drift Scan (Repo + Schema, post-Prompt 24 focus)
+
+Goal: Identify the authoritative taxonomy/naming standards already adopted (docs/notes), and detect any drift since Prompt 24 / migrations 099+ (especially reintroduced “booking” and any invented taxonomies).
+
+A) Repo-wide standards discovery (documentation + code comments)
+
+Run these searches and paste back the best hits (file path + 10–30 lines around match):
+
+# 1) Find docs mentioning the standards/taxonomies
+rg -n --hidden --glob '!.git' \
+  'schema\.org|schemaorg|Reservation|UNSPSC|NAICS|HS code|Harmonized System|CSI|MasterFormat|NIGP|PSC\b|SIC\b|SOC\b|ISCO\b|NOC\b|NIC\b|ISIC\b|GICS\b' \
+  .
+
+# 2) Find any "naming standards" / "taxonomy" policy docs explicitly
+rg -n --hidden --glob '!.git' \
+  'taxonomy|taxonomies|naming standard|terminology|glossary|canonical vocabulary|do not use|banned terms|reservation vs booking' \
+  docs . || true
+
+# 3) List candidate docs files quickly
+ls -la docs || true
+find . -maxdepth 3 -type f \( -iname "*.md" -o -iname "*.mdx" -o -iname "*.txt" \) | sed -n '1,200p'
+
+
+Deliverable: Paste back:
+
+the top 10 most “authoritative” matches (policy / glossary / standards text)
+
+any doc that contains “never use booking / use reservation” rules
+
+any doc defining “UNSPSC/NAICS/HS/CSI” usage locations (tables, fields, APIs)
+
+B) Drift scan (post-Prompt 24 / migrations 099+)
+
+We want to catch things that become hard to change later: enums, table names, API routes, template keys, event types.
+
+1) Scan new migrations only (099+)
+rg -n 'booking|booked|is_booked|bookings\b' server/migrations/0(9[9]|[1-9][0-9][0-9])_*.sql
+rg -n 'UNSPSC|NAICS|HS code|Harmonized|CSI|MasterFormat' server/migrations/0(9[9]|[1-9][0-9][0-9])_*.sql
+
+2) Scan code created/changed since Prompt 24 (fast approximation)
+
+If git is available, show files changed since migration 098 (or last tag). If not, just scan folders likely touched:
+
+# If git history exists:
+git log --oneline -n 30 || true
+git diff --name-only HEAD~50..HEAD || true
+
+# Always scan key dirs for drift:
+rg -n --hidden --glob '!.git' 'booking|booked|is_booked|bookings\b' \
+  server client shared drizzle schema docs .
+
+rg -n --hidden --glob '!.git' \
+  'UNSPSC|NAICS|HS code|Harmonized System|CSI|MasterFormat|JobPosting|Reservation|Offer|Place|Organization|Person' \
+  server client shared drizzle schema docs .
+
+
+Deliverable: Paste back any occurrences of:
+
+booking/booked/is_booked/bookings
+
+invented taxonomies (e.g., “internal category codes” that don’t cite NAICS/UNSPSC/HS/CSI)
+
+anywhere an enum includes “booking”
+
+C) DB schema scan (schema itself, not data)
+
+Run these SQL queries and paste the results:
+
+1) Enums that contain banned words or drift terms
+-- enums containing booking/booked
+SELECT t.typname AS enum_name, e.enumlabel AS enum_value
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+WHERE e.enumlabel ILIKE '%book%'
+ORDER BY enum_name, e.enumsortorder;
+
+-- enums mentioning standards (UNSPSC/NAICS/HS/CSI)
+SELECT t.typname AS enum_name, e.enumlabel AS enum_value
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+WHERE e.enumlabel ILIKE '%naics%'
+   OR e.enumlabel ILIKE '%unspsc%'
+   OR e.enumlabel ILIKE '%hs%'
+   OR e.enumlabel ILIKE '%csi%'
+ORDER BY enum_name, e.enumsortorder;
+
+2) Tables/columns that embed drift terms (schema-level)
+-- columns containing booking/booked
+SELECT table_schema, table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_schema='public'
+  AND (column_name ILIKE '%book%' OR table_name ILIKE '%book%')
+ORDER BY table_name, column_name;
+
+-- columns likely holding taxonomy codes
+SELECT table_schema, table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_schema='public'
+  AND (
+    column_name ILIKE '%naics%' OR
+    column_name ILIKE '%unspsc%' OR
+    column_name ILIKE '%hs%' OR
+    column_name ILIKE '%csi%' OR
+    column_name ILIKE '%taxonomy%' OR
+    column_name ILIKE '%classification%' OR
+    column_name ILIKE '%code%'
+  )
+ORDER BY table_name, column_name;
+
+
+Deliverable: Paste back the results. We’re looking for:
+
+any booking remnants in schema names/columns/enums
+
+where NAICS/UNSPSC/HS/CSI are actually stored (tables/columns)
+
+D) Output format (paste back to ChatGPT)
+
+Please paste back:
+
+Standards docs summary
+
+file paths + key excerpts
+
+Drift findings (repo)
+
+exact matches with file/line
+
+Drift findings (migrations 099+)
+
+exact matches with file/line
+
+DB schema findings
+
+enum list + columns list
+
+Your recommendation
+
+what should be fixed immediately (especially enums/template keys)
