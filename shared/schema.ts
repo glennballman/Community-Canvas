@@ -3928,3 +3928,215 @@ export const insertSubscriptionSchema = createInsertSchema(ccSubscriptions).omit
 });
 export type Subscription = typeof ccSubscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
+// ============================================================================
+// COMMUNITIES (Bundle 102)
+// ============================================================================
+
+export const ccCommunities = pgTable("cc_communities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  regionName: text("region_name"),
+  province: text("province").default("BC"),
+  country: text("country").default("Canada"),
+  latitude: numeric("latitude"),
+  longitude: numeric("longitude"),
+  timezone: text("timezone").default("America/Vancouver"),
+  populationEstimate: integer("population_estimate"),
+  isRemote: boolean("is_remote").default(false),
+  accessNotes: text("access_notes"),
+  portalId: uuid("portal_id").references(() => ccPortals.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  slugIdx: index("idx_cc_communities_slug").on(table.slug),
+  portalIdx: index("idx_cc_communities_portal").on(table.portalId),
+}));
+
+export const insertCommunitySchema = createInsertSchema(ccCommunities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Community = typeof ccCommunities.$inferSelect;
+export type InsertCommunity = z.infer<typeof insertCommunitySchema>;
+
+// ============================================================================
+// JOBS (Bundle 102) - Cold-Start Wedge
+// ============================================================================
+
+export const jobRoleCategoryEnum = pgEnum("job_role_category", [
+  "housekeeping", "cook", "server", "bartender", "maintenance", 
+  "landscaping", "marina", "dock_attendant", "driver", "guide", 
+  "retail", "general_labour", "skilled_trade", "administrative", 
+  "management", "security", "childcare", "healthcare", "other"
+]);
+
+export const jobEmploymentTypeEnum = pgEnum("job_employment_type", [
+  "full_time", "part_time", "seasonal", "contract", "on_call", "temporary"
+]);
+
+export const jobUrgencyEnum = pgEnum("job_urgency", [
+  "normal", "urgent", "emergency"
+]);
+
+export const jobVerificationStateEnum = pgEnum("job_verification_state", [
+  "draft", "awaiting_employer", "verified", "rejected", "expired"
+]);
+
+export const jobStatusEnum = pgEnum("job_status", [
+  "open", "paused", "filled", "expired", "cancelled"
+]);
+
+export const ccJobs = pgTable("cc_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  slug: text("slug"),
+  roleCategory: text("role_category").notNull(),
+  employmentType: text("employment_type").notNull(),
+  
+  communityId: uuid("community_id").references(() => ccCommunities.id),
+  locationText: text("location_text"),
+  latitude: numeric("latitude"),
+  longitude: numeric("longitude"),
+  
+  description: text("description").notNull(),
+  responsibilities: text("responsibilities"),
+  requirements: text("requirements"),
+  niceToHave: text("nice_to_have"),
+  
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  isFlexibleDates: boolean("is_flexible_dates").default(false),
+  hoursPerWeek: integer("hours_per_week"),
+  shiftDetails: text("shift_details"),
+  
+  urgency: text("urgency").notNull().default("normal"),
+  
+  housingProvided: boolean("housing_provided").default(false),
+  housingType: text("housing_type"),
+  housingDescription: text("housing_description"),
+  rvFriendly: boolean("rv_friendly").default(false),
+  mealsProvided: boolean("meals_provided").default(false),
+  transportAssistance: boolean("transport_assistance").default(false),
+  relocationAssistance: boolean("relocation_assistance").default(false),
+  
+  payType: text("pay_type"),
+  payMin: numeric("pay_min"),
+  payMax: numeric("pay_max"),
+  currency: text("currency").default("CAD"),
+  benefitsDescription: text("benefits_description"),
+  
+  disclosedPayMin: numeric("disclosed_pay_min"),
+  disclosedPayMax: numeric("disclosed_pay_max"),
+  showPay: boolean("show_pay").default(true),
+  
+  sourceType: text("source_type").notNull().default("manual"),
+  sourceUrl: text("source_url"),
+  verificationState: text("verification_state").notNull().default("draft"),
+  disclaimerText: text("disclaimer_text"),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedByUserId: uuid("verified_by_user_id"),
+  
+  tenantId: uuid("tenant_id"),
+  operatorId: uuid("operator_id").references(() => ccOperators.id),
+  partyId: uuid("party_id"),
+  portalId: uuid("portal_id").references(() => ccPortals.id),
+  createdByUserId: uuid("created_by_user_id"),
+  
+  status: text("status").notNull().default("open"),
+  filledAt: timestamp("filled_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  
+  viewCount: integer("view_count").default(0),
+  applicationCount: integer("application_count").default(0),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  communityIdx: index("idx_cc_jobs_community").on(table.communityId),
+  statusIdx: index("idx_cc_jobs_status").on(table.status),
+  roleIdx: index("idx_cc_jobs_role").on(table.roleCategory),
+}));
+
+export const insertJobSchema = createInsertSchema(ccJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  viewCount: true,
+  applicationCount: true,
+});
+export type Job = typeof ccJobs.$inferSelect;
+export type InsertJob = z.infer<typeof insertJobSchema>;
+
+// ============================================================================
+// JOB POSTINGS (Bundle 102)
+// ============================================================================
+
+export const ccJobPostings = pgTable("cc_job_postings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  jobId: uuid("job_id").notNull().references(() => ccJobs.id, { onDelete: "cascade" }),
+  portalId: uuid("portal_id").notNull().references(() => ccPortals.id, { onDelete: "cascade" }),
+  isFeatured: boolean("is_featured").default(false),
+  isPinned: boolean("is_pinned").default(false),
+  isHidden: boolean("is_hidden").default(false),
+  pinRank: integer("pin_rank"),
+  customTitle: text("custom_title"),
+  customDescription: text("custom_description"),
+  autoSyndicated: boolean("auto_syndicated").default(false),
+  syndicationRuleId: uuid("syndication_rule_id"),
+  postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  uniqueJobPortal: uniqueIndex("idx_cc_job_postings_unique").on(table.jobId, table.portalId),
+  portalIdx: index("idx_cc_job_postings_portal").on(table.portalId),
+}));
+
+export const insertJobPostingSchema = createInsertSchema(ccJobPostings).omit({
+  id: true,
+  createdAt: true,
+});
+export type JobPosting = typeof ccJobPostings.$inferSelect;
+export type InsertJobPosting = z.infer<typeof insertJobPostingSchema>;
+
+// ============================================================================
+// JOB APPLICANTS (Bundle 102)
+// ============================================================================
+
+export const ccJobApplicants = pgTable("cc_job_applicants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  jobId: uuid("job_id").notNull().references(() => ccJobs.id, { onDelete: "cascade" }),
+  individualId: uuid("individual_id"),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  coverLetter: text("cover_letter"),
+  resumeUrl: text("resume_url"),
+  resumeMediaId: uuid("resume_media_id"),
+  status: text("status").notNull().default("applied"),
+  internalNotes: text("internal_notes"),
+  routedToEmail: text("routed_to_email"),
+  routedAt: timestamp("routed_at", { withTimezone: true }),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+  responseType: text("response_type"),
+  appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  jobIdx: index("idx_cc_job_applicants_job").on(table.jobId),
+  individualIdx: index("idx_cc_job_applicants_individual").on(table.individualId),
+  statusIdx: index("idx_cc_job_applicants_status").on(table.status),
+}));
+
+export const insertJobApplicantSchema = createInsertSchema(ccJobApplicants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  appliedAt: true,
+});
+export type JobApplicant = typeof ccJobApplicants.$inferSelect;
+export type InsertJobApplicant = z.infer<typeof insertJobApplicantSchema>;
