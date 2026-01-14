@@ -5066,3 +5066,145 @@ export const insertNotificationDigestSchema = createInsertSchema(ccNotificationD
 });
 export type NotificationDigest = typeof ccNotificationDigests.$inferSelect;
 export type InsertNotificationDigest = z.infer<typeof insertNotificationDigestSchema>;
+
+// ============================================================================
+// ACTIVITY FEED ENUMS (Bundle 109)
+// ============================================================================
+
+export const activityVerbEnum = pgEnum("activity_verb", [
+  "created", "updated", "deleted", "scheduled", "confirmed",
+  "cancelled", "completed", "claimed", "sent", "accepted",
+  "rejected", "expired", "joined", "left", "approved",
+  "started", "filled", "received", "changed", "milestone", "announcement"
+]);
+
+export const activityVisibilityEnum = pgEnum("activity_visibility", [
+  "private", "tenant", "portal", "community", "public"
+]);
+
+export const activityPriorityEnum = pgEnum("activity_priority", [
+  "low", "normal", "high", "featured"
+]);
+
+// ============================================================================
+// ACTIVITY EVENTS (Bundle 109)
+// Core event stream - immutable log of all activities
+// ============================================================================
+
+export const ccActivityEvents = pgTable("cc_activity_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  // Event classification
+  verb: activityVerbEnum("verb").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: uuid("entity_id"),
+  subtype: text("subtype"),
+  
+  // Actor (XOR identity)
+  actorTenantId: uuid("actor_tenant_id"),
+  actorPartyId: uuid("actor_party_id"),
+  actorIndividualId: uuid("actor_individual_id"),
+  actorName: text("actor_name"),
+  
+  // Context
+  tenantId: uuid("tenant_id"),
+  portalId: uuid("portal_id"),
+  communityId: uuid("community_id"),
+  
+  // Content
+  title: text("title").notNull(),
+  description: text("description"),
+  entityName: text("entity_name"),
+  metadata: jsonb("metadata").default({}),
+  
+  // Visibility & Priority
+  visibility: activityVisibilityEnum("visibility").notNull().default("tenant"),
+  priority: activityPriorityEnum("priority").notNull().default("normal"),
+  
+  // Engagement
+  isActionable: boolean("is_actionable").default(false),
+  actionUrl: text("action_url"),
+  actionLabel: text("action_label"),
+  aggregationKey: text("aggregation_key"),
+  
+  // Timestamps
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_activity_events_tenant").on(table.tenantId, table.occurredAt),
+  portalIdx: index("idx_cc_activity_events_portal").on(table.portalId, table.occurredAt),
+  verbIdx: index("idx_cc_activity_events_verb").on(table.verb, table.occurredAt),
+  entityIdx: index("idx_cc_activity_events_entity").on(table.entityType, table.entityId),
+}));
+
+export const insertActivityEventSchema = createInsertSchema(ccActivityEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type ActivityEvent = typeof ccActivityEvents.$inferSelect;
+export type InsertActivityEvent = z.infer<typeof insertActivityEventSchema>;
+
+// ============================================================================
+// ACTIVITY FEED STATE (Bundle 109)
+// Tracks what each recipient has seen - XOR identity
+// ============================================================================
+
+export const ccActivityFeedState = pgTable("cc_activity_feed_state", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  // Recipient (XOR - exactly one must be set)
+  tenantId: uuid("tenant_id"),
+  partyId: uuid("party_id"),
+  individualId: uuid("individual_id"),
+  
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow(),
+  lastSeenTenantAt: timestamp("last_seen_tenant_at", { withTimezone: true }),
+  lastSeenPortalAt: timestamp("last_seen_portal_at", { withTimezone: true }),
+  lastSeenCommunityAt: timestamp("last_seen_community_at", { withTimezone: true }),
+  unreadCount: integer("unread_count").default(0),
+  collapsedTypes: text("collapsed_types").array().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_activity_feed_state_tenant").on(table.tenantId),
+  partyIdx: index("idx_cc_activity_feed_state_party").on(table.partyId),
+  individualIdx: index("idx_cc_activity_feed_state_individual").on(table.individualId),
+}));
+
+export const insertActivityFeedStateSchema = createInsertSchema(ccActivityFeedState).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ActivityFeedState = typeof ccActivityFeedState.$inferSelect;
+export type InsertActivityFeedState = z.infer<typeof insertActivityFeedStateSchema>;
+
+// ============================================================================
+// ACTIVITY BOOKMARKS (Bundle 109)
+// Users can bookmark important activities - XOR identity
+// ============================================================================
+
+export const ccActivityBookmarks = pgTable("cc_activity_bookmarks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  // Recipient (XOR - exactly one must be set)
+  tenantId: uuid("tenant_id"),
+  partyId: uuid("party_id"),
+  individualId: uuid("individual_id"),
+  
+  activityId: uuid("activity_id").notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_activity_bookmarks_tenant").on(table.tenantId, table.createdAt),
+  partyIdx: index("idx_cc_activity_bookmarks_party").on(table.partyId, table.createdAt),
+  individualIdx: index("idx_cc_activity_bookmarks_individual").on(table.individualId, table.createdAt),
+}));
+
+export const insertActivityBookmarkSchema = createInsertSchema(ccActivityBookmarks).omit({
+  id: true,
+  createdAt: true,
+});
+export type ActivityBookmark = typeof ccActivityBookmarks.$inferSelect;
+export type InsertActivityBookmark = z.infer<typeof insertActivityBookmarkSchema>;
