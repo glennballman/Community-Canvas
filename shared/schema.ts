@@ -4430,3 +4430,208 @@ export const insertClaimLinkSchema = createInsertSchema(ccClaimLinks).omit({
 });
 export type ClaimLink = typeof ccClaimLinks.$inferSelect;
 export type InsertClaimLink = z.infer<typeof insertClaimLinkSchema>;
+
+// ============================================================================
+// PORTAL GOVERNANCE (Bundle 105)
+// ============================================================================
+
+export const portalRoleTypeEnum = pgEnum("portal_role_type", [
+  "owner", "admin", "moderator", "editor", "member", "guest"
+]);
+
+export const moderationStatusEnum = pgEnum("moderation_status", [
+  "pending", "approved", "rejected", "flagged", "auto_approved", "expired"
+]);
+
+export const moderationActionEnum = pgEnum("moderation_action", [
+  "approve", "reject", "flag", "unflag", "escalate", "auto_approve", "auto_reject", "expire"
+]);
+
+export const moderableContentTypeEnum = pgEnum("moderable_content_type", [
+  "job", "job_posting", "listing", "event", "review", "comment", "profile", "message"
+]);
+
+// ============================================================================
+// PORTAL MEMBERS (Bundle 105)
+// ============================================================================
+
+export const ccPortalMembers = pgTable("cc_portal_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull().references(() => ccPortals.id, { onDelete: "cascade" }),
+  
+  tenantId: uuid("tenant_id"),
+  partyId: uuid("party_id"),
+  individualId: uuid("individual_id"),
+  
+  role: portalRoleTypeEnum("role").notNull().default("member"),
+  
+  canPostJobs: boolean("can_post_jobs").default(true),
+  canPostListings: boolean("can_post_listings").default(true),
+  canInviteMembers: boolean("can_invite_members").default(false),
+  canModerate: boolean("can_moderate").default(false),
+  canEditSettings: boolean("can_edit_settings").default(false),
+  
+  isActive: boolean("is_active").notNull().default(true),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  leftAt: timestamp("left_at", { withTimezone: true }),
+  
+  invitedByMemberId: uuid("invited_by_member_id"),
+  invitationId: uuid("invitation_id").references(() => ccInvitations.id),
+  
+  displayName: text("display_name"),
+  bio: text("bio"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalIdx: index("idx_cc_portal_members_portal").on(table.portalId),
+  tenantIdx: index("idx_cc_portal_members_tenant").on(table.tenantId),
+  roleIdx: index("idx_cc_portal_members_role").on(table.portalId, table.role),
+}));
+
+export const insertPortalMemberSchema = createInsertSchema(ccPortalMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PortalMember = typeof ccPortalMembers.$inferSelect;
+export type InsertPortalMember = z.infer<typeof insertPortalMemberSchema>;
+
+// ============================================================================
+// PORTAL SETTINGS (Bundle 105)
+// ============================================================================
+
+export const ccPortalSettings = pgTable("cc_portal_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull().references(() => ccPortals.id, { onDelete: "cascade" }).unique(),
+  
+  logoUrl: text("logo_url"),
+  faviconUrl: text("favicon_url"),
+  primaryColor: text("primary_color").default("#3B82F6"),
+  secondaryColor: text("secondary_color").default("#1E40AF"),
+  customCss: text("custom_css"),
+  
+  autoApproveJobs: boolean("auto_approve_jobs").default(false),
+  autoApproveListings: boolean("auto_approve_listings").default(false),
+  requireVerificationForPosting: boolean("require_verification_for_posting").default(true),
+  allowAnonymousApplications: boolean("allow_anonymous_applications").default(true),
+  
+  moderationEnabled: boolean("moderation_enabled").default(true),
+  silentRejection: boolean("silent_rejection").default(true),
+  rejectionNotificationEnabled: boolean("rejection_notification_enabled").default(false),
+  autoExpireDays: integer("auto_expire_days").default(90),
+  
+  jobsEnabled: boolean("jobs_enabled").default(true),
+  listingsEnabled: boolean("listings_enabled").default(true),
+  eventsEnabled: boolean("events_enabled").default(false),
+  messagingEnabled: boolean("messaging_enabled").default(true),
+  reviewsEnabled: boolean("reviews_enabled").default(false),
+  
+  allowInboundSyndication: boolean("allow_inbound_syndication").default(true),
+  allowOutboundSyndication: boolean("allow_outbound_syndication").default(true),
+  syndicationRequiresApproval: boolean("syndication_requires_approval").default(true),
+  
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  ogImageUrl: text("og_image_url"),
+  
+  supportEmail: text("support_email"),
+  supportPhone: text("support_phone"),
+  
+  termsUrl: text("terms_url"),
+  privacyUrl: text("privacy_url"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertPortalSettingsSchema = createInsertSchema(ccPortalSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PortalSettings = typeof ccPortalSettings.$inferSelect;
+export type InsertPortalSettings = z.infer<typeof insertPortalSettingsSchema>;
+
+// ============================================================================
+// MODERATION QUEUE (Bundle 105)
+// ============================================================================
+
+export const ccModerationQueue = pgTable("cc_moderation_queue", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull().references(() => ccPortals.id, { onDelete: "cascade" }),
+  
+  contentType: moderableContentTypeEnum("content_type").notNull(),
+  contentId: uuid("content_id").notNull(),
+  contentSnapshot: jsonb("content_snapshot"),
+  
+  submittedByTenantId: uuid("submitted_by_tenant_id"),
+  submittedByPartyId: uuid("submitted_by_party_id"),
+  submittedByIndividualId: uuid("submitted_by_individual_id"),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  
+  status: moderationStatusEnum("status").notNull().default("pending"),
+  priority: integer("priority").default(0),
+  
+  autoModerationScore: numeric("auto_moderation_score"),
+  autoModerationFlags: jsonb("auto_moderation_flags").default([]),
+  autoModerationPassed: boolean("auto_moderation_passed"),
+  
+  reviewedByMemberId: uuid("reviewed_by_member_id").references(() => ccPortalMembers.id),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewNotes: text("review_notes"),
+  
+  rejectionReason: text("rejection_reason"),
+  rejectionCategory: text("rejection_category"),
+  isSilentRejection: boolean("is_silent_rejection").default(true),
+  
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalIdx: index("idx_cc_moderation_queue_portal").on(table.portalId),
+  statusIdx: index("idx_cc_moderation_queue_status").on(table.portalId, table.status),
+  contentIdx: index("idx_cc_moderation_queue_content").on(table.contentType, table.contentId),
+  uniqueContent: uniqueIndex("cc_moderation_queue_unique").on(table.portalId, table.contentType, table.contentId),
+}));
+
+export const insertModerationQueueSchema = createInsertSchema(ccModerationQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ModerationQueueItem = typeof ccModerationQueue.$inferSelect;
+export type InsertModerationQueueItem = z.infer<typeof insertModerationQueueSchema>;
+
+// ============================================================================
+// MODERATION HISTORY (Bundle 105)
+// ============================================================================
+
+export const ccModerationHistory = pgTable("cc_moderation_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  queueItemId: uuid("queue_item_id").notNull().references(() => ccModerationQueue.id, { onDelete: "cascade" }),
+  
+  action: moderationActionEnum("action").notNull(),
+  previousStatus: moderationStatusEnum("previous_status"),
+  newStatus: moderationStatusEnum("new_status"),
+  
+  actorMemberId: uuid("actor_member_id").references(() => ccPortalMembers.id),
+  actorSystem: boolean("actor_system").default(false),
+  
+  reason: text("reason"),
+  notes: text("notes"),
+  metadata: jsonb("metadata").default({}),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  queueIdx: index("idx_cc_moderation_history_queue").on(table.queueItemId),
+  actorIdx: index("idx_cc_moderation_history_actor").on(table.actorMemberId),
+}));
+
+export const insertModerationHistorySchema = createInsertSchema(ccModerationHistory).omit({
+  id: true,
+  createdAt: true,
+});
+export type ModerationHistoryEntry = typeof ccModerationHistory.$inferSelect;
+export type InsertModerationHistoryEntry = z.infer<typeof insertModerationHistorySchema>;
