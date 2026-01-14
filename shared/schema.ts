@@ -5387,3 +5387,136 @@ export const insertFolioLedgerEntrySchema = createInsertSchema(ccFolioLedger).om
 });
 export type FolioLedgerEntry = typeof ccFolioLedger.$inferSelect;
 export type InsertFolioLedgerEntry = z.infer<typeof insertFolioLedgerEntrySchema>;
+
+// ============================================================================
+// ENFORCEMENT ACTIONS (Migration 111)
+// Parking/marina violation ticketing system
+// ============================================================================
+
+export const enforcementActionTypeEnum = pgEnum("enforcement_action_type", [
+  "warning", "citation", "tow_order", "boot", "impound", "ban", "revocation"
+]);
+
+export const enforcementStatusEnum = pgEnum("enforcement_status", [
+  "issued", "contested", "upheld", "dismissed", "paid", "escalated", "void"
+]);
+
+export const violationCategoryEnum = pgEnum("violation_category", [
+  "parking_expired", "parking_unauthorized", "parking_wrong_space", "parking_fire_lane",
+  "parking_accessible", "marina_overstay", "marina_unauthorized", "marina_safety",
+  "facility_damage", "facility_rules", "noise", "other"
+]);
+
+export const ccEnforcementActions = pgTable("cc_enforcement_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  
+  ticketNumber: text("ticket_number").notNull(),
+  actionType: enforcementActionTypeEnum("action_type").notNull(),
+  status: enforcementStatusEnum("status").notNull().default("issued"),
+  
+  violationCategory: violationCategoryEnum("violation_category").notNull(),
+  violationDescription: text("violation_description").notNull(),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  
+  facilityId: uuid("facility_id"),
+  assetId: uuid("asset_id"),
+  locationDescription: text("location_description"),
+  
+  vehiclePlate: text("vehicle_plate"),
+  vehicleDescription: text("vehicle_description"),
+  vesselName: text("vessel_name"),
+  vesselRegistration: text("vessel_registration"),
+  
+  offenderPartyId: uuid("offender_party_id"),
+  offenderName: text("offender_name"),
+  offenderContact: text("offender_contact"),
+  
+  reservationId: uuid("reservation_id"),
+  wasExpired: boolean("was_expired").default(false),
+  wasWrongSpace: boolean("was_wrong_space").default(false),
+  
+  fineAmountCents: integer("fine_amount_cents").default(0),
+  currency: text("currency").notNull().default("CAD"),
+  dueDate: date("due_date"),
+  paidAmountCents: integer("paid_amount_cents").default(0),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  
+  escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+  escalationReference: text("escalation_reference"),
+  
+  contestedAt: timestamp("contested_at", { withTimezone: true }),
+  contestReason: text("contest_reason"),
+  contestEvidenceUrls: text("contest_evidence_urls").array(),
+  contestResolvedAt: timestamp("contest_resolved_at", { withTimezone: true }),
+  contestResolvedBy: uuid("contest_resolved_by"),
+  contestResolutionNotes: text("contest_resolution_notes"),
+  
+  evidencePhotoUrls: text("evidence_photo_urls").array(),
+  evidenceNotes: text("evidence_notes"),
+  
+  towRequestId: uuid("tow_request_id"),
+  previousActionId: uuid("previous_action_id"),
+  
+  credentialId: uuid("credential_id"),
+  credentialRevoked: boolean("credential_revoked").default(false),
+  
+  issuedBy: uuid("issued_by"),
+  issuedByName: text("issued_by_name"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  voidedAt: timestamp("voided_at", { withTimezone: true }),
+  voidedBy: uuid("voided_by"),
+  voidReason: text("void_reason"),
+}, (table) => ({
+  tenantStatusIdx: index("idx_enforcement_tenant_status").on(table.tenantId, table.status),
+  facilityIdx: index("idx_enforcement_facility").on(table.facilityId),
+}));
+
+export const insertEnforcementActionSchema = createInsertSchema(ccEnforcementActions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type EnforcementAction = typeof ccEnforcementActions.$inferSelect;
+export type InsertEnforcementAction = z.infer<typeof insertEnforcementActionSchema>;
+
+// ============================================================================
+// ENFORCEMENT FINE SCHEDULE (Migration 111)
+// Standard fines by violation type (tenant-configurable)
+// ============================================================================
+
+export const ccEnforcementFineSchedule = pgTable("cc_enforcement_fine_schedule", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  
+  violationCategory: violationCategoryEnum("violation_category").notNull(),
+  actionType: enforcementActionTypeEnum("action_type").notNull().default("citation"),
+  
+  firstOffenseCents: integer("first_offense_cents").notNull().default(0),
+  secondOffenseCents: integer("second_offense_cents").notNull().default(0),
+  thirdOffenseCents: integer("third_offense_cents").notNull().default(0),
+  
+  gracePeriodMinutes: integer("grace_period_minutes").default(0),
+  dueInDays: integer("due_in_days").notNull().default(30),
+  lateFeeCents: integer("late_fee_cents").default(0),
+  lateAfterDays: integer("late_after_days").default(30),
+  autoEscalateAfterDays: integer("auto_escalate_after_days"),
+  
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_fine_schedule_tenant").on(table.tenantId),
+}));
+
+export const insertEnforcementFineScheduleSchema = createInsertSchema(ccEnforcementFineSchedule).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type EnforcementFineSchedule = typeof ccEnforcementFineSchedule.$inferSelect;
+export type InsertEnforcementFineSchedule = z.infer<typeof insertEnforcementFineScheduleSchema>;
