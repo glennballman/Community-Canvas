@@ -5520,3 +5520,176 @@ export const insertEnforcementFineScheduleSchema = createInsertSchema(ccEnforcem
 });
 export type EnforcementFineSchedule = typeof ccEnforcementFineSchedule.$inferSelect;
 export type InsertEnforcementFineSchedule = z.infer<typeof insertEnforcementFineScheduleSchema>;
+
+// ============================================================================
+// JOBS WEDGE - JOB MATCHES (Migration 112)
+// AI-suggested matches between workers and jobs
+// ============================================================================
+
+export const jobMatchSourceEnum = pgEnum("job_match_source", [
+  "ai_suggestion", "manual", "self_match", "referral", "imported"
+]);
+
+export const jobMatchStatusEnum = pgEnum("job_match_status", [
+  "suggested", "sent_to_worker", "sent_to_employer", "worker_interested",
+  "employer_interested", "mutual_interest", "applied", "dismissed_worker",
+  "dismissed_employer", "expired"
+]);
+
+export const ccJobMatches = pgTable("cc_job_matches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  
+  jobId: uuid("job_id").notNull(),
+  jobPostingId: uuid("job_posting_id"),
+  workerPartyId: uuid("worker_party_id"),
+  workerIndividualId: uuid("worker_individual_id").notNull(),
+  
+  source: jobMatchSourceEnum("source").notNull().default("ai_suggestion"),
+  status: jobMatchStatusEnum("status").notNull().default("suggested"),
+  
+  matchScore: numeric("match_score", { precision: 5, scale: 2 }),
+  scoreBreakdown: jsonb("score_breakdown"),
+  matchReasons: text("match_reasons").array(),
+  
+  matchedSkills: text("matched_skills").array(),
+  missingSkills: text("missing_skills").array(),
+  bonusSkills: text("bonus_skills").array(),
+  
+  workerLocation: text("worker_location"),
+  jobLocation: text("job_location"),
+  distanceKm: numeric("distance_km", { precision: 10, scale: 2 }),
+  travelFeasible: boolean("travel_feasible"),
+  travelNotes: text("travel_notes"),
+  
+  workerAvailableFrom: date("worker_available_from"),
+  workerAvailableTo: date("worker_available_to"),
+  jobStartDate: date("job_start_date"),
+  jobEndDate: date("job_end_date"),
+  availabilityOverlapDays: integer("availability_overlap_days"),
+  
+  workerNeedsAccommodation: boolean("worker_needs_accommodation"),
+  accommodationAvailable: boolean("accommodation_available"),
+  accommodationMatchNotes: text("accommodation_match_notes"),
+  
+  workerExpectedWageCents: integer("worker_expected_wage_cents"),
+  jobWageRangeMinCents: integer("job_wage_range_min_cents"),
+  jobWageRangeMaxCents: integer("job_wage_range_max_cents"),
+  wageAligned: boolean("wage_aligned"),
+  
+  sentToWorkerAt: timestamp("sent_to_worker_at", { withTimezone: true }),
+  workerViewedAt: timestamp("worker_viewed_at", { withTimezone: true }),
+  workerRespondedAt: timestamp("worker_responded_at", { withTimezone: true }),
+  workerResponse: jobMatchStatusEnum("worker_response"),
+  
+  sentToEmployerAt: timestamp("sent_to_employer_at", { withTimezone: true }),
+  employerViewedAt: timestamp("employer_viewed_at", { withTimezone: true }),
+  employerRespondedAt: timestamp("employer_responded_at", { withTimezone: true }),
+  employerResponse: jobMatchStatusEnum("employer_response"),
+  
+  convertedToApplicationId: uuid("converted_to_application_id"),
+  convertedAt: timestamp("converted_at", { withTimezone: true }),
+  dismissedReason: text("dismissed_reason"),
+  expiredAt: timestamp("expired_at", { withTimezone: true }),
+  
+  referredByPartyId: uuid("referred_by_party_id"),
+  referralId: uuid("referral_id"),
+  createdBy: uuid("created_by"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantStatusIdx: index("idx_matches_tenant_status").on(table.tenantId, table.status),
+  jobIdx: index("idx_matches_job").on(table.jobId),
+  workerIdx: index("idx_matches_worker").on(table.workerIndividualId),
+}));
+
+export const insertJobMatchSchema = createInsertSchema(ccJobMatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type JobMatch = typeof ccJobMatches.$inferSelect;
+export type InsertJobMatch = z.infer<typeof insertJobMatchSchema>;
+
+// ============================================================================
+// JOBS WEDGE - JOB APPLICATIONS (Migration 112)
+// Workers apply to specific job postings
+// ============================================================================
+
+export const jobApplicationStatusEnum = pgEnum("job_application_status", [
+  "draft", "submitted", "under_review", "shortlisted", "interview_scheduled",
+  "interviewed", "offer_extended", "offer_accepted", "offer_declined",
+  "rejected", "withdrawn"
+]);
+
+export const ccJobApplications = pgTable("cc_job_applications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  
+  jobId: uuid("job_id").notNull(),
+  jobPostingId: uuid("job_posting_id").notNull(),
+  
+  applicantPartyId: uuid("applicant_party_id"),
+  applicantIndividualId: uuid("applicant_individual_id").notNull(),
+  
+  applicationNumber: text("application_number").notNull(),
+  status: jobApplicationStatusEnum("status").notNull().default("draft"),
+  
+  matchId: uuid("match_id"),
+  referralId: uuid("referral_id"),
+  sourceChannel: text("source_channel"),
+  
+  coverLetter: text("cover_letter"),
+  resumeUrl: text("resume_url"),
+  portfolioUrls: text("portfolio_urls").array(),
+  
+  screeningResponses: jsonb("screening_responses"),
+  customFields: jsonb("custom_fields"),
+  
+  availableStartDate: date("available_start_date"),
+  availableEndDate: date("available_end_date"),
+  isFlexibleDates: boolean("is_flexible_dates").default(false),
+  
+  needsAccommodation: boolean("needs_accommodation").default(false),
+  accommodationNotes: text("accommodation_notes"),
+  hasOwnTransport: boolean("has_own_transport").default(false),
+  transportNotes: text("transport_notes"),
+  
+  expectedWageCents: integer("expected_wage_cents"),
+  wageCurrency: text("wage_currency").default("CAD"),
+  isWageNegotiable: boolean("is_wage_negotiable").default(true),
+  
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: uuid("reviewed_by"),
+  shortlistedAt: timestamp("shortlisted_at", { withTimezone: true }),
+  interviewScheduledAt: timestamp("interview_scheduled_at", { withTimezone: true }),
+  interviewCompletedAt: timestamp("interview_completed_at", { withTimezone: true }),
+  offerExtendedAt: timestamp("offer_extended_at", { withTimezone: true }),
+  offerRespondedAt: timestamp("offer_responded_at", { withTimezone: true }),
+  
+  outcomeNotes: text("outcome_notes"),
+  hiredAt: timestamp("hired_at", { withTimezone: true }),
+  
+  preferredContactMethod: text("preferred_contact_method").default("email"),
+  preferredContactTime: text("preferred_contact_time"),
+  
+  internalNotes: text("internal_notes"),
+  rating: integer("rating"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantStatusIdx: index("idx_applications_tenant_status").on(table.tenantId, table.status),
+  jobIdx: index("idx_applications_job").on(table.jobId),
+  applicantIdx: index("idx_applications_applicant").on(table.applicantIndividualId),
+}));
+
+export const insertJobApplicationSchema = createInsertSchema(ccJobApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type JobApplication = typeof ccJobApplications.$inferSelect;
+export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
