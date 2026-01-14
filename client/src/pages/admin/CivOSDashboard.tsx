@@ -188,7 +188,7 @@ export default function CivOSDashboard() {
                         <div>
                             <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
                                 <Shield className="w-6 h-6" />
-                                CivOS Operations Dashboard
+                                Community Canvas Operations Dashboard
                             </h1>
                             <p className="text-muted-foreground text-sm">
                                 Real-time staging network signals for emergency operations
