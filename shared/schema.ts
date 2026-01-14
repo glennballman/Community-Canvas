@@ -4635,3 +4635,183 @@ export const insertModerationHistorySchema = createInsertSchema(ccModerationHist
 });
 export type ModerationHistoryEntry = typeof ccModerationHistory.$inferSelect;
 export type InsertModerationHistoryEntry = z.infer<typeof insertModerationHistorySchema>;
+
+// ============================================================================
+// ONBOARDING WIZARD (Bundle 106)
+// ============================================================================
+
+export const onboardingFlowTypeEnum = pgEnum("onboarding_flow_type", [
+  "generic", "contractor", "property_owner", "pic", "worker", "coordinator",
+  "job_claim", "property_claim", "invitation_accept", "portal_join"
+]);
+
+export const onboardingStatusEnum = pgEnum("onboarding_status", [
+  "not_started", "in_progress", "completed", "skipped", "abandoned"
+]);
+
+export const stepStatusEnum = pgEnum("step_status", [
+  "pending", "in_progress", "completed", "skipped", "blocked"
+]);
+
+// ============================================================================
+// ONBOARDING FLOWS (Bundle 106)
+// ============================================================================
+
+export const ccOnboardingFlows = pgTable("cc_onboarding_flows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  flowType: onboardingFlowTypeEnum("flow_type").notNull(),
+  actorTypeId: uuid("actor_type_id").references(() => ccActorTypes.id),
+  steps: jsonb("steps").notNull().default([]),
+  estimatedMinutes: integer("estimated_minutes").default(5),
+  allowSkip: boolean("allow_skip").default(true),
+  autoCompleteOnFirstAction: boolean("auto_complete_on_first_action").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  typeIdx: index("idx_cc_onboarding_flows_type").on(table.flowType),
+  actorIdx: index("idx_cc_onboarding_flows_actor").on(table.actorTypeId),
+}));
+
+export const insertOnboardingFlowSchema = createInsertSchema(ccOnboardingFlows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type OnboardingFlow = typeof ccOnboardingFlows.$inferSelect;
+export type InsertOnboardingFlow = z.infer<typeof insertOnboardingFlowSchema>;
+
+// ============================================================================
+// ONBOARDING SESSIONS (Bundle 106)
+// ============================================================================
+
+export const ccOnboardingSessions = pgTable("cc_onboarding_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().unique(),
+  flowId: uuid("flow_id").references(() => ccOnboardingFlows.id),
+  flowType: onboardingFlowTypeEnum("flow_type").notNull().default("generic"),
+  invitationId: uuid("invitation_id"),
+  claimLinkId: uuid("claim_link_id"),
+  portalId: uuid("portal_id"),
+  referrerTenantId: uuid("referrer_tenant_id"),
+  entryContext: jsonb("entry_context").default({}),
+  status: onboardingStatusEnum("status").notNull().default("not_started"),
+  currentStepIndex: integer("current_step_index").default(0),
+  stepsCompleted: integer("steps_completed").default(0),
+  totalSteps: integer("total_steps").default(0),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  skippedAt: timestamp("skipped_at", { withTimezone: true }),
+  abandonedAt: timestamp("abandoned_at", { withTimezone: true }),
+  firstActionType: text("first_action_type"),
+  firstActionAt: timestamp("first_action_at", { withTimezone: true }),
+  firstActionEntityId: uuid("first_action_entity_id"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  lastActivityAt: timestamp("last_activity_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_onboarding_sessions_tenant").on(table.tenantId),
+  statusIdx: index("idx_cc_onboarding_sessions_status").on(table.status),
+  flowIdx: index("idx_cc_onboarding_sessions_flow").on(table.flowId),
+}));
+
+export const insertOnboardingSessionSchema = createInsertSchema(ccOnboardingSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type OnboardingSession = typeof ccOnboardingSessions.$inferSelect;
+export type InsertOnboardingSession = z.infer<typeof insertOnboardingSessionSchema>;
+
+// ============================================================================
+// ONBOARDING STEP PROGRESS (Bundle 106)
+// ============================================================================
+
+export const ccOnboardingStepProgress = pgTable("cc_onboarding_step_progress", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull().references(() => ccOnboardingSessions.id, { onDelete: "cascade" }),
+  stepKey: text("step_key").notNull(),
+  stepIndex: integer("step_index").notNull(),
+  stepName: text("step_name"),
+  status: stepStatusEnum("status").notNull().default("pending"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  skippedAt: timestamp("skipped_at", { withTimezone: true }),
+  completionData: jsonb("completion_data").default({}),
+  validationErrors: jsonb("validation_errors").default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  sessionIdx: index("idx_cc_onboarding_step_progress_session").on(table.sessionId),
+  uniqueStep: uniqueIndex("cc_onboarding_step_progress_unique").on(table.sessionId, table.stepKey),
+}));
+
+export const insertOnboardingStepProgressSchema = createInsertSchema(ccOnboardingStepProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type OnboardingStepProgress = typeof ccOnboardingStepProgress.$inferSelect;
+export type InsertOnboardingStepProgress = z.infer<typeof insertOnboardingStepProgressSchema>;
+
+// ============================================================================
+// ONBOARDING CHECKLIST ITEMS (Bundle 106)
+// ============================================================================
+
+export const ccOnboardingChecklistItems = pgTable("cc_onboarding_checklist_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull().default("setup"),
+  actorTypeId: uuid("actor_type_id").references(() => ccActorTypes.id),
+  completionEvent: text("completion_event"),
+  completionCheckSql: text("completion_check_sql"),
+  icon: text("icon"),
+  sortOrder: integer("sort_order").default(0),
+  requiredForActivation: boolean("required_for_activation").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  categoryIdx: index("idx_cc_onboarding_checklist_items_category").on(table.category),
+  actorIdx: index("idx_cc_onboarding_checklist_items_actor").on(table.actorTypeId),
+}));
+
+export const insertOnboardingChecklistItemSchema = createInsertSchema(ccOnboardingChecklistItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type OnboardingChecklistItem = typeof ccOnboardingChecklistItems.$inferSelect;
+export type InsertOnboardingChecklistItem = z.infer<typeof insertOnboardingChecklistItemSchema>;
+
+// ============================================================================
+// TENANT CHECKLIST PROGRESS (Bundle 106)
+// ============================================================================
+
+export const ccTenantChecklistProgress = pgTable("cc_tenant_checklist_progress", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  checklistItemId: uuid("checklist_item_id").notNull().references(() => ccOnboardingChecklistItems.id, { onDelete: "cascade" }),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  completedByUserId: uuid("completed_by_user_id"),
+  completionEntityId: uuid("completion_entity_id"),
+  completionData: jsonb("completion_data").default({}),
+  isDismissed: boolean("is_dismissed").default(false),
+  dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_tenant_checklist_progress_tenant").on(table.tenantId),
+  uniqueTenantItem: uniqueIndex("cc_tenant_checklist_progress_unique").on(table.tenantId, table.checklistItemId),
+}));
+
+export const insertTenantChecklistProgressSchema = createInsertSchema(ccTenantChecklistProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type TenantChecklistProgress = typeof ccTenantChecklistProgress.$inferSelect;
+export type InsertTenantChecklistProgress = z.infer<typeof insertTenantChecklistProgressSchema>;
