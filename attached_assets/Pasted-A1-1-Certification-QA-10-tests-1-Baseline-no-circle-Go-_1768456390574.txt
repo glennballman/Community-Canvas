@@ -1,0 +1,131 @@
+A1.1 Certification QA (10 tests)
+1) Baseline: no circle
+
+Go to /app/messages
+
+✅ Expect: Portal badge maybe, Tenant badge yes, no Circle badge
+
+✅ “New Circle Conversation” button not present
+
+✅ Messages list works as before
+
+2) Switch into circle
+
+Go to /app/circles → “Act as this circle”
+
+Back to /app/messages
+
+✅ Circle badge appears with correct circle name
+
+✅ “New Circle Conversation” appears
+
+3) Circle conversation appears in list
+
+Click “New Circle Conversation”
+
+Send message
+
+✅ Conversation shows in list tagged Circle (or whatever label you used)
+
+✅ Opens correctly
+
+4) Fan-out delivery / dedupe
+
+Ensure at least 2 circle members + 1 delegatee
+
+Send 2 messages quickly (or retry same action)
+
+✅ All recipients get notifications exactly once per message
+
+✅ No duplicates in cc_notification_deliveries
+
+SQL:
+
+SELECT context_type, context_id, recipient_individual_id, COUNT(*)
+FROM cc_notification_deliveries
+GROUP BY 1,2,3
+HAVING COUNT(*) > 1;
+
+
+Must return 0 rows.
+
+5) Attribution correctness
+
+Send a circle message while:
+
+acting as circle
+
+in a branded portal (if applicable)
+
+with tenant impersonation on/off
+
+✅ Verify ledger fields populated:
+
+circle_id correct
+
+portal_id correct
+
+actor_tenant_id reflects current tenant context (and impersonation if that’s how you attribute)
+
+6) Clear circle
+
+/app/circles → Clear
+
+✅ Circle badge disappears
+
+✅ Circle conversations no longer show (UX rule)
+
+✅ Direct URL to a circle conversation should be blocked by RLS (or show “not found/unauthorized”)
+
+7) Membership revoked while active
+
+While acting as circle, revoke membership or expire delegation
+
+Refresh /app/messages
+
+✅ Middleware clears circle context
+
+✅ Circle badge disappears
+
+✅ Circle conversations no longer accessible
+
+8) Impersonation interaction
+
+Start impersonating a tenant, then act as circle.
+
+✅ Tenant badge shows “(imp)”
+
+✅ Circle badge still correct
+
+✅ Message attribution doesn’t “pretend” the circle is the tenant
+
+9) Multi-tab consistency
+
+Tab A: acting as circle
+
+Tab B: clear circle
+
+Refresh Tab A
+
+✅ Tab A should no longer show circle (session is shared)
+
+10) Performance sanity
+
+Circle with 50+ members (later)
+
+Send one message
+
+✅ No timeout
+
+✅ fanout is reasonably fast (or uses background worker if you implemented it)
+
+One architectural question (not blocking, but important)
+
+When acting as a circle and starting “New Circle Conversation,” did you:
+
+create a single conversation endpoint (participant_type='circle') and then fan-out notifications only ✅ (preferred)
+or
+
+create participant rows per individual ❌ (avoid)
+
+Your earlier A1 design says you did it the preferred way; just confirming.
