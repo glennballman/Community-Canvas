@@ -1,0 +1,142 @@
+✅ REPLIT PROMPT — COORDINATION CIRCLES FULL AUDIT
+
+Paste this verbatim into Replit:
+
+You are performing a forensic audit of the existing implementation related to Coordination Circles in the Community Canvas V3 system.
+
+Your task is to find, enumerate, and explain everything that already exists, not to propose new features.
+
+1. DATA MODEL & SCHEMA
+
+List all database tables related to Coordination Circles, including:
+
+coordination circles / groups / hubs
+
+memberships
+
+roles, scopes, or contexts
+
+any polymorphic or generic “group” constructs used to represent them
+
+For each table:
+
+table name
+
+purpose
+
+key columns
+
+how it relates to tenants, communities, or users
+
+2. AUTHORITY & PERMISSIONS
+
+Identify how Coordination Circles are allowed to initiate actions
+
+Show:
+
+permission checks
+
+role or scope logic
+
+any “acting as” or context-switching mechanisms
+
+Explicitly answer:
+
+How does the system know an action was taken as a Coordination Circle?
+
+How attribution is stored and audited
+
+3. MESSAGING & INBOUND ROUTING
+
+Identify all messaging, inbox, or communication systems that support:
+
+inbound calls / messages
+
+routing to Coordination Circles
+
+switching hats between Circle / Tenant / Individual
+
+Include:
+
+message tables
+
+routing logic
+
+UI entry points if they exist
+
+4. INVENTORY & SCHEDULING SURFACES
+
+Identify how Coordination Circles currently:
+
+view inventory
+
+view or manage calendars
+
+see cross-tenant availability
+
+Note whether this is:
+
+first-class
+
+inherited from tenant views
+
+partially implemented
+
+5. UI & ROUTES (IF ANY)
+
+List any existing:
+
+routes
+
+pages
+
+components
+
+nav entries
+that reference or imply Coordination Circles
+
+If none exist, say so explicitly
+
+6. API / EDGE FUNCTIONS
+
+List any API routes or edge functions that:
+
+reference coordination
+
+operate on behalf of groups
+
+accept a context parameter
+
+7. WHAT IS COMPLETE vs PARTIAL
+
+Categorize findings into:
+
+✅ implemented and usable
+
+⚠️ partially implemented
+
+❌ planned but not built
+
+8. CONSTRAINTS & ASSUMPTIONS
+
+Identify any hard-coded assumptions that might block:
+
+multi-circle membership
+
+cross-tenant coordination
+
+non-admin actors initiating actions
+
+Important rules:
+
+Do NOT propose improvements
+
+Do NOT design UI
+
+Do NOT refactor
+
+Only report what exists and where
+
+Quote file paths, table names, and functions explicitly
+
+Output the audit in a structured report.
