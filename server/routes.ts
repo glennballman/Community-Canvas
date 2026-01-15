@@ -77,6 +77,7 @@ import businessOperatorsRouter from "./routes/businessOperators";
 import walletRouter from "./routes/wallet";
 import railRouter from "./routes/rail";
 import internalRtrRouter from "./routes/internal-rtr";
+import recordBundlesRouter from "./routes/record-bundles";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -188,6 +189,9 @@ export async function registerRoutes(
 
   // Register cc_conversations/messaging routes
   app.use('/api', conversationsRouter);
+
+  // Register defensive record bundles and contemporaneous notes (legal/CYA spine)
+  app.use('/api/record-bundles', recordBundlesRouter);
 
   // Register private feedback routes (small-town trust model)
   app.use('/api', feedbackRouter);

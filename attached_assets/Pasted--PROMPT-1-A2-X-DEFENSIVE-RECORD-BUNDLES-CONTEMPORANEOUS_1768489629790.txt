@@ -1,0 +1,381 @@
+# PROMPT 1 (A2.X) — DEFENSIVE RECORD BUNDLES + CONTEMPORANEOUS NOTES (CYA SPINE)
+# BUILD IT RIGHT. BUILD IT NOW. NO REFACTOR LATER.
+
+You are working in the Community Canvas V3.3.1 codebase on Replit.
+Stack:
+- PostgreSQL (Neon-backed via Replit)
+- Drizzle ORM
+- RLS enforced via PostgreSQL GUCs: app.tenant_id, app.portal_id, app.individual_id, app.circle_id
+- Sessions: connect-pg-simple (same DB)
+- Object storage: Cloudflare R2
+
+This prompt establishes the **Defensive Evidence & Contemporaneous Notes spine**.
+It is a CORE monetization feature and must be designed for legal/insurance defence, not collaboration.
+
+This is NOT CivOS.
+This is PRIVATE, OWNER-CONTROLLED, OPT-IN RECORD PRESERVATION.
+
+---
+
+## WHAT WE ARE BUILDING (EXPLICIT)
+
+1) **Defensive Record Bundles**
+   - Immutable, owner-initiated evidence packages
+   - Assembled later (Prompt 2), but schema + access rules NOW
+   - Used for lawsuits, insurance, chargebacks, employment defence, emergency response defence
+
+2) **Contemporaneous Notes**
+   - Timestamped “field notebook” entries
+   - Written BEFORE, DURING, and AFTER incidents
+   - Correctly scoped (incident / bundle / worker / facility)
+   - Can include photos, videos, receipts
+   - Preserve WHAT was known, WHAT was done, and WHEN
+   - Lockable once preserved into a bundle
+
+Nothing in this prompt assembles PDFs yet.
+We are laying the **legal spine** so nothing breaks later.
+
+---
+
+# DELIVERABLES (NO EXCEPTIONS)
+
+## 1) MIGRATION
+Create:
+`server/migrations/128_record_bundles_and_notes_spine.sql`
+
+Follow existing migration conventions exactly:
+- Idempotent enum creation
+- CREATE TABLE IF NOT EXISTS
+- updated_at triggers via cc_set_updated_at()
+- RLS enabled
+- FORCE RLS on sensitive tables
+- GRANT permissions consistent with other migrations
+
+---
+
+## 1.1 ENUMS (IDEMPOTENT)
+
+Create enums:
+
+### Record Bundles
+- `cc_record_bundle_type_enum`:
+  - 'incident_defence'
+  - 'emergency_response'
+  - 'employment_action'
+  - 'chargeback_dispute'
+  - 'contract_dispute'
+  - 'general_legal'
+
+- `cc_record_bundle_status_enum`:
+  - 'draft'
+  - 'sealed'
+  - 'revoked'
+
+- `cc_record_bundle_artifact_type_enum`:
+  - 'json'
+  - 'pdf'
+  - 'html'
+  - 'media'
+  - 'log_export'
+  - 'snapshot'
+
+- `cc_record_bundle_visibility_enum`:
+  - 'owner_only'
+  - 'legal_team'
+  - 'explicit_delegates'
+
+### Contemporaneous Notes
+- `cc_note_scope_enum`:
+  - 'incident'
+  - 'bundle'
+  - 'worker'
+  - 'facility'
+  - 'asset'
+  - 'contract'
+  - 'work_order'
+  - 'general'
+
+- `cc_note_visibility_enum`:
+  - 'internal'
+  - 'owner_only'
+  - 'legal_only'
+
+---
+
+## 1.2 TABLE: cc_record_bundles
+
+Purpose: immutable, owner-controlled evidence container.
+
+Columns:
+- id uuid pk default gen_random_uuid()
+- tenant_id uuid not null references cc_tenants(id) on delete cascade
+- community_id uuid null references cc_communities(id) on delete set null
+- portal_id uuid null references cc_portals(id) on delete set null
+- circle_id uuid null references cc_coordination_circles(id) on delete set null
+
+Scope (EXACTLY ONE REQUIRED — enforce via CHECK):
+- incident_id uuid null references cc_incidents(id) on delete set null
+- worker_id uuid null references cc_individuals(id) on delete set null
+- contract_id uuid null
+- work_order_id uuid null
+- chargeback_case_id uuid null
+
+Bundle metadata:
+- bundle_type cc_record_bundle_type_enum not null
+- title text not null
+- description text null
+- status cc_record_bundle_status_enum not null default 'draft'
+- visibility cc_record_bundle_visibility_enum not null default 'owner_only'
+
+Chain-of-custody:
+- created_by_individual_id uuid null references cc_individuals(id)
+- created_by_circle_id uuid null references cc_coordination_circles(id)
+- created_at timestamptz not null default now()
+- sealed_at timestamptz null
+- revoked_at timestamptz null
+- updated_at timestamptz not null default now()
+
+Integrity:
+- bundle_hash text null
+- bundle_hash_alg text not null default 'sha256'
+- compiled_version text null
+- compiler_identity text null
+
+CHECK CONSTRAINTS:
+- Exactly one scope pointer is non-null
+- status='sealed' → sealed_at IS NOT NULL
+- status='revoked' → revoked_at IS NOT NULL
+
+Indexes:
+- (tenant_id, created_at desc)
+- (incident_id)
+- (worker_id)
+- (status, sealed_at desc)
+
+Trigger:
+- updated_at trigger via cc_set_updated_at()
+
+---
+
+## 1.3 TABLE: cc_record_bundle_artifacts
+
+Purpose: immutable pointers to compiled evidence artifacts in R2.
+
+Columns:
+- id uuid pk default gen_random_uuid()
+- bundle_id uuid not null references cc_record_bundles(id) on delete cascade
+- tenant_id uuid not null references cc_tenants(id) on delete cascade
+- artifact_type cc_record_bundle_artifact_type_enum not null
+- file_name text not null
+- content_type text not null
+- storage_provider text not null default 'r2'
+- storage_bucket text null
+- storage_key text not null
+- byte_size bigint null
+- hash text not null
+- hash_alg text not null default 'sha256'
+- created_at timestamptz not null default now()
+
+Constraints:
+- unique(bundle_id, artifact_type, storage_key)
+
+Indexes:
+- (bundle_id, created_at)
+- (tenant_id, created_at)
+
+FORCE ROW LEVEL SECURITY
+
+---
+
+## 1.4 TABLE: cc_record_bundle_acl
+
+Purpose: explicit private access delegation (legal counsel, CFO, etc.).
+
+Columns:
+- id uuid pk default gen_random_uuid()
+- bundle_id uuid not null references cc_record_bundles(id) on delete cascade
+- tenant_id uuid not null references cc_tenants(id) on delete cascade
+- grantee_individual_id uuid null references cc_individuals(id)
+- grantee_circle_id uuid null references cc_coordination_circles(id)
+- granted_by_individual_id uuid null references cc_individuals(id)
+- scope text[] not null default ARRAY['read']
+- is_active boolean not null default true
+- expires_at timestamptz null
+- created_at timestamptz not null default now()
+
+CHECK:
+- exactly one of grantee_individual_id or grantee_circle_id is non-null
+
+Indexes:
+- (bundle_id, is_active)
+- (grantee_individual_id, is_active)
+- (grantee_circle_id, is_active)
+
+FORCE ROW LEVEL SECURITY
+
+---
+
+## 1.5 TABLE: cc_contemporaneous_notes  (CRITICAL)
+
+Purpose: timestamped, scoped, append-only field notes for CYA.
+
+Columns:
+- id uuid pk default gen_random_uuid()
+- tenant_id uuid not null references cc_tenants(id) on delete cascade
+- community_id uuid null references cc_communities(id)
+- portal_id uuid null references cc_portals(id)
+- circle_id uuid null references cc_coordination_circles(id)
+
+Scope:
+- scope cc_note_scope_enum not null
+- incident_id uuid null references cc_incidents(id)
+- bundle_id uuid null references cc_record_bundles(id)
+- worker_id uuid null references cc_individuals(id)
+- facility_id uuid null references cc_facilities(id)  -- if table exists
+- asset_id uuid null
+- contract_id uuid null
+- work_order_id uuid null
+
+Content:
+- title text null
+- note_text text not null
+- visibility cc_note_visibility_enum not null default 'internal'
+
+Temporal truth (IMPORTANT):
+- occurred_at timestamptz not null default now()   -- when the action/decision occurred
+- created_at timestamptz not null default now()   -- when note was written
+- created_by_individual_id uuid null references cc_individuals(id)
+- created_by_party_id uuid null references cc_parties(id)
+
+Locking:
+- is_locked boolean not null default false
+- locked_at timestamptz null
+
+Indexes:
+- (tenant_id, created_at desc)
+- (incident_id, occurred_at desc)
+- (bundle_id, occurred_at desc)
+- (worker_id, occurred_at desc)
+
+CHECK (minimal, enforce core scopes):
+- scope='incident' → incident_id IS NOT NULL
+- scope='bundle' → bundle_id IS NOT NULL
+- scope='worker' → worker_id IS NOT NULL
+
+---
+
+## 1.6 TABLE: cc_contemporaneous_note_media
+
+Purpose: attach photos/videos/receipts to notes.
+
+Columns:
+- id uuid pk default gen_random_uuid()
+- note_id uuid not null references cc_contemporaneous_notes(id) on delete cascade
+- tenant_id uuid not null references cc_tenants(id) on delete cascade
+- file_name text not null
+- content_type text not null
+- storage_provider text not null default 'r2'
+- storage_key text not null
+- byte_size bigint null
+- hash text not null
+- hash_alg text not null default 'sha256'
+- created_at timestamptz not null default now()
+
+Indexes:
+- (note_id)
+- (tenant_id, created_at)
+
+FORCE ROW LEVEL SECURITY
+
+---
+
+## 1.7 RLS POLICIES (STRICT)
+
+### cc_record_bundles / artifacts / acl
+SELECT allowed ONLY if:
+- is_service_mode()
+- OR tenant owner/admin (use DB-truth membership)
+- OR explicit active ACL delegate
+
+INSERT:
+- owner/admin or service mode
+
+UPDATE:
+- sealing / revocation only by owner/admin or service mode
+
+DELETE:
+- service mode only
+
+### cc_contemporaneous_notes
+INSERT:
+- tenant members (current_tenant_id matches, current_individual_id not null)
+- service mode
+
+SELECT:
+- owner/admin
+- delegates if note is linked to a bundle they can access
+- service mode
+
+UPDATE:
+- only if is_locked = false
+- owner/admin or service mode
+
+Once bundle is sealed later, notes linked to it will be locked.
+
+---
+
+## 2) MINIMAL SERVICE ROUTES
+Create `server/routes/record-bundles.ts` at `/api/record-bundles`.
+
+### GET /api/record-bundles
+- list bundles visible under RLS
+- filters: incidentId, workerId, status
+
+### GET /api/record-bundles/:id
+- bundle + artifacts + ACL (redact grantee identities unless owner/admin)
+
+### POST /api/record-bundles
+- create draft bundle
+- set tenant/portal/circle via GUCs
+- log ledger: action='record_bundle.create'
+
+### POST /api/record-bundles/:id/seal
+- seal bundle
+- lock linked contemporaneous notes
+- log ledger: 'record_bundle.seal'
+
+---
+
+## 3) STORAGE CONTRACT (NO R2 CALLS YET)
+Add:
+`server/lib/recordBundleStorage.ts`
+
+Export:
+- buildR2KeyForBundle(bundleId, artifactType, fileName)
+
+---
+
+## 4) QA DOCUMENT
+Create:
+`docs/qa/PHASE_PROMPT_1_RECORD_BUNDLES_AND_NOTES_QA.md`
+
+Include:
+- Migration verification
+- RLS checks
+- Note creation before incident
+- Note creation during incident
+- Note locked after bundle seal
+
+---
+
+## ACCEPTANCE CRITERIA
+- Migration runs cleanly
+- Tables + enums exist
+- RLS enforced
+- Notes can be created by staff
+- Notes are timestamped with occurred_at
+- Bundles can be created/sealed by owner/admin
+- Notes become immutable when bundle sealed
+- Activity ledger captures all actions
+
+Proceed now.
