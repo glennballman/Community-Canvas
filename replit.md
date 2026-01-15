@@ -64,6 +64,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Operations Board**: 15-minute precision scheduling interface for all resources.
 - **System Explorer**: Platform Admin debug/discovery surface for overview, evidence, integrations, data sources, data browser, and routes audit.
 - **Evidence Rule Enforcement**: Machine-enforceable evidence gates to track and verify system artifacts.
+- **Coordination Circles (Phase A1.1)**: Federated resource sharing between tenants via circles. Includes circle-aware messaging with notification fan-out, unified conversation inbox (/app/messages), context switching (/app/circles), and per-request membership revalidation in tenantContext middleware.
 
 ## External Dependencies
 
