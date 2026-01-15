@@ -29,6 +29,8 @@ export interface FederatedFacility {
 
 /**
  * Check if actor has specific scope on target tenant
+ * Uses cc_federation_grants with tenant/circle/portal principals
+ * Relies on DB GUCs (current_tenant_id(), current_circle_id(), current_portal_id())
  */
 export async function hasScope(
   ctx: FederationContext,
@@ -36,34 +38,55 @@ export async function hasScope(
   scope: string
 ): Promise<boolean> {
   const result = await db.execute(sql`
-    SELECT 1 FROM cc_federation_agreements
-    WHERE provider_tenant_id = ${targetTenantId}
-      AND community_id = ${ctx.communityId}
-      AND consumer_tenant_id = ${ctx.actorTenantId}
-      AND status = 'active'
-      AND ${scope} = ANY(scopes)
+    SELECT 1
+    FROM cc_federation_grants g
+    WHERE g.provider_tenant_id = ${targetTenantId}
+      AND g.community_id = ${ctx.communityId}
+      AND g.status = 'active'
+      AND ${scope} = ANY(g.scopes)
+      AND (
+        -- Tenant principal
+        (g.principal_type = 'tenant'
+          AND g.principal_tenant_id = current_tenant_id())
+
+        -- Circle principal
+        OR (g.principal_type = 'circle'
+          AND g.principal_circle_id = current_circle_id())
+
+        -- Portal principal
+        OR (g.principal_type = 'portal'
+          AND g.principal_portal_id = current_portal_id())
+      )
     LIMIT 1
   `);
-  
+
   return result.rows.length > 0;
 }
 
 /**
  * Get all tenants where actor has given scope
+ * Uses cc_federation_grants with tenant/circle/portal principals
  */
 export async function getAccessibleTenants(
   ctx: FederationContext,
   scope: string
 ): Promise<string[]> {
   const result = await db.execute(sql`
-    SELECT provider_tenant_id
-    FROM cc_federation_agreements
-    WHERE community_id = ${ctx.communityId}
-      AND consumer_tenant_id = ${ctx.actorTenantId}
-      AND status = 'active'
-      AND ${scope} = ANY(scopes)
+    SELECT DISTINCT g.provider_tenant_id
+    FROM cc_federation_grants g
+    WHERE g.community_id = ${ctx.communityId}
+      AND g.status = 'active'
+      AND ${scope} = ANY(g.scopes)
+      AND (
+        (g.principal_type = 'tenant'
+          AND g.principal_tenant_id = current_tenant_id())
+        OR (g.principal_type = 'circle'
+          AND g.principal_circle_id = current_circle_id())
+        OR (g.principal_type = 'portal'
+          AND g.principal_portal_id = current_portal_id())
+      )
   `);
-  
+
   return result.rows.map(row => row.provider_tenant_id as string);
 }
 
@@ -151,6 +174,7 @@ export async function getFederatedFacilities(
 
 /**
  * Log federated access to activity ledger
+ * Now includes circle_id and portal_id attribution via GUCs
  */
 export async function logFederatedAccess(
   ctx: FederationContext,
@@ -161,11 +185,26 @@ export async function logFederatedAccess(
 ): Promise<void> {
   await db.execute(sql`
     INSERT INTO cc_activity_ledger (
-      tenant_id, community_id, actor_tenant_id, actor_identity_id,
-      action, entity_type, entity_id, payload
+      tenant_id,
+      community_id,
+      actor_tenant_id,
+      actor_identity_id,
+      circle_id,
+      portal_id,
+      action,
+      entity_type,
+      entity_id,
+      payload
     ) VALUES (
-      ${targetTenantId}, ${ctx.communityId}, ${ctx.actorTenantId}, ${ctx.actorIndividualId || null},
-      ${action}, ${resourceType}, ${resourceId},
+      ${targetTenantId},
+      ${ctx.communityId},
+      current_tenant_id(),
+      ${ctx.actorIndividualId || null},
+      current_circle_id(),
+      current_portal_id(),
+      ${action},
+      ${resourceType},
+      ${resourceId},
       ${JSON.stringify({ federation: true, scope: action.split('.')[0] })}
     )
   `);
@@ -216,32 +255,24 @@ export async function searchFederatedAvailability(
 
 /**
  * Test function for federation
+ * NOTE: Deprecated - uses hardcoded IDs and bypasses real context
+ * Prefer testing via actual authenticated requests with GUCs set
  */
 export async function testFederation(): Promise<{
   success: boolean;
-  agreementCount?: number;
-  facilities?: FederatedFacility[];
+  grantCount?: number;
   error?: string;
 }> {
   try {
-    // Count agreements
+    // Count grants (not agreements)
     const countResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM cc_federation_agreements WHERE status = 'active'
+      SELECT COUNT(*) as count FROM cc_federation_grants WHERE status = 'active'
     `);
-    const agreementCount = parseInt(countResult.rows[0]?.count as string) || 0;
-    
-    // Test federated facility search as Chamber
-    const ctx: FederationContext = {
-      actorTenantId: 'ca000000-0000-0000-0000-000000000001', // Chamber
-      communityId: 'c0000000-0000-0000-0000-000000000001', // Bamfield Community
-    };
-    
-    const facilities = await getFederatedFacilities(ctx);
+    const grantCount = parseInt(countResult.rows[0]?.count as string) || 0;
     
     return {
       success: true,
-      agreementCount,
-      facilities,
+      grantCount,
     };
   } catch (error) {
     return { success: false, error: String(error) };

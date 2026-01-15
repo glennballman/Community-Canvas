@@ -1,0 +1,240 @@
+Below is a surgical rewrite of federationService.ts that:
+
+Stops using cc_federation_agreements
+
+Uses cc_federation_grants
+
+Supports tenant + circle + portal principals
+
+Relies ONLY on DB GUCs (current_tenant_id(), current_circle_id(), current_portal_id())
+
+Fixes activity logging to include circle_id and portal_id
+
+Leaves the rest of the file intact (no refactors, no UI)
+
+🔧 PHASE 3 PATCH — server/services/federationService.ts
+0) Imports stay the same
+
+No changes needed at top.
+
+1) Replace hasScope() entirely
+❌ DELETE the existing implementation
+SELECT 1 FROM cc_federation_agreements
+...
+
+✅ REPLACE with this
+export async function hasScope(
+  ctx: FederationContext,
+  targetTenantId: string,
+  scope: string
+): Promise<boolean> {
+  const result = await db.execute(sql`
+    SELECT 1
+    FROM cc_federation_grants g
+    WHERE g.provider_tenant_id = ${targetTenantId}
+      AND g.community_id = ${ctx.communityId}
+      AND g.status = 'active'
+      AND ${scope} = ANY(g.scopes)
+      AND (
+        -- Tenant principal
+        (g.principal_type = 'tenant'
+          AND g.principal_tenant_id = current_tenant_id())
+
+        -- Circle principal (NEW)
+        OR (g.principal_type = 'circle'
+          AND g.principal_circle_id = current_circle_id())
+
+        -- Portal principal
+        OR (g.principal_type = 'portal'
+          AND g.principal_portal_id = current_portal_id())
+      )
+    LIMIT 1
+  `);
+
+  return result.rows.length > 0;
+}
+
+
+Key architectural win:
+ctx.actorTenantId is no longer trusted for auth. The DB context is.
+
+2) Replace getAccessibleTenants() entirely
+❌ DELETE current body (agreements-based)
+✅ REPLACE with grants-based logic
+export async function getAccessibleTenants(
+  ctx: FederationContext,
+  scope: string
+): Promise<string[]> {
+  const result = await db.execute(sql`
+    SELECT DISTINCT g.provider_tenant_id
+    FROM cc_federation_grants g
+    WHERE g.community_id = ${ctx.communityId}
+      AND g.status = 'active'
+      AND ${scope} = ANY(g.scopes)
+      AND (
+        (g.principal_type = 'tenant'
+          AND g.principal_tenant_id = current_tenant_id())
+        OR (g.principal_type = 'circle'
+          AND g.principal_circle_id = current_circle_id())
+        OR (g.principal_type = 'portal'
+          AND g.principal_portal_id = current_portal_id())
+      )
+  `);
+
+  return result.rows.map(row => row.provider_tenant_id as string);
+}
+
+
+This single change is what unlocks:
+
+Circle-based federation
+
+Portal-based federation
+
+Hub/spoke scaling (no N×N)
+
+3) getFederatedFacilities() — NO LOGIC CHANGE NEEDED
+
+✅ This function already consumes getAccessibleTenants(), so once that function is fixed, this one automatically gains circle support.
+
+You do not need to touch:
+
+scarcity logic
+
+unit counting
+
+SQL raw block
+
+Correct as-is.
+
+4) Fix logFederatedAccess() to write circle + portal
+
+Right now, you are silently dropping circle attribution, even though the columns exist.
+
+❌ CURRENT
+INSERT INTO cc_activity_ledger (
+  tenant_id, community_id, actor_tenant_id, actor_identity_id,
+  action, entity_type, entity_id, payload
+)
+
+✅ REPLACE with this
+export async function logFederatedAccess(
+  ctx: FederationContext,
+  targetTenantId: string,
+  action: string,
+  resourceType: string,
+  resourceId: string
+): Promise<void> {
+  await db.execute(sql`
+    INSERT INTO cc_activity_ledger (
+      tenant_id,
+      community_id,
+      actor_tenant_id,
+      actor_identity_id,
+      circle_id,
+      portal_id,
+      action,
+      entity_type,
+      entity_id,
+      payload
+    ) VALUES (
+      ${targetTenantId},
+      ${ctx.communityId},
+      current_tenant_id(),
+      ${ctx.actorIndividualId || null},
+      current_circle_id(),
+      current_portal_id(),
+      ${action},
+      ${resourceType},
+      ${resourceId},
+      ${JSON.stringify({ federation: true, scope: action.split('.')[0] })}
+    )
+  `);
+}
+
+
+Important detail:
+We now use current_tenant_id() instead of ctx.actorTenantId.
+This guarantees attribution matches the active execution context.
+
+5) searchFederatedAvailability() — no change needed
+
+It already calls:
+
+getFederatedFacilities()
+
+logFederatedAccess()
+
+Once those are upgraded, this function becomes circle-aware automatically.
+
+6) Remove / deprecate testFederation()
+
+This function:
+
+Hardcodes tenant IDs
+
+Uses cc_federation_agreements
+
+Bypasses real context
+
+Recommendation
+
+Either:
+
+Delete it, or
+
+Update it to:
+
+create a fake request context
+
+rely on grants
+
+set GUCs explicitly (advanced)
+
+For now, safest move is to delete or ignore it.
+
+✅ POST-PATCH QA CHECKLIST (10 minutes)
+1️⃣ Tenant-based grant still works
+
+principal_type = tenant
+
+No circle selected
+
+Federated search returns results
+
+2️⃣ Circle-based grant works
+
+principal_type = circle
+
+Switch into circle
+
+Federated search returns results
+
+3️⃣ Portal-based grant works
+
+principal_type = portal
+
+Correct portal context
+
+Federated search returns results
+
+4️⃣ Attribution is correct
+
+Query:
+
+SELECT
+  tenant_id,
+  actor_tenant_id,
+  circle_id,
+  portal_id,
+  action
+FROM cc_activity_ledger
+ORDER BY created_at DESC
+LIMIT 5;
+
+
+You should see:
+
+circle_id populated when acting as circle
+
+portal_id populated consistently
