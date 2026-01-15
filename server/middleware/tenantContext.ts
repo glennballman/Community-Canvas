@@ -272,10 +272,53 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
       }
       
       // Circle context from session (set by switch-circle endpoint)
+      // SECURITY: Revalidate circle membership on every request to prevent stale/forged session.current_circle_id
+      // from granting access to circle conversations. This is defensive-in-depth since RLS policies trust current_circle_id().
       const sessionCircleId = (session as any).current_circle_id || (session as any).circle_id;
       if (sessionCircleId && typeof sessionCircleId === 'string' && sessionCircleId.match(/^[0-9a-f-]{36}$/i)) {
-        req.ctx.circle_id = sessionCircleId;
-        req.ctx.acting_as_circle = true;
+        const individualId = req.ctx.individual_id;
+        let isAuthorized = false;
+        
+        if (individualId) {
+          try {
+            // Single efficient query: check direct membership OR active delegation
+            const authResult = await serviceQuery(`
+              SELECT EXISTS (
+                SELECT 1 FROM cc_circle_members 
+                WHERE circle_id = $1 AND individual_id = $2 AND is_active = true
+              ) OR EXISTS (
+                SELECT 1 FROM cc_circle_delegations
+                WHERE circle_id = $1 AND delegatee_individual_id = $2
+                  AND status = 'active'
+                  AND (expires_at IS NULL OR expires_at > now())
+              ) AS authorized
+            `, [sessionCircleId, individualId]);
+            
+            isAuthorized = authResult.rows[0]?.authorized === true;
+          } catch (err) {
+            // Fail closed: on DB error, deny circle access
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[tenantContext] Circle revalidation error, clearing context:', err);
+            }
+            isAuthorized = false;
+          }
+        }
+        
+        if (isAuthorized) {
+          req.ctx.circle_id = sessionCircleId;
+          req.ctx.acting_as_circle = true;
+        } else {
+          // Clear stale/invalid circle context from session
+          (session as any).current_circle_id = null;
+          (session as any).circle_id = null;
+          req.ctx.circle_id = null;
+          req.ctx.acting_as_circle = false;
+          req.ctx.circle_role = null;
+          
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[tenantContext] Circle ${sessionCircleId} access denied for user ${individualId}, context cleared`);
+          }
+        }
       }
     }
     

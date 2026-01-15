@@ -1,0 +1,70 @@
+You are working inside the Community Canvas codebase (authoritative branch: main).
+Runtime: Replit deployment with integrated PostgreSQL. RLS uses Postgres GUCs.
+
+TASK: Implement middleware revalidation hardening for circle context.
+Goal: Prevent stale/forged session.current_circle_id from granting access to circle conversations.
+
+CONTEXT (DO NOT CHANGE):
+- Circle context is stored in session.current_circle_id
+- tenantContext middleware currently reads session.current_circle_id and sets:
+  req.ctx.circle_id and req.ctx.acting_as_circle = true
+- switch-circle route already validates membership/delegation when setting session.current_circle_id
+- RLS policies for messaging assume current_circle_id() is trustworthy
+- We must add a defensive revalidation check in middleware on EVERY request
+
+REQUIREMENTS:
+1) File to modify: server/middleware/tenantContext.ts
+2) In the existing block:
+   if (!req.impersonation) {
+     ...
+     if (session?.userId) {
+       ... tenant extraction ...
+       ... circle extraction ...
+     }
+   }
+Add a revalidation step immediately after reading session.current_circle_id.
+
+3) Revalidation logic:
+- If session.current_circle_id is present and looks like a UUID:
+  - Run a serviceQuery() DB check (bypass RLS safely) to confirm the session user is authorized for that circle via:
+    A) active direct membership:
+       EXISTS cc_circle_members WHERE circle_id=$1 AND individual_id=$2 AND is_active=true
+    OR
+    B) active, not-expired delegation:
+       EXISTS cc_circle_delegations WHERE circle_id=$1 AND delegatee_individual_id=$2
+         AND status='active' AND (expires_at IS NULL OR expires_at > now())
+
+4) If NOT authorized:
+- Clear the circle context defensively:
+  - session.current_circle_id = null
+  - req.ctx.circle_id = null
+  - req.ctx.acting_as_circle = false
+  - req.ctx.circle_role = null (if present)
+- Do NOT throw. Do NOT log noisy errors in production. Optional: dev console.log.
+
+5) If authorized:
+- Keep existing behavior:
+  - req.ctx.circle_id = sessionCircleId
+  - req.ctx.acting_as_circle = true
+  - (do not introduce new permissions; just validate)
+
+6) Do NOT:
+- add any new headers like X-Circle-Id
+- change RLS policies
+- change switch-circle route
+- introduce impersonation changes
+- refactor unrelated tenant/portal logic
+
+IMPLEMENTATION NOTES:
+- You may need to import serviceQuery from the same place user-context routes use it (search existing usage).
+- Keep the check efficient: single query returning boolean.
+- The code must be safe if serviceQuery throws: on error, clear circle context (fail closed).
+
+DELIVERABLE:
+- A single commit modifying tenantContext.ts with the revalidation guard.
+- Include a short comment explaining the security rationale.
+- Provide a quick manual QA instruction:
+  - Set a valid circle, refresh, circle stays.
+  - Manually set an invalid circle_id in session (or revoke membership), refresh, circle clears.
+
+Proceed with minimal additive code.
