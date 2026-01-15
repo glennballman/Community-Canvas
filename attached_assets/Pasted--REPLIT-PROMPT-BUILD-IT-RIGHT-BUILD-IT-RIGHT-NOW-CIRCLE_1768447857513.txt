@@ -1,0 +1,150 @@
+✅ REPLIT PROMPT — “BUILD IT RIGHT, BUILD IT RIGHT NOW” CIRCLES AUDIT
+
+Paste this verbatim into Replit:
+
+You are performing the Build-It-Right / No-Refactor-Later architecture audit for Coordination Circles in Community Canvas V3.
+
+Your job is to propose the canonical first-class implementation of Coordination Circles that will scale beyond Bamfield, without breaking the platform’s core invariants:
+
+PostgreSQL GUC / RLS tenant isolation remains the security spine
+
+Activity ledger remains the attribution spine
+
+Federation scopes remain the authorization model (but may be extended)
+
+Portals remain the membership + surface model
+
+Output must be grounded in current codebase reality (use existing tables where possible), but you are allowed to recommend new tables/columns if required to avoid future refactors.
+
+A) Current-State Constraints (Confirm with file refs)
+
+Confirm the “one active tenant context” GUC model and where it is enforced.
+
+Confirm current federation agreement model (provider/consumer) and scope checking.
+
+Confirm portal membership model and permission flags.
+
+Confirm activity ledger structure and how attribution is logged.
+
+B) Canonical Coordination Circle Model (First-Class)
+
+Propose a first-class model that supports:
+
+cc_coordination_circles entity
+
+circle membership (individuals, parties, tenants)
+
+multi-circle membership per user
+
+circle roles + permissions
+
+circle can initiate actions across tenants under scoped authority
+
+circle can be a “switchboard” where one human can act as multiple circles/tenants with correct attribution
+
+For each proposed table/column:
+
+name
+
+key columns
+
+FK relationships
+
+why it must exist (avoid future refactor)
+
+C) Acting-As Context (Clean + Auditable)
+
+Design how “acting as circle” works while preserving tenant-GUC/RLS:
+
+Should circle be represented as a new actor_type in ActorContext?
+
+How does the request choose: tenant vs portal vs circle?
+
+How is acting context stored (session, JWT, etc.)?
+
+How is it enforced consistently across API + RLS?
+
+Explicitly answer:
+
+Do we need a new GUC like app.circle_id?
+
+If yes, where would it be set and how would RLS use it?
+
+If no, how is circle context enforced without RLS gaps?
+
+D) Federation at Scale (Avoid N×N Explosion)
+
+Propose how circles coordinate N parties/tenants without bilateral explosion:
+
+circle as principal / hub pattern
+
+group-scoped federation grants
+
+inheritance via portal membership
+
+Ground recommendations in current cc_federation_agreements structure.
+If changes needed: propose minimal schema changes that enable N-party.
+
+E) Sheryl Business Partner Case (Non-admin, delegated)
+
+Canonically support:
+
+cross-tenant booking visibility
+
+scoped reservation ability
+
+without making Sheryl admin/staff
+
+Propose how this is represented (delegation grants, partner roles, etc.).
+
+F) Messaging & Inbound Routing
+
+Canonically support circle-level inbound routing:
+
+circle inbox
+
+message participants attribution
+
+hat-switching from inbox actions
+
+Identify which existing messaging tables can be reused and what’s missing.
+
+G) Activity Ledger Attribution (Circle-Attributable)
+
+Propose how ledger records show:
+
+actor_identity_id (human/AI)
+
+actor_tenant_id (execution context)
+
+circle_id (coordination context)
+
+portal_id (surface context)
+
+Recommend whether to add columns vs payload fields, prioritizing audit queries and reporting.
+
+H) UI Implications (No UI design)
+
+List which routes/portals MUST exist for circles to be operable (functional only):
+
+circle picker / acting-as indicator
+
+circle membership management
+
+circle agreements management
+
+circle inbox
+
+I) Deliverable
+
+Output a structured report with:
+
+Canonical design (tables + context + attribution)
+
+Delta from current state (exact file paths that change)
+
+Risks + mitigations
+
+What can be reused unchanged
+
+Do not implement. Do not hand-wave. Quote file paths and table names.
