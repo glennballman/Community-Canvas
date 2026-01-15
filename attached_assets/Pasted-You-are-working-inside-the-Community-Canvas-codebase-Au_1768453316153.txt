@@ -1,0 +1,92 @@
+You are working inside the Community Canvas codebase.
+Authoritative branch: main
+Authoritative runtime: Replit deployment with integrated PostgreSQL (Neon-backed).
+RLS + GUC model is already implemented and MUST be respected.
+
+CONTEXT (DO NOT RE-ARCHITECT):
+- Circles are first-class authority entities (cc_coordination_circles)
+- Circle context is available via PostgreSQL GUC: app.circle_id
+- Tenant, portal, individual GUCs already exist and are correct
+- Federation grants are implemented (cc_federation_grants)
+- Messaging tables already exist (cc_conversations, cc_conversation_participants, cc_messages, notifications)
+- Activity ledger supports tenant_id, circle_id, portal_id attribution
+
+GOAL (PHASE A1 ONLY):
+Implement circle-aware messaging and inbound routing semantics.
+NO UI redesign. NO refactors. NO new product ideas.
+
+SCOPE OF WORK:
+
+1) SCHEMA EXTENSION (MINIMAL, BACKWARD-SAFE)
+- Add enum cc_conversation_participant_type with values:
+  ('individual','tenant','circle','portal')
+- Extend cc_conversation_participants with:
+  - participant_type cc_conversation_participant_type NOT NULL DEFAULT 'individual'
+  - circle_id UUID NULL REFERENCES cc_coordination_circles(id)
+- Add constraint:
+  - if participant_type = 'circle', circle_id must be NOT NULL
+- Enable RLS consistent with existing messaging tables (service mode write-only)
+
+2) MESSAGE ATTRIBUTION
+- Ensure ALL message creation paths log activity using:
+  - current_tenant_id()
+  - current_individual_id()
+  - current_circle_id()
+  - current_portal_id()
+- Do NOT trust request payloads for attribution.
+
+3) CIRCLE RECIPIENT RESOLUTION (NEW SERVICE)
+Create a new backend service:
+  server/services/messagingRoutingService.ts
+
+Export function:
+  resolveCircleRecipients(circleId: string): Promise<string[]>
+
+Logic:
+- Include individuals who are:
+  - active cc_circle_members with member_type = 'individual'
+  - OR active cc_circle_delegations (delegatee_individual_id)
+- Respect delegation expiry and status
+- Use serviceQuery (bypass RLS safely)
+- Return DISTINCT individual IDs
+
+4) CIRCLE AS MESSAGE PARTICIPANT
+- Allow cc_conversation_participants to include:
+  participant_type = 'circle', circle_id = <uuid>
+- Do NOT expand circle into individual participants in the table.
+- Circle membership is resolved dynamically at delivery time.
+
+5) MESSAGE FAN-OUT
+When a message is sent to a conversation that includes a circle participant:
+- Detect participant_type = 'circle'
+- Resolve recipients via resolveCircleRecipients(circle_id)
+- Create notification deliveries for each resolved individual
+- Do NOT modify conversation participants
+
+6) INBOUND ROUTING (BACKEND ONLY)
+Implement backend support so inbound events (message, call, form) can:
+- Be addressed to a circle
+- Create or reuse a conversation with participant_type='circle'
+- Fan-out to recipients using the same resolver
+
+7) NON-GOALS (DO NOT DO):
+- No UI changes
+- No inbox redesign
+- No role-based filtering UI
+- No calendar work
+- No federation changes (already done)
+
+DELIVERABLES:
+- Migration file for messaging schema changes
+- messagingRoutingService.ts with resolver
+- Updates to message creation paths to support circle participants
+- Updates to activity logging to include circle_id + portal_id
+- Minimal tests or comments explaining verification
+
+IMPORTANT CONSTRAINTS:
+- Do NOT introduce impersonation
+- Do NOT duplicate circle membership into conversation rows
+- Do NOT break existing tenant/individual messaging
+- Follow existing migration patterns and RLS conventions
+
+If any ambiguity exists, prefer minimal additive changes.
