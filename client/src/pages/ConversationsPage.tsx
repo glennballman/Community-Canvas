@@ -173,7 +173,7 @@ export default function ConversationsPage() {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            Select a conversation to get started
+            Select a message to get started
           </div>
         )}
       </div>

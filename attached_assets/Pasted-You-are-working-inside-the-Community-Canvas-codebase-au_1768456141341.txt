@@ -1,0 +1,70 @@
+You are working inside the Community Canvas codebase (authoritative branch: main).
+This task is UX COPY NORMALIZATION ONLY. Do NOT change schema, APIs, routes, file names, component names, or data models.
+
+GOAL:
+Normalize ALL user-facing UI copy in the messaging system from “Conversations”/“Conversation” → “Messages”/“Message”.
+
+IMPORTANT RULE (LOCK THIS IN):
+- “Conversation” is an internal container concept (OK in code/schema).
+- “Messages” is the user-facing term (must be used in UI).
+
+SCOPE:
+1) Frontend UI strings only (React).
+2) Update ALL user-visible text in:
+   - Messages page headers
+   - Left pane titles
+   - Empty states
+   - Dropdown filters
+   - Buttons / menu items (if any)
+   - Helper/placeholder text (e.g. “Select a conversation…”)
+   - Any toast/alert copy related to messaging
+
+DO NOT:
+- rename DB tables cc_conversations / cc_messages
+- rename API endpoints
+- rename TypeScript types/interfaces
+- refactor logic
+- change navigation (nav already correctly says “Messages”)
+
+IMPLEMENTATION INSTRUCTIONS:
+A) Search the client codebase for these exact strings (case-insensitive):
+   - "Conversations"
+   - "Conversation"
+   - "Select a conversation"
+   - "No conversations yet"
+   - "All Conversations"
+   - "New Conversation"
+   - "Start a conversation"
+   - "conversation" (only replace when it is user-facing UI text)
+
+B) Replace with user-facing equivalents:
+   - "Conversations" -> "Messages"
+   - "Conversation" -> "Message" OR "Thread" ONLY if it truly refers to the container (prefer “Message” for simplicity)
+   - "Select a conversation to get started" -> "Select a message to get started"
+   - "No conversations yet" -> "No messages yet"
+   - "All Conversations" -> "All Messages"
+   - "New Conversation" -> "New Message"
+   - "Start a conversation" -> "Start a message"
+
+C) Be careful with developer-only or internal identifiers:
+   - Do NOT change variable names like conversationId, conversation, conversations in logic.
+   - Only change literal strings rendered to the UI.
+
+D) Add a tiny guard against regression:
+   - Create a short checklist doc: docs/ui/MESSAGING_TERMINOLOGY.md
+     Include:
+     - “UI must say Messages”
+     - “Schema/internal may say Conversations”
+     - examples of correct copy
+
+DELIVERABLES:
+1) A PR/commit that updates UI copy across messaging surfaces so the UI never displays “Conversations”.
+2) docs/ui/MESSAGING_TERMINOLOGY.md added.
+3) Quick manual QA note in the PR description:
+   - Visit /app/messages
+   - Verify left panel header says “Messages”
+   - Verify filter says “All Messages”
+   - Verify empty state says “No messages yet”
+   - Verify right panel placeholder says “Select a message to get started”
+
+Proceed with minimal changes consistent with current UI patterns.

@@ -62,13 +62,10 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
 
   const createCircleConversation = useMutation({
     mutationFn: async (data: { subject: string; message: string }) => {
-      return apiRequest('/api/conversations/circle', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('POST', '/api/conversations/circle', data);
     },
     onSuccess: () => {
-      toast({ title: 'Conversation created' });
+      toast({ title: 'Message sent' });
       setNewConvOpen(false);
       setNewConvSubject('');
       setNewConvMessage('');
@@ -76,7 +73,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
       fetchConversations();
     },
     onError: () => {
-      toast({ title: 'Failed to create conversation', variant: 'destructive' });
+      toast({ title: 'Failed to send message', variant: 'destructive' });
     },
   });
 
@@ -143,7 +140,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
     <div className="flex flex-col h-full bg-background border-r">
       <div className="p-4 border-b">
         <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-          <h2 className="text-lg font-semibold" data-testid="text-conversations-title">Conversations</h2>
+          <h2 className="text-lg font-semibold" data-testid="text-conversations-title">Messages</h2>
           <ContextIndicator />
         </div>
         <select
@@ -152,7 +149,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
           className="w-full p-2 border rounded text-sm bg-background"
           data-testid="select-conversation-filter"
         >
-          <option value="all">All Conversations</option>
+          <option value="all">All Messages</option>
           <option value="interest">Interest</option>
           <option value="negotiation">Negotiation</option>
           <option value="contracted">Contracted</option>
@@ -170,12 +167,12 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
                 data-testid="button-new-circle-conversation"
               >
                 <MessageSquarePlus className="h-4 w-4" />
-                New Circle Conversation
+                New Circle Message
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>New Circle Conversation</DialogTitle>
+                <DialogTitle>New Circle Message</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -187,7 +184,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
                   <Input
                     value={newConvSubject}
                     onChange={(e) => setNewConvSubject(e.target.value)}
-                    placeholder="Conversation subject..."
+                    placeholder="Subject..."
                     data-testid="input-conversation-subject"
                   />
                 </div>
@@ -218,7 +215,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
                   disabled={!newConvSubject.trim() || !newConvMessage.trim() || createCircleConversation.isPending}
                   data-testid="button-submit-conversation"
                 >
-                  {createCircleConversation.isPending ? 'Creating...' : 'Create Conversation'}
+                  {createCircleConversation.isPending ? 'Creating...' : 'Send Message'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -235,7 +232,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
             <div>
               <h3 className="font-medium mb-1">Tenant Context Required</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Platform admins need to impersonate a tenant to view conversations.
+                Platform admins need to impersonate a tenant to view messages.
               </p>
               <Link href="/platform">
                 <Button size="sm" variant="outline" data-testid="button-go-impersonate">
@@ -246,7 +243,7 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
             </div>
           </div>
         ) : conversations.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">No conversations yet</div>
+          <div className="p-4 text-center text-muted-foreground">No messages yet</div>
         ) : (
           conversations.map((conv) => {
             const intakeMode = getIntakeModeLabel(conv.intake_mode);
