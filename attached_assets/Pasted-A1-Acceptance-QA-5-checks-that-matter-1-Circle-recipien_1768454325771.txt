@@ -1,0 +1,115 @@
+A1 Acceptance QA (5 checks that matter)
+1) Circle recipient correctness
+
+Create a circle with:
+
+2 direct individual members
+
+1 delegated individual (active, not expired)
+Send one message to circle conversation.
+
+✅ Expect:
+
+3 notification deliveries total
+
+No duplicates
+
+Delegated recipient included
+
+Expired delegation excluded
+
+SQL spot-check:
+
+SELECT recipient_individual_id, COUNT(*)
+FROM cc_notification_deliveries
+WHERE context_type = 'message'
+GROUP BY 1
+ORDER BY 2 DESC;
+
+2) Idempotency under retries
+
+Trigger the same inbound event twice (same external correlation key / same message ID if you have it) so fanOutMessageToRecipients() runs twice.
+
+✅ Expect:
+
+notification count stays the same
+
+ON CONFLICT prevents duplicates
+
+SQL:
+
+SELECT context_type, context_id, recipient_individual_id, COUNT(*)
+FROM cc_notification_deliveries
+GROUP BY 1,2,3
+HAVING COUNT(*) > 1;
+
+
+Should return zero rows.
+
+3) Attribution chain correctness
+
+Send a message while:
+
+portal context set (brand)
+
+circle selected
+
+tenant set (execution)
+
+✅ Expect in ledger/message rows:
+
+actor_individual_id = sender
+
+actor_tenant_id = current tenant
+
+portal_id = current portal
+
+circle_id = current circle
+
+If you’re logging in cc_activity_ledger, verify:
+
+SELECT actor_tenant_id, actor_identity_id, circle_id, portal_id, action
+FROM cc_activity_ledger
+ORDER BY created_at DESC
+LIMIT 10;
+
+4) Backward compatibility (tenant-only conversations)
+
+Create a normal tenant conversation with participant_type = 'tenant' or legacy rows.
+
+✅ Expect:
+
+old messaging still works
+
+no constraint violations on existing data
+
+no RLS regressions
+
+5) RLS posture sanity
+
+Make sure:
+
+service-mode writes still work
+
+non-service user can read only what they should
+
+circle participation doesn’t accidentally expose cross-tenant messages
+
+The “tell” is if a user can see circle conversations they aren’t a member of.
+
+Two things I want you to confirm from your implementation summary
+
+These are not changes, just a check that you didn’t accidentally introduce a refactor hazard:
+
+You added tenant_id, portal_id to cc_conversation_participants.
+✅ Good if those are for participant identity by type.
+⚠️ Make sure you did not turn conversations into “owned by tenant” in a way that breaks cross-tenant circle routing. The circle itself must remain the endpoint.
+
+“Circle-aware RLS policies for conversations and messages”
+✅ Good, but only if:
+
+membership checks use circle membership + delegation
+
+you didn’t create a loophole where portal_id = current portal grants access to everything
+
+If you paste the RLS policy blocks from Migration 126 (just the policy SQL, not the whole file), I’ll do a quick “red-team” read for leakage paths.
