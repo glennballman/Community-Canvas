@@ -1,0 +1,84 @@
+You are performing a forensic audit of the existing Community Canvas codebase to surface the full V1 “Jobber + CompanyCam replacement” subsystem (bids/estimates, quotes, work orders, job execution, timesheets, field photos, change orders, invoicing hooks, approvals).
+
+Goal: Produce an authoritative inventory of what already exists (DB schema + API routes + services + UI routes) so we can incorporate it into the V3 inventory deliverables and avoid duplicate systems.
+
+1) Output required (must be concrete, file-backed)
+
+Return a report with these sections, each backed by file paths and table/column names:
+
+Data Model Map (tables + columns)
+
+List all cc_* tables related to: bids/estimates/quotes, proposals, work orders, jobs/projects, tasks, timesheets/time entries, labor, materials, photos/media, notes, approvals/signatures, invoices/line items, change orders, disputes/chargebacks.
+
+For each table: key columns + FKs + RLS status (enabled/forced) if present in migrations.
+
+API Surface Map (server routes)
+
+List all routes touching the above objects (method + path + purpose)
+
+Include file paths: server/routes/*.ts and any server/services/*.ts.
+
+UI Surface Map (client routes/pages/components)
+
+List all relevant pages and routes under client/src/pages/** and navigation entries that expose this functionality.
+
+Workflow Coverage
+
+For each workflow: “Estimate → Bid → Approval → Work Order → Time/Photos → Change Order → Completion → Invoice/Settlement”
+
+Mark: ✅ implemented end-to-end / ⚠ partial / ❌ missing
+
+Integration Hooks
+
+Identify any existing connectors for: payments, invoicing, accounting, exports, attachments storage, R2 keys, etc.
+
+Overlap / Collision Risks with V3
+
+Identify where this V1 subsystem overlaps with V3:
+
+reservations vs bookings
+
+jobs wedge
+
+record bundles / notes
+
+CAPs/service runs
+
+Recommend “reuse vs refactor vs deprecate” without implementing anything.
+
+2) Mandatory evidence rules
+
+Do not guess. Every claim must include at least one of:
+
+table name + relevant columns
+
+migration file reference
+
+route path + file reference
+
+UI route + file reference
+
+3) How to do the audit (required steps)
+
+Perform these steps and include the results:
+
+Search shared/schema.ts for keywords:
+estimate, quote, bid, proposal, work_order, job, project, task, time, timesheet, time_entry, labor, material, line_item, invoice, change_order, attachment, media, photo, companycam, jobber.
+
+Search server/routes and server/services for the same keywords.
+
+Search client/src/pages and client/src/components for the same keywords plus nav labels (“Jobs”, “Work Orders”, “Timesheets”, “Estimates”, “Bids”).
+
+Search server/migrations for table creation and RLS policies related to this subsystem.
+
+4) Deliverable format
+
+Output as docs/audits/V1_JOBBER_COMPANYCAM_FORENSIC_AUDIT.md with:
+
+Executive summary (10 bullets max)
+
+The six sections above
+
+Appendix: “Top 20 files to read first”
+
+Start now and do not implement code changes—this is audit only.
