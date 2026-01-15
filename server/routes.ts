@@ -78,6 +78,7 @@ import walletRouter from "./routes/wallet";
 import railRouter from "./routes/rail";
 import internalRtrRouter from "./routes/internal-rtr";
 import recordBundlesRouter from "./routes/record-bundles";
+import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -192,6 +193,12 @@ export async function registerRoutes(
 
   // Register defensive record bundles and contemporaneous notes (legal/CYA spine)
   app.use('/api/record-bundles', recordBundlesRouter);
+
+  // Register incident prompts routes
+  app.use('/api/incidents', incidentPromptsRouter);
+
+  // Register public incident responder endpoint (NO AUTH)
+  app.use('/api/public/incident-prompts', publicIncidentRouter);
 
   // Register private feedback routes (small-town trust model)
   app.use('/api', feedbackRouter);
