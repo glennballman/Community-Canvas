@@ -65,6 +65,12 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **System Explorer**: Platform Admin debug/discovery surface for overview, evidence, integrations, data sources, data browser, and routes audit.
 - **Evidence Rule Enforcement**: Machine-enforceable evidence gates to track and verify system artifacts.
 - **Coordination Circles (Phase A1.1)**: Federated resource sharing between tenants via circles. Includes circle-aware messaging with notification fan-out, unified conversation inbox (/app/messages), context switching (/app/circles), and per-request membership revalidation in tenantContext middleware.
+- **Defensive Record Bundles (Phase A2.X)**: Immutable, owner-controlled evidence packages for legal/insurance defense (Migration 127). Includes:
+  - **Bundle Types**: incident_defence, emergency_response, employment_action, chargeback_dispute, contract_dispute, general_legal
+  - **Contemporaneous Notes**: Timestamped notes with scope-based linking (incident, bundle, worker, facility, asset, contract, work_order)
+  - **ACL Delegation**: Owner/admin-only by default with explicit grantee delegation (individual or circle), redacted for non-owner/admin viewers
+  - **Seal Workflow**: Draft → Sealed (locks all linked notes), immutable after sealing
+  - **RLS Enforcement**: FORCE RLS on artifacts, ACL, and media tables; strict owner/admin/delegate access policies
 
 ## External Dependencies
 
