@@ -76,6 +76,18 @@ import CirclesPage from './pages/app/CirclesPage';
 import SettingsPage from './pages/app/SettingsPage';
 import SystemExplorerPage from './pages/app/SystemExplorerPage';
 
+// Pages - V3 Placeholders
+import OpsBoardPage from './pages/app/OpsBoardPage';
+import ParkingPage from './pages/app/ParkingPage';
+import MarinaPage from './pages/app/MarinaPage';
+import HospitalityPage from './pages/app/HospitalityPage';
+import JobsPage from './pages/app/JobsPage';
+import EnforcementPage from './pages/app/EnforcementPage';
+import AdminHomePage from './pages/app/admin/AdminHomePage';
+import OperatorHomePage from './pages/app/operator/OperatorHomePage';
+import PortalsPage from './pages/app/admin/PortalsPage';
+import TenantsPageApp from './pages/app/admin/TenantsPage';
+
 // Pages - Admin
 import { ImpersonationConsole } from './pages/admin/ImpersonationConsole';
 import CivOSDashboard from './pages/admin/CivOSDashboard';
@@ -193,9 +205,33 @@ export default function App() {
                 <Route index element={<TenantPicker />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 
+                {/* V3 Operations */}
+                <Route path="ops" element={<OpsBoardPage />} />
+                <Route path="operations" element={<OperationsBoard />} />
+                
+                {/* V3 Reservations */}
+                <Route path="parking" element={<ParkingPage />} />
+                <Route path="marina" element={<MarinaPage />} />
+                <Route path="hospitality" element={<HospitalityPage />} />
+                
+                {/* V3 Work */}
+                <Route path="jobs" element={<JobsPage />} />
+                <Route path="work-requests" element={<WorkRequestsList />} />
+                <Route path="services/runs" element={<ServiceRuns />} />
+                <Route path="services/runs/new" element={<CreateServiceRun />} />
+                <Route path="services/runs/:slug" element={<ServiceRunDetail />} />
+                
+                {/* V3 Compliance */}
+                <Route path="enforcement" element={<EnforcementPage />} />
+                
+                {/* V3 Admin */}
+                <Route path="admin" element={<AdminHomePage />} />
+                <Route path="operator" element={<OperatorHomePage />} />
+                <Route path="admin/portals" element={<PortalsPage />} />
+                <Route path="admin/tenants" element={<TenantsPageApp />} />
+                
                 {/* Community tenant routes */}
                 <Route path="availability" element={<AvailabilityConsole />} />
-                <Route path="operations" element={<OperationsBoard />} />
                 <Route path="service-runs" element={<ServiceRuns />} />
                 <Route path="service-runs/new" element={<CreateServiceRun />} />
                 <Route path="service-runs/:slug" element={<ServiceRunDetail />} />

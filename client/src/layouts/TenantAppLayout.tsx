@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { useTenant, TenantMembership } from '../contexts/TenantContext';
 import { PortalSelector } from '../components/PortalSelector';
+import { ContextIndicator } from '../components/context/ContextIndicator';
 
 // ============================================================================
 // NAVIGATION CONFIGURATION
@@ -665,9 +666,25 @@ export function TenantAppLayout(): React.ReactElement {
       </aside>
 
       {/* ====== MAIN CONTENT ====== */}
-      <main style={styles.main}>
-        <Outlet />
-      </main>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Top Bar with Context Indicator */}
+        <header style={{
+          height: '48px',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          padding: '0 16px',
+          backgroundColor: '#0a1628',
+          flexShrink: 0,
+        }}>
+          <ContextIndicator />
+        </header>
+        
+        <main style={styles.main}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

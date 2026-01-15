@@ -65,6 +65,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **System Explorer**: Platform Admin debug/discovery surface for overview, evidence, integrations, data sources, data browser, and routes audit.
 - **Evidence Rule Enforcement**: Machine-enforceable evidence gates to track and verify system artifacts.
 - **Coordination Circles (Phase A1.1)**: Federated resource sharing between tenants via circles. Includes circle-aware messaging with notification fan-out, unified conversation inbox (/app/messages), context switching (/app/circles), and per-request membership revalidation in tenantContext middleware.
+- **V3 App Shell (U1)**: Authoritative left nav IA via `V3_NAV` in `client/src/lib/routes/v3Nav.ts`. 6 sections (Operations, Reservations, Work, Compliance, Communication, Admin). ContextIndicator in top bar showing Portal/Tenant/Circle context. Route audit script: `npx tsx client/scripts/v3-route-audit.ts`.
 - **Defensive Record Bundles (Phase A2.X)**: Immutable, owner-controlled evidence packages for legal/insurance defense (Migration 127). Includes:
   - **Bundle Types**: incident_defence, emergency_response, employment_action, chargeback_dispute, contract_dispute, general_legal
   - **Contemporaneous Notes**: Timestamped notes with scope-based linking (incident, bundle, worker, facility, asset, contract, work_order)

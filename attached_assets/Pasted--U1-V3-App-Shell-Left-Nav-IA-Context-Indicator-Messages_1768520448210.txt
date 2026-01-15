@@ -1,0 +1,187 @@
+✅ U1 — V3 App Shell + Left Nav IA + Context Indicator + Messages Copy Fix + Route Audit + Placeholders
+
+AUTHORITATIVE CONSTRAINTS:
+- Do NOT invent endpoints.
+- First, extract existing routes/endpoints/components from the repo.
+- Reuse existing AppShell/TenantAppLayout if it exists. Only create new shell if none exists.
+- Do NOT implement global string-transform copy normalization. Only update explicit labels/headers.
+- If a nav route doesn’t exist yet, create a minimal placeholder page so navigation is stable.
+
+KNOWN AUTHORITATIVE ENDPOINTS (from uploaded MD):
+- GET  /api/me/context (must include circle_id + acting_as_circle)
+- POST /api/me/switch-circle
+- POST /api/me/clear-circle
+- POST /api/me/switch-tenant
+(These endpoints are described in the authoritative MD. Do not change them.)
+
+------------------------------------------------------------
+0) REPO EXTRACTION (MUST DO FIRST — print findings)
+A) Locate the router:
+- Search for React Router or Next routing:
+  - `rg "createBrowserRouter|Routes\\s*\\(|react-router" -S`
+  - `rg "next/router|app\\/" -S`
+- Print the main router file path and route tree for `/app/*`.
+
+B) Locate existing shell/layout:
+- `rg "AppShell|TenantAppLayout|DashboardLayout|MainLayout|Shell" client/src -S`
+- If an existing layout wraps `/app/*`, we will MODIFY it.
+
+C) Locate existing “me” endpoints usage:
+- `rg "/api/me/context|me/context|switch-circle|clear-circle|switch-tenant" -S client server`
+- Report the exact client API helper used (fetch wrapper), and its file path.
+
+D) Locate existing Messages route/page:
+- `rg "/app/messages|MessagesPage|ConversationsPage" client/src -S`
+- Confirm current wording (“Conversations” vs “Messages”) and where it appears.
+
+STOP if router/layout cannot be found. Print what you searched and the closest matches.
+
+------------------------------------------------------------
+1) NAV IA: single source of truth
+
+Create: `client/src/lib/routes/v3Nav.ts`
+Export `V3_NAV` as ordered sections + items:
+
+Sections and routes (REQUIRED NOW; placeholders allowed):
+1) Operations
+- Dashboard        → /app
+- Operations Board → /app/ops        (placeholder if missing; matches “Operations board” requirement)
+2) Reservations
+- Reservations     → /app/reservations
+- Parking          → /app/parking
+- Marina           → /app/marina
+- Hospitality      → /app/hospitality
+3) Work
+- Jobs             → /app/jobs
+- Work Requests    → /app/work-requests
+- Projects         → /app/projects
+- Service Runs     → /app/services/runs
+4) Compliance
+- Enforcement      → /app/enforcement
+5) Communication
+- Messages         → /app/messages
+6) Admin
+- Admin            → /app/admin
+- Operator         → /app/operator
+- Portals          → /app/admin/portals   (placeholder if missing; portal admin UI is known gap)
+- Tenants          → /app/admin/tenants   (placeholder if missing)
+
+Note: this IA aligns with the authoritative dashboard map and UI gap list (ops, reservations, jobs, contracts/projects, messages, admin/operator). No wallet-first items.
+
+------------------------------------------------------------
+2) CONTEXT INDICATOR (Portal/Tenant/Circle) — must use real endpoints
+
+Create component: `client/src/components/context/ContextIndicator.tsx`
+
+Behavior:
+- On mount: call GET `/api/me/context` (using the repo’s existing API helper)
+- Render compact banner:
+  - Portal: <name> • Tenant: <name> • Circle: <name or “None”>
+  - If acting_as_circle is true, show “Acting as Circle” badge.
+- Provide “Switch circle” control (simple dropdown or modal):
+  - Must call POST `/api/me/switch-circle` with `{ circleId }` (match server expectations found in repo)
+  - Provide “Clear circle” → POST `/api/me/clear-circle`
+- Also provide “Switch tenant” control ONLY if current UI already supports it:
+  - Must call POST `/api/me/switch-tenant` (match existing payload)
+
+After any switch:
+- Refetch `/api/me/context`
+- Soft refresh current view (do not full reload unless necessary)
+
+Hard rule:
+- UI must not pass tenant_id/circle_id to business endpoints as query params.
+- Context is server-side (GUC/session) and enforced by RLS.
+
+------------------------------------------------------------
+3) APP SHELL / LAYOUT — reuse if exists
+
+If an existing layout for `/app/*` exists:
+- Modify it to:
+  - Render LeftNav built from `V3_NAV`
+  - Render `ContextIndicator` in the top bar (visible on every /app page)
+  - Ensure Messages label appears in nav
+
+If no layout exists:
+Create: `client/src/components/shell/V3AppShell.tsx`
+- LeftNav + TopBar + <Outlet/>
+
+Wire into router so all `/app/*` routes use the shell.
+
+------------------------------------------------------------
+4) PLACEHOLDER PAGES (stability requirement)
+
+For each REQUIRED NOW route that is missing, create a minimal placeholder page.
+Rules:
+- The placeholder must render inside the shell and show:
+  - Title
+  - “UI placeholder: wiring pending in U2+”
+  - A small list of next actions (non-interactive)
+- No backend calls in placeholders.
+
+Create placeholders at these paths (adjust to repo conventions):
+- `client/src/pages/app/OpsBoardPage.tsx`           → /app/ops
+- `client/src/pages/app/ReservationsPage.tsx`       → /app/reservations
+- `client/src/pages/app/ParkingPage.tsx`            → /app/parking
+- `client/src/pages/app/MarinaPage.tsx`             → /app/marina
+- `client/src/pages/app/HospitalityPage.tsx`        → /app/hospitality
+- `client/src/pages/app/JobsPage.tsx`               → /app/jobs
+- `client/src/pages/app/WorkRequestsPage.tsx`       → /app/work-requests
+- `client/src/pages/app/ProjectsPage.tsx`           → /app/projects
+- `client/src/pages/app/ServiceRunsPage.tsx`        → /app/services/runs
+- `client/src/pages/app/EnforcementPage.tsx`        → /app/enforcement
+- `client/src/pages/app/MessagesPage.tsx`           → /app/messages (if missing)
+- `client/src/pages/app/admin/AdminHomePage.tsx`    → /app/admin
+- `client/src/pages/app/operator/OperatorHome.tsx`  → /app/operator
+- `client/src/pages/app/admin/PortalsPage.tsx`      → /app/admin/portals
+- `client/src/pages/app/admin/TenantsPage.tsx`      → /app/admin/tenants
+
+If any already exist, do NOT overwrite. Patch minimally.
+
+------------------------------------------------------------
+5) “MESSAGES” COPY FIX (explicit labels only; no global transforms)
+
+Do:
+- Update nav label to “Messages”
+- Update Messages page header to “Messages”
+- Search for visible UI labels “Conversations” and replace ONLY those labels/headers/empty-states with “Messages”.
+Do NOT:
+- Rename schema
+- Rename API routes
+- Rewrite payload keys
+
+Proof requirement:
+- `rg "Conversations" client/src` shows only backend/internal references (if any), not UI headings.
+
+------------------------------------------------------------
+6) ROUTE AUDIT HARNESS (FAIL only for REQUIRED NOW)
+
+Create: `client/scripts/v3-route-audit.ts`
+- Parse router definition OR maintain a manual list extracted from the router file.
+- REQUIRED_NOW list = all routes in V3_NAV above.
+- Output:
+  - FAIL if any REQUIRED_NOW route is missing.
+  - WARN if known future routes are missing (do not fail for future).
+
+Add package script:
+- `"check:v3-routes": "tsx client/scripts/v3-route-audit.ts"` (or repo’s script runner)
+
+------------------------------------------------------------
+7) ACCEPTANCE TESTS (add at least 3)
+
+Add tests using the repo’s test framework (Jest/RTL or Playwright):
+1) Shell renders and includes ContextIndicator on a sample `/app/*` route.
+2) Nav contains “Messages” label, and “Conversations” does not appear as a nav label.
+3) Route audit passes once placeholders exist.
+
+------------------------------------------------------------
+8) OUTPUT (must include in your response)
+- List of files created/modified
+- The extracted endpoint payload shapes you found for:
+  - /api/me/context
+  - /api/me/switch-circle
+  - /api/me/clear-circle
+  - /api/me/switch-tenant
+- Result of `pnpm check:v3-routes` (or equivalent)
+- Result of `rg "Conversations" client/src` after changes
+
+STOP after U1. Do NOT implement U2+ until user says “Proceed U2”.

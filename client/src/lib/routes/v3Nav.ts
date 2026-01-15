@@ -1,0 +1,110 @@
+/**
+ * V3 NAV - Single Source of Truth for Left Nav IA
+ * 
+ * AUTHORITATIVE: All /app/* navigation flows through this config.
+ * Sections and routes aligned with authoritative dashboard map.
+ */
+
+import {
+  LayoutDashboard,
+  Calendar,
+  Car,
+  Anchor,
+  Home,
+  Briefcase,
+  ClipboardList,
+  FolderKanban,
+  Truck,
+  ShieldAlert,
+  MessageSquare,
+  Settings,
+  Building2,
+  Users,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+export interface NavItem {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  testId: string;
+}
+
+export interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+/**
+ * V3_NAV - Authoritative navigation structure
+ * 
+ * Sections (in order):
+ * 1. Operations - Dashboard, Ops Board
+ * 2. Reservations - Reservations, Parking, Marina, Hospitality
+ * 3. Work - Jobs, Work Requests, Projects, Service Runs
+ * 4. Compliance - Enforcement
+ * 5. Communication - Messages
+ * 6. Admin - Admin, Operator, Portals, Tenants
+ */
+export const V3_NAV: NavSection[] = [
+  {
+    title: 'Operations',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', href: '/app', testId: 'nav-dashboard' },
+      { icon: Calendar, label: 'Operations Board', href: '/app/ops', testId: 'nav-ops' },
+    ],
+  },
+  {
+    title: 'Reservations',
+    items: [
+      { icon: Calendar, label: 'Reservations', href: '/app/reservations', testId: 'nav-reservations' },
+      { icon: Car, label: 'Parking', href: '/app/parking', testId: 'nav-parking' },
+      { icon: Anchor, label: 'Marina', href: '/app/marina', testId: 'nav-marina' },
+      { icon: Home, label: 'Hospitality', href: '/app/hospitality', testId: 'nav-hospitality' },
+    ],
+  },
+  {
+    title: 'Work',
+    items: [
+      { icon: Briefcase, label: 'Jobs', href: '/app/jobs', testId: 'nav-jobs' },
+      { icon: ClipboardList, label: 'Work Requests', href: '/app/work-requests', testId: 'nav-work-requests' },
+      { icon: FolderKanban, label: 'Projects', href: '/app/projects', testId: 'nav-projects' },
+      { icon: Truck, label: 'Service Runs', href: '/app/services/runs', testId: 'nav-service-runs' },
+    ],
+  },
+  {
+    title: 'Compliance',
+    items: [
+      { icon: ShieldAlert, label: 'Enforcement', href: '/app/enforcement', testId: 'nav-enforcement' },
+    ],
+  },
+  {
+    title: 'Communication',
+    items: [
+      { icon: MessageSquare, label: 'Messages', href: '/app/messages', testId: 'nav-messages' },
+    ],
+  },
+  {
+    title: 'Admin',
+    items: [
+      { icon: Settings, label: 'Admin', href: '/app/admin', testId: 'nav-admin' },
+      { icon: Building2, label: 'Operator', href: '/app/operator', testId: 'nav-operator' },
+      { icon: Building2, label: 'Portals', href: '/app/admin/portals', testId: 'nav-portals' },
+      { icon: Users, label: 'Tenants', href: '/app/admin/tenants', testId: 'nav-tenants' },
+    ],
+  },
+];
+
+/**
+ * Flat list of all required routes for route audit
+ */
+export const V3_REQUIRED_ROUTES = V3_NAV.flatMap(section => 
+  section.items.map(item => item.href)
+);
+
+/**
+ * Get all nav items as flat array
+ */
+export function getAllNavItems(): NavItem[] {
+  return V3_NAV.flatMap(section => section.items);
+}
