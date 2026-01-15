@@ -99,6 +99,21 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
       }
     }
     
+    // Get current portal context if current tenant has one
+    let currentPortal = null;
+    if (currentTenantId) {
+      const portalResult = await serviceQuery(`
+        SELECT id, name, slug, status
+        FROM cc_portals
+        WHERE owning_tenant_id = $1 AND status = 'active'
+        ORDER BY created_at LIMIT 1
+      `, [currentTenantId]);
+      
+      if (portalResult.rows.length > 0) {
+        currentPortal = portalResult.rows[0];
+      }
+    }
+    
     res.json({
       user: {
         id: user.id,
@@ -115,6 +130,11 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         is_primary: false,
       })),
       current_tenant_id: currentTenantId,
+      current_portal: currentPortal ? {
+        id: currentPortal.id,
+        name: currentPortal.name,
+        slug: currentPortal.slug,
+      } : null,
       current_circle_id: currentCircleId,
       acting_as_circle: !!currentCircle,
       current_circle: currentCircle ? {

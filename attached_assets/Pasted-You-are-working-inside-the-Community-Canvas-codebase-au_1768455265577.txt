@@ -1,0 +1,85 @@
+You are working inside the Community Canvas codebase (authoritative branch: main).
+Runtime: Replit deployment with integrated PostgreSQL. RLS uses Postgres GUCs (tenant_id, portal_id, circle_id, individual_id).
+Circles + federation + circle-aware messaging (Phase A1) are COMPLETE and must be treated as authoritative.
+
+TASK: Implement Phase A1.1 — Circle Inbox UI surface (MINIMAL, ADDITIVE)
+This is NOT a UI redesign. Do NOT change layouts, nav structure, or visual system.
+Goal: Expose circle conversations in the existing messages UI and add clear “hat/context” clarity.
+
+SCOPE (ONLY THESE ITEMS):
+
+1) Messages list must include Circle Conversations
+- Existing messages UI currently lists conversations for the user.
+- Update the server query powering the conversations list (or the client fetch + server route) so that when acting_as_circle = true (req.ctx.circle_id set), it includes conversations where:
+  - cc_conversation_participants contains participant_type='circle' and circle_id = current_circle_id()
+- IMPORTANT: Do not remove existing tenant/individual conversations. This is additive:
+  - Show BOTH: “My / Tenant” conversations + “Circle” conversations.
+- Sorting: keep existing ordering (most recent activity).
+
+2) Add a simple “Context / Hat Indicator” (no redesign)
+- Add a small non-invasive indicator somewhere already present on the Messages page header/top area:
+  - Shows current portal (if any), current tenant (if any), and current circle (if acting_as_circle).
+- Do not add new global UI chrome.
+- Data source must be GET /api/me/context (already returns current_circle, acting_as_circle, portal info).
+- This is informational only.
+
+3) Add Circle Switch control entrypoint (minimal)
+- Do NOT create a new complex picker UI.
+- Add a lightweight “Switch Circle” action that links to a new simple page or modal using existing styling patterns:
+  - Page route suggestion: /app/circles (or /app/messages/circles) using existing App layout.
+- This page lists the user’s circles from GET /api/me/circles (already implemented).
+- Each row has:
+  - Circle name
+  - Status (active)
+  - Button: “Act as this circle” → POST /api/me/switch-circle
+  - Button: “Clear circle” → POST /api/me/clear-circle (only shown if currently acting_as_circle)
+- After switch/clear, redirect back to /app/messages.
+
+4) Message composition: allow “Send as Circle” ONLY when acting_as_circle
+- In the message composer (existing), add a small toggle/selector that is only visible if acting_as_circle = true:
+  - Default behavior: replying within a circle conversation should naturally be “as circle context” (GUC already set).
+  - The toggle is ONLY for starting NEW conversations: choose “Start conversation addressed to Circle” vs “Start conversation as me/tenant”.
+- Keep this extremely minimal:
+  - If there is already a “New message” flow, add an option:
+    - “New Circle Conversation”
+    - When chosen, call the existing backend helper (findOrCreateCircleConversation) and create conversation participant_type='circle' circle_id=current_circle_id()
+- Do not change message storage semantics.
+
+5) Hard constraints / Security
+- Do NOT add dev headers for circle.
+- Do NOT trust any client-submitted circleId for reading messages—RLS must enforce.
+- Use existing endpoints:
+  - GET /api/me/context
+  - GET /api/me/circles
+  - POST /api/me/switch-circle
+  - POST /api/me/clear-circle
+- Ensure UI never shows circle conversations unless acting_as_circle is true (as a UX rule), but the real enforcement is RLS.
+
+NON-GOALS (DO NOT DO):
+- No nav redesign
+- No new theming
+- No role-based filters
+- No search overhaul
+- No inbox routing adapters (that’s A1.2)
+- No calendar overlays
+
+DELIVERABLES:
+A) Functional UI Surfaces implemented:
+- /app/messages shows both conversation types, labeled clearly
+- /app/circles page exists and works
+- Hat indicator visible on /app/messages
+B) Minimal backend support if needed:
+- If the conversations API endpoint currently filters too strictly, update it to include circle conversations under RLS
+C) Quick manual QA checklist in a short doc (docs/qa/PHASE_A1_1_CIRCLE_INBOX_QA.md)
+
+FUNCTIONAL LABELING (important):
+- In conversations list, label circle conversations with a small prefix/tag like:
+  - “(Circle) Bamfield Coordination” or “Circle: Bamfield”
+- Do not expose internal IDs.
+
+IMPLEMENTATION TIPS:
+- Prefer updating existing conversation list query to rely on RLS and return what is visible in the current context.
+- When acting_as_circle is true, fetch conversations normally; RLS will include circle conversations via the new policies.
+- If your current query hard-filters by participant individual_id, you must expand it to allow participant_type='circle' matching current_circle_id().
+
+Proceed with minimal code changes consistent with existing patterns.

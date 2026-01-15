@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { apiRequest, queryClient } from '../../lib/queryClient';
 import { Button } from '@/components/ui/button';
-import { UserCircle, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { UserCircle, AlertCircle, Users, Plus, MessageSquarePlus } from 'lucide-react';
 import { Link } from 'wouter';
+import { ContextIndicator } from './ContextIndicator';
+import { useToast } from '@/hooks/use-toast';
 
 interface Conversation {
   id: string;
@@ -15,11 +22,13 @@ interface Conversation {
   contact_unlocked: boolean;
   last_message_preview: string;
   last_message_at: string;
-  my_role: 'owner' | 'contractor';
+  my_role: 'owner' | 'contractor' | 'circle_member';
   unread_count: number;
   intake_mode?: 'bid' | 'run' | 'direct_award';
   service_run_id?: string;
   run_member_count?: number;
+  is_circle_conversation?: boolean;
+  circle_name?: string;
 }
 
 interface ConversationListProps {
@@ -27,11 +36,49 @@ interface ConversationListProps {
   selectedId?: string;
 }
 
+interface UserContext {
+  acting_as_circle: boolean;
+  current_circle: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+}
+
 export function ConversationList({ onSelect, selectedId }: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [authError, setAuthError] = useState(false);
+  const [newConvOpen, setNewConvOpen] = useState(false);
+  const [newConvSubject, setNewConvSubject] = useState('');
+  const [newConvMessage, setNewConvMessage] = useState('');
+  const { toast } = useToast();
+  
+  const { data: context } = useQuery<UserContext>({
+    queryKey: ['/api/me/context'],
+    staleTime: 30000,
+  });
+
+  const createCircleConversation = useMutation({
+    mutationFn: async (data: { subject: string; message: string }) => {
+      return apiRequest('/api/conversations/circle', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: 'Conversation created' });
+      setNewConvOpen(false);
+      setNewConvSubject('');
+      setNewConvMessage('');
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      fetchConversations();
+    },
+    onError: () => {
+      toast({ title: 'Failed to create conversation', variant: 'destructive' });
+    },
+  });
 
   useEffect(() => {
     fetchConversations();
@@ -44,8 +91,8 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
       const params = new URLSearchParams();
       if (filter !== 'all') params.set('state', filter);
       
-      const data = await api.get<{ conversations: Conversation[] }>(
-        `/conversations?${params}`
+      const data = await api<{ conversations: Conversation[] }>(
+        `/api/conversations?${params}`
       );
       setConversations(data.conversations || []);
     } catch (error: any) {
@@ -95,7 +142,10 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
   return (
     <div className="flex flex-col h-full bg-background border-r">
       <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold mb-3" data-testid="text-conversations-title">Conversations</h2>
+        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+          <h2 className="text-lg font-semibold" data-testid="text-conversations-title">Conversations</h2>
+          <ContextIndicator />
+        </div>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
@@ -109,6 +159,71 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
         </select>
+        
+        {context?.acting_as_circle && context.current_circle && (
+          <Dialog open={newConvOpen} onOpenChange={setNewConvOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full mt-3 gap-2"
+                data-testid="button-new-circle-conversation"
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+                New Circle Conversation
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New Circle Conversation</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>Posting as: <strong>{context.current_circle.name}</strong></span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Subject</label>
+                  <Input
+                    value={newConvSubject}
+                    onChange={(e) => setNewConvSubject(e.target.value)}
+                    placeholder="Conversation subject..."
+                    data-testid="input-conversation-subject"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">First Message</label>
+                  <Textarea
+                    value={newConvMessage}
+                    onChange={(e) => setNewConvMessage(e.target.value)}
+                    placeholder="Write your message..."
+                    className="min-h-[100px]"
+                    data-testid="textarea-conversation-message"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="ghost"
+                  onClick={() => setNewConvOpen(false)}
+                  data-testid="button-cancel-conversation"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => createCircleConversation.mutate({ 
+                    subject: newConvSubject, 
+                    message: newConvMessage 
+                  })}
+                  disabled={!newConvSubject.trim() || !newConvMessage.trim() || createCircleConversation.isPending}
+                  data-testid="button-submit-conversation"
+                >
+                  {createCircleConversation.isPending ? 'Creating...' : 'Create Conversation'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -147,6 +262,11 @@ export function ConversationList({ onSelect, selectedId }: ConversationListProps
               >
                 <div className="flex justify-between items-start mb-1 gap-2">
                   <span className="font-medium text-sm truncate flex-1">
+                    {conv.is_circle_conversation && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 mr-1.5">
+                        Circle
+                      </span>
+                    )}
                     {conv.opportunity_title}
                   </span>
                   {conv.unread_count > 0 && (

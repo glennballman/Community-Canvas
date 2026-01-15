@@ -72,6 +72,7 @@ import CustomersPage from './pages/app/business/CustomersPage';
 
 // Pages - App Shared
 import ConversationsPage from './pages/ConversationsPage';
+import CirclesPage from './pages/app/CirclesPage';
 import SettingsPage from './pages/app/SettingsPage';
 import SystemExplorerPage from './pages/app/SystemExplorerPage';
 
@@ -235,6 +236,7 @@ export default function App() {
                 
                 {/* Shared routes */}
                 <Route path="messages" element={<ConversationsPage />} />
+                <Route path="circles" element={<CirclesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
 

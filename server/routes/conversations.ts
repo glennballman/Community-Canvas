@@ -1,9 +1,136 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../db';
+import { serviceQuery } from '../db/tenantDb';
 import { resolveActorParty, canUnlockContact } from '../lib/partyResolver';
 import { redactContactInfo, shouldBlockMessage } from '../lib/contactRedaction';
+import { findOrCreateCircleConversation, fanOutMessageToRecipients } from '../services/messagingRoutingService';
 
 const router = Router();
+
+/**
+ * POST /api/conversations/circle
+ * Create a new circle conversation with an initial message.
+ * Requires validated acting_as_circle context from middleware.
+ * 
+ * Security: Uses req.ctx.circle_id and req.ctx.acting_as_circle which are 
+ * revalidated every request by tenantContext middleware (checks membership 
+ * OR active delegation before setting circle context).
+ */
+router.post('/circle', async (req: Request, res: Response) => {
+  const client = await pool.connect();
+  
+  try {
+    // Use validated context from tenantContext middleware (not raw session)
+    const ctx = (req as any).ctx;
+    const circleId = ctx?.circle_id;
+    const actingAsCircle = ctx?.acting_as_circle;
+    const individualId = ctx?.individual_id || (req as any).individual_id;
+    const tenantId = ctx?.tenant_id || (req as any).tenant_id;
+    
+    // Security: These values come from tenantContext middleware which revalidates
+    // circle membership on every request (direct member OR active delegation)
+    if (!actingAsCircle || !circleId) {
+      return res.status(403).json({ 
+        error: 'Must be acting as a circle with valid membership to create circle conversations' 
+      });
+    }
+    
+    if (!individualId) {
+      return res.status(401).json({ error: 'Individual context required' });
+    }
+    
+    const { subject, message } = req.body;
+    
+    // Input validation
+    const trimmedSubject = subject?.trim();
+    const trimmedMessage = message?.trim();
+    
+    if (!trimmedSubject || !trimmedMessage) {
+      return res.status(400).json({ error: 'Subject and message are required' });
+    }
+    
+    if (trimmedSubject.length > 500) {
+      return res.status(400).json({ error: 'Subject too long (max 500 characters)' });
+    }
+    
+    if (trimmedMessage.length > 10000) {
+      return res.status(400).json({ error: 'Message too long (max 10000 characters)' });
+    }
+    
+    // Use single transaction for all operations
+    await client.query('BEGIN');
+    
+    // Set GUCs for the transaction
+    await client.query(`SELECT set_config('app.current_individual_id', $1, true)`, [individualId]);
+    await client.query(`SELECT set_config('app.current_tenant_id', $1, true)`, [tenantId || '']);
+    
+    // Create conversation
+    const convResult = await client.query(`
+      INSERT INTO cc_conversations (subject, status, created_at, updated_at)
+      VALUES ($1, 'active', now(), now())
+      RETURNING id
+    `, [trimmedSubject]);
+    
+    const conversationId = convResult.rows[0].id as string;
+    
+    // Add circle as participant
+    await client.query(`
+      INSERT INTO cc_conversation_participants (
+        conversation_id, participant_type, circle_id, is_active, joined_at
+      )
+      VALUES ($1, 'circle', $2, true, now())
+    `, [conversationId, circleId]);
+    
+    // Add the creating individual as a participant (for tracking the initiator)
+    await client.query(`
+      INSERT INTO cc_conversation_participants (
+        conversation_id, participant_type, individual_id, is_active, joined_at
+      )
+      VALUES ($1, 'individual', $2, true, now())
+    `, [conversationId, individualId]);
+    
+    // Create the initial message
+    const msgResult = await client.query(`
+      INSERT INTO cc_messages (
+        conversation_id, 
+        sender_individual_id, 
+        message_type, 
+        content, 
+        visibility,
+        created_at
+      )
+      VALUES ($1, $2, 'normal', $3, 'normal', now())
+      RETURNING id, created_at
+    `, [conversationId, individualId, trimmedMessage]);
+    
+    await client.query('COMMIT');
+    
+    // Fan out notification to circle members (best-effort, after commit)
+    try {
+      await fanOutMessageToRecipients(
+        conversationId,
+        msgResult.rows[0].id,
+        individualId
+      );
+    } catch (fanoutErr) {
+      console.error('[CircleConversation] Fan-out notification failed:', fanoutErr);
+      // Continue - message was saved, notification is best-effort
+    }
+    
+    res.status(201).json({
+      success: true,
+      conversation_id: conversationId,
+      message_id: msgResult.rows[0].id,
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Error creating circle conversation:', error);
+    res.status(500).json({ error: 'Failed to create circle conversation' });
+  } finally {
+    client.release();
+  }
+});
 
 router.post('/cc_conversations', async (req: Request, res: Response) => {
   try {
@@ -672,6 +799,148 @@ router.patch('/cc_conversations/:id/state', async (req: Request, res: Response) 
   } catch (error) {
     console.error('Error updating state:', error);
     res.status(500).json({ error: 'Failed to update state' });
+  }
+});
+
+/**
+ * GET /api/conversations
+ * 
+ * Unified conversations endpoint that includes:
+ * - Traditional party-based conversations (work requests)
+ * - Circle conversations when acting_as_circle=true
+ * 
+ * Uses RLS through tenant context GUCs for circle visibility.
+ */
+router.get('/conversations', async (req: Request, res: Response) => {
+  try {
+    const actor = await resolveActorParty(req, 'contractor');
+    const tenantReq = req as any;
+    const ctx = tenantReq.ctx || {};
+    const isActingAsCircle = ctx.acting_as_circle && ctx.circle_id;
+    
+    // Collect all conversations
+    const allConversations: any[] = [];
+    
+    // 1. Traditional party-based conversations
+    if (actor) {
+      const { state, limit = '50' } = req.query;
+      
+      let query = `
+        SELECT c.id, c.work_request_id as opportunity_id,
+               wr.title as opportunity_title,
+               wr.work_request_ref as opportunity_ref,
+               wr.work_category,
+               wr.intake_mode,
+               owner_p.trade_name as owner_name,
+               contractor_p.trade_name as contractor_name,
+               c.state,
+               c.contact_unlocked,
+               c.last_message_at,
+               c.unread_owner,
+               c.unread_contractor,
+               c.owner_party_id,
+               c.contractor_party_id,
+               (SELECT content FROM cc_messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_preview,
+               'party' as conversation_type
+        FROM cc_conversations c
+        JOIN cc_work_requests wr ON c.work_request_id = wr.id
+        LEFT JOIN cc_parties owner_p ON c.owner_party_id = owner_p.id
+        LEFT JOIN cc_parties contractor_p ON c.contractor_party_id = contractor_p.id
+        WHERE (c.owner_party_id = $1 OR c.contractor_party_id = $1)
+      `;
+      const params: any[] = [actor.actor_party_id];
+      
+      if (state && typeof state === 'string') {
+        params.push(state);
+        query += ` AND c.state = $${params.length}::conversation_state`;
+      }
+      
+      query += ` ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`;
+      params.push(parseInt(limit as string));
+      query += ` LIMIT $${params.length}`;
+      
+      const result = await pool.query(query, params);
+      
+      result.rows.forEach((c: any) => {
+        allConversations.push({
+          ...c,
+          my_role: c.owner_party_id === actor.actor_party_id ? 'owner' : 'contractor',
+          unread_count: c.owner_party_id === actor.actor_party_id ? c.unread_owner : c.unread_contractor,
+          is_circle_conversation: false,
+        });
+      });
+    }
+    
+    // 2. Circle conversations (when acting_as_circle)
+    if (isActingAsCircle) {
+      try {
+        // Query circle conversations using the circle participant type
+        const circleQuery = `
+          SELECT DISTINCT conv.id,
+                 conv.subject as opportunity_title,
+                 conv.status as state,
+                 conv.created_at,
+                 conv.updated_at as last_message_at,
+                 c.name as circle_name,
+                 'circle' as conversation_type
+          FROM cc_conversation_participants cp
+          JOIN cc_conversations conv ON conv.id = cp.conversation_id
+          LEFT JOIN cc_coordination_circles c ON c.id = cp.circle_id
+          WHERE cp.participant_type = 'circle'
+            AND cp.circle_id = $1
+            AND cp.is_active = true
+          ORDER BY conv.updated_at DESC
+          LIMIT 50
+        `;
+        
+        const circleResult = await pool.query(circleQuery, [ctx.circle_id]);
+        
+        circleResult.rows.forEach((c: any) => {
+          allConversations.push({
+            id: c.id,
+            opportunity_id: null,
+            opportunity_title: c.opportunity_title || `Circle: ${c.circle_name}`,
+            opportunity_ref: null,
+            owner_name: c.circle_name,
+            contractor_name: null,
+            state: c.state || 'active',
+            contact_unlocked: true,
+            last_message_at: c.last_message_at,
+            last_message_preview: null,
+            my_role: 'circle_member',
+            unread_count: 0,
+            is_circle_conversation: true,
+            circle_name: c.circle_name,
+          });
+        });
+      } catch (circleErr) {
+        // Circle tables may not exist in all environments
+        console.error('Error fetching circle conversations:', circleErr);
+      }
+    }
+    
+    // Sort by most recent activity
+    allConversations.sort((a, b) => {
+      const dateA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return dateB - dateA;
+    });
+    
+    res.json({
+      conversations: allConversations,
+      count: allConversations.length,
+      acting_as_circle: isActingAsCircle,
+      circle_id: isActingAsCircle ? ctx.circle_id : null,
+      actor: actor ? {
+        party_id: actor.actor_party_id,
+        individual_id: actor.individual_id,
+        display_name: actor.display_name,
+      } : null,
+    });
+    
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
   }
 });
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ConversationList } from '../components/conversations/ConversationList';
 import { ConversationView } from '../components/conversations/ConversationView';
+import { ContextIndicator } from '../components/conversations/ContextIndicator';
 import { PaymentPromise } from '../components/payments/PaymentPromise';
 import { TrustSignals } from '../components/trust/TrustSignals';
 import { FeedbackForm } from '../components/feedback/FeedbackForm';
