@@ -19,6 +19,7 @@ async function setSessionVars(client: PoolClient, ctx: TenantContext): Promise<v
   // This ensures the setting persists for the duration of the connection
   await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [ctx.tenant_id || '']);
   await client.query(`SELECT set_config('app.portal_id', $1, false)`, [ctx.portal_id || '']);
+  await client.query(`SELECT set_config('app.circle_id', $1, false)`, [ctx.circle_id || '']);
   await client.query(`SELECT set_config('app.individual_id', $1, false)`, [ctx.individual_id || '']);
   await client.query(`SELECT set_config('app.platform_staff_id', $1, false)`, ['']);
   await client.query(`SELECT set_config('app.impersonation_session_id', $1, false)`, ['']);
@@ -35,6 +36,7 @@ async function setActorSessionVars(client: PoolClient, actor: ActorContext): Pro
 async function clearSessionVars(client: PoolClient): Promise<void> {
   await client.query(`SELECT set_config('app.tenant_id', '', false)`);
   await client.query(`SELECT set_config('app.portal_id', '', false)`);
+  await client.query(`SELECT set_config('app.circle_id', '', false)`);
   await client.query(`SELECT set_config('app.individual_id', '', false)`);
   await client.query(`SELECT set_config('app.platform_staff_id', '', false)`);
   await client.query(`SELECT set_config('app.impersonation_session_id', '', false)`);
@@ -46,6 +48,7 @@ async function setServiceMode(client: PoolClient): Promise<void> {
   // Now set service mode sentinel with session-scope (false = session-level, not tx-local)
   await client.query(`SELECT set_config('app.tenant_id', $1, false)`, [SERVICE_MODE_SENTINEL]);
   await client.query(`SELECT set_config('app.portal_id', $1, false)`, [SERVICE_MODE_SENTINEL]);
+  await client.query(`SELECT set_config('app.circle_id', $1, false)`, [SERVICE_MODE_SENTINEL]);
   await client.query(`SELECT set_config('app.individual_id', $1, false)`, [SERVICE_MODE_SENTINEL]);
 }
 

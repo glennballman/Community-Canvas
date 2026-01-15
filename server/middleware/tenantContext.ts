@@ -23,6 +23,9 @@ export interface TenantContext {
   roles: string[];
   scopes: string[];
   is_impersonating: boolean;
+  circle_id: string | null;
+  acting_as_circle: boolean;
+  circle_role?: string | null;
 }
 
 export interface ImpersonationSession {
@@ -68,6 +71,9 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
     roles: [],
     scopes: [],
     is_impersonating: false,
+    circle_id: null,
+    acting_as_circle: false,
+    circle_role: null,
   };
 
   try {
@@ -264,6 +270,13 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
       if (sessionTenantId) {
         req.ctx.tenant_id = sessionTenantId;
       }
+      
+      // Circle context from session (set by switch-circle endpoint)
+      const sessionCircleId = (session as any).current_circle_id || (session as any).circle_id;
+      if (sessionCircleId && typeof sessionCircleId === 'string' && sessionCircleId.match(/^[0-9a-f-]{36}$/i)) {
+        req.ctx.circle_id = sessionCircleId;
+        req.ctx.acting_as_circle = true;
+      }
     }
     
     // Also check for current_tenant_id even if userId not in session (JWT auth case)
@@ -296,5 +309,8 @@ export function getTenantContext(req: Request): TenantContext {
     roles: [],
     scopes: [],
     is_impersonating: false,
+    circle_id: null,
+    acting_as_circle: false,
+    circle_role: null,
   };
 }

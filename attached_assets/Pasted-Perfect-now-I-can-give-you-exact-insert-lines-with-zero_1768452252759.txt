@@ -1,0 +1,145 @@
+Perfect — now I can give you exact insert lines with zero ambiguity.
+
+1) server/db/withRequestContext.ts
+✅ Update setSessionContext() (lines 32–37)
+
+Add app.circle_id between portal and individual (or after portal; either is fine). Do this:
+
+export async function setSessionContext(client: PoolClient, ctx: TenantContext): Promise<void> {
+  // Set session variables - empty string means regular user without that context
+  await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [ctx.tenant_id || '']);
+  await client.query(`SELECT set_config('app.portal_id', $1, true)`, [ctx.portal_id || '']);
+  await client.query(`SELECT set_config('app.circle_id', $1, true)`, [ctx.circle_id || '']);  // ✅ ADD
+  await client.query(`SELECT set_config('app.individual_id', $1, true)`, [ctx.individual_id || '']);
+}
+
+✅ Update withServiceContext() (lines 71–74)
+
+Set app.circle_id to the service sentinel too (keeps your invariants consistent):
+
+await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [SERVICE_MODE_SENTINEL]);
+await client.query(`SELECT set_config('app.portal_id', $1, true)`, [SERVICE_MODE_SENTINEL]);
+await client.query(`SELECT set_config('app.circle_id', $1, true)`, [SERVICE_MODE_SENTINEL]);    // ✅ ADD
+await client.query(`SELECT set_config('app.individual_id', $1, true)`, [SERVICE_MODE_SENTINEL]);
+
+
+(If you also have withServiceContextRead() / other service variants, apply the same line.)
+
+2) server/middleware/tenantContext.ts
+✅ Add the new fields to TenantContext interface
+
+Add:
+
+circle_id: string | null;
+acting_as_circle: boolean;
+circle_role?: string | null;
+
+✅ Add defaults in the initial req.ctx = { ... }
+
+Add:
+
+circle_id: null,
+acting_as_circle: false,
+circle_role: null,
+
+✅ Session user area: insert circle extraction after tenant extraction
+
+In your snippet, the correct place is inside:
+
+if (session?.userId) {
+  ...
+  const sessionTenantId = session.current_tenant_id || session.tenant_id;
+  if (sessionTenantId) {
+    req.ctx.tenant_id = sessionTenantId;
+  }
+
+  // ✅ INSERT HERE
+}
+
+
+Add this block:
+
+const sessionCircleId = (session as any).current_circle_id || (session as any).circle_id;
+if (sessionCircleId && typeof sessionCircleId === 'string' && sessionCircleId.match(/^[0-9a-f-]{36}$/i)) {
+  req.ctx.circle_id = sessionCircleId;
+  req.ctx.acting_as_circle = true;
+}
+
+
+Why here?
+
+It’s after session is loaded
+
+It’s in the same precedence bucket as current tenant selection
+
+It will never override impersonation (since your whole block is gated by !req.impersonation)
+
+❌ Don’t add an X-Circle-Id dev header
+
+Keep it out. Circle spoofing is worse than tenant spoofing.
+
+3) server/db/tenantDb.ts (mechanical)
+
+Add exactly:
+
+✅ setSessionVars()
+await client.query(`SELECT set_config('app.circle_id', $1, false)`, [ctx.circle_id || '']);
+
+✅ clearSessionVars()
+await client.query(`SELECT set_config('app.circle_id', '', false)`);
+
+4) server/routes/user-context.ts — add circle switch routes now
+
+Since tables exist, no try/catch needed.
+
+Add:
+
+helper canActAsCircle()
+
+POST /api/me/switch-circle
+
+POST /api/me/clear-circle
+
+extend GET /api/me/context response with current_circle_id + acting_as_circle
+
+(Use the exact code I gave last message; it fits your patterns.)
+
+5) 3 proof queries / checks (fast)
+
+After implementing:
+
+A) Confirm middleware is populating ctx (via /api/me/context)
+
+GET /api/me/context should include:
+
+current_circle_id
+
+acting_as_circle
+
+B) Confirm GUC is set inside DB calls
+
+Temporarily add a debug endpoint (serviceQuery) that returns:
+
+SELECT
+  current_setting('app.tenant_id', true) AS tenant_id,
+  current_setting('app.portal_id', true) AS portal_id,
+  current_setting('app.circle_id', true) AS circle_id,
+  current_setting('app.individual_id', true) AS individual_id;
+
+C) Confirm RLS visibility
+
+Once circle_id is set, a user who is a member should be able to SELECT from:
+
+cc_coordination_circles
+
+cc_circle_members
+
+One tiny TypeScript note
+
+Your session typing probably doesn’t include current_circle_id. To avoid TS friction:
+
+use (session as any).current_circle_id (as shown)
+
+or extend SessionData type later
+
+If you want the cleanest next step: tell Replit to implement exactly the code inserts above + add the two routes.

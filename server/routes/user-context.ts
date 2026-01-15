@@ -83,6 +83,22 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
       }
     }
     
+    // Get current circle from session
+    const currentCircleId = (session as any)?.current_circle_id || null;
+    let currentCircle = null;
+    
+    if (currentCircleId) {
+      const circleResult = await serviceQuery(`
+        SELECT id, name, slug, status
+        FROM cc_coordination_circles
+        WHERE id = $1 AND status = 'active'
+      `, [currentCircleId]);
+      
+      if (circleResult.rows.length > 0) {
+        currentCircle = circleResult.rows[0];
+      }
+    }
+    
     res.json({
       user: {
         id: user.id,
@@ -99,6 +115,13 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         is_primary: false,
       })),
       current_tenant_id: currentTenantId,
+      current_circle_id: currentCircleId,
+      acting_as_circle: !!currentCircle,
+      current_circle: currentCircle ? {
+        id: currentCircle.id,
+        name: currentCircle.name,
+        slug: currentCircle.slug,
+      } : null,
       is_impersonating: !!impersonatedTenant,
       impersonated_tenant: impersonatedTenant ? {
         id: impersonatedTenant.id,
@@ -156,6 +179,143 @@ router.post('/me/switch-tenant', authenticateToken, async (req: AuthRequest, res
   } catch (error) {
     console.error('Error switching tenant:', error);
     res.status(500).json({ error: 'Failed to switch tenant' });
+  }
+});
+
+/**
+ * Helper: Check if user can act as a specific circle
+ * Returns the membership row if valid, null otherwise
+ */
+async function canActAsCircle(userId: string, circleId: string): Promise<any | null> {
+  const result = await serviceQuery(`
+    SELECT 
+      cm.id,
+      cm.circle_id,
+      cm.role_id,
+      cr.level as role_level,
+      cr.name as role_name,
+      c.status as circle_status
+    FROM cc_circle_members cm
+    JOIN cc_coordination_circles c ON c.id = cm.circle_id
+    LEFT JOIN cc_circle_roles cr ON cr.id = cm.role_id
+    WHERE cm.circle_id = $1
+      AND cm.individual_id = $2
+      AND cm.is_active = true
+      AND c.status = 'active'
+    LIMIT 1
+  `, [circleId, userId]);
+  
+  return result.rows.length > 0 ? result.rows[0] : null;
+}
+
+/**
+ * GET /api/me/circles
+ * 
+ * Returns circles the user is a member of
+ */
+router.get('/me/circles', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    
+    const result = await serviceQuery(`
+      SELECT 
+        c.id,
+        c.name,
+        c.slug,
+        c.description,
+        c.status,
+        cm.is_active,
+        cr.name as role_name,
+        cr.level as role_level
+      FROM cc_circle_members cm
+      JOIN cc_coordination_circles c ON c.id = cm.circle_id
+      LEFT JOIN cc_circle_roles cr ON cr.id = cm.role_id
+      WHERE cm.individual_id = $1
+        AND cm.is_active = true
+        AND c.status = 'active'
+      ORDER BY c.name ASC
+    `, [userId]);
+    
+    res.json({ 
+      circles: result.rows.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        slug: r.slug,
+        description: r.description,
+        role_name: r.role_name,
+        role_level: r.role_level,
+      }))
+    });
+    
+  } catch (error) {
+    console.error('Error fetching circles:', error);
+    res.status(500).json({ error: 'Failed to fetch circles' });
+  }
+});
+
+/**
+ * POST /api/me/switch-circle
+ * 
+ * Switches the current circle for the session.
+ * User must be an active member of the target circle.
+ */
+router.post('/me/switch-circle', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const { circle_id } = req.body;
+    
+    if (!circle_id) {
+      return res.status(400).json({ error: 'circle_id is required' });
+    }
+    
+    // Validate UUID format
+    if (typeof circle_id !== 'string' || !circle_id.match(/^[0-9a-f-]{36}$/i)) {
+      return res.status(400).json({ error: 'Invalid circle_id format' });
+    }
+    
+    // Verify user can act as this circle
+    const membership = await canActAsCircle(userId!, circle_id);
+    
+    if (!membership) {
+      return res.status(403).json({ error: 'Not an active member of this circle' });
+    }
+    
+    // Store in session
+    const session = (req as any).session;
+    if (session) {
+      session.current_circle_id = circle_id;
+    }
+    
+    res.json({ 
+      success: true, 
+      circle_id,
+      role_name: membership.role_name,
+      role_level: membership.role_level,
+    });
+    
+  } catch (error) {
+    console.error('Error switching circle:', error);
+    res.status(500).json({ error: 'Failed to switch circle' });
+  }
+});
+
+/**
+ * POST /api/me/clear-circle
+ * 
+ * Clears the current circle from the session.
+ */
+router.post('/me/clear-circle', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const session = (req as any).session;
+    if (session) {
+      delete session.current_circle_id;
+    }
+    
+    res.json({ success: true, circle_id: null });
+    
+  } catch (error) {
+    console.error('Error clearing circle:', error);
+    res.status(500).json({ error: 'Failed to clear circle' });
   }
 });
 
