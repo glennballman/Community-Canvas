@@ -3,7 +3,7 @@ import { BarChart3, Calendar, DollarSign, Users } from 'lucide-react';
 
 export default function TenantDashboard() {
   const stats = [
-    { label: 'Total Bookings', value: '87', icon: BarChart3, change: '+12%' },
+    { label: 'Total Revenue', value: '$12,450', icon: DollarSign, change: '+12%' },
     { label: 'Active Reservations', value: '24', icon: Calendar, change: '+3' },
     { label: 'Customers', value: '156', icon: Users, change: '+8' },
     { label: 'Conversion Rate', value: '3.2%', icon: BarChart3, change: '+0.4%' },

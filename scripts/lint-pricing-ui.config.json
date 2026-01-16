@@ -66,23 +66,23 @@
   ],
   "routeContextRules": [
     {
-      "name": "No currency in /app/**",
-      "matchPathRegex": "^client/src/(pages|routes)/app/",
-      "forbidRegexSet": "currency"
-    },
-    {
       "name": "No forbidden pricing copy in /app/**",
       "matchPathRegex": "^client/src/(pages|routes)/app/",
       "forbidRegexSet": "forbiddenCopy"
     },
     {
-      "name": "No pricing language in operator pages",
+      "name": "No currency in operator pages (/app/operator/**)",
       "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
-      "forbidRegexSet": "forbiddenCopy"
+      "forbidRegexSet": "currency"
     },
     {
-      "name": "No currency in operator pages",
-      "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
+      "name": "No currency in emergency/incident pages (/app/emergency/** or /app/incidents/**)",
+      "matchPathRegex": "^client/src/(pages|routes)/app/(emergency|incidents)/",
+      "forbidRegexSet": "currency"
+    },
+    {
+      "name": "No currency in usage summary page (/app/admin/usage)",
+      "matchPathRegex": "^client/src/(pages|routes)/app/admin/UsageSummaryPage\\.(ts|tsx)$",
       "forbidRegexSet": "currency"
     }
   ]

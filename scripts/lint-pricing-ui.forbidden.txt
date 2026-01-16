@@ -1,6 +1,14 @@
 # Pricing UI Lint - Forbidden Terms Reference
 # This file is for human reviewers. The linter uses config.json.
 
+## Policy Summary
+We are NOT anti-money UI. We ARE anti-upsell/checkout psychology and
+anti-pricing in crisis/safety/operator workflows.
+
+Currency is ALLOWED where users do accounting work (invoices, folios, quotes).
+Currency is BLOCKED where it would pressure or derail safety, legal defensibility,
+or authority trust.
+
 ## Forbidden Components (banned in /app/** routes)
 - PricingModal
 - UpgradeBanner
@@ -10,7 +18,7 @@
 - CountdownTimer
 - Paywall
 
-## Forbidden Pricing Copy (banned in /app/** routes)
+## Forbidden Pricing Copy (banned everywhere in /app/**)
 - upgrade
 - unlock
 - buy now
@@ -35,11 +43,24 @@
 - available on pro/premium
 - not available on your plan
 
-## Currency Symbols/Codes (banned in /app/** routes)
-- $ € £ followed by digits
-- USD, CAD, EUR, GBP
+## Currency Symbols/Codes - CONTEXT-SPECIFIC RULES
 
-## Allowed Areas (exempt from copy/currency rules)
+### Currency FORBIDDEN in:
+- /app/operator/** (operator console)
+- /app/emergency/** or /app/incidents/** (safety workflows)
+- /app/admin/UsageSummaryPage (usage tracking)
+
+### Currency ALLOWED in:
+- /app/folios/** (accounting)
+- /app/invoices/** (billing)
+- /app/payments/** (transactions)
+- /app/quotes/** (estimates)
+- /app/jobs/** (job pricing)
+- /app/reservations/** (rates)
+- /app/dashboard (tenant revenue KPIs)
+- Any other financial module
+
+## Allowed Areas (exempt from forbidden copy rules)
 - client/src/pages/public/**
 - client/src/pages/marketing/**
 - client/src/marketing/**

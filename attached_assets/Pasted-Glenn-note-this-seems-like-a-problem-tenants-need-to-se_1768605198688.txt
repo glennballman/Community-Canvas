@@ -1,0 +1,216 @@
+Glenn note: this seems like a problem - tenants need to see $ signs
+
+You’re right to flag it — as written, the guardrail “no $ in /app/” is too blunt** if tenants need legitimate money UI (folios, invoices, quotes, payments).
+
+The fix is to make the rule precise: we don’t ban currency everywhere, we ban it in crisis/safety flows and operator flows, and we ban salesy pricing language everywhere in the app. Tenants can absolutely see amounts where money is the object (invoices, folios, quotes), just not as upsell bait or in emergency UX.
+
+The policy adjustment I recommend (clean + enforceable)
+1) Keep these bans everywhere under /app/** (no change)
+
+Forbidden copy patterns: upgrade/unlock/buy now/subscribe/limited time/etc.
+
+Forbidden paywall components: PricingModal/UpgradeBanner/PlanGrid/etc.
+
+This preserves Ramanujam compliance.
+
+2) Narrow the currency ban to the places it matters
+
+Currency should be allowed in normal financial modules and blocked in safety/authority/operator contexts.
+
+Currency allowed (examples)
+
+/app/folios/**
+
+/app/invoices/**
+
+/app/payments/**
+
+/app/quotes/**
+
+/app/jobs/** (if you show pricing in job estimates)
+
+/app/admin/usage (still no dollars there by design)
+
+/app/reservations/** (if nightly rates exist)
+
+Currency forbidden (keep hard ban)
+
+/app/operator/** (operator console)
+
+/app/emergency/** (if any)
+
+/app/enforcement/** (fines can be tricky; ok to allow if it’s actual fines, but never upsell)
+
+/c/:slug/** public emergency surfaces (if any)
+
+Any “usage” or “compliance” dashboards that drift into revenue bragging
+
+Concrete change to your CI config (what to do)
+
+Update scripts/lint-pricing-ui.config.json routeContextRules from:
+
+“No currency in /app/**” ✅ currently too broad
+
+to:
+
+“No currency in operator pages”
+
+“No currency in emergency pages”
+
+“No currency in usage pages”
+
+(Optional) “Currency allowed only in financial modules, otherwise warn”
+
+Minimal safe edit (recommended)
+
+Replace the existing rule:
+
+{
+  "name": "No currency in /app/**",
+  "matchPathRegex": "^client/src/(pages|routes)/app/",
+  "forbidRegexSet": "currency"
+}
+
+
+With these narrower rules:
+
+{
+  "name": "No currency in operator pages",
+  "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
+  "forbidRegexSet": "currency"
+},
+{
+  "name": "No currency in emergency pages",
+  "matchPathRegex": "^client/src/(pages|routes)/app/(emergency|incidents)/",
+  "forbidRegexSet": "currency"
+},
+{
+  "name": "No currency in usage summary",
+  "matchPathRegex": "^client/src/(pages|routes)/app/admin/UsageSummaryPage\\.(ts|tsx)$",
+  "forbidRegexSet": "currency"
+}
+
+
+Then explicitly allow money modules by simply not banning them.
+
+What about dashboards showing revenue?
+
+This is where your instinct is right: tenants may want revenue KPIs, but we should treat it carefully:
+
+It’s fine for tenants to see revenue on a Finance dashboard or Folio/Invoice reporting
+
+It should not show up as “Total Revenue $X” on a generic “Operations dashboard” if that encourages wallet-first thinking or becomes a conversion surface
+
+So:
+
+Create (later) a /app/finance dashboard where $ is normal
+
+Keep /app (general dashboard) to operational counts (bookings, jobs, incidents, etc.) unless you explicitly declare it a finance screen
+
+Updated “Pricing Law” interpretation (so nobody gets confused)
+
+We are not anti-money UI
+
+We are anti upsell/checkout psychology and anti pricing in crisis workflows
+
+Currency is allowed where the user is already doing accounting work
+
+Currency is blocked where it would pressure/derail safety, legal defensibility, or authority trust
+
+If you want, I’ll draft the exact updated config file block (full JSON) matching your current structure (including allowGlobs, ignores, etc.) so you can paste it in without thinking.
+
+draft the exact updated config file block (full JSON)
+{
+  "rootDir": ".",
+  "scanGlobs": [
+    "client/src/**/*.ts",
+    "client/src/**/*.tsx",
+    "client/src/**/*.js",
+    "client/src/**/*.jsx",
+    "client/src/**/*.mdx"
+  ],
+  "ignoreGlobs": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.vite/**",
+    "**/.cache/**",
+    "**/.turbo/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ],
+  "allowGlobs": [
+    "client/src/pages/public/**",
+    "client/src/pages/marketing/**",
+    "client/src/marketing/**",
+    "client/src/content/**"
+  ],
+  "forbiddenComponents": [
+    "PricingModal",
+    "UpgradeBanner",
+    "PlanGrid",
+    "PlanComparison",
+    "StickyCTA",
+    "CountdownTimer",
+    "Paywall"
+  ],
+  "forbiddenCopyRegex": [
+    "(?i)\\bupgrade\\b",
+    "(?i)\\bunlock\\b",
+    "(?i)\\bbuy\\s*now\\b",
+    "(?i)\\bsubscribe\\b",
+    "(?i)\\bgo\\s*pro\\b",
+    "(?i)\\bpro\\s*only\\b",
+    "(?i)\\bpremium\\s*only\\b",
+    "(?i)\\bpaid\\s*plan\\b",
+    "(?i)\\bcheckout\\b",
+    "(?i)\\badd\\s*payment\\b",
+    "(?i)\\benter\\s*card\\b",
+    "(?i)\\bcard\\s*details\\b",
+    "(?i)\\blimited\\s*time\\b",
+    "(?i)\\bact\\s*now\\b",
+    "(?i)\\bdon['’]t\\s*miss\\s*out\\b",
+    "(?i)\\bhurry\\b",
+    "(?i)\\bsale\\b",
+    "(?i)\\bdiscount\\b",
+    "(?i)\\bdeal\\b",
+    "(?i)\\bexclusive\\b",
+    "(?i)\\bthis\\s+feature\\s+requires\\b",
+    "(?i)\\bavailable\\s+on\\s+(pro|premium)\\b",
+    "(?i)\\bnot\\s+available\\s+on\\s+your\\s+plan\\b"
+  ],
+  "currencyRegex": [
+    "[$€£]\\s?\\d",
+    "(?i)\\bUSD\\b",
+    "(?i)\\bCAD\\b",
+    "(?i)\\bEUR\\b",
+    "(?i)\\bGBP\\b"
+  ],
+  "routeContextRules": [
+    {
+      "name": "No forbidden pricing copy in /app/**",
+      "matchPathRegex": "^client/src/(pages|routes)/app/",
+      "forbidRegexSet": "forbiddenCopy"
+    },
+    {
+      "name": "No currency in operator pages (/app/operator/**)",
+      "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
+      "forbidRegexSet": "currency"
+    },
+    {
+      "name": "No currency in emergency/incident pages (/app/emergency/** or /app/incidents/**)",
+      "matchPathRegex": "^client/src/(pages|routes)/app/(emergency|incidents)/",
+      "forbidRegexSet": "currency"
+    },
+    {
+      "name": "No currency in usage summary page (/app/admin/usage)",
+      "matchPathRegex": "^client/src/(pages|routes)/app/admin/UsageSummaryPage\\.(ts|tsx)$",
+      "forbidRegexSet": "currency"
+    },
+    {
+      "name": "Ban forbidden paywall components in /app/**",
+      "matchPathRegex": "^client/src/(pages|routes)/app/",
+      "forbidRegexSet": "forbiddenCopy"
+    }
+  ]
+}

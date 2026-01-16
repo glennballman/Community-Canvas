@@ -239,9 +239,9 @@ function BusinessDashboard({ tenant }: DashboardProps): React.ReactElement {
           marginBottom: '32px',
         }}>
           <StatCard
-            icon="📊"
-            label="Total Bookings"
-            value="87"
+            icon="💰"
+            label="Total Revenue"
+            value="$12,450"
             sublabel="+12% from last month"
             color="#10b981"
           />
