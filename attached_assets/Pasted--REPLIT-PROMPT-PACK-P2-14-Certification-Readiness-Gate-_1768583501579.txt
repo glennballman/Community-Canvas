@@ -1,0 +1,358 @@
+✅ REPLIT PROMPT PACK — P2.14 Certification Readiness Gate + QA (Authoritative)
+P2.14.0 — Non-Negotiables
+
+Deliver a certifiability framework for the Emergency / Legal / Insurance subsystems that:
+
+Produces hard proofs, not summaries
+
+Validates invariants for:
+
+P2.5 chain-of-custody
+
+P2.6 claim dossiers
+
+P2.7 legal holds
+
+P2.8 offline ingest idempotency
+
+P2.9 authority access security
+
+P2.10 defense packs
+
+P2.11 anonymous interest groups
+
+P2.12 emergency runs + scope grants
+
+P2.13 preserve-record automation
+
+Adds:
+
+a Certification Gate Checklist doc
+
+a QA smoke test script that runs end-to-end
+
+a small set of SQL verification queries
+
+a minimal /api/qa/status endpoint returning pass/fail for runtime checks
+
+No UI redesign.
+
+P2.14.1 — Documentation Artifacts (Must Create)
+A) docs/P2_14_CERT_READINESS_GATE.md
+
+Include:
+
+Module Inventory + Status
+
+P2.5–P2.13 each has: tables, endpoints, RLS, tests, docs = ✅/⚠️/❌
+
+Non-Negotiable Invariants
+
+Chain-of-custody recomputation must match stored hashes
+
+Sealed evidence/bundles immutable
+
+Legal hold blocks destructive changes
+
+Dossier/Defense pack hashes deterministic
+
+Authority tokens hashed-only + expiry enforced
+
+Anonymous groups: no signal enumeration, k-anonymity
+
+Offline ingest: idempotent batch + item keys
+
+Emergency scope grants TTL enforced
+
+Preserve-record: raw bytes stored + sha256 computed + evidence created
+
+Proof Requirements
+
+For each invariant, list:
+
+SQL query / endpoint
+
+expected output
+
+screenshot/log evidence requirement
+
+Failure Playbook
+
+What to do if each invariant fails (where to look)
+
+B) docs/P2_14_SQL_VERIFICATION_QUERIES.md
+
+Provide copy-paste SQL blocks for:
+
+RLS enabled and forced
+
+Triggers exist for legal holds
+
+Unique constraints on client_request_id for idempotency
+
+Evidence tables row counts for test runs
+
+Spot-check hashes
+
+P2.14.2 — Runtime QA Endpoint (Minimal)
+
+Add: GET /api/qa/status
+
+Returns JSON like:
+
+{
+  "ok": true,
+  "checks": [
+    { "name": "rls_enabled_evidence", "ok": true, "details": {} },
+    { "name": "legal_hold_triggers_present", "ok": true },
+    { "name": "authority_token_hash_only", "ok": true },
+    { "name": "offline_idempotency_constraints", "ok": true }
+  ],
+  "timestamp": "..."
+}
+
+
+Implementation notes:
+
+This endpoint must be admin-only (use existing auth role checks)
+
+It must run lightweight checks only (no heavy scans)
+
+Where possible, use information_schema / pg_catalog queries
+
+Create module:
+
+src/lib/qa/runtimeChecks.ts
+
+Checks to include (minimum):
+
+RLS enabled on critical tables:
+
+cc_evidence_objects, cc_evidence_events, cc_evidence_bundles, cc_evidence_bundle_items
+
+cc_claim_dossiers
+
+cc_legal_holds + targets + events
+
+cc_authority_access_* tables
+
+“Forced RLS” present where required (if you enforce FORCE RLS policy)
+
+Legal hold trigger functions exist on protected tables
+
+Unique constraints exist for idempotency keys:
+
+evidence_objects tenant+client_request_id
+
+evidence_events tenant+client_request_id
+
+offline queue tenant+device+batch_client_request_id
+
+interest group signals tenant+group+client_request_id
+
+Authority tokens store only hashes:
+
+verify no column named token and token_hash is populated
+
+Emergency scope grants TTL fields exist and status enum includes expired
+
+P2.14.3 — Automated Smoke Test Script (End-to-End)
+
+Create script:
+
+scripts/qa-emergency-legal-insurance-smoke.ts
+
+It must:
+
+Run against dev database using server API calls (preferred) or direct DB where needed
+
+Print PASS/FAIL per step
+
+Exit non-zero on failure
+
+Smoke test flow (minimum)
+Setup
+
+Create a test tenant context or use existing QA tenant (follow your project conventions)
+
+Ensure GUC context is set for tenant/circle where required
+
+Step 1 — P2.5 Evidence
+
+Create evidence object with client_request_id
+
+Upload (or json_snapshot) and compute sha
+
+Append event chain
+
+Seal evidence
+
+Verify endpoint returns valid=true
+
+Step 2 — P2.5 Bundle
+
+Create bundle
+
+Add evidence item
+
+Seal bundle
+
+Confirm manifest_sha256 exists and stable
+
+Step 3 — P2.6 Claim
+
+Create claim
+
+Attach sealed bundle
+
+Assemble dossier v1
+
+Export zip_json
+
+Confirm export artifact stored
+
+Step 4 — P2.7 Legal Hold
+
+Create legal hold
+
+Target the evidence object
+
+Attempt to mutate/delete evidence → must FAIL with LEGAL_HOLD_ACTIVE
+
+Release hold → mutation allowed (or at least no longer blocked)
+
+Step 5 — P2.9 Authority Access
+
+Create grant scoped to the dossier + bundle
+
+Issue token
+
+Validate session endpoint works
+
+Fetch index + dossier
+
+Attempt access to unscoped item → denied
+
+Revoke token → access denied
+
+Step 6 — P2.10 Defense Pack
+
+Create dispute
+
+Attach sealed inputs
+
+Assemble defense pack
+
+Export zip_json
+
+Create authority share from defense pack and confirm token issuance
+
+Step 7 — P2.11 Anonymous Interest Group
+
+Create interest group with headcount trigger (e.g., 2)
+
+Submit signal twice (public endpoint) with idempotency keys
+
+Confirm aggregate count increments appropriately
+
+Ensure no endpoint can list individual signals while open
+
+Trigger fires at threshold:
+
+group status triggered
+
+sealed coordination bundle created
+
+legal hold created
+
+Step 8 — P2.12 Emergency Run
+
+Create emergency template + activate
+
+Create property profile
+
+Start run
+
+Create emergency scope grant with short TTL
+
+Force expiry sweeper and confirm grant status expired
+
+Export playbook zip_json
+
+Step 9 — P2.13 Preserve Record
+
+Create record source (url)
+
+Capture URL (use a stable example URL from config; if no outbound net allowed in env, stub with internal endpoint)
+
+Confirm capture row + evidence created + sealed (if configured)
+
+Generate record pack for run and confirm sealed bundle manifest
+
+Step 10 — /api/qa/status
+
+Call and assert ok=true for all checks
+
+P2.14.4 — SQL Verification Queries (Copy/Paste)
+
+In docs/P2_14_SQL_VERIFICATION_QUERIES.md include queries like:
+
+RLS enabled
+select schemaname, tablename, rowsecurity, forcrowsecurity
+from pg_tables
+join pg_class c on c.relname = tablename
+where tablename in (
+  'cc_evidence_objects','cc_evidence_events','cc_evidence_bundles','cc_evidence_bundle_items',
+  'cc_claim_dossiers','cc_legal_holds','cc_legal_hold_targets','cc_authority_access_grants',
+  'cc_interest_group_signals','cc_emergency_runs','cc_record_captures'
+);
+
+Trigger presence (legal hold)
+select event_object_table, trigger_name
+from information_schema.triggers
+where trigger_name ilike '%legal_hold%'
+order by event_object_table, trigger_name;
+
+Idempotency constraints
+select tc.table_name, tc.constraint_name
+from information_schema.table_constraints tc
+join information_schema.constraint_column_usage ccu
+  on tc.constraint_name = ccu.constraint_name
+where tc.constraint_type = 'UNIQUE'
+  and ccu.column_name = 'client_request_id'
+order by tc.table_name;
+
+Evidence hash spot-check
+select id, source_type, content_sha256, chain_status, sealed_at
+from cc_evidence_objects
+order by created_at desc
+limit 20;
+
+
+(Include 10–15 such queries covering the subsystems.)
+
+P2.14.5 — Output Artifacts
+
+Ensure the following files exist after implementation:
+
+docs/P2_14_CERT_READINESS_GATE.md
+
+docs/P2_14_SQL_VERIFICATION_QUERIES.md
+
+scripts/qa-emergency-legal-insurance-smoke.ts
+
+src/lib/qa/runtimeChecks.ts
+
+src/pages/api/qa/status.ts (or equivalent routing location)
+
+✅ Definition of Done
+
+P2.14 is done only when:
+
+QA status endpoint returns structured results and is admin-protected
+
+Smoke test script runs end-to-end and fails fast on invariant break
+
+Certification readiness doc enumerates all invariants and proof steps
+
+SQL verification doc exists with copy/paste queries

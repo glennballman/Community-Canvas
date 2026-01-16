@@ -88,6 +88,7 @@ import emergencyRouter from "./routes/emergency";
 import recordsRouter from "./routes/records";
 import interestGroupsRouter, { publicRouter as publicInterestGroupsRouter } from "./routes/interestGroups";
 import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
+import qaRouter from "./routes/qa";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -338,6 +339,9 @@ export async function registerRoutes(
   
   // Register system explorer routes (debug/discovery surface)
   app.use('/api/admin/system-explorer', systemExplorerRouter);
+
+  // Register QA runtime checks endpoint (admin only)
+  app.use('/api/qa', qaRouter);
 
   // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
   app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/cc_articles'));
