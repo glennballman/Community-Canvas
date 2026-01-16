@@ -1,0 +1,188 @@
+# U2 — Portal & Onboarding Surfaces (Public → App)
+
+You are implementing V3 UI delivery. Do NOT design new subsystems. Do NOT touch backend schema. Only UI wiring.
+
+## HARD CONSTRAINTS (NON-NEGOTIABLE)
+
+- NO new database tables
+- NO new API endpoints
+- NO invented schemas or payload shapes
+- NO routes outside U2 scope
+- Use "reservation" never "booking"
+- Reuse existing components before creating new ones
+
+## U2 SCOPE (ONLY THESE ROUTES)
+
+| Route | Purpose |
+|-------|---------|
+| `/p/:portalSlug` | Public portal landing |
+| `/p/:portalSlug/onboarding` | Public onboarding (if missing) |
+| `/p/:portalSlug/reserve` | Reserve bridge |
+| `/c/:slug/*` | Community portal shell |
+
+**DO NOT add:** /checkout, /confirmation, /app/reservations, or any other routes.
+
+## ROUTE AUTHORITY RULES
+
+- **Authoritative routes** are ONLY those in the locked route map: `/p/*`, `/c/*`, `/trip/*`
+- If `/b/:slug/*` exists in code as a dev fallback, leave it untouched; do not add or redesign it
+- Do not declare any route "authoritative" unless it's in the locked V3_ROUTE_MAP
+
+------------------------------------------------------------
+## 0) EXTRACTION PHASE (REQUIRED FIRST - STOP IF FAILS)
+
+Before writing ANY code, extract what already exists:
+
+A) Find existing portal layouts and components:
+```
+rg "PublicPortalLayout|PortalLayout|PortalHomePage|PortalContext" -l client/src
+```
+Print the file paths found.
+
+B) Find existing portal routes in router config:
+```
+rg "/p/|/c/|portalSlug|:slug" client/src/App.tsx client/src/router
+```
+Print exact route definitions.
+
+C) Find portal public API endpoints used today:
+```
+rg "/api/public|api/public|cc_portals|portalSlug" -l server
+```
+Print the exact endpoints and payload shapes (types/interfaces) for:
+- portal detail by slug
+- portal theme/settings/copy
+- reserve flow entry (if any)
+
+D) Find onboarding flows UI:
+```
+rg "onboarding|Onboarding|OnboardingWizard|cc_onboarding" -l client/src
+```
+Print the files and routes where onboarding appears.
+
+**STOP if you cannot find PublicPortalLayout or PortalHomePage. Output what you searched and the closest matches.**
+
+------------------------------------------------------------
+## 1) Fix/Finalize Public Portal Entry Surfaces (NO redesign, just wiring + completeness)
+
+### Goal:
+Ensure each portal route loads:
+- portal theme
+- portal copy
+- feature flags (if they exist)
+- a "Start" CTA that leads to the correct next step
+
+### Implementation:
+
+A) `PublicPortalLayout` must:
+- On route load, resolve portal by:
+  - domain host header (prod)
+  - or slug param (path-based)
+- Provide portal context to children via existing `PortalContext`
+
+**If PublicPortalLayout already does this, do not refactor; just ensure pages consume it.**
+
+B) `PortalHomePage` must show:
+- Portal name + hero content (from portal copy/settings)
+- CTA buttons with this logic:
+
+**CTA Rules (Fallback-Safe):**
+| CTA | Show If | Links To |
+|-----|---------|----------|
+| "Reserve" | `/p/:portalSlug/reserve` route exists | `/p/:portalSlug/reserve` |
+| "Enter App" | Always | `/app` (NO query params) |
+| "Get Started" | Step 0D found onboarding component/endpoint | `/p/:portalSlug/onboarding` |
+
+**If feature flags exist in portal settings, respect them. If not, use the fallback rules above.**
+
+C) For community portals (`/c/:slug/*`):
+- Show community shell home
+- Include "Switch to App" / "Sign in" CTA → `/app`
+
+**Important: Do not build new design. If copy/theme tokens exist, just render them.**
+
+------------------------------------------------------------
+## 2) Portal Onboarding Route (public, portal-scoped)
+
+### Create/ensure route: `/p/:portalSlug/onboarding`
+
+**FIRST PREFERENCE:** Reuse existing `OnboardingWizardPage` (from route map `/onboarding`) by:
+- Rendering it within `PublicPortalLayout`, OR
+- Redirecting into it while preserving portal context
+
+**SECOND PREFERENCE (only if Step 0D confirms existing flow-definition payload type):**
+- Render a schema-driven form using the existing flow definition
+- title, description, fields (from flow definition endpoint)
+
+**DO NOT invent a flow schema. Use whatever the backend already returns, or reuse the existing wizard.**
+
+### On submit:
+- Call the existing submit endpoint (from extraction)
+- Show success screen with next actions:
+  - "Enter App" → `/app`
+  - "Reserve" (if enabled) → `/p/:portalSlug/reserve`
+  - "Contact" (if defined in portal copy)
+
+------------------------------------------------------------
+## 3) Reserve Bridge Hardening (public → reservation flow)
+
+### Ensure route: `/p/:portalSlug/reserve`
+
+Requirements:
+- Load in portal context
+- Either:
+  - A) Render existing reservation flow UI if already built, OR
+  - B) Show a minimal placeholder that:
+    - Proves portal context is present
+    - Links to `/app` (or `/app/dashboard` if it exists)
+    - **DO NOT link to `/app/reservations` — that route ships in U4**
+
+This pack is UI delivery, so if the reserve UI is partial, keep navigation stable and the route non-broken.
+
+------------------------------------------------------------
+## 4) "Enter App" Behavior (portal context preserved)
+
+### HARD RULE: No query params. No portal_id in URL.
+
+When user clicks "Enter App" from any portal page:
+- If user is authenticated → go to `/app` immediately
+- If not authenticated → go to existing sign-in route, then after login:
+  - Land at `/app`
+  - Portal context remains set server-side (via session/cookie, NOT URL params)
+
+If the system uses `TenantContext` for portal_id/slug/type, ensure it remains correct after auth transitions.
+
+------------------------------------------------------------
+## 5) Minimal QA / Acceptance Tests
+
+Add tests using repo framework (RTL/Jest or Playwright):
+
+1. `/p/:portalSlug` renders and includes portal name and CTA buttons
+   - Mock portal API response (use shape from Step 0C extraction)
+2. `/p/:portalSlug/onboarding` renders
+   - Only test schema-driven form if Step 0D found flow-definition endpoint
+3. "Enter App" link exists on both `/p/:portalSlug` and `/c/:slug/*` home
+4. "Enter App" link does NOT contain query params
+
+### Also add manual QA checklist in `docs/ui/U2_PORTAL_ONBOARDING_QA.md`:
+- [ ] Domain-based portal loads correct theme/copy
+- [ ] Path-based `/p/:slug` fallback works
+- [ ] CTA flows do not lose portal context
+- [ ] Reserve route does not 404
+- [ ] "Enter App" preserves portal context without URL params
+
+------------------------------------------------------------
+## 6) Output Required
+
+After implementation, output:
+
+1. **Files created/modified** (list)
+2. **Extracted endpoints used** (paths + payload shapes from Step 0)
+3. **Route verification** proving these work:
+   - `/p/:portalSlug`
+   - `/p/:portalSlug/onboarding`
+   - `/p/:portalSlug/reserve`
+   - `/c/:slug/*` home
+4. **Test run output**
+
+**STOP after U2. Do NOT proceed to U3.**

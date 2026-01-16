@@ -112,7 +112,9 @@ import ArticlesPage from './pages/admin/ArticlesPage';
 import PresentationViewer from './pages/public/PresentationViewer';
 import PortalHomePage from './pages/public/PortalHomePage';
 import PortalReservePage from './pages/public/PortalReservePage';
+import PortalOnboardingPage from './pages/public/PortalOnboardingPage';
 import TripPortalPage from './pages/public/TripPortalPage';
+import CommunityPortalHome from './pages/portal/CommunityPortalHome';
 
 // Pages - Auth
 import LoginPage from './pages/auth/LoginPage';
@@ -180,6 +182,7 @@ export default function App() {
               {/* PUBLIC BUSINESS PORTAL - /p/:portalSlug/* */}
               {/* ========================================== */}
               <Route path="/p/:portalSlug" element={<PortalHomePage />} />
+              <Route path="/p/:portalSlug/onboarding" element={<PortalOnboardingPage />} />
               <Route path="/p/:portalSlug/reserve" element={<PortalReservePage />} />
               <Route path="/p/:portalSlug/reserve/:assetId" element={<PortalReservePage />} />
               
@@ -190,7 +193,7 @@ export default function App() {
               {/* PUBLIC PORTAL - /c/:slug/*                */}
               {/* ========================================== */}
               <Route path="/c/:slug" element={<PublicPortalLayout />}>
-                <Route index element={<PortalOverview />} />
+                <Route index element={<CommunityPortalHome />} />
                 <Route path="businesses" element={<PortalSection section="businesses" />} />
                 <Route path="services" element={<PortalSection section="services" />} />
                 <Route path="stay" element={<PortalSection section="stay" />} />

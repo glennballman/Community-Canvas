@@ -486,6 +486,50 @@ function PortalNotFound() {
   );
 }
 
+function PortalNavbar({
+  brandName,
+  portalSlug,
+  theme,
+}: {
+  brandName: string;
+  portalSlug: string;
+  theme?: { primary_color: string };
+}) {
+  return (
+    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <Link 
+          to={`/p/${portalSlug}`}
+          className="font-semibold text-lg"
+          data-testid="link-portal-brand"
+        >
+          {brandName}
+        </Link>
+        <div className="flex items-center gap-3">
+          <Link to={`/p/${portalSlug}/reserve`}>
+            <Button 
+              variant="outline" 
+              size="sm"
+              data-testid="button-reserve-nav"
+            >
+              Reserve
+            </Button>
+          </Link>
+          <Link to="/app">
+            <Button 
+              size="sm"
+              style={{ backgroundColor: theme?.primary_color }}
+              data-testid="button-enter-app"
+            >
+              Enter App
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function PortalHomePage() {
   const params = useParams();
   const portalSlug = params.portalSlug as string;
@@ -506,6 +550,12 @@ export default function PortalHomePage() {
   return (
     <div className="min-h-screen bg-background" data-testid="page-portal-home">
       <title>{config.seo?.description ? `${config.brand_name} - ${config.tagline}` : config.brand_name}</title>
+      
+      <PortalNavbar 
+        brandName={config.brand_name || portal.name} 
+        portalSlug={portalSlug} 
+        theme={config.theme}
+      />
       
       {sortedSections.map((section, index) => (
         <SectionRenderer
