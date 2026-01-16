@@ -59,6 +59,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Offline/Low-Signal Evidence Queue**: Evidence capture without connectivity, utilizing sync sessions, an ingest queue, a reconcile log, and a client-side queue library for batch processing and network status monitoring.
 - **Authority/Adjuster Read-Only Portals**: Secure external access for insurance adjusters, legal authorities, and auditors, managed through grants, scopes, tokens, and audit logs, leveraging SECURITY DEFINER functions and public routes.
 - **Dispute/Extortion Defense Pack**: Unified dispute management for various types of disputes, linking to sealed evidence, assembling defense packs with versioning, and integrating with Authority Share for external access.
+- **Anonymous Interest Groups & Threshold Triggers (P2.11)**: Privacy-preserving collective action system for whistleblower protection and class-action coordination, featuring SECURITY DEFINER functions for anonymous signal submission, k-anonymity aggregates (counts hidden when <5), configurable threshold triggers (headcount, geo_quorum, time_window, composite), AES-256-GCM contact encryption until trigger, auto-creation of legal holds (P2.7) and sealed evidence bundles (P2.5) on trigger, and optional authority share (P2.9) for external parties.
 
 ### Feature Specifications
 - **Dual-view Mode**: Sources View (data source URLs) and Data View (live monitoring).
