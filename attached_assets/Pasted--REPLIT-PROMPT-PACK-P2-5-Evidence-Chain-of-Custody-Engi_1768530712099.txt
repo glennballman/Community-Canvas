@@ -1,0 +1,464 @@
+✅ REPLIT PROMPT PACK — P2.5 Evidence Chain-of-Custody Engine (Authoritative)
+P2.5.0 — Non-Negotiables (Read First)
+
+Implement an evidence chain-of-custody subsystem that:
+
+Produces tamper-evident evidence bundles with immutable manifests
+
+Supports sealed records + verification (hash chain + signatures-ready)
+
+Preserves dual timestamps: occurred_at vs created_at
+
+Enforces strict tenant/circle scoping using existing GUC context + RLS
+
+Is offline/low-signal compatible by allowing late uploads while keeping an auditable chain
+
+Works for: evacuation orders, utility outages, media articles, photos, notes, telemetry snapshots
+
+Must be usable by: circles, operators, platform admins, and public incident flows (where allowed)
+
+No UI redesign. Only add minimal endpoints + server utilities + tests.
+
+Architectural invariant
+
+There must be a single canonical “evidence object” primitive that can represent:
+
+file blobs (R2 objects)
+
+URL snapshots (fetched HTML/PDF + extracted text)
+
+structured JSON snapshots (API feed snapshot)
+
+manual note records (contemporaneous notes)
+…and each evidence object must be attestable, sealable, and bundleable.
+
+P2.5.1 — Database Migration (New Tables)
+
+Create migration (next migration number) adding these tables:
+
+1) cc_evidence_objects
+
+Represents a single evidence item.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null (nullable for tenant-wide or portal-wide evidence)
+
+portal_id uuid null
+
+created_by_individual_id uuid null
+
+source_type text not null
+enum-like: file_r2 | url_snapshot | json_snapshot | manual_note | external_feed
+
+title text null
+
+description text null
+
+occurred_at timestamptz null (when the underlying event happened)
+
+created_at timestamptz not null default now() (when recorded in system)
+
+captured_at timestamptz null (when snapshot/capture took place)
+
+content_mime text null
+
+content_bytes bigint null
+
+content_sha256 text not null (sha256 hex of canonical content bytes)
+
+content_canonical_json jsonb null (for json_snapshot; canonicalized before hashing)
+
+r2_bucket text null
+
+r2_key text null
+
+url text null
+
+url_fetched_at timestamptz null
+
+url_http_status int null
+
+url_response_headers jsonb null
+
+url_extracted_text text null (optional; not hashed unless included in canonical)
+
+chain_status text not null default 'open'
+values: open | sealed | superseded | revoked
+
+sealed_at timestamptz null
+
+sealed_by_individual_id uuid null
+
+seal_reason text null
+
+client_request_id text null (idempotency key)
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, created_at desc)
+
+(tenant_id, circle_id, created_at desc)
+
+unique (tenant_id, client_request_id) where client_request_id is not null
+
+2) cc_evidence_events
+
+Append-only chain events for the evidence object (custody steps).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+evidence_object_id uuid not null references cc_evidence_objects(id) on delete cascade
+
+event_type text not null
+values: created | uploaded | fetched | sealed | transferred | accessed | exported | superseded | revoked | annotated
+
+event_at timestamptz not null default now()
+
+actor_individual_id uuid null
+
+actor_role text null (optional display)
+
+event_payload jsonb not null default '{}'::jsonb
+
+prev_event_id uuid null
+
+event_canonical_json jsonb not null (canonical payload used for hashing)
+
+event_sha256 text not null (sha256(prev_hash + canonical_event_json))
+
+prev_event_sha256 text null
+
+client_request_id text null
+
+Indexes:
+
+(tenant_id, evidence_object_id, event_at asc)
+
+unique (tenant_id, client_request_id) where not null
+
+3) cc_evidence_bundles
+
+Represents a pack/bundle (your “defence pack”, “insurance pack”, “emergency pack”).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+portal_id uuid null
+
+bundle_type text not null
+values: emergency_pack | insurance_claim | dispute_defense | class_action | generic
+
+title text not null
+
+description text null
+
+created_by_individual_id uuid null
+
+created_at timestamptz not null default now()
+
+bundle_status text not null default 'open'
+values: open | sealed | exported
+
+manifest_json jsonb null (frozen at seal)
+
+manifest_sha256 text null
+
+sealed_at timestamptz null
+
+sealed_by_individual_id uuid null
+
+exported_at timestamptz null
+
+exported_by_individual_id uuid null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, created_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+4) cc_evidence_bundle_items
+
+Join table.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+bundle_id uuid not null references cc_evidence_bundles(id) on delete cascade
+
+evidence_object_id uuid not null references cc_evidence_objects(id) on delete restrict
+
+added_at timestamptz not null default now()
+
+added_by_individual_id uuid null
+
+sort_order int not null default 0
+
+label text null (e.g., “Evacuation Order”, “BC Hydro outage”)
+
+notes text null
+
+Indexes:
+
+unique (tenant_id, bundle_id, evidence_object_id)
+
+(tenant_id, bundle_id, sort_order)
+
+P2.5.2 — RLS Policies (Must Use Existing GUC Context)
+
+Enable RLS on all 4 tables and enforce:
+
+tenant_id = current_setting('app.tenant_id', true)::uuid
+
+If circle-scoped rows exist, enforce access via existing circle membership logic:
+
+allow when circle_id is null (tenant-wide evidence)
+
+else require membership in cc_circle_members for circle_id
+
+Platform admins may bypass only if you already have a canonical “platform admin” mechanism; otherwise do not invent a new bypass here.
+
+Also:
+
+Events are append-only: deny UPDATE/DELETE for non-service roles.
+
+Bundles: allow UPDATE only while bundle_status='open'; once sealed, immutable.
+
+P2.5.3 — Server Utilities (Canonical Hashing + Event Chain)
+
+Add a server module: src/lib/evidence/custody.ts
+
+Must implement:
+
+canonicalizeJson(input): string
+
+Deterministic JSON stringify:
+
+sort object keys recursively
+
+stable arrays (preserve order)
+
+no whitespace
+
+Used for all hashes.
+
+sha256Hex(bytesOrString): string
+
+Standard sha256 hex.
+
+computeEvidenceContentSha256(...)
+
+For json_snapshot: hash canonical JSON string bytes
+
+For file_r2: hash actual uploaded bytes (stream if large)
+
+For url_snapshot: hash fetched raw bytes (NOT extracted text unless explicitly included)
+
+Store resulting hash in cc_evidence_objects.content_sha256
+
+appendEvidenceEvent({evidenceId, eventType, payload, actor, clientRequestId})
+
+Read last event for evidenceId (by event_at asc, tie-break id)
+
+Compute event_canonical_json = canonicalize(payload + minimal metadata)
+
+Compute event_sha256 = sha256(prev_hash + canonical_event_json)
+
+Insert into cc_evidence_events with prev_event_id, prev_event_sha256
+
+Idempotency:
+
+If client_request_id already exists for same tenant, return existing event.
+
+P2.5.4 — API Endpoints (No UI, Just Primitives)
+
+Add routes under your existing API structure:
+
+Evidence Objects
+
+POST /api/evidence/objects
+Create a placeholder evidence object (open chain).
+Body:
+
+source_type, title, description, occurred_at, circle_id?, portal_id?, client_request_id?, metadata?
+Server:
+
+insert into cc_evidence_objects with temporary content_sha256 = sha256("") only if no content yet
+
+append event: created
+
+POST /api/evidence/objects/:id/upload
+For file uploads to R2 (use your existing R2 mechanism).
+Server:
+
+stream bytes, compute sha256
+
+update object: mime, bytes, r2_key, content_sha256
+
+append event: uploaded
+
+POST /api/evidence/objects/:id/fetch-url
+Body: { url, include_headers: boolean }
+Server:
+
+fetch URL (with user-agent + timeout + size cap)
+
+store raw bytes to R2 (recommended)
+
+compute sha256(raw bytes)
+
+store: url, fetched_at, status, headers(json), r2_key, sha256
+
+append event: fetched
+
+POST /api/evidence/objects/:id/seal
+Body: { reason }
+Server:
+
+require object is open
+
+set chain_status='sealed', set sealed_at/by
+
+append event: sealed
+
+GET /api/evidence/objects/:id/verify
+Server returns:
+
+evidence object
+
+full ordered event chain with recomputed hashes
+
+valid: true/false + first failure index if false
+
+Bundles
+
+POST /api/evidence/bundles
+Body: { bundle_type, title, description?, circle_id?, portal_id?, client_request_id? }
+Server inserts bundle, status open
+
+POST /api/evidence/bundles/:id/items
+Body: { evidence_object_id, label?, notes?, sort_order? }
+Server inserts into bundle_items
+
+POST /api/evidence/bundles/:id/seal
+Server:
+
+compile manifest_json including:
+
+bundle metadata
+
+ordered list of evidence item ids + each item’s content_sha256
+
+each evidence object’s final event hash (tip hash)
+
+timestamps + actor ids
+
+canonicalize manifest_json and compute manifest_sha256
+
+write to bundle row, set status sealed, append exported event later when exported (optional)
+
+GET /api/evidence/bundles/:id/manifest
+Returns manifest_json + sha256
+
+P2.5.5 — Hardening Rules (Legal Defensibility)
+
+Implement these rules exactly:
+
+No mutation after seal:
+
+evidence object content cannot change after chain_status='sealed'
+
+bundle items cannot change after bundle sealed
+
+Any correction must be via:
+
+superseded event + new evidence object (new hash)
+
+Every API call that reads evidence should append accessed event only if you can do it without flooding (implement rate-limited “access log” using a 5-minute dedupe window keyed by evidence_id + actor_id + action).
+
+P2.5.6 — Tests (Must Exist)
+
+Add tests (whatever framework is used currently) covering:
+
+Append-only event chain
+
+create evidence, upload, seal
+
+verify tip hash changes each event
+
+verify recomputation matches stored hashes
+
+Idempotency
+
+same client_request_id returns same created object / event
+
+RLS isolation
+
+cross-tenant access blocked
+
+circle membership required when circle_id set
+
+Bundle manifest correctness
+
+seal bundle
+
+manifest sha matches canonical manifest
+
+evidence list order stable
+
+P2.5.7 — Minimal Documentation (For Later Certification)
+
+Create docs/P2_5_EVIDENCE_CHAIN_OF_CUSTODY.md containing:
+
+Data model overview
+
+Hashing rules (what is hashed, what is not)
+
+Seal semantics
+
+Verification endpoint contract
+
+Threat model (tampering, replay, late uploads, superseding)
+
+No marketing language. Pure technical defensibility.
+
+✅ Definition of Done
+
+P2.5 is “done” only when:
+
+New tables exist + RLS enforced
+
+Evidence objects can be created, filled (upload/fetch/json), sealed
+
+Events form a verifiable hash chain
+
+Bundles seal into a deterministic manifest with sha256
+
+/verify returns valid/invalid correctly
+
+Tests pass in CI/dev

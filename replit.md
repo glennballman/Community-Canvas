@@ -72,6 +72,13 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
   - **ACL Delegation**: Owner/admin-only by default with explicit grantee delegation (individual or circle), redacted for non-owner/admin viewers
   - **Seal Workflow**: Draft → Sealed (locks all linked notes), immutable after sealing
   - **RLS Enforcement**: FORCE RLS on artifacts, ACL, and media tables; strict owner/admin/delegate access policies
+- **P2.5 Evidence Chain-of-Custody Engine** (Migration 130-131): Tamper-evident evidence bundles with immutable manifests:
+  - **Evidence Objects** (`cc_evidence_objects`): Source-typed (photo, video, audio, json_snapshot, url_snapshot, file_r2, manual_note) with content_sha256 hashing
+  - **Event Chain** (`cc_evidence_events`): Append-only hash chain linking events via SHA256(prev_hash + canonical_event_json), FORCE RLS
+  - **Bundle Manifests**: Deterministic JSON manifest with canonical serialization (sorted keys, no whitespace), frozen at seal time
+  - **Utility Functions**: `canonicalizeJson()`, `sha256Hex()`, `appendEvidenceEvent()`, `verifyEvidenceChain()`, `compileBundleManifest()`
+  - **API Endpoints**: 10 routes under `/api/evidence/*` for objects and bundles
+  - **Tests**: 21 passing tests covering hashing, chain integrity, idempotency, and manifest determinism
 
 ## External Dependencies
 
