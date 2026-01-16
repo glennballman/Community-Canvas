@@ -1,0 +1,296 @@
+REPLIT PROMPT: Pricing Infrastructure Discovery Audit
+Objective
+Discover and document all pricing infrastructure that exists in the database. This audit will establish ground truth before UI development begins.
+
+INSTRUCTIONS
+Run each query section below and paste back the complete results. Do NOT make any changes - this is read-only discovery.
+
+SECTION 1: Core Pricing Tables (Prompt 24)
+sql-- 1A: Check which Prompt 24 tables exist
+SELECT table_name, 
+       (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name) as column_count
+FROM information_schema.tables t
+WHERE table_schema = 'public' 
+  AND table_name IN (
+    'cc_conversation_participants',
+    'cc_actor_types', 
+    'cc_tenant_actor_roles', 
+    'cc_plans', 
+    'cc_plan_entitlements', 
+    'cc_subscriptions',
+    'cc_communities', 
+    'cc_jobs', 
+    'cc_job_postings', 
+    'cc_job_applicants',
+    'cc_value_events', 
+    'cc_ledger_entries'
+  )
+ORDER BY table_name;
+-- EXPECTED: 12 rows
+
+-- 1B: Count rows in seed tables
+SELECT 'cc_actor_types' as table_name, COUNT(*) as row_count FROM cc_actor_types
+UNION ALL SELECT 'cc_plans', COUNT(*) FROM cc_plans
+UNION ALL SELECT 'cc_plan_entitlements', COUNT(*) FROM cc_plan_entitlements
+UNION ALL SELECT 'cc_communities', COUNT(*) FROM cc_communities
+ORDER BY table_name;
+-- EXPECTED: actor_types=5, plans=15, communities=3 (Bamfield, Tofino, Ucluelet)
+
+-- 1C: Verify actor types seeded correctly
+SELECT code, name, sort_order FROM cc_actor_types ORDER BY sort_order;
+-- EXPECTED: CONTRACTOR, INVENTORY, PIC, WORKER, COORDINATOR
+
+-- 1D: Verify plans per actor type
+SELECT at.code as actor, COUNT(p.id) as plan_count, 
+       STRING_AGG(p.code, ', ' ORDER BY p.tier_level) as plans
+FROM cc_actor_types at
+LEFT JOIN cc_plans p ON p.actor_type_id = at.id
+GROUP BY at.code, at.sort_order
+ORDER BY at.sort_order;
+-- EXPECTED: 3 plans per actor (15 total)
+
+SECTION 2: Viral Growth Tables (Prompts 25-27)
+sql-- 2A: Check which Prompt 25-27 tables exist
+SELECT table_name,
+       (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name) as column_count
+FROM information_schema.tables t
+WHERE table_schema = 'public' 
+  AND table_name IN (
+    'cc_invitations',
+    'cc_referrals',
+    'cc_claim_links',
+    'cc_portal_members',
+    'cc_portal_settings',
+    'cc_moderation_queue',
+    'cc_moderation_history',
+    'cc_onboarding_flows',
+    'cc_onboarding_sessions',
+    'cc_onboarding_step_progress',
+    'cc_onboarding_checklist_items',
+    'cc_tenant_checklist_progress'
+  )
+ORDER BY table_name;
+-- EXPECTED: 12 rows
+
+-- 2B: Check onboarding flows seeded
+SELECT code, name, flow_type, jsonb_array_length(steps) as step_count
+FROM cc_onboarding_flows
+ORDER BY code;
+-- EXPECTED: 5 flows (generic, contractor, worker, property_owner, pic)
+
+-- 2C: Check checklist items seeded
+SELECT code, name, category, required_for_activation
+FROM cc_onboarding_checklist_items
+ORDER BY sort_order;
+-- EXPECTED: ~5 checklist items
+
+SECTION 3: Notification & Activity Tables (Prompts 28-29)
+sql-- 3A: Check which Prompt 28-29 tables exist
+SELECT table_name,
+       (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name) as column_count
+FROM information_schema.tables t
+WHERE table_schema = 'public' 
+  AND table_name IN (
+    'cc_notification_templates',
+    'cc_notification_preferences',
+    'cc_notifications',
+    'cc_notification_deliveries',
+    'cc_notification_digests',
+    'cc_tenant_individuals',
+    'cc_activity_events',
+    'cc_activity_feed_state',
+    'cc_activity_bookmarks'
+  )
+ORDER BY table_name;
+-- EXPECTED: 9 rows
+
+-- 3B: Check notification templates seeded
+SELECT code, name, category, array_length(default_channels, 1) as channel_count
+FROM cc_notification_templates
+ORDER BY category, code;
+-- EXPECTED: ~10 templates
+
+SECTION 4: PMS Spine Tables (Migration A)
+sql-- 4A: Check PMS tables exist
+SELECT table_name,
+       (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name) as column_count
+FROM information_schema.tables t
+WHERE table_schema = 'public' 
+  AND table_name IN (
+    'cc_rate_plans',
+    'cc_folios',
+    'cc_folio_ledger'
+  )
+ORDER BY table_name;
+-- EXPECTED: 3 rows
+
+SECTION 5: All Pricing-Related Enums
+sql-- 5A: List all relevant enums and their values
+SELECT t.typname as enum_name, 
+       array_agg(e.enumlabel ORDER BY e.enumsortorder) as values,
+       COUNT(e.enumlabel) as value_count
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+WHERE t.typname IN (
+  -- Prompt 24
+  'value_event_type', 'ledger_entry_type',
+  'job_role_category', 'job_employment_type', 'job_urgency', 
+  'job_verification_state', 'job_status',
+  -- Prompt 25
+  'invitation_context_type', 'invitation_status', 'invitee_role',
+  'claim_link_type', 'claim_link_status',
+  -- Prompt 26
+  'portal_role_type', 'moderation_status', 'moderation_action', 'moderable_content_type',
+  -- Prompt 27
+  'onboarding_flow_type', 'onboarding_status', 'step_status',
+  -- Prompt 28
+  'notification_channel', 'notification_priority', 'notification_status',
+  'notification_category', 'digest_frequency',
+  -- Prompt 29
+  'activity_verb', 'activity_visibility', 'activity_priority',
+  -- PMS
+  'folio_status', 'folio_ledger_entry_type', 'rate_plan_type', 'rate_plan_status'
+)
+GROUP BY t.typname
+ORDER BY t.typname;
+
+-- 5B: CRITICAL - Check for terminology violations in enums
+SELECT t.typname as enum_name, e.enumlabel as bad_value
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+WHERE e.enumlabel ILIKE '%book%'
+ORDER BY t.typname;
+-- EXPECTED: 0 rows (no booking terminology)
+
+SECTION 6: Helper Functions
+sql-- 6A: List all pricing/value helper functions
+SELECT routine_name, 
+       routine_type,
+       CASE WHEN security_type = 'DEFINER' THEN 'SECURITY DEFINER' ELSE 'INVOKER' END as security
+FROM information_schema.routines
+WHERE routine_schema = 'public'
+  AND routine_name IN (
+    -- Prompt 24 value functions
+    'cc_has_entitlement',
+    'cc_entitlement_value', 
+    'cc_record_value_event',
+    'cc_tenant_balance',
+    -- Prompt 25 invitation functions
+    'cc_generate_claim_token',
+    'cc_create_invitation',
+    'cc_claim_invitation',
+    'cc_revoke_invitation',
+    'cc_get_invitation_public',
+    'cc_get_claim_link_public',
+    'cc_create_job_claim_link',
+    -- Prompt 26 portal functions
+    'cc_submit_for_moderation',
+    'cc_moderate_content',
+    'cc_has_portal_permission',
+    'cc_add_portal_member',
+    -- Prompt 27 onboarding functions
+    'cc_start_onboarding',
+    'cc_complete_onboarding_step',
+    'cc_skip_onboarding',
+    'cc_get_onboarding_status',
+    'cc_record_first_action',
+    -- Prompt 28 notification functions
+    'cc_create_notification',
+    'cc_mark_notification_read',
+    'cc_mark_all_notifications_read',
+    'cc_get_unread_notification_count',
+    'cc_get_notifications',
+    'cc_update_notification_preferences',
+    -- Prompt 29 activity functions
+    'cc_record_activity',
+    'cc_get_activity_feed',
+    'cc_mark_feed_seen',
+    'cc_toggle_activity_bookmark',
+    'cc_get_activity_summary',
+    -- PMS functions
+    'cc_post_folio_entry',
+    'cc_recalculate_folio_totals',
+    'cc_reverse_folio_entry',
+    'cc_select_rate_plan',
+    'cc_next_folio_number',
+    -- Core helpers
+    'current_tenant_id',
+    'is_service_mode'
+  )
+ORDER BY routine_name;
+-- EXPECTED: ~35 functions
+
+SECTION 7: RLS Status
+sql-- 7A: Check RLS enabled on all pricing tables
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+  AND tablename IN (
+    'cc_actor_types', 'cc_tenant_actor_roles', 'cc_plans', 
+    'cc_plan_entitlements', 'cc_subscriptions',
+    'cc_communities', 'cc_jobs', 'cc_job_postings', 'cc_job_applicants',
+    'cc_value_events', 'cc_ledger_entries',
+    'cc_invitations', 'cc_referrals', 'cc_claim_links',
+    'cc_portal_members', 'cc_portal_settings', 
+    'cc_moderation_queue', 'cc_moderation_history',
+    'cc_onboarding_flows', 'cc_onboarding_sessions', 
+    'cc_onboarding_step_progress', 'cc_tenant_checklist_progress',
+    'cc_notification_preferences', 'cc_notifications',
+    'cc_notification_deliveries', 'cc_notification_digests',
+    'cc_activity_events', 'cc_activity_feed_state', 'cc_activity_bookmarks',
+    'cc_rate_plans', 'cc_folios', 'cc_folio_ledger'
+  )
+ORDER BY tablename;
+-- Check rowsecurity = 't' for all
+
+SECTION 8: Migration History
+sql-- 8A: Show recent migrations
+SELECT id, hash, created_at
+FROM drizzle_migrations
+ORDER BY created_at DESC
+LIMIT 20;
+
+-- 8B: Count total migrations
+SELECT COUNT(*) as total_migrations FROM drizzle_migrations;
+
+SECTION 9: Column-Level Terminology Check
+sql-- 9A: Find any columns with 'book' in the name (should be 0)
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name ILIKE '%book%'
+ORDER BY table_name, column_name;
+-- EXPECTED: 0 rows (all renamed to reservation terminology)
+```
+
+---
+
+## OUTPUT FORMAT
+
+After running all queries, provide a summary in this format:
+```
+## DISCOVERY RESULTS
+
+### Tables Found
+- Prompt 24 (Core): X/12
+- Prompts 25-27 (Viral): X/12  
+- Prompts 28-29 (Notifications): X/9
+- PMS Spine: X/3
+- TOTAL: X/36
+
+### Seed Data Status
+- Actor Types: X/5
+- Plans: X/15
+- Communities: X/3
+- Onboarding Flows: X/5
+- Notification Templates: X/10
+
+### Functions Found: X/~35
+
+### Terminology Violations: X (should be 0)
+
+### GAPS IDENTIFIED
+[List any missing tables, functions, or seed data]
+
+DO NOT MODIFY ANYTHING
+This is a read-only audit. Just run queries and report results.
