@@ -82,6 +82,7 @@ import evidenceRouter from "./routes/evidence";
 import insuranceRouter from "./routes/insurance";
 import legalRouter from "./routes/legal";
 import offlineRouter from "./routes/offline";
+import { authorityRouter, publicAuthorityRouter } from "./routes/authority";
 import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
@@ -209,6 +210,12 @@ export async function registerRoutes(
   
   // Register P2.8 offline sync routes
   app.use('/api/offline', offlineRouter);
+
+  // Register P2.9 Authority Access Portal routes (authenticated admin APIs)
+  app.use('/api/authority', authorityRouter);
+  
+  // Register P2.9 Public Authority Access Portal routes (NO AUTH - token-based)
+  app.use('/p/authority', publicAuthorityRouter);
 
   // Register incident prompts routes
   app.use('/api/incidents', incidentPromptsRouter);
