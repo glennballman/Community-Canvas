@@ -1,0 +1,447 @@
+✅ REPLIT PROMPT PACK — P2.6 Insurance Claim Auto-Assembler (Authoritative)
+P2.6.0 — Non-Negotiables
+
+Build an insurance-claim subsystem that:
+
+Treats sealed evidence bundles (P2.5) as the only canonical input
+
+Produces carrier-agnostic, defensible claim dossiers (PDF optional later; start with JSON + ZIP export-ready)
+
+Supports multiple claimants / properties / policies per tenant/circle
+
+Preserves occurred_at vs created_at timeline integrity
+
+Is monetizable: per-claim + per-export events
+
+No UI redesign. Add minimal endpoints + docs + tests.
+
+P2.6.1 — Database Migration (New Tables)
+1) cc_insurance_policies
+
+Represents a policy (not a claim).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+portal_id uuid null
+
+policy_type text not null
+values: property | liability | business_interruption | travel | auto | marine | other
+
+carrier_name text null
+
+broker_name text null
+
+policy_number text null
+
+named_insured text null
+
+effective_date date null
+
+expiry_date date null
+
+coverage_summary jsonb not null default '{}'::jsonb
+
+contacts jsonb not null default '{}'::jsonb
+(adjuster, broker, emergency line, email, phone)
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, created_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+2) cc_insurance_claims
+
+Represents a claim case file.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+portal_id uuid null
+
+policy_id uuid null references cc_insurance_policies(id) on delete set null
+
+claim_type text not null
+values: evacuation | wildfire | flood | tsunami | power_outage | storm | theft | liability | other
+
+claim_status text not null default 'draft'
+values: draft | assembled | submitted | under_review | approved | denied | closed
+
+title text not null
+
+loss_occurred_at timestamptz null
+
+loss_discovered_at timestamptz null
+
+reported_at timestamptz null
+
+claim_number text null (when provided by carrier)
+
+loss_location jsonb null
+{address, lat, lon, place_name, jurisdiction}
+
+claimants jsonb not null default '[]'::jsonb
+array of people/orgs (name, role, contact)
+
+summary text null (human readable)
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, created_at desc)
+
+(tenant_id, claim_status)
+
+unique (tenant_id, client_request_id) where not null
+
+3) cc_claim_inputs
+
+Connects a claim to sealed evidence bundles + optional additional sealed evidence objects.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+claim_id uuid not null references cc_insurance_claims(id) on delete cascade
+
+bundle_id uuid null references cc_evidence_bundles(id) on delete restrict
+
+bundle_manifest_sha256 text null (copied at attach time)
+
+evidence_object_id uuid null references cc_evidence_objects(id) on delete restrict
+
+evidence_content_sha256 text null (copied at attach time)
+
+attached_at timestamptz not null default now()
+
+attached_by_individual_id uuid null
+
+label text null
+
+notes text null
+
+Rules:
+
+either bundle_id OR evidence_object_id must be present (one of them)
+
+attachments must be sealed sources only
+
+Indexes:
+
+unique (tenant_id, claim_id, bundle_id) where bundle_id not null
+
+unique (tenant_id, claim_id, evidence_object_id) where evidence_object_id not null
+
+4) cc_claim_dossiers
+
+Stores assembled dossiers (immutable once finalized).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+claim_id uuid not null references cc_insurance_claims(id) on delete cascade
+
+dossier_version int not null default 1
+
+dossier_status text not null default 'assembled'
+values: assembled | exported | superseded
+
+assembled_at timestamptz not null default now()
+
+assembled_by_individual_id uuid null
+
+dossier_json jsonb not null
+
+dossier_sha256 text not null (sha of canonicalized dossier_json)
+
+export_artifacts jsonb not null default '[]'::jsonb
+(r2 keys of exports like zip/pdf)
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, claim_id, dossier_version desc)
+
+unique (tenant_id, client_request_id) where not null
+
+P2.6.2 — RLS Policies (GUC + Circle Membership)
+
+Enable RLS for all 4 tables, enforcing:
+
+tenant_id = current_setting('app.tenant_id', true)::uuid
+
+circle-scoped access: if circle_id is set, require membership in cc_circle_members
+
+append-only behavior where appropriate:
+
+cc_claim_dossiers: no UPDATE to dossier_json after insert; supersede by new row/version
+
+P2.6.3 — Dossier Assembly Engine (Server Module)
+
+Create: src/lib/claims/assemble.ts
+
+Core functions
+assembleClaimDossier(claimId, options)
+
+Produces a deterministic dossier JSON object:
+
+Dossier sections (minimum required):
+
+cover
+
+claim title, claim type, status, created_at, created_by
+
+policy summary (if policy linked)
+
+claimant list
+
+loss_details
+
+occurred/discovered/reported times
+
+location object
+
+narrative summary (claim.summary or generated placeholder)
+
+timeline
+
+sorted events from all attached sealed bundles:
+
+include each evidence object:
+
+id, source_type, title, occurred_at, created_at, captured_at
+
+content_sha256
+
+tip_event_hash (from P2.5 verification chain)
+
+pointer (r2_key or url)
+
+evidence_index
+
+grouped by category labels:
+
+evacuation orders
+
+utilities outages
+
+media reports
+
+photos/videos
+
+notes/witness statements
+
+telemetry/snapshots
+
+verification
+
+list of bundle manifest sha256 values
+
+list of evidence sha256 values
+
+dossier_sha256 (computed)
+
+assembly algorithm version string (e.g., claim_dossier_v1)
+
+Determinism rules:
+
+Sort timeline by (occurred_at nulls last, created_at, id)
+
+Sort evidence groups by label then by same ordering
+
+Use canonicalizeJson from P2.5 for hashing
+
+dossier_sha256 = sha256Hex(canonicalized_dossier_json)
+
+attachClaimInput(claimId, {bundleId|evidenceObjectId})
+
+Enforce that attached bundle is sealed (bundle_status='sealed')
+
+Copy bundle_manifest_sha256 at attach time
+
+Enforce evidence object is sealed and copy content_sha256
+
+P2.6.4 — API Endpoints (Minimal)
+
+Add routes:
+
+Policies
+
+POST /api/insurance/policies
+Create or upsert-like via client_request_id.
+Body: policy fields.
+
+GET /api/insurance/policies
+List policies (scoped).
+
+Claims
+
+POST /api/insurance/claims
+Create claim (draft).
+Body: claim fields + optional policy_id.
+
+POST /api/insurance/claims/:id/attach
+Body:
+
+{ bundle_id } OR { evidence_object_id }
+
+optional label, notes
+Server uses attachClaimInput, rejects unsealed inputs.
+
+POST /api/insurance/claims/:id/assemble
+Body: { client_request_id?, force_new_version?: boolean }
+Server:
+
+Builds dossier using assembleClaimDossier
+
+Inserts cc_claim_dossiers with incremented dossier_version
+
+Sets claim_status → assembled
+
+GET /api/insurance/claims/:id/dossiers
+Returns list of dossier versions + sha256.
+
+GET /api/insurance/dossiers/:dossierId
+Returns dossier_json + dossier_sha256.
+
+Exports (stub but real)
+
+POST /api/insurance/dossiers/:dossierId/export
+Body: { format: "zip_json" } (start with zip of dossier.json + manifest refs)
+Server:
+
+Generate a zip containing:
+
+dossier.json
+
+inputs.json (bundle manifests + evidence pointers)
+
+Store zip to R2
+
+Update export_artifacts (allowed as append-only event; if immutability strict, create a new dossier row marked exported—choose the strict approach)
+
+Mark dossier_status → exported (or create new row; preferred: update only status + export_artifacts)
+
+Also append a custody event:
+
+For each included evidence bundle/object, append exported event in cc_evidence_events (rate-limit/dedupe per dossier export)
+
+P2.6.5 — Validation Rules (Legal/Defensive)
+
+Claim assembly must fail if any attached input is not sealed.
+
+Claim dossier must include:
+
+every bundle manifest sha
+
+every evidence content sha
+
+every evidence tip hash
+
+Any later correction must:
+
+attach additional sealed evidence
+
+assemble a new dossier version
+
+Never overwrite prior dossier_json.
+
+P2.6.6 — Tests (Must Exist)
+
+Attach rejects unsealed
+
+create bundle open → attach should fail
+
+seal bundle → attach succeeds
+
+Deterministic dossier hash
+
+same inputs produce same dossier_sha256
+
+order changes don’t change canonical outcome if sorting rules are applied
+
+Versioning
+
+assemble v1
+
+attach new sealed evidence
+
+assemble v2
+
+v1 remains unchanged, v2 differs
+
+RLS
+
+tenant isolation
+
+circle membership required
+
+Export creates R2 artifact + logs exported events
+
+export zip_json
+
+export artifacts populated
+
+evidence events appended (deduped)
+
+P2.6.7 — Documentation
+
+Create docs/P2_6_INSURANCE_CLAIM_AUTO_ASSEMBLER.md:
+
+Policy vs Claim vs Dossier model
+
+Determinism + hashing rules
+
+Required verification fields (manifest sha, content sha, tip hash)
+
+Export format zip_json
+
+Monetization hooks (claim created, dossier assembled, dossier exported) as audit events (no billing implementation here)
+
+✅ Definition of Done
+
+P2.6 is done only when:
+
+Tables + RLS shipped
+
+Attach enforces sealed-only inputs
+
+Assemble creates deterministic, hashed dossiers with versions
+
+Export zip_json works and stores to R2
+
+Tests pass

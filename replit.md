@@ -79,6 +79,14 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
   - **Utility Functions**: `canonicalizeJson()`, `sha256Hex()`, `appendEvidenceEvent()`, `verifyEvidenceChain()`, `compileBundleManifest()`
   - **API Endpoints**: 10 routes under `/api/evidence/*` for objects and bundles
   - **Tests**: 21 passing tests covering hashing, chain integrity, idempotency, and manifest determinism
+- **P2.6 Insurance Claim Auto-Assembler** (Migration 132): Carrier-agnostic claim dossiers from sealed evidence:
+  - **Policies** (`cc_insurance_policies`): Policy records with carrier, broker, coverage info
+  - **Claims** (`cc_insurance_claims`): Claim case files with status workflow (draft → assembled → submitted → approved/denied)
+  - **Inputs** (`cc_claim_inputs`): Links claims to sealed bundles/objects with SHA256 copies at attach time
+  - **Dossiers** (`cc_claim_dossiers`): Immutable assembled dossiers with versioning and export tracking
+  - **Assembly Engine**: Deterministic dossier generation with sorted timelines and evidence categorization
+  - **Export Format**: zip_json (dossier.json + inputs.json) stored to R2
+  - **Tests**: 18 passing tests covering attach validation, deterministic hashing, versioning, immutability
 
 ## External Dependencies
 
