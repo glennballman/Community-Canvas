@@ -1,0 +1,89 @@
+{
+  "rootDir": ".",
+  "scanGlobs": [
+    "client/src/**/*.ts",
+    "client/src/**/*.tsx",
+    "client/src/**/*.js",
+    "client/src/**/*.jsx",
+    "client/src/**/*.mdx"
+  ],
+  "ignoreGlobs": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.vite/**",
+    "**/.cache/**",
+    "**/.turbo/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ],
+  "allowGlobs": [
+    "client/src/pages/public/**",
+    "client/src/pages/marketing/**",
+    "client/src/marketing/**",
+    "client/src/content/**"
+  ],
+  "forbiddenComponents": [
+    "PricingModal",
+    "UpgradeBanner",
+    "PlanGrid",
+    "PlanComparison",
+    "StickyCTA",
+    "CountdownTimer",
+    "Paywall"
+  ],
+  "forbiddenCopyRegex": [
+    "(?i)\\bupgrade\\b",
+    "(?i)\\bunlock\\b",
+    "(?i)\\bbuy\\s*now\\b",
+    "(?i)\\bsubscribe\\b",
+    "(?i)\\bgo\\s*pro\\b",
+    "(?i)\\bpro\\s*only\\b",
+    "(?i)\\bpremium\\s*only\\b",
+    "(?i)\\bpaid\\s*plan\\b",
+    "(?i)\\bcheckout\\b",
+    "(?i)\\badd\\s*payment\\b",
+    "(?i)\\benter\\s*card\\b",
+    "(?i)\\bcard\\s*details\\b",
+    "(?i)\\blimited\\s*time\\b",
+    "(?i)\\bact\\s*now\\b",
+    "(?i)\\bdon['']t\\s*miss\\s*out\\b",
+    "(?i)\\bhurry\\b",
+    "(?i)\\bsale\\b",
+    "(?i)\\bdiscount\\b",
+    "(?i)\\bdeal\\b",
+    "(?i)\\bexclusive\\b",
+    "(?i)\\bthis\\s+feature\\s+requires\\b",
+    "(?i)\\bavailable\\s+on\\s+(pro|premium)\\b",
+    "(?i)\\bnot\\s+available\\s+on\\s+your\\s+plan\\b"
+  ],
+  "currencyRegex": [
+    "[$€£]\\s?\\d",
+    "(?i)\\bUSD\\b",
+    "(?i)\\bCAD\\b",
+    "(?i)\\bEUR\\b",
+    "(?i)\\bGBP\\b"
+  ],
+  "routeContextRules": [
+    {
+      "name": "No currency in /app/**",
+      "matchPathRegex": "^client/src/(pages|routes)/app/",
+      "forbidRegexSet": "currency"
+    },
+    {
+      "name": "No forbidden pricing copy in /app/**",
+      "matchPathRegex": "^client/src/(pages|routes)/app/",
+      "forbidRegexSet": "forbiddenCopy"
+    },
+    {
+      "name": "No pricing language in operator pages",
+      "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
+      "forbidRegexSet": "forbiddenCopy"
+    },
+    {
+      "name": "No currency in operator pages",
+      "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
+      "forbidRegexSet": "currency"
+    }
+  ]
+}

@@ -1,0 +1,372 @@
+✅ REPLIT PROMPT PACK — V3-UI-GUARDRAILS-CI (Pricing-Law CI Enforcement)
+
+You are Replit. Implement repo-level CI enforcement so pricing-law violations cannot land in main. This extends the current dev-only guardrails into hard gates.
+
+Hard constraints:
+
+Scan client app code (React SPA) for forbidden pricing language and currency symbols in operational routes.
+
+Ban known “upgrade/paywall” UI components under /app/*.
+
+Allow marketing/docs to contain pricing words (configurable allowlist).
+
+Fail CI with clear file:line diagnostics.
+
+0) Files to add
+
+Create:
+
+scripts/lint-pricing-ui.ts
+
+scripts/lint-pricing-ui.config.json
+
+scripts/lint-pricing-ui.forbidden.txt (optional reference list)
+
+Update package.json scripts
+
+Update CI workflow (GitHub Actions or Replit CI equivalent)
+
+If this repo doesn’t use GitHub Actions, still add the script + package.json entries; wire into whatever CI runs npm test.
+
+1) Config: scripts/lint-pricing-ui.config.json
+{
+  "rootDir": ".",
+  "scanGlobs": [
+    "client/src/**/*.ts",
+    "client/src/**/*.tsx",
+    "client/src/**/*.js",
+    "client/src/**/*.jsx",
+    "client/src/**/*.mdx"
+  ],
+  "ignoreGlobs": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.vite/**",
+    "**/.cache/**",
+    "**/.turbo/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ],
+  "allowGlobs": [
+    "client/src/pages/public/**",
+    "client/src/pages/marketing/**",
+    "client/src/marketing/**",
+    "client/src/content/**"
+  ],
+  "forbiddenComponents": [
+    "PricingModal",
+    "UpgradeBanner",
+    "PlanGrid",
+    "PlanComparison",
+    "StickyCTA",
+    "CountdownTimer",
+    "Paywall"
+  ],
+  "forbiddenCopyRegex": [
+    "(?i)\\bupgrade\\b",
+    "(?i)\\bunlock\\b",
+    "(?i)\\bbuy\\s*now\\b",
+    "(?i)\\bsubscribe\\b",
+    "(?i)\\bgo\\s*pro\\b",
+    "(?i)\\bpro\\s*only\\b",
+    "(?i)\\bpremium\\s*only\\b",
+    "(?i)\\bpaid\\s*plan\\b",
+    "(?i)\\bcheckout\\b",
+    "(?i)\\badd\\s*payment\\b",
+    "(?i)\\benter\\s*card\\b",
+    "(?i)\\bcard\\s*details\\b",
+    "(?i)\\blimited\\s*time\\b",
+    "(?i)\\bact\\s*now\\b",
+    "(?i)\\bdon['’]t\\s*miss\\s*out\\b",
+    "(?i)\\bhurry\\b",
+    "(?i)\\bsale\\b",
+    "(?i)\\bdiscount\\b",
+    "(?i)\\bdeal\\b",
+    "(?i)\\bexclusive\\b",
+    "(?i)\\bthis\\s+feature\\s+requires\\b",
+    "(?i)\\bavailable\\s+on\\s+(pro|premium)\\b",
+    "(?i)\\bnot\\s+available\\s+on\\s+your\\s+plan\\b"
+  ],
+  "currencyRegex": [
+    "[$€£]\\s?\\d",
+    "(?i)\\bUSD\\b",
+    "(?i)\\bCAD\\b",
+    "(?i)\\bEUR\\b",
+    "(?i)\\bGBP\\b"
+  ],
+  "routeContextRules": [
+    {
+      "name": "No currency in /app/**",
+      "matchPathRegex": "^client/src/(pages|routes)/app/",
+      "forbidRegexSet": "currency"
+    },
+    {
+      "name": "No forbidden pricing copy in /app/**",
+      "matchPathRegex": "^client/src/(pages|routes)/app/",
+      "forbidRegexSet": "forbiddenCopy"
+    },
+    {
+      "name": "No pricing language in operator pages",
+      "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
+      "forbidRegexSet": "forbiddenCopy"
+    },
+    {
+      "name": "No currency in operator pages",
+      "matchPathRegex": "^client/src/(pages|routes)/app/operator/",
+      "forbidRegexSet": "currency"
+    }
+  ]
+}
+
+
+Notes:
+
+allowGlobs are “marketing/public content areas” where pricing words may exist.
+
+Everything under /app/* is treated as operational: no currency and no forbidden CTA language.
+
+2) Script: scripts/lint-pricing-ui.ts
+
+Create a Node TypeScript script that:
+
+Loads config JSON
+
+Expands globs
+
+Ignores configured ignore globs
+
+Skips allowGlobs for forbidden-copy rules (but still scans for forbidden components if desired)
+
+Scans file contents and reports file:line:column + matched snippet
+
+Exits non-zero on any violation
+
+/* scripts/lint-pricing-ui.ts */
+import fs from "fs";
+import path from "path";
+import process from "process";
+
+type RuleSetName = "forbiddenCopy" | "currency";
+
+type RouteContextRule = {
+  name: string;
+  matchPathRegex: string;
+  forbidRegexSet: "forbiddenCopy" | "currency";
+};
+
+type Config = {
+  rootDir: string;
+  scanGlobs: string[];
+  ignoreGlobs: string[];
+  allowGlobs: string[];
+  forbiddenComponents: string[];
+  forbiddenCopyRegex: string[];
+  currencyRegex: string[];
+  routeContextRules: RouteContextRule[];
+};
+
+function loadConfig(): Config {
+  const p = path.resolve(process.cwd(), "scripts/lint-pricing-ui.config.json");
+  const raw = fs.readFileSync(p, "utf8");
+  return JSON.parse(raw) as Config;
+}
+
+/**
+ * Minimal glob matcher to avoid dependencies. Supports:
+ * - ** for any depth
+ * - * for any chars except path separator
+ */
+function globToRegex(glob: string): RegExp {
+  const escaped = glob
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\\\*\\\*/g, "§§DOUBLESTAR§§")
+    .replace(/\\\*/g, "[^/]*")
+    .replace(/§§DOUBLESTAR§§/g, ".*");
+  return new RegExp("^" + escaped + "$");
+}
+
+function matchesAnyGlob(filePath: string, globs: string[]): boolean {
+  const unixPath = filePath.replace(/\\/g, "/");
+  return globs.some((g) => globToRegex(g).test(unixPath));
+}
+
+function walkDir(dir: string, out: string[] = []): string[] {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const e of entries) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) walkDir(full, out);
+    else out.push(full);
+  }
+  return out;
+}
+
+function isScannable(filePath: string): boolean {
+  return /\.(ts|tsx|js|jsx|mdx)$/i.test(filePath);
+}
+
+function compileRegexes(patterns: string[]): RegExp[] {
+  return patterns.map((p) => new RegExp(p));
+}
+
+function findAllMatches(text: string, rx: RegExp): Array<{ index: number; match: string }> {
+  const out: Array<{ index: number; match: string }> = [];
+  // Ensure global scanning
+  const flags = rx.flags.includes("g") ? rx.flags : rx.flags + "g";
+  const r = new RegExp(rx.source, flags);
+  let m: RegExpExecArray | null;
+  while ((m = r.exec(text)) !== null) {
+    out.push({ index: m.index, match: m[0] });
+    // Prevent infinite loops on zero-length matches
+    if (m.index === r.lastIndex) r.lastIndex++;
+  }
+  return out;
+}
+
+function indexToLineCol(text: string, idx: number): { line: number; col: number } {
+  // 1-based line/col
+  let line = 1;
+  let col = 1;
+  for (let i = 0; i < idx && i < text.length; i++) {
+    if (text[i] === "\n") {
+      line++;
+      col = 1;
+    } else {
+      col++;
+    }
+  }
+  return { line, col };
+}
+
+function snippetAt(text: string, idx: number, len: number): string {
+  const start = Math.max(0, idx - 20);
+  const end = Math.min(text.length, idx + len + 20);
+  return text.slice(start, end).replace(/\s+/g, " ").trim();
+}
+
+function main() {
+  const cfg = loadConfig();
+  const root = path.resolve(process.cwd(), cfg.rootDir);
+
+  // Gather candidate files by walking from root; filter by scanGlobs patterns.
+  const allFiles = walkDir(root).map((p) => path.relative(root, p).replace(/\\/g, "/"));
+  const scanRegexes = cfg.scanGlobs.map(globToRegex);
+  const candidates = allFiles
+    .filter((rel) => scanRegexes.some((rx) => rx.test(rel)))
+    .filter((rel) => !matchesAnyGlob(rel, cfg.ignoreGlobs))
+    .map((rel) => path.join(root, rel));
+
+  const forbiddenCopy = compileRegexes(cfg.forbiddenCopyRegex);
+  const currency = compileRegexes(cfg.currencyRegex);
+
+  const violations: string[] = [];
+
+  function applyRegexSet(relPath: string, text: string, setName: RuleSetName) {
+    const set = setName === "forbiddenCopy" ? forbiddenCopy : currency;
+    for (const rx of set) {
+      const matches = findAllMatches(text, rx);
+      for (const m of matches) {
+        const { line, col } = indexToLineCol(text, m.index);
+        violations.push(
+          `${relPath}:${line}:${col} [${setName}] matched "${m.match}" :: ${snippetAt(text, m.index, m.match.length)}`
+        );
+      }
+    }
+  }
+
+  for (const abs of candidates) {
+    if (!isScannable(abs)) continue;
+
+    const relPath = path.relative(root, abs).replace(/\\/g, "/");
+
+    const text = fs.readFileSync(abs, "utf8");
+
+    // Forbidden components: always ban inside app routes, even if marketing allow.
+    const isAppTree = /^client\/src\/(pages|routes)\/app\//.test(relPath);
+    if (isAppTree) {
+      for (const comp of cfg.forbiddenComponents) {
+        // Catch JSX usage and imports
+        const jsxRx = new RegExp(String.raw`<\s*${comp}\b`);
+        const importRx = new RegExp(String.raw`\b${comp}\b`);
+        if (jsxRx.test(text) || importRx.test(text)) {
+          violations.push(`${relPath}:1:1 [component] forbidden component reference "${comp}"`);
+        }
+      }
+    }
+
+    // Allowlisted areas skip forbiddenCopy + currency checks
+    const isAllow = matchesAnyGlob(relPath, cfg.allowGlobs);
+
+    // Route context rules (strong enforcement)
+    for (const rule of cfg.routeContextRules) {
+      const matchRx = new RegExp(rule.matchPathRegex);
+      if (!matchRx.test(relPath)) continue;
+
+      if (isAllow) continue;
+
+      if (rule.forbidRegexSet === "forbiddenCopy") applyRegexSet(relPath, text, "forbiddenCopy");
+      if (rule.forbidRegexSet === "currency") applyRegexSet(relPath, text, "currency");
+    }
+  }
+
+  if (violations.length) {
+    console.error("❌ Pricing UI lint failed. Violations:");
+    for (const v of violations.slice(0, 200)) console.error(" - " + v);
+    if (violations.length > 200) console.error(`... and ${violations.length - 200} more`);
+    process.exit(1);
+  } else {
+    console.log("✅ Pricing UI lint passed.");
+  }
+}
+
+main();
+
+3) Optional: reference list file (human-readable)
+
+Create scripts/lint-pricing-ui.forbidden.txt listing the forbidden phrases (helps reviewers). This file is not used by the script—just for humans.
+
+4) Wire into package.json
+
+Add scripts:
+
+{
+  "scripts": {
+    "lint:pricing-ui": "node --loader ts-node/esm scripts/lint-pricing-ui.ts",
+    "ci:guardrails": "npm run lint:pricing-ui"
+  }
+}
+
+
+If the repo does not have ts-node, use one of these options:
+
+Option A (recommended): compile script with tsx
+
+Add dev dependency tsx and use:
+
+"lint:pricing-ui": "tsx scripts/lint-pricing-ui.ts"
+
+Option B: plain JS version
+
+If you prefer no tooling, convert the script to scripts/lint-pricing-ui.mjs (same logic) and run with node. (Do this if you don’t want new deps.)
+
+5) GitHub Actions (if applicable)
+
+If you use GitHub Actions, add step to your CI workflow:
+
+- name: Guardrails - Pricing UI Lint
+  run: npm run ci:guardrails
+
+
+If Replit CI is used instead, ensure the CI command includes npm run ci:guardrails.
+
+6) Acceptance criteria
+
+CI fails if any forbidden pricing CTA language appears under client/src/pages/app/** or client/src/pages/app/operator/**
+
+CI fails if any currency symbols or currency codes appear anywhere under client/src/pages/app/**
+
+CI fails if forbidden paywall components are referenced in app routes
+
+Marketing/public content areas do not trigger false positives due to allowGlobs
+
+Output includes file:line:column + snippet for fast fixes

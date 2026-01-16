@@ -1,0 +1,46 @@
+# Pricing UI Lint - Forbidden Terms Reference
+# This file is for human reviewers. The linter uses config.json.
+
+## Forbidden Components (banned in /app/** routes)
+- PricingModal
+- UpgradeBanner
+- PlanGrid
+- PlanComparison
+- StickyCTA
+- CountdownTimer
+- Paywall
+
+## Forbidden Pricing Copy (banned in /app/** routes)
+- upgrade
+- unlock
+- buy now
+- subscribe
+- go pro
+- pro only
+- premium only
+- paid plan
+- checkout
+- add payment
+- enter card
+- card details
+- limited time
+- act now
+- don't miss out
+- hurry
+- sale
+- discount
+- deal
+- exclusive
+- this feature requires
+- available on pro/premium
+- not available on your plan
+
+## Currency Symbols/Codes (banned in /app/** routes)
+- $ € £ followed by digits
+- USD, CAD, EUR, GBP
+
+## Allowed Areas (exempt from copy/currency rules)
+- client/src/pages/public/**
+- client/src/pages/marketing/**
+- client/src/marketing/**
+- client/src/content/**
