@@ -1,9 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { runAllChecks, runSingleCheck } from '../lib/qa/runtimeChecks';
+import { requirePlatformRole, requireServiceKey, isServiceKeyRequest } from '../middleware/guards';
 
 const router = Router();
 
-router.get('/status', async (req: Request, res: Response) => {
+// Admin-only guard: requires platform_admin role OR valid service key
+const requireAdminOrServiceKey = (req: Request, res: Response, next: Function) => {
+  // Allow service key access
+  if (isServiceKeyRequest(req)) {
+    return next();
+  }
+  // Otherwise require platform_admin role
+  return requirePlatformRole('platform_admin')(req, res, next);
+};
+
+router.get('/status', requireAdminOrServiceKey, async (req: Request, res: Response) => {
   try {
     const result = await runAllChecks();
     res.json(result);
@@ -16,7 +27,7 @@ router.get('/status', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/check/:name', async (req: Request, res: Response) => {
+router.get('/check/:name', requireAdminOrServiceKey, async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
     const result = await runSingleCheck(name);

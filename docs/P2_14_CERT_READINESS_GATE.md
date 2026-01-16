@@ -29,7 +29,7 @@ This document provides a comprehensive certification framework for the Emergency
 - Expected: All `event_sha256` values are 64 characters
 - Expected: Events after first have valid `prev_event_sha256`
 
-**Verification Endpoint:** `GET /api/qa/check/evidence_chain_integrity`
+**Verification Endpoint:** `GET /api/admin/qa/check/evidence_chain_integrity`
 
 **Failure Playbook:**
 1. Check `cc_evidence_events` for events missing `event_sha256`
@@ -45,7 +45,7 @@ This document provides a comprehensive certification framework for the Emergency
 - SQL Query: See `P2_14_SQL_VERIFICATION_QUERIES.md` #2
 - Test: Attempt UPDATE on sealed object → must fail
 
-**Verification Endpoint:** `GET /api/qa/status` (check `legal_hold_triggers_present`)
+**Verification Endpoint:** `GET /api/admin/qa/status` (check `legal_hold_triggers_present`)
 
 **Failure Playbook:**
 1. Check trigger exists: `\d cc_evidence_objects`
@@ -61,7 +61,7 @@ This document provides a comprehensive certification framework for the Emergency
 - SQL Query: See `P2_14_SQL_VERIFICATION_QUERIES.md` #10
 - Test: Create hold → target evidence → attempt delete → must fail
 
-**Verification Endpoint:** `GET /api/qa/check/legal_hold_triggers_present`
+**Verification Endpoint:** `GET /api/admin/qa/check/legal_hold_triggers_present`
 
 **Failure Playbook:**
 1. Check `cc_legal_hold_targets` for active targets
@@ -89,7 +89,7 @@ This document provides a comprehensive certification framework for the Emergency
 **Proof Requirements:**
 - SQL Query: See `P2_14_SQL_VERIFICATION_QUERIES.md` #8
 - Expected: Column `token_hash` exists, no `token` column with plaintext
-- Verification: `GET /api/qa/check/authority_token_hash_only`
+- Verification: `GET /api/admin/qa/check/authority_token_hash_only`
 
 **Failure Playbook:**
 1. Check column definitions in `cc_authority_access_tokens`
@@ -119,7 +119,7 @@ This document provides a comprehensive certification framework for the Emergency
 - Expected: No endpoint returns individual signals while group is open
 - Expected: Counts < 5 displayed as "hidden" or not disclosed
 
-**Verification Endpoint:** `GET /api/qa/check/anonymous_groups_k_anonymity`
+**Verification Endpoint:** `GET /api/admin/qa/check/anonymous_groups_k_anonymity`
 
 **Failure Playbook:**
 1. Check RLS policies on `cc_interest_group_signals`
@@ -134,7 +134,7 @@ This document provides a comprehensive certification framework for the Emergency
 - SQL Query: See `P2_14_SQL_VERIFICATION_QUERIES.md` #3, #16
 - Expected: Unique constraints on `(tenant_id, client_request_id)` or similar
 
-**Verification Endpoint:** `GET /api/qa/check/idempotency_constraints_present`
+**Verification Endpoint:** `GET /api/admin/qa/check/idempotency_constraints_present`
 
 **Failure Playbook:**
 1. Check unique constraints on queue tables
@@ -150,7 +150,7 @@ This document provides a comprehensive certification framework for the Emergency
 - Expected: `expires_at` and `status` columns exist
 - Test: Create grant with short TTL → run sweeper → status = 'expired'
 
-**Verification Endpoint:** `GET /api/qa/check/emergency_scope_grant_ttl`
+**Verification Endpoint:** `GET /api/admin/qa/check/emergency_scope_grant_ttl`
 
 **Failure Playbook:**
 1. Check grant creation sets `expires_at`
@@ -166,7 +166,7 @@ This document provides a comprehensive certification framework for the Emergency
 - Expected: Captures have `content_sha256` (64 chars) and `evidence_object_id`
 - Expected: R2 key follows pattern `record-captures/{tenant}/{capture}/{hash}`
 
-**Verification Endpoint:** `GET /api/qa/check/record_capture_schema`
+**Verification Endpoint:** `GET /api/admin/qa/check/record_capture_schema`
 
 **Failure Playbook:**
 1. Check `fetchAndStoreUrlSnapshot()` stores raw bytes
@@ -178,7 +178,7 @@ This document provides a comprehensive certification framework for the Emergency
 ### QA Status Endpoint
 
 ```bash
-curl -X GET /api/qa/status
+curl -X GET /api/admin/qa/status
 ```
 
 Response:
@@ -204,7 +204,7 @@ Response:
 ### Individual Check
 
 ```bash
-curl -X GET /api/qa/check/rls_enabled_critical_tables
+curl -X GET /api/admin/qa/check/rls_enabled_critical_tables
 ```
 
 ## Smoke Test Execution
@@ -230,7 +230,7 @@ The smoke test validates each subsystem end-to-end:
 For certification audit, provide:
 
 1. **Screenshot Evidence:**
-   - `/api/qa/status` response showing all checks pass
+   - `/api/admin/qa/status` response showing all checks pass
    - Smoke test output showing all steps PASS
 
 2. **SQL Query Results:**
@@ -248,7 +248,7 @@ For certification audit, provide:
 ## Certification Checklist
 
 - [ ] All modules in inventory show ✅ status
-- [ ] `/api/qa/status` returns `ok: true` for all checks
+- [ ] `/api/admin/qa/status` returns `ok: true` for all checks
 - [ ] Smoke test completes with all PASS
 - [ ] SQL verification queries return expected results
 - [ ] Documentation artifacts exist:

@@ -340,8 +340,8 @@ export async function registerRoutes(
   // Register system explorer routes (debug/discovery surface)
   app.use('/api/admin/system-explorer', systemExplorerRouter);
 
-  // Register QA runtime checks endpoint (admin only)
-  app.use('/api/qa', qaRouter);
+  // Register QA runtime checks endpoint (platform admin or service key)
+  app.use('/api/admin/qa', qaRouter);
 
   // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
   app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/cc_articles'));
