@@ -47,4 +47,7 @@ export * from './useAssembleDefensePack';           // POST /p2/disputes/:id/ass
 export * from './useExportDefensePack';             // POST /p2/defense-packs/:id/export
 export * from './useShareDefensePackAuthority';     // POST /p2/defense-packs/:id/share-authority
 
+// Monetization (GET /p2/monetization/*)
+export * from './useMonetizationUsage';             // GET /p2/monetization/usage
+
 export { P2ApiError } from '../operatorP2';

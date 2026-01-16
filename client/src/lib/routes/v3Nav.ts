@@ -20,6 +20,7 @@ import {
   Settings,
   Building2,
   Users,
+  BarChart3,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -88,6 +89,7 @@ export const V3_NAV: NavSection[] = [
     title: 'Admin',
     items: [
       { icon: Settings, label: 'Admin', href: '/app/admin', testId: 'nav-admin' },
+      { icon: BarChart3, label: 'Usage', href: '/app/admin/usage', testId: 'nav-usage' },
       { icon: Building2, label: 'Operator', href: '/app/operator', testId: 'nav-operator' },
       { icon: Building2, label: 'Portals', href: '/app/admin/portals', testId: 'nav-portals' },
       { icon: Users, label: 'Tenants', href: '/app/admin/tenants', testId: 'nav-tenants' },

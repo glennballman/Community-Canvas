@@ -21,6 +21,8 @@ export const operatorKeys = {
   
   dispute: (disputeId: string) => [...operatorKeys.all, 'dispute', disputeId] as const,
   defensePack: (defensePackId: string) => [...operatorKeys.all, 'defense-pack', defensePackId] as const,
+  
+  usage: (period: string, includeDrills: boolean) => [...operatorKeys.all, 'usage', { period, includeDrills }] as const,
 };
 
 export const P2_KEYS = operatorKeys;

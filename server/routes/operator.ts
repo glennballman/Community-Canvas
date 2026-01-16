@@ -1354,4 +1354,55 @@ router.get('/p2/events', authenticateToken, async (req: AuthRequest, res: Respon
   }
 });
 
+/**
+ * P2.15 Monetization Usage - Get event counts for a period
+ * Returns counts only (no dollar amounts) for the Usage Summary UI
+ */
+router.get('/p2/monetization/usage', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const ctx = await getP2OperatorContext(req);
+    // Any authenticated tenant member can view usage - no special role required
+    // Access is already validated by getP2OperatorContext which checks tenant membership
+    
+    const periodParam = req.query.period as string;
+    const includeDrills = req.query.includeDrills === '1';
+    
+    // Default to current month if no period specified
+    const now = new Date();
+    const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const period = periodParam || defaultPeriod;
+    
+    // Validate period format (YYYY-MM)
+    if (!/^\d{4}-\d{2}$/.test(period)) {
+      return res.status(400).json({ ok: false, error: 'Invalid period format. Use YYYY-MM.' });
+    }
+    
+    // Build the query with optional drill exclusion
+    let drillFilter = '';
+    if (!includeDrills) {
+      drillFilter = `AND (metadata->>'is_drill' IS NULL OR metadata->>'is_drill' != 'true')`;
+    }
+    
+    const result = await db.execute(sql.raw(`
+      SELECT event_type, COALESCE(SUM(quantity), 0)::int as count
+      FROM cc_monetization_events
+      WHERE tenant_id = '${ctx.tenantId}'::uuid
+        AND period_key = '${period}'
+        AND blocked = false
+        ${drillFilter}
+      GROUP BY event_type
+      ORDER BY event_type ASC
+    `));
+    
+    const counts = (result.rows ?? []).map((row: any) => ({
+      eventType: row.event_type,
+      count: parseInt(row.count, 10) || 0,
+    }));
+    
+    res.json({ ok: true, period, counts });
+  } catch (err: any) {
+    res.status(err.statusCode || 500).json({ ok: false, error: err.message });
+  }
+});
+
 export default router;
