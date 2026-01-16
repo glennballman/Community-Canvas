@@ -1,0 +1,243 @@
+✅ REPLIT PROMPT PACK — V3-UI-OP4 (Usage Summary UI — Counts Only, Ramanujam-Safe)
+
+You are Replit. Implement OP4: a Usage Summary UI that surfaces event counts from the monetization ledger (P2.15) without becoming a pricing page.
+Hard constraints:
+
+No dollars anywhere in /app/* operational flows.
+
+No upgrade banners, no plan comparison grids, no “unlock/upgrade” language.
+
+Keep dev forbidden pricing guardrails active.
+
+Use existing React SPA stack (Vite + React Router + TanStack Query + shadcn/ui).
+
+Prefer existing endpoints. If missing, add a minimal P2 operator endpoint to supply usage counts (spec below).
+
+0) Decide location + access control
+0.1 Route location
+
+Add under tenant app admin section:
+
+/app/admin/usage → UsageSummaryPage
+
+Rationale: This is “admin visibility”, not an operator workflow. Keep it under the Admin section.
+
+0.2 Access control
+
+Page must require normal tenant auth (already in /app/* tree).
+
+Additionally: if you have a “tenant admin” check in UI context, gate the page.
+
+If not available, still render, but show “Admin access required” when API returns access denied.
+
+1) Frontend UI: new page + route + nav link
+1.1 Create page
+
+Create: client/src/pages/app/admin/UsageSummaryPage.tsx
+
+Page layout (minimal):
+
+Header: “Usage Summary”
+
+Subtext: “Shows protected actions recorded this period.”
+
+Controls row:
+
+Month selector (YYYY-MM) default to current month
+
+Optional toggle: “Include drills” (default off) if the backend supports it
+
+Main content:
+
+Table: event_type, count, notes (optional)
+
+Secondary card: “Recorded Events” explanation (factual copy only)
+
+Approved copy snippets (use these verbatim):
+
+“This page shows protected actions recorded this period.”
+
+“Counts are based on the monetization event ledger.”
+
+“Exports and authority shares may be recorded as billable events under your plan.”
+
+No other pricing language.
+
+1.2 Wire route
+
+Add route in your app router:
+
+/app/admin/usage → UsageSummaryPage
+
+1.3 Add nav link
+
+Update client/src/lib/routes/v3Nav.ts (Admin section) to add:
+
+Title: “Usage”
+
+Route: /app/admin/usage
+
+Keep it under Admin section; do not create a Pricing section.
+
+2) Data source: Usage counts API
+2.1 Preferred: Use existing endpoint (if present)
+
+Search backend for any endpoint returning monetization usage, e.g.:
+
+GET /api/operator/p2/monetization/usage?period=YYYY-MM
+
+GET /api/monetization/usage?period=...
+
+GET /api/operator/p2/usage?...
+
+If it exists, use it.
+
+2.2 If missing: Add minimal P2 endpoint (backend spec)
+
+If no usage endpoint exists, implement:
+
+Endpoint
+
+GET /api/operator/p2/monetization/usage?period=YYYY-MM&includeDrills=0|1
+
+Response (P2 envelope)
+
+Success:
+
+{
+  "ok": true,
+  "period": "2026-01",
+  "counts": [
+    { "eventType": "emergency_run_started", "count": 2 },
+    { "eventType": "authority_share_issued", "count": 5 }
+  ]
+}
+
+
+Error:
+
+{ "ok": false, "error": "Access denied to this tenant" }
+
+Server behavior
+
+Auth required (JWT)
+
+Tenant membership validated (same as other P2 routes)
+
+Require tenant admin or platform operator role (choose what you already enforce)
+
+Query:
+
+period_key = period
+
+group by event_type
+
+exclude drills by default (either metadata->>'is_drill' != 'true' or event_type not like 'drill_%')
+
+Order counts by eventType ASC
+
+3) Frontend API hook
+
+Create:
+
+client/src/lib/api/operatorP2/useMonetizationUsage.ts
+
+Uses your existing P2 operator API client wrapper:
+
+Request: GET /monetization/usage?period=${period}&includeDrills=${includeDrills ? 1 : 0}
+
+Returns:
+
+period
+
+counts: Array<{ eventType: string; count: number }>
+
+Query key:
+
+operatorKeys.usage(period, includeDrills)
+
+4) UI Rendering details
+4.1 Table
+
+Use shadcn Table.
+
+Columns:
+
+Event Type (monospace)
+
+Count (right aligned)
+
+Description (optional)
+
+Optional: Friendly labels
+
+Create a map in:
+
+client/src/lib/monetization/eventTypeLabels.ts
+
+Example:
+
+emergency_run_started → “Emergency run started”
+
+evidence_bundle_sealed → “Evidence bundle sealed”
+
+insurance_dossier_exported → “Insurance dossier exported”
+
+defense_pack_exported → “Defense pack exported”
+
+authority_share_issued → “Authority share issued”
+
+interest_group_triggered → “Interest group activated”
+
+If no label exists, show raw eventType.
+
+4.2 Empty state
+
+If counts empty:
+
+“No events recorded this period.”
+
+4.3 Error state
+
+Use OperatorErrorAlert (re-use existing component) or create AdminErrorAlert wrapper.
+
+If error contains “Access denied” show:
+
+“Admin access required to view usage summary.”
+
+5) Guardrails
+5.1 Dev forbidden pricing check
+
+Call your existing assertNoForbiddenPricingCopy in UsageSummaryPage useEffect (DEV only).
+
+5.2 No currency in this page
+
+Add a local assert in DEV:
+
+fail if any $ detected in rendered text
+
+6) Acceptance criteria
+
+/app/admin/usage route works and appears in Admin nav
+
+Page loads usage counts for current month
+
+Month selector changes period and refetches
+
+No dollar amounts, no upgrade language, no plan grids
+
+Uses P2 envelope handling ({ ok, error?, ... })
+
+If API missing: the minimal backend endpoint is added under /api/operator/p2/monetization/usage
+
+7) Do not implement yet
+
+Any plan management UI
+
+Any billing UI
+
+Any “upgrade plan” CTAs
+
+Any dollar display anywhere in /app/*
+
+Implement OP4 exactly as specified.

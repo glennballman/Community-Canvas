@@ -7,7 +7,17 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Check, ExternalLink, ShieldCheck, ShieldX, Clock, HelpCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Copy, Check, ExternalLink, ShieldCheck, ShieldX, Clock, HelpCircle, AlertTriangle } from 'lucide-react';
 
 interface AuthorityGrantDetailsCardProps {
   grantId?: string;
@@ -15,8 +25,10 @@ interface AuthorityGrantDetailsCardProps {
   expiresAt?: string;
   status?: 'active' | 'revoked' | 'expired' | 'unknown';
   scopeSummary?: string;
-  onRevoke?: () => void;
-  loading?: boolean;
+  title?: string;
+  grantType?: string;
+  onRevoke?: (reason: string) => void | Promise<void>;
+  revoking?: boolean;
 }
 
 const STATUS_CONFIG: Record<string, { icon: typeof ShieldCheck; label: string; variant: 'default' | 'destructive' | 'secondary' | 'outline' }> = {
@@ -32,10 +44,14 @@ export function AuthorityGrantDetailsCard({
   expiresAt,
   status = 'unknown',
   scopeSummary,
+  title,
+  grantType,
   onRevoke,
-  loading = false,
+  revoking = false,
 }: AuthorityGrantDetailsCardProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [revokeReason, setRevokeReason] = useState('');
 
   const handleCopy = async (value: string, field: string) => {
     await navigator.clipboard.writeText(value);
@@ -87,11 +103,11 @@ export function AuthorityGrantDetailsCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 shrink-0"
+                className="shrink-0"
                 onClick={() => handleCopy(grantId, 'grantId')}
                 data-testid="button-copy-grant-id"
               >
-                {copiedField === 'grantId' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                {copiedField === 'grantId' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
           </div>
@@ -107,15 +123,15 @@ export function AuthorityGrantDetailsCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 shrink-0"
+                className="shrink-0"
                 onClick={() => handleCopy(accessUrl, 'accessUrl')}
                 data-testid="button-copy-access-url"
               >
-                {copiedField === 'accessUrl' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                {copiedField === 'accessUrl' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
               <a href={accessUrl} target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" data-testid="button-open-access-url">
-                  <ExternalLink className="h-3 w-3" />
+                <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-open-access-url">
+                  <ExternalLink className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -155,11 +171,11 @@ export function AuthorityGrantDetailsCard({
             <Button
               variant="destructive"
               size="sm"
-              onClick={onRevoke}
-              disabled={loading}
+              onClick={() => setRevokeDialogOpen(true)}
+              disabled={revoking}
               data-testid="button-revoke-grant"
             >
-              {loading ? 'Revoking...' : 'Revoke Access'}
+              Revoke Access
             </Button>
           </div>
         )}
@@ -168,6 +184,52 @@ export function AuthorityGrantDetailsCard({
           Recorded in operator audit log.
         </div>
       </CardContent>
+
+      <Dialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Revoke Authority Grant
+            </DialogTitle>
+            <DialogDescription>
+              This will immediately revoke access for all tokens associated with this grant.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="revoke-reason-inline">Reason for Revocation</Label>
+              <Input
+                id="revoke-reason-inline"
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                placeholder="Enter reason for revocation"
+                data-testid="input-revoke-reason-inline"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (onRevoke && revokeReason.trim()) {
+                  await onRevoke(revokeReason.trim());
+                  setRevokeDialogOpen(false);
+                  setRevokeReason('');
+                }
+              }}
+              disabled={!revokeReason.trim() || revoking}
+              data-testid="button-confirm-revoke-inline"
+            >
+              {revoking ? 'Revoking...' : 'Revoke Grant'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

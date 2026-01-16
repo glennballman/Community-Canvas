@@ -33,7 +33,7 @@ export default function OperatorAuthorityIndexPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <Shield className="h-6 w-6 text-primary" />
+        <Shield className="h-6 w-6" />
         <div>
           <h1 className="text-xl font-bold">Authority Sharing</h1>
           <p className="text-sm text-muted-foreground">Manage external access grants</p>
