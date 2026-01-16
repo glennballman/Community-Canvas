@@ -105,6 +105,18 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
   - **API Endpoints**: 7 routes under `/api/offline/*` for sync sessions, uploads, ingest, seal, and URL fetching
   - **RLS Policies**: Individual access to own sessions/queued items with service mode bypass
   - **Tests**: 10 passing tests covering sync sessions, batch/item idempotency, hash mismatch rejection, pending bytes, hold enforcement, sealing, and append-only logs
+- **P2.9 Authority/Adjuster Read-Only Portals** (Migration 135): Secure external access for insurance adjusters, legal authorities, and auditors:
+  - **Grants** (`cc_authority_access_grants`): Grant containers with recipient info, expiry, max views, optional passcode
+  - **Scopes** (`cc_authority_access_scopes`): Defines what a grant can access (evidence_bundle, insurance_claim, claim_dossier)
+  - **Tokens** (`cc_authority_access_tokens`): Shareable tokens with SHA-256 hashing, usage tracking, revocation
+  - **Events** (`cc_authority_access_events`): Append-only audit log with FORCE RLS
+  - **SECURITY DEFINER Functions**: 7 functions (validate_token, get_bundle_manifest, get_dossier, get_evidence_object_summary, list_scope_index, check_scope, log_event)
+  - **Session Tokens**: JWT with 15-minute expiry after successful token+passcode validation
+  - **Rate Limiting**: 30 requests/minute per IP+token hash combination
+  - **Signed Downloads**: R2 pre-signed URLs with 60-second expiry
+  - **Public Routes**: `/p/authority/*` for external access (validate, scopes, bundle, dossier, evidence, download)
+  - **Admin Routes**: `/api/authority/*` for grant/scope/token management
+  - **Tests**: 28 passing tests covering token generation, passcode enforcement, validation, revocation, rate limiting
 
 ## External Dependencies
 
