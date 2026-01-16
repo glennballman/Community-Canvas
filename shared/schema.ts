@@ -1,4 +1,5 @@
 import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey, char, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -5857,3 +5858,142 @@ export const insertSettlementBatchSchema = createInsertSchema(ccSettlementBatche
 });
 export type SettlementBatch = typeof ccSettlementBatches.$inferSelect;
 export type InsertSettlementBatch = z.infer<typeof insertSettlementBatchSchema>;
+
+// ============================================================================
+// P2.15 MONETIZATION EVENT LEDGER + PLAN GATING
+// ============================================================================
+
+// Plan status enum
+export const monetizationPlanStatusEnum = pgEnum("cc_monetization_plan_status", [
+  "active",
+  "inactive",
+  "deprecated",
+]);
+
+// Monetization event type enum
+export const monetizationEventTypeEnum = pgEnum("cc_monetization_event_type", [
+  "emergency_run_started",
+  "emergency_playbook_exported",
+  "evidence_bundle_sealed",
+  "insurance_dossier_assembled",
+  "insurance_dossier_exported",
+  "defense_pack_assembled",
+  "defense_pack_exported",
+  "authority_share_issued",
+  "interest_group_triggered",
+  "record_capture_created",
+  "offline_sync_batch",
+]);
+
+// Monetization subject type enum
+export const monetizationSubjectTypeEnum = pgEnum("cc_monetization_subject_type", [
+  "emergency_run",
+  "evidence_bundle",
+  "claim",
+  "dossier",
+  "defense_pack",
+  "authority_grant",
+  "interest_group",
+  "record_capture",
+  "offline_batch",
+]);
+
+// Monetization Plans - Defines plans and entitlements
+export const ccMonetizationPlans = pgTable("cc_monetization_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id"), // null = global/default plan template
+  planKey: text("plan_key").notNull(), // e.g., free, pro, emergency_plus
+  title: text("title").notNull(),
+  description: text("description"),
+  entitlements: jsonb("entitlements").notNull().$type<{
+    events?: Record<string, { limit: number; period: string }>;
+    features?: Record<string, boolean>;
+    hard_gates?: Record<string, boolean>;
+  }>(),
+  status: monetizationPlanStatusEnum("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  tenantPlanKeyIdx: uniqueIndex("uq_monetization_plan_tenant_key").on(table.tenantId, table.planKey).where(sql`tenant_id IS NOT NULL`),
+  globalPlanKeyIdx: uniqueIndex("uq_monetization_plan_global_key").on(table.planKey).where(sql`tenant_id IS NULL`),
+  statusIdx: index("idx_monetization_plans_status").on(table.status),
+}));
+
+export const insertMonetizationPlanSchema = createInsertSchema(ccMonetizationPlans).omit({
+  id: true,
+  createdAt: true,
+});
+export type MonetizationPlan = typeof ccMonetizationPlans.$inferSelect;
+export type InsertMonetizationPlan = z.infer<typeof insertMonetizationPlanSchema>;
+
+// Tenant Plan Assignments - Which plan a tenant is on (time-bounded)
+export const ccMonetizationPlanAssignments = pgTable("cc_monetization_plan_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  planId: uuid("plan_id").notNull().references(() => ccMonetizationPlans.id),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+  effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull().defaultNow(),
+  effectiveTo: timestamp("effective_to", { withTimezone: true }),
+  status: text("status").notNull().default("active"),
+  assignedByIndividualId: uuid("assigned_by_individual_id"),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  tenantStatusIdx: index("idx_monetization_assignments_tenant_status").on(table.tenantId, table.status),
+  tenantEffectiveIdx: index("idx_monetization_assignments_tenant_effective").on(table.tenantId, table.effectiveFrom),
+}));
+
+export const insertMonetizationPlanAssignmentSchema = createInsertSchema(ccMonetizationPlanAssignments).omit({
+  id: true,
+  assignedAt: true,
+});
+export type MonetizationPlanAssignment = typeof ccMonetizationPlanAssignments.$inferSelect;
+export type InsertMonetizationPlanAssignment = z.infer<typeof insertMonetizationPlanAssignmentSchema>;
+
+// Monetization Events - The ledger. Append-only. This is the spine.
+export const ccMonetizationEvents = pgTable("cc_monetization_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  portalId: uuid("portal_id"),
+  circleId: uuid("circle_id"),
+  eventType: text("event_type").notNull(), // matches monetizationEventTypeEnum values
+  eventAt: timestamp("event_at", { withTimezone: true }).notNull().defaultNow(),
+  actorIndividualId: uuid("actor_individual_id"),
+  subjectType: text("subject_type"), // matches monetizationSubjectTypeEnum values
+  subjectId: uuid("subject_id"),
+  quantity: integer("quantity").notNull().default(1),
+  planKey: text("plan_key"), // copied at event time
+  periodKey: text("period_key").notNull(), // e.g., 2026-01 (for monthly aggregation)
+  blocked: boolean("blocked").notNull().default(false),
+  blockReason: text("block_reason"),
+  clientRequestId: text("client_request_id"),
+  metadata: jsonb("metadata").notNull().default({}),
+}, (table) => ({
+  tenantEventAtIdx: index("idx_monetization_events_tenant_type_at").on(table.tenantId, table.eventType, table.eventAt),
+  tenantPeriodIdx: index("idx_monetization_events_tenant_period").on(table.tenantId, table.periodKey),
+  clientRequestIdx: uniqueIndex("uq_monetization_events_client_request").on(table.tenantId, table.clientRequestId).where(sql`client_request_id IS NOT NULL`),
+}));
+
+export const insertMonetizationEventSchema = createInsertSchema(ccMonetizationEvents).omit({
+  id: true,
+});
+export type MonetizationEvent = typeof ccMonetizationEvents.$inferSelect;
+export type InsertMonetizationEvent = z.infer<typeof insertMonetizationEventSchema>;
+
+// Plan Usage Snapshots - Pre-aggregated usage for fast gating
+export const ccMonetizationUsageSnapshots = pgTable("cc_monetization_usage_snapshots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  planId: uuid("plan_id").notNull().references(() => ccMonetizationPlans.id),
+  periodKey: text("period_key").notNull(), // e.g., 2026-01
+  usage: jsonb("usage").notNull().$type<Record<string, number>>(), // e.g., { emergency_run_started: 2 }
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  uniqueTenantPlanPeriod: uniqueIndex("uq_monetization_usage_tenant_plan_period").on(table.tenantId, table.planId, table.periodKey),
+}));
+
+export const insertMonetizationUsageSnapshotSchema = createInsertSchema(ccMonetizationUsageSnapshots).omit({
+  id: true,
+  computedAt: true,
+});
+export type MonetizationUsageSnapshot = typeof ccMonetizationUsageSnapshots.$inferSelect;
+export type InsertMonetizationUsageSnapshot = z.infer<typeof insertMonetizationUsageSnapshotSchema>;

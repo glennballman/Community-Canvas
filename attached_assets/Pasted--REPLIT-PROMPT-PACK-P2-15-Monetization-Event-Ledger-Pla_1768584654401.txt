@@ -1,0 +1,402 @@
+✅ REPLIT PROMPT PACK — P2.15 Monetization Event Ledger + Plan Gating (Authoritative)
+P2.15.0 — Non-Negotiables
+
+Implement monetization by metering events, not invoices:
+
+Every monetizable moment emits a durable, immutable event
+
+Events are tenant-scoped, plan-aware, and auditable
+
+No billing UI, no payment rails, no Stripe logic
+
+Enables hard gating (allow / warn / block) without refactors
+
+Works across:
+
+Emergency runs & packs
+
+Insurance claims & dossiers
+
+Defense packs
+
+Authority shares
+
+Anonymous interest groups
+
+Offline-safe (events can be emitted later)
+
+No UI redesign; backend primitives + endpoints + docs + tests only
+
+P2.15.1 — Database Migration (New Tables)
+1) cc_plans
+
+Defines plans and entitlements.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid null (null = global/default plan template)
+
+plan_key text not null (e.g., free, pro, emergency_plus)
+
+title text not null
+
+description text null
+
+entitlements jsonb not null
+Example:
+
+{
+  "events": {
+    "emergency_run_started": { "limit": 3, "period": "month" },
+    "evidence_bundle_sealed": { "limit": 10, "period": "month" },
+    "authority_share_issued": { "limit": 5, "period": "month" }
+  },
+  "features": {
+    "anonymous_groups": true,
+    "offline_capture": true,
+    "authority_portal": true
+  },
+  "hard_gates": {
+    "defense_pack_export": true
+  }
+}
+
+
+status text not null default 'active'
+
+created_at timestamptz not null default now()
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+unique (tenant_id, plan_key) where tenant_id is not null
+
+unique (plan_key) where tenant_id is null
+
+2) cc_tenant_plan_assignments
+
+Which plan a tenant is on (time-bounded).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+plan_id uuid not null references cc_plans(id)
+
+assigned_at timestamptz not null default now()
+
+effective_from timestamptz not null default now()
+
+effective_to timestamptz null
+
+status text not null default 'active'
+
+assigned_by_individual_id uuid null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, status)
+
+(tenant_id, effective_from desc)
+
+3) cc_monetization_events
+
+The ledger. Append-only. This is the spine.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+portal_id uuid null
+
+circle_id uuid null
+
+event_type text not null
+Examples:
+
+emergency_run_started
+
+evidence_bundle_sealed
+
+insurance_dossier_assembled
+
+insurance_dossier_exported
+
+defense_pack_assembled
+
+defense_pack_exported
+
+authority_share_issued
+
+interest_group_triggered
+
+event_at timestamptz not null default now()
+
+actor_individual_id uuid null
+
+subject_type text null
+values: emergency_run | evidence_bundle | claim | dossier | defense_pack | authority_grant | interest_group
+
+subject_id uuid null
+
+quantity int not null default 1
+
+plan_key text null (copied at event time)
+
+period_key text not null
+Example: 2026-01 (for monthly aggregation)
+
+blocked boolean not null default false
+
+block_reason text null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, event_type, event_at desc)
+
+(tenant_id, period_key)
+
+unique (tenant_id, client_request_id) where not null
+
+4) cc_plan_usage_snapshots (Optional but recommended)
+
+Pre-aggregated usage for fast gating.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+plan_id uuid not null
+
+period_key text not null
+
+usage jsonb not null
+Example:
+
+{
+  "emergency_run_started": 2,
+  "authority_share_issued": 1
+}
+
+
+computed_at timestamptz not null default now()
+
+Indexes:
+
+unique (tenant_id, plan_id, period_key)
+
+P2.15.2 — RLS Policies
+
+Enable RLS:
+
+All tables tenant-scoped via app.tenant_id
+
+Plans with tenant_id is null are readable by all tenants (read-only)
+
+cc_monetization_events is append-only for non-service roles
+
+P2.15.3 — Plan Resolution + Gating Engine
+
+Create module:
+
+src/lib/monetization/gating.ts
+
+getActivePlanForTenant(tenantId, atTime=now())
+
+Resolve active plan assignment
+
+Fallback order:
+
+tenant-specific plan
+
+global default plan (plan_key=free or similar)
+
+Return plan with entitlements
+
+checkEntitlement({tenantId, eventType, quantity=1, atTime=now()})
+
+Returns:
+
+{
+  allowed: boolean,
+  hard_block: boolean,
+  remaining?: number,
+  reason?: string
+}
+
+
+Logic:
+
+Determine period_key (monthly)
+
+Look up plan entitlements for eventType
+
+Count usage for period (from snapshot or live sum)
+
+If over limit:
+
+if hard_gates[eventType] === true → allowed=false, hard_block=true
+
+else → allowed=true, hard_block=false (soft overage; still emit event but flagged)
+
+emitMonetizationEvent(...)
+
+Calls checkEntitlement
+
+Inserts into cc_monetization_events
+
+sets blocked=true if not allowed
+
+Returns gating result
+
+Important:
+Subsystems should call emitMonetizationEvent before performing the action if it is hard-gated, or after if allowed/soft-gated.
+
+P2.15.4 — Integration Points (Wire These In)
+
+Add calls to emitMonetizationEvent at these points (minimum):
+
+Emergency
+
+startEmergencyRun → emergency_run_started
+
+generateEmergencyRecordPack → evidence_bundle_sealed
+
+export-playbook → emergency_playbook_exported
+
+Evidence
+
+Bundle seal → evidence_bundle_sealed
+
+Insurance
+
+Dossier assemble → insurance_dossier_assembled
+
+Dossier export → insurance_dossier_exported
+
+Defense
+
+Defense pack assemble → defense_pack_assembled
+
+Defense pack export → defense_pack_exported
+
+Authority
+
+Token issuance → authority_share_issued
+
+Interest Groups
+
+Group triggered → interest_group_triggered
+
+For hard-gated actions (e.g., defense_pack_export):
+
+If allowed=false && hard_block=true → abort action and surface a clear error:
+
+PLAN_LIMIT_EXCEEDED
+
+P2.15.5 — Offline / Deferred Events
+
+For P2.8 compatibility:
+
+Allow emitMonetizationEvent to accept event_at in the past
+
+Period_key must be derived from event_at
+
+Idempotency via client_request_id ensures no double-counting
+
+P2.15.6 — API Endpoints (Minimal)
+Admin / Tenant
+
+GET /api/monetization/plan
+Returns active plan + entitlements.
+
+GET /api/monetization/usage?period=YYYY-MM
+Returns aggregated usage vs limits.
+
+POST /api/monetization/assign-plan
+Admin-only.
+Body: { plan_key, effective_from?, effective_to? }
+
+Platform (Optional)
+
+POST /api/platform/plans
+Create/update global plans (platform admin only).
+
+P2.15.7 — Tests (Must Exist)
+
+Plan resolution fallback works
+
+Soft limit:
+
+over limit → event emitted, blocked=false
+
+Hard gate:
+
+over limit → blocked=true, action aborted
+
+Idempotency:
+
+same client_request_id doesn’t double-count
+
+Period roll-over:
+
+usage resets next month
+
+Offline event with past event_at counts toward correct period
+
+P2.15.8 — Documentation
+
+Create docs/P2_15_MONETIZATION_LEDGER.md:
+
+Event ledger philosophy
+
+Plan + entitlement schema
+
+Hard vs soft gates
+
+Integration contract for subsystems
+
+How this feeds billing later (without implementing it now)
+
+✅ Definition of Done
+
+P2.15 is done only when:
+
+Ledger tables exist with RLS
+
+Plan resolution + gating engine works
+
+All major subsystems emit events
+
+Hard gates enforce correctly
+
+Usage can be queried
+
+Tests pass
+
+Docs exist
+
+🟢 SYSTEM STATUS AFTER P2.15
+
+At this point:
+
+Emergency, Legal, Insurance, Dispute, Class-Action, Authority Access all complete
+
+Monetization is event-complete and future-proof
+
+No refactors needed to add billing, invoices, or pricing changes later
