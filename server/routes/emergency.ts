@@ -19,6 +19,8 @@ import {
   expireEmergencyGrants,
 } from '../lib/emergency/scopes.js';
 import { exportPlaybook } from '../lib/emergency/playbook.js';
+import { generateEmergencyRecordPack } from '../lib/records/generatePack.js';
+import { fetchAndStoreUrlSnapshot } from '../lib/records/capture.js';
 
 const router = Router();
 
@@ -566,6 +568,169 @@ router.post('/runs/:id/export-playbook', async (req: any, res: Response) => {
   } catch (err: unknown) {
     console.error('Error exporting playbook:', err);
     const message = err instanceof Error ? err.message : 'Failed to export playbook';
+    res.status(500).json({ error: message });
+  }
+});
+
+const GeneratePackSchema = z.object({
+  title: z.string().optional(),
+  include_types: z.array(z.string()).optional(),
+  seal_bundle: z.boolean().default(true),
+});
+
+router.post('/runs/:id/generate-record-pack', async (req: any, res: Response) => {
+  try {
+    const tenantId = req.ctx.tenant_id!;
+    const runId = req.params.id;
+    const individualId = req.ctx.individual_id;
+
+    const parsed = GeneratePackSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid request', details: parsed.error.errors });
+    }
+
+    const result = await generateEmergencyRecordPack({
+      runId,
+      tenantId,
+      title: parsed.data.title,
+      includeTypes: parsed.data.include_types,
+      sealBundle: parsed.data.seal_bundle,
+      generatedBy: individualId || undefined,
+    });
+
+    res.json(result);
+  } catch (err: unknown) {
+    console.error('Error generating record pack:', err);
+    const message = err instanceof Error ? err.message : 'Failed to generate record pack';
+    res.status(500).json({ error: message });
+  }
+});
+
+router.get('/runs/:id/captures', async (req: any, res: Response) => {
+  try {
+    const tenantId = req.ctx.tenant_id!;
+    const runId = req.params.id;
+
+    const result = await serviceQuery(
+      `SELECT id, capture_type, status, target_url, http_status, content_mime,
+              content_bytes, content_sha256, evidence_object_id, requested_at, error
+       FROM cc_record_captures
+       WHERE tenant_id = $1 AND run_id = $2
+       ORDER BY requested_at DESC`,
+      [tenantId, runId]
+    );
+
+    res.json({ captures: result.rows });
+  } catch (err: unknown) {
+    console.error('Error listing captures:', err);
+    const message = err instanceof Error ? err.message : 'Failed to list captures';
+    res.status(500).json({ error: message });
+  }
+});
+
+const CaptureUrlSchema = z.object({
+  url: z.string().url(),
+  capture_type: z.enum(['evac_order', 'utility_outage', 'media_article', 'advisory', 'alert', 'generic']).default('generic'),
+  include_headers: z.boolean().default(true),
+  defer_if_fail: z.boolean().default(false),
+});
+
+router.post('/runs/:id/capture-url', async (req: any, res: Response) => {
+  try {
+    const tenantId = req.ctx.tenant_id!;
+    const runId = req.params.id;
+    const individualId = req.ctx.individual_id;
+
+    const parsed = CaptureUrlSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid request', details: parsed.error.errors });
+    }
+
+    const result = await fetchAndStoreUrlSnapshot({
+      tenantId,
+      runId,
+      url: parsed.data.url,
+      captureType: parsed.data.capture_type,
+      includeHeaders: parsed.data.include_headers,
+      requestedBy: individualId || undefined,
+      deferIfFail: parsed.data.defer_if_fail,
+    });
+
+    res.status(201).json(result);
+  } catch (err: unknown) {
+    console.error('Error capturing URL:', err);
+    const message = err instanceof Error ? err.message : 'Failed to capture URL';
+    res.status(500).json({ error: message });
+  }
+});
+
+router.post('/runs/:id/authority/refresh', async (req: any, res: Response) => {
+  try {
+    const tenantId = req.ctx.tenant_id!;
+    const runId = req.params.id;
+    const individualId = req.ctx.individual_id;
+
+    const runResult = await serviceQuery<{ authority_grant_id: string | null }>(
+      `SELECT authority_grant_id FROM cc_emergency_runs WHERE id = $1 AND tenant_id = $2`,
+      [runId, tenantId]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+
+    const authorityGrantId = runResult.rows[0].authority_grant_id;
+    if (!authorityGrantId) {
+      return res.status(400).json({ error: 'No authority share exists for this run' });
+    }
+
+    const capturesResult = await serviceQuery<{ evidence_object_id: string }>(
+      `SELECT DISTINCT evidence_object_id FROM cc_record_captures
+       WHERE tenant_id = $1 AND run_id = $2 AND evidence_object_id IS NOT NULL`,
+      [tenantId, runId]
+    );
+
+    const evidenceIds = capturesResult.rows.map(r => r.evidence_object_id);
+
+    if (evidenceIds.length > 0) {
+      const scopeResult = await serviceQuery<{ scope_config: any }>(
+        `SELECT scope_config FROM cc_authority_grants WHERE id = $1`,
+        [authorityGrantId]
+      );
+
+      if (scopeResult.rows.length > 0) {
+        const existingScope = scopeResult.rows[0].scope_config || {};
+        const existingEvidenceIds = existingScope.evidence_ids || [];
+        const newEvidenceIds = [...new Set([...existingEvidenceIds, ...evidenceIds])];
+
+        await serviceQuery(
+          `UPDATE cc_authority_grants SET scope_config = jsonb_set(
+            COALESCE(scope_config, '{}'::jsonb), '{evidence_ids}', $2::jsonb
+          ) WHERE id = $1`,
+          [authorityGrantId, JSON.stringify(newEvidenceIds)]
+        );
+      }
+    }
+
+    await serviceQuery(
+      `INSERT INTO cc_emergency_run_events (
+        tenant_id, run_id, event_type, event_at, actor_individual_id, event_payload
+      ) VALUES ($1, $2, 'authority_shared', now(), $3, $4)`,
+      [tenantId, runId, individualId, JSON.stringify({
+        action: 'refreshed',
+        authority_grant_id: authorityGrantId,
+        evidence_count: evidenceIds.length,
+      })]
+    );
+
+    res.json({
+      authority_grant_id: authorityGrantId,
+      evidence_count: evidenceIds.length,
+      refreshed: true,
+    });
+  } catch (err: unknown) {
+    console.error('Error refreshing authority:', err);
+    const message = err instanceof Error ? err.message : 'Failed to refresh authority';
     res.status(500).json({ error: message });
   }
 });

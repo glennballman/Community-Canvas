@@ -1,0 +1,423 @@
+✅ REPLIT PROMPT PACK — P2.13 Preserve Record → Generate Pack (Authoritative)
+P2.13.0 — Non-Negotiables
+
+Implement a system that, during/after an emergency, can:
+
+Ingest external records (evacuation orders, utility outages, media articles, alerts, official advisories)
+
+Capture deterministic snapshots (raw bytes → R2) with sha256
+
+Create/append to a sealed evidence bundle (P2.5) for the emergency run
+
+Preserve chain-of-custody events (P2.5 events)
+
+Optionally auto-create:
+
+Legal Hold (P2.7) if not already present
+
+Authority Share (P2.9) for adjuster/regulator
+
+Be offline/low-signal aware: allow “URL now, fetch later” with auditable state
+
+Be monetizable: per-capture + per-pack generation events (audit only)
+
+No UI redesign; backend automation + endpoints + docs + tests only.
+
+P2.13.1 — Database Migration (New Tables)
+1) cc_record_sources
+
+Configurable sources to capture from.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+portal_id uuid null
+
+circle_id uuid null
+
+source_type text not null
+values: url | rss | json_feed | webhook | manual_url_list
+
+title text not null
+
+description text null
+
+base_url text null
+
+config jsonb not null default '{}'::jsonb
+Examples:
+
+rss: { feed_url, match_keywords: [], max_items: 20 }
+
+json_feed: { url, path_items: "$.items", fields: {...} }
+
+url: { url, include_headers: true }
+
+enabled boolean not null default true
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, enabled)
+
+unique (tenant_id, client_request_id) where not null
+
+2) cc_record_captures
+
+A capture attempt (append-only, operational log).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+run_id uuid null references cc_emergency_runs(id) on delete set null
+
+source_id uuid null references cc_record_sources(id) on delete set null
+
+capture_type text not null
+values: evac_order | utility_outage | media_article | advisory | alert | generic
+
+requested_at timestamptz not null default now()
+
+requested_by_individual_id uuid null
+
+status text not null default 'pending'
+values: pending | fetched | stored | sealed | failed | deferred
+
+target_url text null
+
+http_status int null
+
+response_headers jsonb null
+
+content_mime text null
+
+content_bytes bigint null
+
+content_sha256 text null
+
+r2_key text null
+
+evidence_object_id uuid null (P2.5)
+
+error jsonb null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, run_id, requested_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+3) cc_record_capture_queue
+
+For deferred/async fetching (low-signal or rate-limited).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+run_id uuid null
+
+capture_id uuid not null references cc_record_captures(id) on delete cascade
+
+next_attempt_at timestamptz not null default now()
+
+attempt_count int not null default 0
+
+status text not null default 'queued'
+values: queued | processing | done | deadletter
+
+last_error jsonb null
+
+created_at timestamptz not null default now()
+
+Indexes:
+
+(tenant_id, next_attempt_at)
+
+(tenant_id, status)
+
+P2.13.2 — RLS Policies
+
+Enable RLS:
+
+tenant scope via app.tenant_id
+
+circle membership enforcement where applicable through run/circle relationships (use run.circle_id when present)
+
+Public capture is not allowed here by default. Captures run via authenticated or system processes.
+
+P2.13.3 — Capture Engine (Deterministic Snapshots)
+
+Create: src/lib/records/capture.ts
+
+fetchAndStoreUrlSnapshot({tenantId, runId?, url, includeHeaders, captureType, requestedBy, clientRequestId})
+
+Must:
+
+Fetch with:
+
+timeout
+
+max bytes cap (default 5MB, configurable)
+
+content-type allowlist: text/html, application/pdf, application/json, text/plain
+
+Store raw response bytes to R2
+
+Compute sha256(raw bytes)
+
+Create or upsert a P2.5 Evidence Object:
+
+source_type = url_snapshot
+
+url, fetched_at, status, headers
+
+r2_key, bytes, mime
+
+content_sha256
+
+occurred_at: if detectable from payload, store in metadata (do not guess)
+
+Append custody event(s):
+
+created (if new)
+
+fetched
+
+Create cc_record_captures row referencing evidence_object_id
+
+Optionally (configurable):
+
+auto-seal evidence object after fetch (recommended for external records)
+
+set status='sealed' when sealed
+
+Failure handling:
+
+If fetch fails:
+
+create capture with status='failed' and error
+
+If offline/deferred requested:
+
+create capture with status='deferred'
+
+enqueue into cc_record_capture_queue
+
+captureFromSource(sourceId, {runId?, requestedBy})
+
+Reads cc_record_sources config and captures:
+
+url: capture the configured URL
+
+rss: fetch feed, pick top N items matching keywords, capture each item URL
+
+json_feed: fetch JSON, extract items using config paths, capture item URLs or store JSON snapshot as evidence object
+
+All resulting evidence objects must have custody events and hashes.
+
+P2.13.4 — Pack Generation (Emergency Run Pack)
+
+Create: src/lib/records/generatePack.ts
+
+generateEmergencyRecordPack(runId, {title?, includeTypes?, sealBundle=true})
+
+Must:
+
+Resolve run, ensure run has:
+
+coordination_bundle_id (from P2.12)
+
+legal_hold_id (create if missing)
+
+Gather all evidence objects related to run:
+
+from cc_record_captures.evidence_object_id where run_id
+
+plus any manually attached evidence to run (if you implemented a join table, include it)
+
+Ensure each included external record evidence is sealed:
+
+If not sealed, seal it now (unless legal hold prevents mutation; if hold exists, sealing is allowed, mutation of content is not)
+
+Create or update a dedicated evidence bundle:
+
+bundle_type = emergency_pack
+
+title default: Emergency Record Pack: <run_type> - <property_label>
+
+include manifest listing:
+
+run metadata
+
+list of evidence objects with content_sha256 + tip hash (from custody verify)
+
+capture metadata (http_status, fetched_at)
+
+Seal the bundle, store manifest_sha256
+
+Update cc_emergency_runs.coordination_bundle_id if you want the pack to become canonical, OR store a new record_pack_bundle_id in run.metadata (preferred: keep original coordination bundle and add another sealed pack bundle reference)
+
+Return: { bundle_id, manifest_sha256, count }
+
+P2.13.5 — Queue Worker (Deferred Capture Processing)
+
+Create: src/lib/records/queueWorker.ts
+
+processCaptureQueue({limit=10})
+
+Picks queued rows where next_attempt_at <= now() FOR UPDATE SKIP LOCKED
+
+For each:
+
+mark processing
+
+attempt fetch/store via fetchAndStoreUrlSnapshot
+
+on success: status done
+
+on failure: increment attempt_count, set next_attempt_at with backoff
+
+after N attempts (e.g., 5): deadletter
+
+This can be invoked:
+
+on-demand via endpoint
+
+or by whatever scheduled job mechanism exists in Replit
+
+P2.13.6 — API Endpoints (Minimal)
+Sources
+
+POST /api/records/sources
+Create source.
+Body: { source_type, title, description?, config, portal_id?, circle_id?, client_request_id? }
+
+GET /api/records/sources
+List sources.
+
+POST /api/records/sources/:id/capture
+Body: { run_id?, requested_by_individual_id? }
+Server calls captureFromSource.
+
+Manual capture
+
+POST /api/records/capture-url
+Body:
+
+{ run_id?, url, capture_type, include_headers?, defer_if_fail?: boolean, client_request_id? }
+Server calls fetchAndStoreUrlSnapshot or queues.
+
+Queue
+
+POST /api/records/queue/process
+Body: { limit? }
+Server calls processCaptureQueue.
+
+Pack generation
+
+POST /api/emergency/runs/:id/generate-record-pack
+Body: { title?, include_types?, seal_bundle?: true }
+Server calls generateEmergencyRecordPack.
+
+Read capture log
+
+GET /api/emergency/runs/:id/captures
+Returns capture rows + evidence ids + status (no raw bytes).
+
+P2.13.7 — Integration Rules (Hardening)
+
+External records should default to auto-seal evidence objects after fetch.
+
+Each capture should also append an emergency run event:
+
+evidence_attached (or record_captured) in cc_emergency_run_events
+
+If an authority share exists for the run, do NOT auto-expand it silently.
+
+Provide an explicit endpoint:
+
+POST /api/emergency/runs/:id/authority/refresh
+
+Adds newly captured evidence scopes to the authority grant (P2.9) and logs event authority_shared with “refreshed”.
+
+P2.13.8 — Tests (Must Exist)
+
+URL capture creates:
+
+record_capture row
+
+evidence object with content_sha256
+
+custody events
+
+R2 stored bytes
+
+Deferred capture queues and later processes successfully
+
+Pack generation:
+
+gathers captured evidence
+
+seals evidence (if needed)
+
+seals bundle with deterministic manifest sha
+
+RLS tenant isolation
+
+RSS/json_feed source capture:
+
+correct number of items captured (size capped)
+
+keyword filtering works (rss)
+
+P2.13.9 — Documentation
+
+Create docs/P2_13_PRESERVE_RECORD_GENERATE_PACK.md:
+
+Source types + config examples
+
+Deterministic snapshot rules (what is hashed)
+
+Deferred queue behavior
+
+How record pack relates to emergency run + authority share
+
+Operational guidance: “During tsunami warning do X, then run generate pack”
+
+✅ Definition of Done
+
+P2.13 is done only when:
+
+Sources + captures + queue tables exist w/ RLS
+
+Deterministic fetch/store with sha256 works
+
+Evidence objects created with custody events
+
+Deferred queue worker works
+
+Emergency record pack bundle generation works and is sealed
+
+Tests pass
+
+Docs exist
