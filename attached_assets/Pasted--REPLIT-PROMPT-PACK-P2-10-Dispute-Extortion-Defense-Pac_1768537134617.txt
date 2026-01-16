@@ -1,0 +1,391 @@
+✅ REPLIT PROMPT PACK — P2.10 Dispute / Extortion Defense Pack (Authoritative)
+P2.10.0 — Non-Negotiables
+
+Implement a dispute/defense subsystem that:
+
+Produces one-click, defensible defense packs for:
+
+credit card chargebacks (Visa/MC/Amex)
+
+review extortion (Google/Airbnb/Tripadvisor)
+
+BBB complaints
+
+contractor/vendor disputes (materials, delivery, workmanship)
+
+Uses sealed evidence and hashed dossiers as canonical input
+
+Generates structured timelines that third parties can’t ignore
+
+Supports role-specific exports (card network, platform, insurer, counsel)
+
+Is monetizable: per-defense-pack assembled/exported
+
+No UI redesign: backend + endpoints + docs + tests only
+
+P2.10.1 — Database Migration (New Tables)
+1) cc_disputes
+
+Represents a dispute case file.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+portal_id uuid null
+
+dispute_type text not null
+values: chargeback | review_extortion | bbb | contract | platform_dispute | other
+
+counterparty_type text not null
+values: guest_customer | platform | bank | vendor | contractor | regulator | other
+
+counterparty_name text null
+
+counterparty_reference text null (chargeback case #, review URL, BBB case #)
+
+status text not null default 'draft'
+values: draft | assembled | sent | resolved | lost | won | closed
+
+title text not null
+
+summary text null
+
+incident_occurred_at timestamptz null
+
+reported_at timestamptz null
+
+amount_cents int null
+
+currency text null
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, created_at desc)
+
+(tenant_id, status)
+
+unique (tenant_id, client_request_id) where not null
+
+2) cc_dispute_inputs
+
+Attach sealed bundles / evidence / claim dossiers to disputes.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+dispute_id uuid not null references cc_disputes(id) on delete cascade
+
+input_type text not null values: evidence_bundle | evidence_object | claim_dossier | insurance_claim
+
+input_id uuid not null
+
+copied_sha256 text not null (manifest_sha, content_sha, dossier_sha, etc.)
+
+label text null
+
+notes text null
+
+attached_at timestamptz not null default now()
+
+attached_by_individual_id uuid null
+
+Indexes:
+
+unique (tenant_id, dispute_id, input_type, input_id)
+
+(tenant_id, input_type, input_id)
+
+3) cc_defense_packs
+
+Immutable assembled defense pack outputs (versioned).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+dispute_id uuid not null references cc_disputes(id) on delete cascade
+
+pack_version int not null default 1
+
+pack_status text not null default 'assembled' values: assembled | exported | superseded
+
+pack_type text not null
+values: chargeback_v1 | review_extortion_v1 | bbb_v1 | contract_v1 | generic_v1
+
+assembled_at timestamptz not null default now()
+
+assembled_by_individual_id uuid null
+
+pack_json jsonb not null
+
+pack_sha256 text not null
+
+export_artifacts jsonb not null default '[]'::jsonb
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, dispute_id, pack_version desc)
+
+unique (tenant_id, client_request_id) where not null
+
+P2.10.2 — RLS Policies
+
+Enable RLS on all 3 tables:
+
+tenant scope via app.tenant_id
+
+circle membership required when circle_id is set (for disputes)
+
+defense packs immutable: no UPDATE to pack_json; supersede by inserting new version
+
+P2.10.3 — Defense Pack Assembly Engine (Deterministic)
+
+Create: src/lib/disputes/assembleDefensePack.ts
+
+assembleDefensePack(disputeId, packType)
+
+Input sources:
+
+sealed evidence bundles (P2.5)
+
+sealed evidence objects (P2.5)
+
+claim dossiers (P2.6) (already hashed)
+
+optional insurance claim links (cc_insurance_claims)
+
+Pack JSON structure (minimum):
+
+cover
+
+dispute metadata (type, counterparty, reference, amount)
+
+tenant/portal identifiers (non-sensitive)
+
+created_at, assembled_at
+
+executive_summary
+
+5–12 bullet points, factual, timestamped references to evidence IDs/hashes
+
+chronology
+
+merged timeline from all inputs
+
+each entry includes:
+
+occurred_at, created_at, title, source_type
+
+content_sha256 (or dossier sha)
+
+pointer (evidence id, bundle id, dossier id)
+
+contractual_basis (optional but scaffold)
+
+placeholders for terms/policies involved
+
+link to evidence objects containing the terms screenshots/pdfs
+
+rebuttal_matrix
+
+for chargebacks: reason codes mapping placeholders (do not hardcode network rules; keep generic)
+
+for review extortion: “threat → demand → response” mapping
+
+evidence_index
+
+grouped: communications, proof of service, safety/emergency orders, third-party sources, photos, receipts
+
+verification
+
+list all bundle manifest sha256
+
+list all evidence content sha256
+
+list dossier sha256
+
+pack_sha256 (computed)
+
+algorithm version: defense_pack_v1
+
+Determinism rules:
+
+Canonicalize JSON using P2.5 canonicalizer
+
+Sort all timeline items by (occurred_at nulls last, created_at, id)
+
+pack_sha256 = sha256Hex(canonical(pack_json))
+
+Hard rule:
+
+Assembly must fail if any attached bundle/evidence is not sealed OR any dossier missing sha.
+
+P2.10.4 — Attachment Rules (Sealed-only)
+
+Create server helper: src/lib/disputes/inputs.ts
+
+attachDisputeInput(disputeId, input)
+
+If input is bundle: require bundle_status='sealed', copy manifest_sha256
+
+If evidence object: require chain_status='sealed', copy content_sha256
+
+If claim dossier: copy dossier_sha256
+
+If insurance claim: require it has at least one dossier assembled or sealed bundle inputs (prefer dossiers)
+
+Reject otherwise.
+
+P2.10.5 — API Endpoints (Minimal)
+Disputes
+
+POST /api/disputes
+Create dispute (draft).
+Body: dispute fields.
+
+POST /api/disputes/:id/attach
+Body:
+
+{ input_type, input_id, label?, notes? }
+Server: sealed-only enforcement.
+
+POST /api/disputes/:id/assemble
+Body: { pack_type, client_request_id?, force_new_version? }
+Server:
+
+assemble
+
+insert cc_defense_packs with version increment
+
+set dispute status assembled
+
+GET /api/disputes/:id/packs
+List pack versions + sha.
+
+GET /api/defense-packs/:packId
+Return pack_json + sha.
+
+Export
+
+POST /api/defense-packs/:packId/export
+Body: { format: "zip_json" }
+Server:
+
+Create zip:
+
+defense_pack.json
+
+inputs.json (bundle manifests/dossier refs/evidence refs)
+
+verification.json (sha lists)
+
+Store to R2 and append to export_artifacts (or new row; choose minimal update)
+
+Append custody exported events to involved evidence objects/bundles (dedupe)
+
+Share to Authority
+
+POST /api/defense-packs/:packId/share
+Server:
+
+Creates an Authority Grant (P2.9) scoped to:
+
+the referenced sealed bundles
+
+the referenced evidence objects
+
+any referenced dossiers
+
+Issues token and returns share URL
+
+Logs token_issued
+
+This is the “send to bank/BBB/adjuster” workflow without onboarding friction.
+
+P2.10.6 — Monetization Hooks (Audit-Only)
+
+Do not implement billing. But emit internal events (existing audit system) or add dispute events in metadata:
+
+dispute_created
+
+defense_pack_assembled
+
+defense_pack_exported
+
+defense_pack_shared
+
+If you already have a metrics/event sink table, write there; otherwise keep it in cc_defense_packs.metadata.events[].
+
+P2.10.7 — Tests (Must Exist)
+
+Attach rejects unsealed bundle/evidence
+
+Deterministic pack_sha256 stable with same inputs
+
+Versioning:
+
+assemble v1
+
+attach additional sealed evidence
+
+assemble v2; v1 unchanged
+
+Export produces R2 artifact
+
+Share creates authority grant with correct scopes
+
+RLS tenant isolation & circle membership enforcement
+
+P2.10.8 — Documentation
+
+Create docs/P2_10_DISPUTE_DEFENSE_PACKS.md:
+
+Data model
+
+Sealed-only requirement
+
+Pack JSON schema + verification section
+
+Export format zip_json
+
+“One-click send” via authority share
+
+✅ Definition of Done
+
+P2.10 is done only when:
+
+disputes + inputs + defense_packs tables exist w/ RLS
+
+sealed-only attachments enforced
+
+deterministic assembly + sha works
+
+export zip_json works
+
+authority share works
+
+tests pass
+
+docs exist
