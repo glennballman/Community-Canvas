@@ -89,6 +89,7 @@ import recordsRouter from "./routes/records";
 import interestGroupsRouter, { publicRouter as publicInterestGroupsRouter } from "./routes/interestGroups";
 import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
 import qaRouter from "./routes/qa";
+import monetizationRouter from "./routes/monetization";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -342,6 +343,9 @@ export async function registerRoutes(
 
   // Register QA runtime checks endpoint (platform admin or service key)
   app.use('/api/admin/qa', qaRouter);
+
+  // Register monetization routes (plan management and usage tracking)
+  app.use('/api/monetization', monetizationRouter);
 
   // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
   app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/cc_articles'));
