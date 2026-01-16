@@ -238,6 +238,24 @@ describe('P2.10 Dispute/Extortion Defense Pack', () => {
       expect(pack1.packJson.verification.pack_sha256).toBe(pack1.packSha256);
     });
 
+    it('should produce deterministic pack_sha256 for same inputs', async () => {
+      const pack1 = await assembleDefensePack(
+        TEST_TENANT_ID,
+        disputeId,
+        'chargeback_v1',
+        TEST_INDIVIDUAL_ID
+      );
+
+      const pack2 = await assembleDefensePack(
+        TEST_TENANT_ID,
+        disputeId,
+        'chargeback_v1',
+        TEST_INDIVIDUAL_ID
+      );
+
+      expect(pack1.packSha256).toBe(pack2.packSha256);
+    });
+
     it('should sort evidence chronologically in pack', async () => {
       const pack = await assembleDefensePack(
         TEST_TENANT_ID,

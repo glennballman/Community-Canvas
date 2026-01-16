@@ -323,7 +323,9 @@ export async function assembleDefensePack(
   
   // 6. Build pack JSON (without pack_sha256 initially)
   const now = new Date();
-  const packJson: Omit<DefensePackJson, 'verification'> & { verification: Omit<VerificationSection, 'pack_sha256'> } = {
+  
+  // Create deterministic payload (excludes volatile timestamps)
+  const deterministicPayload = {
     algorithm_version: 'defense_pack_v1',
     cover: {
       dispute_type: dispute.dispute_type,
@@ -337,7 +339,6 @@ export async function assembleDefensePack(
       dispute_id: disputeId,
       title: dispute.title,
       created_at: dispute.created_at.toISOString(),
-      assembled_at: now.toISOString(),
     },
     executive_summary: generateExecutiveSummary(dispute, chronology, packType),
     chronology,
@@ -352,9 +353,18 @@ export async function assembleDefensePack(
     },
   };
   
-  // 7. Compute pack_sha256
-  const canonicalJson = canonicalizeJson(packJson);
+  // 7. Compute pack_sha256 from deterministic payload only
+  const canonicalJson = canonicalizeJson(deterministicPayload);
   const packSha256 = sha256Hex(canonicalJson);
+  
+  // Build full packJson with volatile assembled_at (not included in hash)
+  const packJson: Omit<DefensePackJson, 'verification'> & { verification: Omit<VerificationSection, 'pack_sha256'> } = {
+    ...deterministicPayload,
+    cover: {
+      ...deterministicPayload.cover,
+      assembled_at: now.toISOString(),
+    },
+  };
   
   // 8. Add pack_sha256 to verification
   const finalPackJson: DefensePackJson = {
