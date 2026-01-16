@@ -18,9 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, ArrowLeft, CheckCircle, Download, Share2, Users } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle, Download, Users } from 'lucide-react';
 import { OperatorActionPanel } from '@/components/operator/OperatorActionPanel';
 import { OperatorAuditFeed } from '@/components/operator/OperatorAuditFeed';
+import { AuthoritySharePreviewCard, AuthorityGrantDetailsCard, calculateExpiresAt } from '@/components/operator/authority';
 import { useResolveEmergencyRun } from '@/lib/api/operatorP2/useResolveEmergencyRun';
 import { useGrantEmergencyScope } from '@/lib/api/operatorP2/useGrantEmergencyScope';
 import { useRevokeEmergencyScope } from '@/lib/api/operatorP2/useRevokeEmergencyScope';
@@ -61,6 +62,10 @@ export default function OperatorEmergencyRunPage() {
   const [revokeReason, setRevokeReason] = useState('');
   const [recordPackTitle, setRecordPackTitle] = useState('');
   const [authorityEmail, setAuthorityEmail] = useState('');
+  const [shareScope, setShareScope] = useState('run_only');
+  const [shareExpiry, setShareExpiry] = useState('none');
+  const [broadScopeAck, setBroadScopeAck] = useState(false);
+  const [lastShareResult, setLastShareResult] = useState<{ grantId?: string; token?: string; accessUrl?: string } | null>(null);
   
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -101,6 +106,7 @@ export default function OperatorEmergencyRunPage() {
         <TabsList data-testid="tabs-run">
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="scope" data-testid="tab-scope">Scope Grants</TabsTrigger>
+          <TabsTrigger value="share" data-testid="tab-share">Share</TabsTrigger>
           <TabsTrigger value="audit" data-testid="tab-audit">Audit</TabsTrigger>
         </TabsList>
         
@@ -187,39 +193,6 @@ export default function OperatorEmergencyRunPage() {
               </p>
             </OperatorActionPanel>
             
-            <OperatorActionPanel
-              title="Share with Authority"
-              description="Create read-only access for external parties"
-              actionLabel="Share"
-              onAction={async () => {
-                const result = await shareAuthority.mutateAsync({
-                  runId,
-                  authority_email: authorityEmail || undefined,
-                  scope: 'all',
-                });
-                return result;
-              }}
-              resultRenderer={(result) => {
-                const r = result as { grantId: string; token: string };
-                return (
-                  <div className="space-y-1">
-                    <div>Grant: <code>{r.grantId}</code></div>
-                    <div>Token: <code className="text-xs">{r.token}</code></div>
-                  </div>
-                );
-              }}
-            >
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Authority Email (optional)</label>
-                <Input
-                  type="email"
-                  value={authorityEmail}
-                  onChange={(e) => setAuthorityEmail(e.target.value)}
-                  placeholder="authority@example.gov"
-                  data-testid="input-authority-email"
-                />
-              </div>
-            </OperatorActionPanel>
           </div>
         </TabsContent>
         
@@ -338,6 +311,69 @@ export default function OperatorEmergencyRunPage() {
                 </div>
               </div>
             </OperatorActionPanel>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="share" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <AuthoritySharePreviewCard
+              subjectType="emergency_run"
+              subjectId={runId}
+              defaultScope="run_only"
+              onScopeChange={setShareScope}
+              onExpiryChange={setShareExpiry}
+              onBroadScopeAcknowledge={setBroadScopeAck}
+              meta={{ title: 'Emergency Run' }}
+            />
+            
+            <div className="space-y-6">
+              <OperatorActionPanel
+                title="Share with Authority"
+                description="Create read-only access for external parties"
+                actionLabel="Share Access"
+                disabled={shareScope === 'all_related' && !broadScopeAck}
+                onAction={async () => {
+                  const scopeMap: Record<string, 'run' | 'record_pack' | 'all'> = {
+                    'run_only': 'run',
+                    'record_pack_only': 'record_pack',
+                    'run_and_record_pack': 'all',
+                    'all_related': 'all',
+                  };
+                  const result = await shareAuthority.mutateAsync({
+                    runId,
+                    authority_email: authorityEmail || undefined,
+                    scope: scopeMap[shareScope] || 'run',
+                    expires_at: calculateExpiresAt(shareExpiry),
+                  });
+                  setLastShareResult(result);
+                  return result;
+                }}
+                resultRenderer={(result) => {
+                  const r = result as { grantId: string; token: string };
+                  return <span>Grant created: <code>{r.grantId}</code></span>;
+                }}
+              >
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Authority Email (optional)</label>
+                  <Input
+                    type="email"
+                    value={authorityEmail}
+                    onChange={(e) => setAuthorityEmail(e.target.value)}
+                    placeholder="authority@example.gov"
+                    data-testid="input-authority-email"
+                  />
+                </div>
+              </OperatorActionPanel>
+              
+              {lastShareResult && (
+                <AuthorityGrantDetailsCard
+                  grantId={lastShareResult.grantId}
+                  accessUrl={lastShareResult.accessUrl}
+                  status="active"
+                  scopeSummary={shareScope}
+                />
+              )}
+            </div>
           </div>
         </TabsContent>
         

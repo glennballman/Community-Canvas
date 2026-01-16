@@ -1,0 +1,312 @@
+✅ REPLIT PROMPT PACK — V3-UI-OP3 (Authority Share UX: Preview + Least-Privilege Scopes + Revoke + History)
+
+You are Replit. Implement OP3 to make Authority Sharing operator-safe and trustable across Emergency Runs, Insurance Dossiers, and Defense Packs.
+Hard constraints:
+
+P2-only: call only /api/operator/p2/* endpoints.
+
+Preserve { ok, error?, ...data } envelope handling with existing API client + P2ApiError.
+
+No pricing UI/CTAs; keep dev forbidden pricing guardrails active.
+
+Minimal UI only (shadcn tables/forms); no redesign.
+
+Reuse OperatorActionPanel, OperatorIdOpenCard, OperatorResultLinks, OperatorAuditFeed.
+
+0) Confirm the backend authority endpoints available (P2-only)
+
+Scan server operator P2 routes and confirm:
+
+Share endpoints already used in OP1/OP2:
+
+POST /emergency/runs/:runId/share-authority
+
+POST /insurance/dossiers/:dossierId/share-authority
+
+POST /defense-packs/:defensePackId/share-authority
+
+Determine if any of these exist (optional):
+
+POST /authority/grants/:grantId/revoke
+
+GET /authority/grants/:grantId
+
+GET /authority/grants?subjectType=...&subjectId=...
+
+GET /authority/grants/:grantId/events
+
+If revoke/history endpoints do not exist:
+
+Implement UI for “Open Grant by ID” + “Revoke if endpoint exists”
+
+Still show share result details (grantId/accessUrl/expiresAt) from share responses.
+
+Do not use non-P2 endpoints.
+
+1) Shared Components (new)
+
+Create folder if not already:
+
+client/src/components/operator/authority/
+
+1.1 AuthoritySharePreviewCard.tsx
+
+Purpose: show “what will be shared” and enforce least-privilege.
+
+Props:
+
+subjectType: "emergency_run" | "insurance_dossier" | "defense_pack"
+
+subjectId: string
+
+defaultScope?: string
+
+onScopeChange?: (scope: string) => void
+
+showDrillWarning?: boolean (see 6.1)
+
+meta?: { title?: string; summary?: string }
+
+UI:
+
+A Card with:
+
+Subject label + ID (copy button)
+
+Scope selector (Select)
+
+Optional expiry selector (none/1d/7d/30d/custom)
+
+Warning area if drill flagged or scope too broad
+
+Scope options (least → most), per subject:
+
+Emergency run scopes
+
+run_only (default)
+
+record_pack_only
+
+run_and_record_pack
+
+all_related (warn)
+
+Insurance dossier scopes
+
+dossier_only (default)
+
+dossier_and_inputs
+
+all_related (warn)
+
+Defense pack scopes
+
+defense_pack_only (default)
+
+pack_and_inputs
+
+all_related (warn)
+
+Notes:
+
+This component does not call API; it only collects user intent.
+
+Must visually default to least privilege.
+
+1.2 AuthorityGrantDetailsCard.tsx
+
+Props:
+
+grantId?: string
+
+accessUrl?: string
+
+expiresAt?: string
+
+status?: string
+
+scopeSummary?: string
+
+onRevoke?: () => void (optional)
+
+loading?: boolean
+
+UI:
+
+Card shows:
+
+grantId (copy)
+
+accessUrl (copy)
+
+expiresAt (display)
+
+status badge (active/revoked/expired/unknown)
+
+revoke button if handler provided
+
+If no accessUrl provided, show “Access URL not returned; use grant ID lookup”.
+
+1.3 AuthorityGrantHistoryTable.tsx (only if list endpoint exists)
+
+Props:
+
+items: Array<{ grantId: string; createdAt: string; expiresAt?: string; status?: string; scope?: string }>
+Renders a table; each row has “Open” link to grant page.
+
+2) New Hooks (P2-only)
+
+Create in client/src/lib/api/operatorP2/:
+
+2.1 Revoke grant (if endpoint exists)
+
+useRevokeAuthorityGrant.ts
+
+POST /authority/grants/:grantId/revoke
+
+body: { reason?: string }
+
+If backend uses a different revoke path (e.g., /authority/grants/:grantId/revoke vs /authority/shares/:id/revoke), match actual.
+
+2.2 Fetch grant (optional if endpoint exists)
+
+useAuthorityGrantById.ts
+
+GET /authority/grants/:grantId
+
+2.3 List grants by subject (optional if endpoint exists)
+
+useAuthorityGrantsForSubject.ts
+
+GET /authority/grants?subjectType=...&subjectId=...&limit=50
+
+If none exist, skip.
+
+3) New Pages (routes)
+
+Create pages:
+
+client/src/pages/app/operator/OperatorAuthorityGrantPage.tsx
+
+client/src/pages/app/operator/OperatorAuthorityIndexPage.tsx
+
+Add routes:
+
+/app/operator/authority → OperatorAuthorityIndexPage
+
+/app/operator/authority/grants/:grantId → OperatorAuthorityGrantPage
+
+Also update OperatorHomePage to link “Authority” (new card).
+
+4) Embed Share UX into existing workspaces (OP1/OP2 pages)
+4.1 Emergency run page (/app/operator/emergency/:runId)
+
+In the existing “Overview” tab (or create a “Share” tab if cleaner):
+
+Add AuthoritySharePreviewCard (subjectType=emergency_run)
+
+Add share action panel using existing hook (useShareEmergencyAuthority)
+
+body should include:
+
+scope mapped from selected scope
+
+expiresAt if backend supports
+
+Render result using AuthorityGrantDetailsCard
+
+If list grants endpoint exists, show AuthorityGrantHistoryTable for this run.
+
+4.2 Insurance claim page (/app/operator/insurance/claims/:claimId)
+
+In “Share” tab:
+
+Require dossierId input (prefill last assembled)
+
+Add AuthoritySharePreviewCard (subjectType=insurance_dossier, subjectId=dossierId)
+
+Call useShareInsuranceDossierAuthority with selected scope/expiry
+
+Render AuthorityGrantDetailsCard
+
+If backend supports list grants: show history for dossierId.
+
+4.3 Dispute page (/app/operator/disputes/:disputeId)
+
+In “Share” tab:
+
+defensePackId input (prefill)
+
+AuthoritySharePreviewCard (subjectType=defense_pack)
+
+call useShareDefensePackAuthority
+
+render AuthorityGrantDetailsCard
+
+5) Authority Index page (/app/operator/authority)
+
+Purpose: central place to open/revoke/manage grants.
+
+Layout:
+
+Header “Authority Sharing”
+
+OperatorIdOpenCard labeled “Open Grant by ID”
+
+navigates to /app/operator/authority/grants/:grantId
+
+If list endpoint exists (optional):
+
+show recent grants table with open links.
+
+6) Safety guardrails (important)
+6.1 Drill-mode warning (if is_drill exists on subject fetch)
+
+If any subject detail endpoint returns is_drill: true:
+
+AuthoritySharePreviewCard.showDrillWarning=true
+
+Show warning:
+
+“This is a DRILL artifact. Sharing is disabled by default.”
+
+Disable share button unless user checks:
+
+“I understand this is a drill” checkbox
+
+If UI cannot fetch drill state, omit (but keep code ready).
+
+6.2 Least-privilege enforcement
+
+Default scope must be the least privilege option.
+
+If user selects all_related, show a warning and require a checkbox:
+
+“I intend to share all related records.”
+
+7) Audit integration
+
+After a successful share:
+
+Add a small line under details:
+
+“Recorded in operator audit log.”
+Optionally link to /app/operator/audit filtered by grantId (client-side filter ok).
+
+8) Acceptance Criteria
+
+Share UX exists in Emergency Run, Insurance Claim, and Dispute pages with:
+
+scope selector
+
+expiry selection (if supported)
+
+share action and results rendering
+
+New Authority pages allow opening a grant by ID; grant detail page can revoke if endpoint exists
+
+No usage of non-P2 endpoints
+
+No pricing CTAs introduced; dev forbidden pricing guardrail remains active
+
+Revoke action (if available) updates status display or shows success message

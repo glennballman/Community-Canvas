@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, AlertTriangle, ClipboardList, Shield, Scale, FileCheck } from 'lucide-react';
+import { Building2, AlertTriangle, ClipboardList, Shield, Scale, FileCheck, Share2 } from 'lucide-react';
 import { OperatorActionPanel } from '@/components/operator/OperatorActionPanel';
 import { useStartEmergencyRun } from '@/lib/api/operatorP2/useStartEmergencyRun';
 import { assertNoForbiddenPricingCopy } from '@/lib/pricing/forbiddenCopy';
@@ -164,6 +164,23 @@ export default function OperatorHomePage() {
             <Link to="/app/operator/disputes">
               <Button variant="outline" className="w-full" data-testid="button-go-disputes">
                 Go to Disputes
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        
+        <Card data-testid="card-authority">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Share2 className="h-5 w-5" />
+              Authority
+            </CardTitle>
+            <CardDescription>Manage external access grants</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/app/operator/authority">
+              <Button variant="outline" className="w-full" data-testid="button-go-authority">
+                Go to Authority
               </Button>
             </Link>
           </CardContent>

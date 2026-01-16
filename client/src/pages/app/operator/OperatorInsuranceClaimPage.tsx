@@ -14,6 +14,7 @@ import { ArrowLeft, Shield, FileArchive, Share2 } from 'lucide-react';
 import { OperatorActionPanel } from '@/components/operator/OperatorActionPanel';
 import { OperatorResultLinks } from '@/components/operator/OperatorResultLinks';
 import { OperatorAuditFeed, type AuditEvent } from '@/components/operator/OperatorAuditFeed';
+import { AuthoritySharePreviewCard, AuthorityGrantDetailsCard, calculateExpiresAt } from '@/components/operator/authority';
 import { useAssembleInsuranceDossier } from '@/lib/api/operatorP2/useAssembleInsuranceDossier';
 import { useExportInsuranceDossier } from '@/lib/api/operatorP2/useExportInsuranceDossier';
 import { useShareInsuranceDossierAuthority } from '@/lib/api/operatorP2/useShareInsuranceDossierAuthority';
@@ -47,6 +48,9 @@ export default function OperatorInsuranceClaimPage() {
   const [shareDossierId, setShareDossierId] = useState('');
   const [exportResult, setExportResult] = useState<{ r2Key?: string; url?: string } | null>(null);
   const [shareResult, setShareResult] = useState<{ grantId?: string; accessUrl?: string } | null>(null);
+  const [shareScope, setShareScope] = useState('dossier_only');
+  const [shareExpiry, setShareExpiry] = useState('none');
+  const [broadScopeAck, setBroadScopeAck] = useState(false);
   
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -202,52 +206,67 @@ export default function OperatorInsuranceClaimPage() {
         </TabsContent>
         
         <TabsContent value="share" className="space-y-4">
-          <OperatorActionPanel
-            title="Share with Authority"
-            description="Generate secure access for external adjusters"
-            actionLabel="Share Authority"
-            onAction={handleShareAuthority}
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Dossier ID</label>
-              <Input
-                value={shareDossierId}
-                onChange={(e) => setShareDossierId(e.target.value)}
-                placeholder="Enter dossier UUID"
-                data-testid="input-share-dossier-id"
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
+              <AuthoritySharePreviewCard
+                subjectType="insurance_dossier"
+                subjectId={shareDossierId || claimId}
+                defaultScope="dossier_only"
+                onScopeChange={setShareScope}
+                onExpiryChange={setShareExpiry}
+                onBroadScopeAcknowledge={setBroadScopeAck}
+                meta={{ title: 'Insurance Dossier' }}
               />
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Dossier ID</label>
+                <Input
+                  value={shareDossierId}
+                  onChange={(e) => setShareDossierId(e.target.value)}
+                  placeholder="Enter dossier UUID"
+                  data-testid="input-share-dossier-id"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use the dossier ID from an assembled dossier
+                </p>
+              </div>
             </div>
-          </OperatorActionPanel>
-          
-          {shareResult && (
-            <Card data-testid="card-share-result">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Share2 className="h-4 w-4" />
-                  Authority Granted
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {shareResult.grantId && (
-                  <div>
-                    <span className="text-muted-foreground">Grant ID: </span>
-                    <span className="font-mono">{shareResult.grantId}</span>
-                  </div>
-                )}
-                {shareResult.accessUrl && (
-                  <div>
-                    <span className="text-muted-foreground">Access URL: </span>
-                    <a href={shareResult.accessUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">
-                      {shareResult.accessUrl}
-                    </a>
-                  </div>
-                )}
-                {!shareResult.grantId && !shareResult.accessUrl && (
-                  <p className="text-muted-foreground">Authority granted successfully</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+            
+            <div className="space-y-4">
+              <OperatorActionPanel
+                title="Share with Authority"
+                description="Generate secure access for external adjusters"
+                actionLabel="Share Access"
+                disabled={(shareScope === 'all_related' && !broadScopeAck) || !shareDossierId.trim()}
+                onAction={async () => {
+                  const result = await shareAuthority.mutateAsync({
+                    dossierId: shareDossierId.trim(),
+                    scope: shareScope,
+                    expiresAt: calculateExpiresAt(shareExpiry),
+                  });
+                  setShareResult({ grantId: result.grantId, accessUrl: result.accessUrl });
+                  return result;
+                }}
+                resultRenderer={(result) => {
+                  const r = result as { grantId: string };
+                  return <span>Grant created: <code>{r.grantId}</code></span>;
+                }}
+              >
+                <p className="text-sm text-muted-foreground">
+                  Scope and expiry are configured in the preview panel
+                </p>
+              </OperatorActionPanel>
+              
+              {shareResult && (
+                <AuthorityGrantDetailsCard
+                  grantId={shareResult.grantId}
+                  accessUrl={shareResult.accessUrl}
+                  status="active"
+                  scopeSummary={shareScope}
+                />
+              )}
+            </div>
+          </div>
         </TabsContent>
         
         <TabsContent value="audit" className="space-y-4">

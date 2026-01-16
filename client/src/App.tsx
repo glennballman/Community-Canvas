@@ -94,6 +94,8 @@ import OperatorInsuranceIndexPage from './pages/app/operator/OperatorInsuranceIn
 import OperatorInsuranceClaimPage from './pages/app/operator/OperatorInsuranceClaimPage';
 import OperatorDisputesIndexPage from './pages/app/operator/OperatorDisputesIndexPage';
 import OperatorDisputePage from './pages/app/operator/OperatorDisputePage';
+import OperatorAuthorityIndexPage from './pages/app/operator/OperatorAuthorityIndexPage';
+import OperatorAuthorityGrantPage from './pages/app/operator/OperatorAuthorityGrantPage';
 import PortalsPage from './pages/app/admin/PortalsPage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
@@ -247,6 +249,8 @@ export default function App() {
                 <Route path="operator/insurance/claims/:claimId" element={<OperatorInsuranceClaimPage />} />
                 <Route path="operator/disputes" element={<OperatorDisputesIndexPage />} />
                 <Route path="operator/disputes/:disputeId" element={<OperatorDisputePage />} />
+                <Route path="operator/authority" element={<OperatorAuthorityIndexPage />} />
+                <Route path="operator/authority/grants/:grantId" element={<OperatorAuthorityGrantPage />} />
                 <Route path="operator/audit" element={<OperatorAuditPage />} />
                 <Route path="admin/portals" element={<PortalsPage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />
