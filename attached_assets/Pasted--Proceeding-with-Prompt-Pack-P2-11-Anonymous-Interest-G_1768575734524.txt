@@ -1,0 +1,427 @@
+✅ Proceeding with Prompt Pack P2.11 — Anonymous Interest Groups + Threshold Triggers Finalization (class-action style onboarding, anti-circumvention, anonymity until threshold, monetizable), built on P2.5 evidence + P2.7 holds + P2.9 authority. No UI redesign.
+
+✅ REPLIT PROMPT PACK — P2.11 Anonymous Interest Groups + Threshold Triggers (Authoritative)
+P2.11.0 — Non-Negotiables
+
+Implement anonymous interest groups that:
+
+Allow people to express interest safely (fear-free) without exposing identity publicly
+
+Keep participants anonymous to each other until threshold triggers are met
+
+Prevent anti-circumvention (no easy fishing for who joined)
+
+Support threshold triggers:
+
+headcount N
+
+geographic quorum (e.g., at least X from a postal/area)
+
+time window (e.g., within 72h)
+
+On trigger, auto-generate:
+
+a sealed coordination bundle (P2.5)
+
+an optional authority share (P2.9) for counsel/insurer/regulator
+
+a legal hold (P2.7) to preserve records
+
+Must be monetizable: per-group + per-trigger event
+
+No UI redesign; backend + endpoints + docs + tests only.
+
+P2.11.1 — Database Migration (New Tables)
+1) cc_interest_groups
+
+Group configuration.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+portal_id uuid null
+
+circle_id uuid null (optional controlling circle)
+
+group_type text not null
+values: class_action | insurance_mass_claim | regulatory_petition | community_issue | other
+
+title text not null
+
+description text null
+
+status text not null default 'open'
+values: open | triggered | closed
+
+anonymity_mode text not null default 'strict'
+values: strict | relaxed
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+triggered_at timestamptz null
+
+trigger_reason text null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, status)
+
+(tenant_id, created_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+2) cc_interest_group_triggers
+
+Defines trigger conditions.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+group_id uuid not null references cc_interest_groups(id) on delete cascade
+
+trigger_type text not null
+values: headcount | geo_quorum | time_window | composite
+
+params jsonb not null
+examples:
+
+headcount: { "min_count": 25 }
+
+geo_quorum: { "min_count": 10, "geo_key": "postal_fsa" }
+
+time_window: { "hours": 72 }
+
+composite: { "all": [ {...}, {...} ] }
+
+enabled boolean not null default true
+
+created_at timestamptz not null default now()
+
+Index:
+
+(tenant_id, group_id)
+
+3) cc_interest_group_signals
+
+Anonymous signals of interest. This is the sensitive table.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+group_id uuid not null references cc_interest_groups(id) on delete cascade
+
+submitted_at timestamptz not null default now()
+
+signal_status text not null default 'active' values: active | withdrawn
+
+anonymized_handle text not null (random public handle, not reversible)
+
+contact_channel text null (e.g., email/phone) — OPTIONAL
+
+contact_encrypted text null (encrypted blob; do NOT store plain contact)
+
+geo_key text null (e.g., postal_fsa, city_code) — coarse only
+
+geo_value text null
+
+proof_evidence_bundle_id uuid null (optional: sealed bundle with their evidence)
+
+signal_hash text not null (sha256 of canonical signal payload)
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, group_id, submitted_at desc)
+
+unique (tenant_id, group_id, client_request_id) where not null
+
+(tenant_id, group_id, geo_key, geo_value)
+
+4) cc_interest_group_events
+
+Audit log (append-only).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+group_id uuid not null references cc_interest_groups(id) on delete cascade
+
+event_type text not null
+values: group_created | signal_received | signal_withdrawn | trigger_evaluated | triggered | closed | access_denied
+
+event_at timestamptz not null default now()
+
+actor_individual_id uuid null
+
+event_payload jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, group_id, event_at desc)
+
+P2.11.2 — Encryption Requirement (Contact Safety)
+
+Do NOT store plain email/phone. Implement:
+
+src/lib/crypto/sealContact.ts
+
+Use a server-side encryption key from env (KMS later; now env var).
+
+Encrypt contact into contact_encrypted.
+
+Store contact_channel only (email/phone) + encrypted blob.
+
+If encryption key missing: reject submissions that include contact.
+
+This ensures “anonymous until threshold” is real.
+
+P2.11.3 — RLS + Access Model (Strict Anonymity)
+
+Enable RLS on all tables.
+
+Public/Anonymous submission
+
+Use a SECURITY DEFINER submission function (similar to A2.1) so the portal can accept signals without auth.
+
+Rules:
+
+Public can create signals for a group if:
+
+group.status='open'
+
+group.portal_id matches current portal context (domain routing)
+
+Public cannot read signals.
+
+Authenticated tenant access
+
+Tenant admins / circle admins can:
+
+read aggregate stats only (counts, geo buckets) while open
+
+cannot read decrypted contacts unless triggered AND they have appropriate role (use existing role patterns)
+
+Individual signals:
+
+In strict mode, even admins cannot list raw signals while open; only aggregates.
+
+Once triggered, allow controlled export to counsel/authority via P2.9 share.
+
+P2.11.4 — Trigger Evaluation Engine
+
+Create: src/lib/interestGroups/evaluateTriggers.ts
+
+evaluateGroupTriggers(groupId)
+
+Computes aggregates:
+
+total active signals
+
+geo buckets (geo_key/geo_value counts)
+
+time window satisfaction
+
+Evaluates enabled triggers; if satisfied:
+
+mark group triggered
+
+write event triggered
+
+call onGroupTriggered(groupId, reason, aggregates)
+
+onGroupTriggered(...) must do all of:
+
+Create a Legal Hold (P2.7)
+
+hold_type = class_action (or mapped)
+
+targets:
+
+the group itself (table_scope for signals)
+
+any linked proof bundles
+
+Create a sealed Evidence Bundle (P2.5)
+
+bundle_type = class_action
+
+manifest contains:
+
+group metadata
+
+aggregate counts (NOT raw identities)
+
+references to proof bundle ids + manifest sha (if provided)
+
+Optionally create an Authority Grant (P2.9)
+
+scoped to the sealed coordination bundle
+
+token issuance handled by admin action OR auto-issue if metadata.auto_share=true
+
+Create a Coordination Circle (if required)
+
+If your circles already exist: create a new circle “Group: <title>” and attach controlling roles
+
+Keep members empty until explicit onboarding
+
+All outputs must be deterministic and auditable.
+
+P2.11.5 — API Endpoints
+Admin / Authenticated
+
+POST /api/interest-groups
+Create group.
+Body: { group_type, title, description, portal_id?, circle_id?, anonymity_mode?, client_request_id? }
+
+POST /api/interest-groups/:id/triggers
+Add trigger.
+Body: { trigger_type, params }
+
+GET /api/interest-groups
+List groups + status + aggregate counts.
+
+GET /api/interest-groups/:id/summary
+Returns aggregates only:
+
+total signals
+
+geo buckets (coarse)
+
+trigger config
+
+status
+
+POST /api/interest-groups/:id/evaluate
+Manually force evaluation (cron later).
+Server calls evaluateGroupTriggers.
+
+POST /api/interest-groups/:id/close
+Close group.
+
+Public (Portal)
+
+POST /p/interest-groups/:groupId/signal
+Body:
+
+{ client_request_id, geo_key?, geo_value?, contact_channel?, contact?, proof_bundle_id? }
+Server:
+
+validate group open + portal match
+
+encrypt contact if provided
+
+generate anonymized_handle random
+
+compute signal_hash = sha256(canonical signal payload)
+
+insert signal (idempotent)
+
+log event signal_received
+
+after insert, call evaluateGroupTriggers(groupId) (safe + rate-limited)
+
+Response:
+
+{ ok: true, anonymized_handle }
+
+POST /p/interest-groups/:groupId/withdraw
+Body: { client_request_id, anonymized_handle }
+Server:
+
+set signal_status withdrawn if matches (do not reveal if handle exists; always return ok)
+
+log event
+
+P2.11.6 — Anti-Circumvention Protections (Must Implement)
+
+While group.status='open' and anonymity_mode='strict':
+
+Do not expose list endpoints that show handles or per-signal rows
+
+Aggregate endpoints must apply k-anonymity:
+
+if any geo bucket count < 5, return “<5” or omit bucket
+
+Public submission response never returns counts.
+
+Rate limit public signal submissions per IP/device fingerprint (if available):
+
+e.g., 10/hour per IP per group
+
+Make withdraw endpoint non-enumerable: always returns ok.
+
+P2.11.7 — Tests (Must Exist)
+
+Public can submit signal; cannot read signals
+
+Idempotency: repeated client_request_id doesn’t duplicate
+
+Trigger headcount fires correctly
+
+Trigger firing creates:
+
+legal hold
+
+sealed evidence bundle with manifest sha
+
+event logs
+
+k-anonymity on aggregates (<5 hidden)
+
+Encryption: contact stored only encrypted; plain never stored
+
+Rate limiting enforced on public submit
+
+P2.11.8 — Documentation
+
+Create docs/P2_11_ANONYMOUS_INTEREST_GROUPS.md:
+
+Threat model (fear-free participation)
+
+Anonymity modes
+
+Trigger types + examples
+
+k-anonymity rules
+
+What gets sealed into coordination bundle
+
+How to share to counsel via P2.9
+
+✅ Definition of Done
+
+P2.11 is done only when:
+
+Groups/triggers/signals/events tables exist with RLS
+
+Public signal submission works safely (no leakage)
+
+Trigger evaluation works and produces sealed outputs + holds
+
+Anti-circumvention protections in place
+
+Tests pass
+
+Docs exist
