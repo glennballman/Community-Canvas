@@ -5997,3 +5997,106 @@ export const insertMonetizationUsageSnapshotSchema = createInsertSchema(ccMoneti
 });
 export type MonetizationUsageSnapshot = typeof ccMonetizationUsageSnapshots.$inferSelect;
 export type InsertMonetizationUsageSnapshot = z.infer<typeof insertMonetizationUsageSnapshotSchema>;
+
+// ============================================================================
+// P2.16 SYSTEM COMPLETION MATRIX (SCM) - Certification Integration
+// ============================================================================
+
+// Certification policy schema
+export const certificationPolicySchema = z.object({
+  certifiable_when: z.object({
+    qa_status_endpoint_ok: z.boolean().optional(),
+    smoke_test_script_passed: z.boolean().optional(),
+    rls_enabled: z.boolean().optional(),
+    critical_triggers_present: z.boolean().optional(),
+    docs_present: z.boolean().optional(),
+  }).optional(),
+  proof_artifacts: z.object({
+    qa_status_endpoint: z.string().optional(),
+    smoke_test_script: z.string().optional(),
+    docs: z.array(z.string()).optional(),
+    sql_queries_doc: z.string().optional(),
+  }).optional(),
+  default_strategy: z.enum(['hold_for_flex', 'certify_immediate', 'blocked']).optional(),
+  allowed_states: z.array(z.enum(['built', 'certifiable', 'certified', 'held'])).optional(),
+});
+export type CertificationPolicy = z.infer<typeof certificationPolicySchema>;
+
+// SCM Module Registry
+export const scmModules = pgTable("scm_modules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  moduleKey: text("module_key").notNull().unique(),
+  title: text("title").notNull(),
+  category: text("category").notNull(),
+  owner: text("owner").notNull().default('platform'),
+  certificationPolicy: jsonb("certification_policy").notNull().$type<CertificationPolicy>().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertScmModuleSchema = createInsertSchema(scmModules).omit({ id: true, createdAt: true });
+export type ScmModule = typeof scmModules.$inferSelect;
+export type InsertScmModule = z.infer<typeof insertScmModuleSchema>;
+
+// SCM Proof Runs - stores proof run results
+export const scmProofRunTypeEnum = z.enum(['qa_status', 'smoke_test', 'sql_verification']);
+export type ScmProofRunType = z.infer<typeof scmProofRunTypeEnum>;
+
+export const scmProofRuns = pgTable("scm_proof_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id"), // null = platform-wide proof run
+  moduleKey: text("module_key"), // optional: if run is for a specific module
+  runType: text("run_type").notNull(), // qa_status | smoke_test | sql_verification
+  runAt: timestamp("run_at", { withTimezone: true }).notNull().defaultNow(),
+  ok: boolean("ok").notNull(),
+  details: jsonb("details").notNull().$type<Record<string, unknown>>().default({}),
+  artifactRefs: jsonb("artifact_refs").notNull().$type<string[]>().default([]),
+  createdByIndividualId: uuid("created_by_individual_id"),
+}, (table) => ({
+  runTypeAtIdx: index("idx_scm_proof_runs_type_at").on(table.runType, table.runAt),
+}));
+
+export const insertScmProofRunSchema = createInsertSchema(scmProofRuns).omit({ id: true });
+export type ScmProofRun = typeof scmProofRuns.$inferSelect;
+export type InsertScmProofRun = z.infer<typeof insertScmProofRunSchema>;
+
+// SCM Module Overrides - manual state overrides
+export const scmModuleStateEnum = z.enum(['built', 'held', 'certified']);
+export type ScmModuleState = z.infer<typeof scmModuleStateEnum>;
+
+export const scmModuleOverrides = pgTable("scm_module_overrides", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  moduleKey: text("module_key").notNull(),
+  overrideState: text("override_state").notNull(), // built | held | certified
+  overrideReason: text("override_reason"),
+  setAt: timestamp("set_at", { withTimezone: true }).notNull().defaultNow(),
+  setByIndividualId: uuid("set_by_individual_id"),
+}, (table) => ({
+  moduleKeyIdx: index("idx_scm_module_overrides_key").on(table.moduleKey),
+}));
+
+export const insertScmModuleOverrideSchema = createInsertSchema(scmModuleOverrides).omit({ id: true, setAt: true });
+export type ScmModuleOverride = typeof scmModuleOverrides.$inferSelect;
+export type InsertScmModuleOverride = z.infer<typeof insertScmModuleOverrideSchema>;
+
+// SCM Certification States - computed states for each module
+export const scmCertificationStates = pgTable("scm_certification_states", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  moduleKey: text("module_key").notNull().unique(),
+  computedState: text("computed_state").notNull(), // built | certifiable
+  effectiveState: text("effective_state").notNull(), // final state after override
+  isBuilt: boolean("is_built").notNull().default(false),
+  isCertifiable: boolean("is_certifiable").notNull().default(false),
+  isCertified: boolean("is_certified").notNull().default(false),
+  isHeld: boolean("is_held").notNull().default(false),
+  lastQaStatusRunId: uuid("last_qa_status_run_id"),
+  lastQaStatusOk: boolean("last_qa_status_ok"),
+  lastSmokeTestRunId: uuid("last_smoke_test_run_id"),
+  lastSmokeTestOk: boolean("last_smoke_test_ok"),
+  docsPresent: boolean("docs_present").notNull().default(false),
+  missingDocs: jsonb("missing_docs").notNull().$type<string[]>().default([]),
+  computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertScmCertificationStateSchema = createInsertSchema(scmCertificationStates).omit({ id: true, computedAt: true });
+export type ScmCertificationState = typeof scmCertificationStates.$inferSelect;
+export type InsertScmCertificationState = z.infer<typeof insertScmCertificationStateSchema>;

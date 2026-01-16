@@ -1,0 +1,346 @@
+✅ REPLIT PROMPT PACK — P2.16 SCM Integration + Certification Decision Pack (Authoritative)
+P2.16.0 — Non-Negotiables
+
+You will integrate the Emergency/Legal/Insurance subsystems into the System Completion Matrix (SCM) so we can:
+
+Track completion by module (P2.5–P2.15)
+
+Compute “Certifiable” status only when hard proof gates pass
+
+Explicitly support “Built but not certified yet” (strategic flexibility)
+
+Produce a Certification Decision Report (machine + human readable)
+
+No UI redesign. Minimal SCM surfaces only if absolutely required; backend truth first.
+
+P2.16.1 — SCM Module Registry (DB)
+
+Add a migration introducing SCM module registration rows (if not already present). If SCM already has a modules table, extend it rather than duplicating.
+
+If you already have something like scm_modules / scm_certification_states
+
+Add records for these module keys:
+
+P2.5_EVIDENCE_CUSTODY
+
+P2.6_INSURANCE_CLAIMS
+
+P2.7_LEGAL_HOLDS
+
+P2.8_OFFLINE_SYNC
+
+P2.9_AUTHORITY_PORTAL
+
+P2.10_DEFENSE_PACKS
+
+P2.11_ANON_INTEREST_GROUPS
+
+P2.12_EMERGENCY_TEMPLATES_RUNS
+
+P2.13_PRESERVE_RECORD_PACKS
+
+P2.14_CERT_READINESS_QA
+
+P2.15_MONETIZATION_LEDGER
+
+Each module record must include:
+
+module_key (unique)
+
+title
+
+owner = platform
+
+category = emergency_legal_insurance
+
+certification_policy jsonb (defined below)
+
+created_at
+
+If SCM does NOT have a module registry table
+
+Create: scm_modules
+
+id uuid pk default gen_random_uuid()
+
+module_key text unique not null
+
+title text not null
+
+category text not null
+
+certification_policy jsonb not null default '{}'::jsonb
+
+created_at timestamptz not null default now()
+
+And ensure it integrates with your existing SCM state tables (do not create parallel truth).
+
+P2.16.2 — Certification Policy Schema (Per Module)
+
+Each module gets a policy object like:
+
+{
+  "certifiable_when": {
+    "qa_status_endpoint_ok": true,
+    "smoke_test_script_passed": true,
+    "rls_enabled": true,
+    "critical_triggers_present": true,
+    "docs_present": true
+  },
+  "proof_artifacts": {
+    "qa_status_endpoint": "/api/qa/status",
+    "smoke_test_script": "scripts/qa-emergency-legal-insurance-smoke.ts",
+    "docs": [
+      "docs/P2_5_EVIDENCE_CHAIN_OF_CUSTODY.md",
+      "docs/P2_6_INSURANCE_CLAIM_AUTO_ASSEMBLER.md",
+      "docs/P2_7_LEGAL_HOLD_RETENTION.md",
+      "docs/P2_8_OFFLINE_LOW_SIGNAL_SYNC.md",
+      "docs/P2_9_AUTHORITY_READ_ONLY_PORTAL.md",
+      "docs/P2_10_DISPUTE_DEFENSE_PACKS.md",
+      "docs/P2_11_ANONYMOUS_INTEREST_GROUPS.md",
+      "docs/P2_12_EMERGENCY_TEMPLATES_AND_RUNS.md",
+      "docs/P2_13_PRESERVE_RECORD_GENERATE_PACK.md",
+      "docs/P2_14_CERT_READINESS_GATE.md",
+      "docs/P2_15_MONETIZATION_LEDGER.md"
+    ],
+    "sql_queries_doc": "docs/P2_14_SQL_VERIFICATION_QUERIES.md"
+  },
+  "default_strategy": "hold_for_flex",
+  "allowed_states": ["built", "certifiable", "certified", "held"]
+}
+
+
+Interpretation:
+
+built: implemented but proofs not complete
+
+certifiable: proofs pass; ready to certify
+
+certified: you intentionally lock it in
+
+held: intentionally not certifying yet (to stay flexible)
+
+P2.16.3 — SCM Computation Hook (Backend Truth)
+
+Add a server module:
+
+src/lib/scm/p2_emergency_legal_insurance.ts
+
+It must compute module states based on:
+
+/api/qa/status result (P2.14)
+
+Existence of required docs files
+
+Existence of key tables and RLS flags (via pg_catalog checks)
+
+Last smoke test run record (you will store it below)
+
+New table: scm_proof_runs
+
+Stores proof run results.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid null (null = platform-wide proof run)
+
+run_type text not null values: qa_status | smoke_test | sql_verification
+
+run_at timestamptz not null default now()
+
+ok boolean not null
+
+details jsonb not null default '{}'::jsonb
+
+artifact_refs jsonb not null default '[]'::jsonb (paths, logs)
+
+created_by_individual_id uuid null
+
+Index:
+
+(run_type, run_at desc)
+
+Computation rules
+
+For each module_key:
+
+Set built=true if its tables exist and endpoints exist (light checks)
+
+Set certifiable=true if:
+
+latest /api/qa/status ok=true
+
+latest smoke_test ok=true
+
+docs present
+
+and (module-specific) triggers/policies exist:
+
+P2.7 must have legal hold triggers present
+
+P2.9 must have authority token hash-only confirmed
+
+P2.11 must have k-anonymity enforcement confirmed (via test flag)
+
+“certified” must be manual (never auto-escalate)
+
+Output must be written into your canonical SCM state table (whatever you already use, e.g., scm_certification_states).
+
+P2.16.4 — Record Smoke Test Runs into SCM
+
+Modify scripts/qa-emergency-legal-insurance-smoke.ts (P2.14) so that:
+
+After completion, it POSTs results to an admin endpoint:
+
+POST /api/qa/proof-runs
+Body:
+
+{
+  "run_type": "smoke_test",
+  "ok": true,
+  "details": { "steps": [...] },
+  "artifact_refs": ["logs/qa-smoke-<timestamp>.txt"]
+}
+
+
+Also add:
+
+POST /api/qa/proof-runs (admin-only) that inserts into scm_proof_runs.
+
+Do the same for:
+
+/api/qa/status check (optional): allow it to store a proof run snapshot when called with ?record=1.
+
+P2.16.5 — Certification Decision Report Generator
+
+Create script:
+
+scripts/scm-generate-cert-decision-report.ts
+
+It must produce:
+
+docs/CERT_DECISION_P2_EMERGENCY_LEGAL_INSURANCE.md
+
+docs/CERT_DECISION_P2_EMERGENCY_LEGAL_INSURANCE.json
+
+Report contents:
+
+Timestamp
+
+For each P2 module:
+
+built? certifiable? certified? held?
+
+proofs:
+
+last qa_status run id/time
+
+last smoke_test run id/time
+
+required docs present? (list missing if any)
+
+recommended action:
+
+CERTIFY NOW if certifiable and stable
+
+HOLD if certifiable but strategically flexible
+
+BLOCKED if not certifiable (include reasons)
+
+Rules of recommendation:
+
+Default to HOLD even if certifiable unless:
+
+module is safety/legal-critical AND stable primitives (P2.5 custody, P2.7 holds, P2.9 authority)
+
+OR user explicitly wants it certified now
+
+This matches your “don’t certify too early” strategy.
+
+P2.16.6 — Minimal Admin Endpoints (No UI)
+
+Add:
+
+POST /api/scm/modules/:module_key/set-state
+Body: { state: "certified" | "held" | "built" }
+
+Admin-only.
+
+Writes explicit override state into SCM (do not delete computed facts; store override separately, e.g., scm_module_overrides table).
+
+Create table scm_module_overrides:
+
+id uuid pk default gen_random_uuid()
+
+module_key text not null
+
+override_state text not null values: built | held | certified
+
+override_reason text null
+
+set_at timestamptz not null default now()
+
+set_by_individual_id uuid null
+
+Rule:
+
+Effective state = override_state if present; otherwise computed.
+
+P2.16.7 — Tests (Must Exist)
+
+Computation marks a module “certifiable” only when:
+
+latest qa_status ok=true
+
+latest smoke_test ok=true
+
+docs present
+
+Override works:
+
+set held overrides computed certifiable
+
+set certified overrides held
+
+Proof runs insert and query correctly
+
+P2.16.8 — Documentation
+
+Create:
+
+docs/P2_16_SCM_CERT_INTEGRATION.md
+Contents:
+
+Module keys
+
+Computation inputs (proof runs)
+
+Override semantics
+
+How to run:
+
+smoke test
+
+record proof
+
+generate cert decision report
+
+What “certified” means in your system (locked invariants)
+
+✅ Definition of Done
+
+P2.16 is done only when:
+
+SCM contains module entries for P2.5–P2.15
+
+Proof runs are recorded
+
+SCM computation produces certifiable flags
+
+Overrides exist (hold/certify)
+
+Certification decision report generator outputs MD + JSON
+
+Tests pass
