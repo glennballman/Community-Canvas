@@ -1,6 +1,10 @@
 /**
- * Hook: List emergency runs for tenant
- * GET /api/operator/p2/emergency/runs
+ * Hook: Get emergency run dashboard
+ * GET /api/operator/p2/emergency/runs/:id/dashboard
+ * 
+ * Note: The backend implements per-run dashboard, not a list endpoint.
+ * Use useEmergencyRunDashboard to get run details.
+ * For listing runs, query cc_drill_sessions directly via a tenant endpoint.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -20,28 +24,23 @@ export interface EmergencyRun {
   tenant_id: string;
 }
 
-interface EmergencyRunsResponse {
-  runs: EmergencyRun[];
+export interface EmergencyRunDashboard {
+  run: EmergencyRun;
+  evidence_count: number;
+  scope_grants: Array<{
+    id: string;
+    scope_key: string;
+    granted_at: string;
+  }>;
 }
 
-export function useEmergencyRuns() {
-  return useQuery({
-    queryKey: operatorKeys.emergencyActiveRuns(),
-    queryFn: async () => {
-      const result = await operatorP2Get<EmergencyRunsResponse>('/emergency/runs');
-      return result.runs;
-    },
-    staleTime: 30 * 1000,
-  });
-}
-
-export function useEmergencyRunById(runId: string | undefined) {
+export function useEmergencyRunDashboard(runId: string | undefined) {
   return useQuery({
     queryKey: operatorKeys.emergencyRun(runId || ''),
     queryFn: async () => {
       if (!runId) throw new Error('Run ID required');
-      const result = await operatorP2Get<{ run: EmergencyRun }>(`/emergency/runs/${runId}`);
-      return result.run;
+      const result = await operatorP2Get<EmergencyRunDashboard>(`/emergency/runs/${runId}/dashboard`);
+      return result;
     },
     enabled: !!runId,
     staleTime: 30 * 1000,
