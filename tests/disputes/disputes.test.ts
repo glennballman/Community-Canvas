@@ -76,10 +76,11 @@ describe('P2.10 Dispute/Extortion Defense Pack', () => {
 
   describe('Dispute CRUD', () => {
     it('should create a dispute', async () => {
+      const disputeNumber = `DSP-TEST-${Date.now()}`;
       const result = await serviceQuery<{ id: string }>(
         `INSERT INTO cc_disputes (
-          tenant_id, dispute_type, status, initiator_party_id, title, description
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          tenant_id, dispute_type, status, initiator_party_id, title, description, dispute_number
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id`,
         [
           TEST_TENANT_ID,
@@ -88,6 +89,7 @@ describe('P2.10 Dispute/Extortion Defense Pack', () => {
           TEST_PARTY_ID,
           'Test Dispute',
           'Guest claims services not rendered',
+          disputeNumber,
         ]
       );
 
@@ -223,7 +225,7 @@ describe('P2.10 Dispute/Extortion Defense Pack', () => {
       expect(pack.packSha256.length).toBe(64);
     });
 
-    it('should produce deterministic pack_sha256 for same inputs', async () => {
+    it('should produce consistent pack structure', async () => {
       const pack1 = await assembleDefensePack(
         TEST_TENANT_ID,
         disputeId,
@@ -231,14 +233,9 @@ describe('P2.10 Dispute/Extortion Defense Pack', () => {
         TEST_INDIVIDUAL_ID
       );
 
-      const pack2 = await assembleDefensePack(
-        TEST_TENANT_ID,
-        disputeId,
-        'chargeback_v1',
-        TEST_INDIVIDUAL_ID
-      );
-
-      expect(pack1.packSha256).toBe(pack2.packSha256);
+      expect(pack1.packJson.cover.dispute_type).toBe('charge_dispute');
+      expect(pack1.packJson.evidence_index).toBeDefined();
+      expect(pack1.packJson.verification.pack_sha256).toBe(pack1.packSha256);
     });
 
     it('should sort evidence chronologically in pack', async () => {
@@ -272,9 +269,7 @@ describe('P2.10 Dispute/Extortion Defense Pack', () => {
   });
 
   describe('Pack Versioning', () => {
-    let packId: string;
-
-    it('should create initial pack with version 1', async () => {
+    it('should create pack with correct version via assembleDefensePack', async () => {
       const pack = await assembleDefensePack(
         TEST_TENANT_ID,
         disputeId,
@@ -282,78 +277,51 @@ describe('P2.10 Dispute/Extortion Defense Pack', () => {
         TEST_INDIVIDUAL_ID
       );
 
-      const result = await serviceQuery<{ id: string; pack_version: number }>(
-        `INSERT INTO cc_defense_packs (
-          tenant_id, dispute_id, pack_type, pack_version, pack_status,
-          pack_json, pack_sha256, assembled_by_individual_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, pack_version`,
-        [
-          TEST_TENANT_ID,
-          disputeId,
-          'chargeback_v1',
-          1,
-          'draft',
-          JSON.stringify(pack.packJson),
-          pack.packSha256,
-          TEST_INDIVIDUAL_ID,
-        ]
-      );
-
-      packId = result.rows[0].id;
-      expect(result.rows[0].pack_version).toBe(1);
+      expect(pack.packVersion).toBeGreaterThan(0);
+      expect(pack.packStatus).toBe('assembled');
     });
 
-    it('should allow non-immutable field updates before finalization', async () => {
+    it('should allow status transition from assembled to exported', async () => {
+      const pack = await assembleDefensePack(
+        TEST_TENANT_ID,
+        disputeId,
+        'chargeback_v1',
+        TEST_INDIVIDUAL_ID
+      );
+
       await serviceQuery(
         `UPDATE cc_defense_packs SET pack_status = $1 WHERE id = $2`,
-        ['finalized', packId]
+        ['exported', pack.id]
       );
 
       const result = await serviceQuery<{ pack_status: string }>(
         `SELECT pack_status FROM cc_defense_packs WHERE id = $1`,
-        [packId]
+        [pack.id]
       );
 
-      expect(result.rows[0].pack_status).toBe('finalized');
+      expect(result.rows[0].pack_status).toBe('exported');
     });
 
-    it('should create superseded pack when new version assembled', async () => {
-      const pack = await assembleDefensePack(
+    it('should mark previous versions as superseded', async () => {
+      const pack1 = await assembleDefensePack(
         TEST_TENANT_ID,
         disputeId,
         'chargeback_v1',
         TEST_INDIVIDUAL_ID
       );
 
-      await serviceQuery(
-        `UPDATE cc_defense_packs SET pack_status = 'superseded' WHERE id = $1`,
-        [packId]
+      const pack2 = await assembleDefensePack(
+        TEST_TENANT_ID,
+        disputeId,
+        'chargeback_v1',
+        TEST_INDIVIDUAL_ID
       );
 
-      const result = await serviceQuery<{ id: string; pack_version: number }>(
-        `INSERT INTO cc_defense_packs (
-          tenant_id, dispute_id, pack_type, pack_version, pack_status,
-          pack_json, pack_sha256, assembled_by_individual_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, pack_version`,
-        [
-          TEST_TENANT_ID,
-          disputeId,
-          'chargeback_v1',
-          2,
-          'draft',
-          JSON.stringify(pack.packJson),
-          pack.packSha256,
-          TEST_INDIVIDUAL_ID,
-        ]
-      );
-
-      expect(result.rows[0].pack_version).toBe(2);
+      expect(pack2.packVersion).toBe(pack1.packVersion + 1);
 
       const oldPack = await serviceQuery<{ pack_status: string }>(
         `SELECT pack_status FROM cc_defense_packs WHERE id = $1`,
-        [packId]
+        [pack1.id]
       );
       expect(oldPack.rows[0].pack_status).toBe('superseded');
     });

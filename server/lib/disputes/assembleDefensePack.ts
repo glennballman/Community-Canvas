@@ -379,7 +379,7 @@ export async function assembleDefensePack(
     await pool.query(
       `UPDATE cc_defense_packs 
        SET pack_status = 'superseded'
-       WHERE tenant_id = $1::uuid AND dispute_id = $2::uuid AND pack_status = 'assembled'`,
+       WHERE tenant_id = $1::uuid AND dispute_id = $2::uuid AND pack_status NOT IN ('superseded', 'archived')`,
       [tenantId, disputeId]
     );
   }
@@ -403,11 +403,8 @@ export async function assembleDefensePack(
     ]
   );
   
-  // 12. Update dispute status
-  await pool.query(
-    `UPDATE cc_disputes SET status = 'assembled' WHERE tenant_id = $1::uuid AND id = $2::uuid`,
-    [tenantId, disputeId]
-  );
+  // Note: Dispute status change is left to the caller to handle as needed
+  // since different workflows may require different status transitions
   
   return mapPackRow(insertResult.rows[0]);
 }
