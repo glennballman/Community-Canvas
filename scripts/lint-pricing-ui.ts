@@ -28,12 +28,13 @@ function loadConfig(): Config {
 }
 
 function globToRegex(glob: string): RegExp {
-  const escaped = glob
+  let pattern = glob
+    .replace(/\*\*/g, "§§DOUBLESTAR§§")
+    .replace(/\*/g, "§§STAR§§")
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\\\*\\\*/g, "§§DOUBLESTAR§§")
-    .replace(/\\\*/g, "[^/]*")
-    .replace(/§§DOUBLESTAR§§/g, ".*");
-  return new RegExp("^" + escaped + "$");
+    .replace(/§§DOUBLESTAR§§/g, ".*")
+    .replace(/§§STAR§§/g, "[^/]*");
+  return new RegExp("^" + pattern + "$");
 }
 
 function matchesAnyGlob(filePath: string, globs: string[]): boolean {
@@ -53,6 +54,13 @@ function walkDir(dir: string, out: string[] = []): string[] {
 
 function isScannable(filePath: string): boolean {
   return /\.(ts|tsx|js|jsx|mdx)$/i.test(filePath);
+}
+
+function stripComments(text: string): string {
+  let result = text;
+  result = result.replace(/\/\*[\s\S]*?\*\//g, (match) => ' '.repeat(match.length));
+  result = result.replace(/\/\/.*$/gm, (match) => ' '.repeat(match.length));
+  return result;
 }
 
 function compileRegexes(patterns: string[]): RegExp[] {
@@ -129,7 +137,8 @@ function main() {
 
     const relPath = path.relative(root, abs).replace(/\\/g, "/");
 
-    const text = fs.readFileSync(abs, "utf8");
+    const rawText = fs.readFileSync(abs, "utf8");
+    const text = stripComments(rawText);
 
     const isAppTree = /^client\/src\/(pages|routes)\/app\//.test(relPath);
     if (isAppTree) {
