@@ -8,11 +8,34 @@ export type P2Err = { ok: false; error: string };
 export type P2Resp<T extends object> = P2Ok<T> | P2Err;
 
 /**
+ * Typed error class for P2 API errors
+ */
+export class P2ApiError extends Error {
+  public readonly code: string;
+  public readonly statusCode: number;
+  
+  constructor(message: string, code: string = 'P2_ERROR', statusCode: number = 400) {
+    super(message);
+    this.name = 'P2ApiError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+  
+  static fromResponse(data: { error?: string; code?: string }, statusCode: number): P2ApiError {
+    return new P2ApiError(
+      data.error || 'Request failed',
+      data.code || 'P2_ERROR',
+      statusCode
+    );
+  }
+}
+
+/**
  * Make a request to the P2 operator API
  * @param path - Path relative to /api/operator/p2 (e.g., "/emergency/runs/start")
  * @param init - Fetch options (method, body, etc.)
  * @returns Parsed response with ok: true and data fields
- * @throws Error if ok is false or response is invalid
+ * @throws P2ApiError if ok is false or response is invalid
  */
 export async function operatorP2<T extends object>(
   path: string,
@@ -38,21 +61,24 @@ export async function operatorP2<T extends object>(
   try {
     json = await response.json();
   } catch {
-    throw new Error(`Invalid JSON response from ${url}`);
+    throw new P2ApiError(`Invalid JSON response from ${url}`, 'INVALID_RESPONSE', response.status);
   }
   
   if (typeof json !== 'object' || json === null) {
-    throw new Error('Invalid server response');
+    throw new P2ApiError('Invalid server response', 'INVALID_RESPONSE', response.status);
   }
   
   const data = json as Record<string, unknown>;
   
   if (typeof data.ok !== 'boolean') {
-    throw new Error('Invalid server response');
+    throw new P2ApiError('Invalid server response', 'INVALID_RESPONSE', response.status);
   }
   
   if (data.ok === false) {
-    throw new Error((data.error as string) || 'Request failed');
+    throw P2ApiError.fromResponse(
+      data as { error?: string; code?: string },
+      response.status
+    );
   }
   
   return data as P2Ok<T>;

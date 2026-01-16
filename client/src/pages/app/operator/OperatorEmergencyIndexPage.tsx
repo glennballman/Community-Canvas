@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -17,9 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertTriangle, ArrowLeft, Search } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Search, ExternalLink, Loader2 } from 'lucide-react';
 import { OperatorActionPanel } from '@/components/operator/OperatorActionPanel';
+import { OperatorErrorAlert } from '@/components/operator/OperatorErrorAlert';
 import { useStartEmergencyRun } from '@/lib/api/operatorP2/useStartEmergencyRun';
+import { useEmergencyRuns, type EmergencyRun } from '@/lib/api/operatorP2/useEmergencyRuns';
 import { assertNoForbiddenPricingCopy } from '@/lib/pricing/forbiddenCopy';
 
 const SCENARIO_TYPES = [
@@ -35,6 +39,7 @@ const SCENARIO_TYPES = [
 export default function OperatorEmergencyIndexPage() {
   const navigate = useNavigate();
   const startEmergencyRun = useStartEmergencyRun();
+  const { data: runs, isLoading: runsLoading, error: runsError, refetch } = useEmergencyRuns();
   
   const [scenarioType, setScenarioType] = useState('other');
   const [title, setTitle] = useState('');
@@ -190,17 +195,65 @@ export default function OperatorEmergencyIndexPage() {
       
       <Separator />
       
-      <Card className="opacity-60" data-testid="card-active-runs">
-        <CardHeader>
-          <CardTitle className="text-base">Active Runs</CardTitle>
-          <CardDescription>
-            List of active runs (requires endpoint implementation)
-          </CardDescription>
+      <Card data-testid="card-active-runs">
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-base">Emergency Runs</CardTitle>
+            <CardDescription>
+              All emergency runs for this tenant
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={runsLoading}
+            data-testid="button-refresh-runs"
+          >
+            {runsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
+          </Button>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Active runs list will be available when the list endpoint is implemented.
-          </p>
+          {runsError ? (
+            <OperatorErrorAlert error={runsError} title="Failed to load runs" />
+          ) : runsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : !runs || runs.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No emergency runs found. Start a new run above.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {runs.map((run: EmergencyRun) => (
+                <Link
+                  key={run.id}
+                  to={`/app/operator/emergency/${run.id}`}
+                  className="block hover-elevate"
+                >
+                  <div className="flex items-center justify-between p-3 border rounded-md" data-testid={`run-item-${run.id}`}>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {run.title || `${run.scenario_type.replace('_', ' ')} run`}
+                        </span>
+                        <Badge variant={run.status === 'active' ? 'destructive' : 'secondary'}>
+                          {run.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(run.created_at).toLocaleString()} - {run.scenario_type}
+                      </p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
