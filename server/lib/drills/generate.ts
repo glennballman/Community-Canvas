@@ -159,12 +159,12 @@ export async function generateSyntheticRecords(
 
   if (config.hasEmergencyRun) {
     const runId = randomUUID();
-    const runTitle = `[DRILL] ${config.baseTitle} - Emergency Run`;
+    const runSummary = `[DRILL] ${config.baseTitle} - Emergency Run`;
     await db.execute(sql`
       INSERT INTO cc_emergency_runs (
-        id, tenant_id, title, status, started_at, is_drill, drill_id, metadata
+        id, tenant_id, summary, run_type, status, started_at, is_drill, drill_id, metadata
       ) VALUES (
-        ${runId}, ${tenantId}, ${runTitle}, 'active', now(), true, ${drillId}, ${baseMetadata}::jsonb
+        ${runId}, ${tenantId}, ${runSummary}, 'drill', 'active', now(), true, ${drillId}, ${baseMetadata}::jsonb
       )
     `);
     result.emergencyRunIds.push(runId);
@@ -175,9 +175,9 @@ export async function generateSyntheticRecords(
   const bundleTitle = `[DRILL] Evidence Bundle - ${config.baseTitle}`;
   await db.execute(sql`
     INSERT INTO cc_evidence_bundles (
-      id, tenant_id, title, bundle_type, status, content_hash, is_drill, drill_id, metadata
+      id, tenant_id, title, bundle_type, bundle_status, manifest_sha256, is_drill, drill_id, metadata
     ) VALUES (
-      ${bundleId}, ${tenantId}, ${bundleTitle}, 'drill_bundle', 'open', ${bundleHash}, true, ${drillId}, ${baseMetadata}::jsonb
+      ${bundleId}, ${tenantId}, ${bundleTitle}, 'generic', 'open', ${bundleHash}, true, ${drillId}, ${baseMetadata}::jsonb
     )
   `);
   result.evidenceBundleIds.push(bundleId);
@@ -186,11 +186,12 @@ export async function generateSyntheticRecords(
     const objectId = randomUUID();
     const objectHash = createHash('sha256').update(`drill-evidence-${objectId}-${i}-${Date.now()}`).digest('hex');
     const objMetadata = JSON.stringify({ scenarioType, synthetic: true, index: i });
+    const objTitle = `[DRILL] Evidence Object ${i + 1}`;
     await db.execute(sql`
       INSERT INTO cc_evidence_objects (
-        id, tenant_id, bundle_id, object_type, content_hash, captured_at, is_drill, drill_id, metadata
+        id, tenant_id, title, source_type, content_sha256, captured_at, is_drill, drill_id, metadata
       ) VALUES (
-        ${objectId}, ${tenantId}, ${bundleId}, 'document', ${objectHash}, now(), true, ${drillId}, ${objMetadata}::jsonb
+        ${objectId}, ${tenantId}, ${objTitle}, 'manual_note', ${objectHash}, now(), true, ${drillId}, ${objMetadata}::jsonb
       )
     `);
     result.evidenceObjectIds.push(objectId);
@@ -199,9 +200,9 @@ export async function generateSyntheticRecords(
   const captureId = randomUUID();
   await db.execute(sql`
     INSERT INTO cc_record_captures (
-      id, tenant_id, capture_type, status, captured_at, is_drill, drill_id, metadata
+      id, tenant_id, capture_type, status, requested_at, is_drill, drill_id, metadata
     ) VALUES (
-      ${captureId}, ${tenantId}, 'drill_capture', 'captured', now(), true, ${drillId}, ${baseMetadata}::jsonb
+      ${captureId}, ${tenantId}, 'generic', 'stored', now(), true, ${drillId}, ${baseMetadata}::jsonb
     )
   `);
   result.recordCaptureIds.push(captureId);
@@ -209,43 +210,61 @@ export async function generateSyntheticRecords(
   if (config.hasClaim) {
     const claimId = randomUUID();
     const claimNumber = `DRILL-CLM-${Date.now().toString(36).toUpperCase()}`;
+    const claimTitle = `[DRILL] Insurance Claim - ${config.baseTitle}`;
     await db.execute(sql`
       INSERT INTO cc_insurance_claims (
-        id, tenant_id, claim_number, status, filed_at, is_drill, drill_id, metadata
+        id, tenant_id, claim_number, title, claim_type, claim_status, is_drill, drill_id, metadata
       ) VALUES (
-        ${claimId}, ${tenantId}, ${claimNumber}, 'draft', now(), true, ${drillId}, ${baseMetadata}::jsonb
+        ${claimId}, ${tenantId}, ${claimNumber}, ${claimTitle}, 'other', 'draft', true, ${drillId}, ${baseMetadata}::jsonb
       )
     `);
     result.claimIds.push(claimId);
 
     const dossierId = randomUUID();
+    const dossierJson = JSON.stringify({ drill: true, scenario: scenarioType, claim_id: claimId });
+    const dossierSha256 = `drill-${dossierId.substring(0,8)}`;
     await db.execute(sql`
       INSERT INTO cc_claim_dossiers (
-        id, tenant_id, claim_id, status, assembled_at, is_drill, drill_id, metadata
+        id, tenant_id, claim_id, dossier_status, dossier_json, dossier_sha256, dossier_version, export_artifacts, assembled_at, is_drill, drill_id, metadata
       ) VALUES (
-        ${dossierId}, ${tenantId}, ${claimId}, 'draft', now(), true, ${drillId}, ${baseMetadata}::jsonb
+        ${dossierId}, ${tenantId}, ${claimId}, 'assembled', ${dossierJson}::jsonb, ${dossierSha256}, 1, '[]'::jsonb, now(), true, ${drillId}, ${baseMetadata}::jsonb
       )
     `);
     result.dossierIds.push(dossierId);
   }
 
   if (config.hasDispute) {
+    // Create a drill party first for the dispute
+    const partyId = randomUUID();
+    await db.execute(sql`
+      INSERT INTO cc_parties (
+        id, tenant_id, legal_name, party_type, status
+      ) VALUES (
+        ${partyId}, ${tenantId}, '[DRILL] Drill Party', 'contractor', 'approved'
+      )
+    `);
+    
     const disputeId = randomUUID();
+    const disputeNumber = `DRILL-DSP-${Date.now().toString(36).toUpperCase()}`;
+    const disputeTitle = `[DRILL] Dispute - ${config.baseTitle}`;
+    const disputeDescription = `Drill scenario dispute for ${scenarioType} - ${config.baseTitle}`;
     await db.execute(sql`
       INSERT INTO cc_disputes (
-        id, tenant_id, dispute_type, status, opened_at, is_drill, drill_id, metadata
+        id, tenant_id, dispute_number, title, description, dispute_type, status, initiator_party_id, is_drill, drill_id
       ) VALUES (
-        ${disputeId}, ${tenantId}, 'drill_dispute', 'open', now(), true, ${drillId}, ${baseMetadata}::jsonb
+        ${disputeId}, ${tenantId}, ${disputeNumber}, ${disputeTitle}, ${disputeDescription}, 'other', 'draft', ${partyId}, true, ${drillId}
       )
     `);
     result.disputeIds.push(disputeId);
 
     const packId = randomUUID();
+    const packJson = JSON.stringify({ drill: true, scenario: scenarioType, dispute_id: disputeId });
+    const packSha256 = `drill-${packId.substring(0,8)}`;
     await db.execute(sql`
       INSERT INTO cc_defense_packs (
-        id, tenant_id, dispute_id, status, assembled_at, is_drill, drill_id, metadata
+        id, tenant_id, dispute_id, pack_type, pack_status, pack_json, pack_sha256, pack_version, export_artifacts, assembled_at, is_drill, drill_id, metadata
       ) VALUES (
-        ${packId}, ${tenantId}, ${disputeId}, 'draft', now(), true, ${drillId}, ${baseMetadata}::jsonb
+        ${packId}, ${tenantId}, ${disputeId}, 'generic_v1', 'assembled', ${packJson}::jsonb, ${packSha256}, 1, '[]'::jsonb, now(), true, ${drillId}, ${baseMetadata}::jsonb
       )
     `);
     result.defensePackIds.push(packId);
