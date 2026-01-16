@@ -675,6 +675,54 @@ async function testQAStatus(): Promise<void> {
 // Main Execution
 // ============================================================================
 
+async function recordProofRunToSCM(passed: number, failed: number, allResults: TestResult[]): Promise<void> {
+  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+  const serviceKey = process.env.INTERNAL_SERVICE_KEY || process.env.SERVICE_KEY;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (serviceKey) {
+    headers['x-internal-service-key'] = serviceKey;
+  }
+
+  const passRate = passed / (passed + failed);
+  const ok = passRate >= 0.7;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/scm/proof-runs`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        run_type: 'smoke_test',
+        ok,
+        details: {
+          total: allResults.length,
+          passed,
+          failed,
+          pass_rate: passRate,
+          steps: allResults.map(r => ({
+            step: r.step,
+            passed: r.passed,
+            error: r.error,
+          })),
+        },
+        artifact_refs: [],
+      }),
+    });
+
+    if (!response.ok) {
+      console.log(`   ⚠️  Failed to record proof run: ${await response.text()}`);
+    } else {
+      const data = await response.json();
+      console.log(`   ✅ Proof run recorded: ${data.run_id}`);
+    }
+  } catch (err: any) {
+    console.log(`   ⚠️  Could not record proof run: ${err.message}`);
+  }
+}
+
 async function runAllTests(): Promise<void> {
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('   P2.14 QA Smoke Test - Emergency/Legal/Insurance Subsystems');
@@ -713,6 +761,10 @@ async function runAllTests(): Promise<void> {
   }
   
   console.log('\n═══════════════════════════════════════════════════════════════\n');
+  
+  // Record proof run to SCM
+  console.log('   Recording proof run to SCM...');
+  await recordProofRunToSCM(passed, failed, results);
   
   await pool.end();
   

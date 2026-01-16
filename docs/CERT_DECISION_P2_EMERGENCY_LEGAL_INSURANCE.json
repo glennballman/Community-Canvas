@@ -1,0 +1,249 @@
+{
+  "generatedAt": "2026-01-16T18:41:21.908Z",
+  "category": "emergency_legal_insurance",
+  "modules": [
+    {
+      "moduleKey": "P2.10_DEFENSE_PACKS",
+      "title": "Dispute/Extortion Defense Pack",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": false,
+        "missingDocs": [
+          "docs/P2_10_DISPUTE_DEFENSE_PACKS.md"
+        ]
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing; Missing docs: docs/P2_10_DISPUTE_DEFENSE_PACKS.md"
+    },
+    {
+      "moduleKey": "P2.11_ANON_INTEREST_GROUPS",
+      "title": "Anonymous Interest Groups & Threshold Triggers",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": false,
+        "missingDocs": [
+          "docs/P2_11_ANONYMOUS_INTEREST_GROUPS.md"
+        ]
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing; Missing docs: docs/P2_11_ANONYMOUS_INTEREST_GROUPS.md"
+    },
+    {
+      "moduleKey": "P2.12_EMERGENCY_TEMPLATES_RUNS",
+      "title": "Emergency Templates & Runs",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.13_PRESERVE_RECORD_PACKS",
+      "title": "Preserve Record Generate Pack",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.14_CERT_READINESS_QA",
+      "title": "Certification Readiness Gate",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.15_MONETIZATION_LEDGER",
+      "title": "Monetization Event Ledger",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.5_EVIDENCE_CUSTODY",
+      "title": "Evidence Chain-of-Custody Engine",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.6_INSURANCE_CLAIMS",
+      "title": "Insurance Claim Auto-Assembler",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.7_LEGAL_HOLDS",
+      "title": "Legal Hold & Retention Policies",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.8_OFFLINE_SYNC",
+      "title": "Offline/Low-Signal Evidence Queue",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    },
+    {
+      "moduleKey": "P2.9_AUTHORITY_PORTAL",
+      "title": "Authority/Adjuster Read-Only Portals",
+      "built": true,
+      "certifiable": false,
+      "certified": false,
+      "held": false,
+      "effectiveState": "built",
+      "proofs": {
+        "lastQaStatusRunId": null,
+        "lastQaStatusRunAt": null,
+        "lastQaStatusOk": null,
+        "lastSmokeTestRunId": "8929f928-9163-4573-ad7a-8ec15d6a3ffd",
+        "lastSmokeTestRunAt": "2026-01-16T18:41:11.257Z",
+        "lastSmokeTestOk": false,
+        "docsPresent": true,
+        "missingDocs": []
+      },
+      "recommendedAction": "BLOCKED",
+      "blockReason": "QA status check failed or missing; Smoke test failed or missing"
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "built": 11,
+    "certifiable": 0,
+    "certified": 0,
+    "held": 0,
+    "blocked": 11
+  }
+}

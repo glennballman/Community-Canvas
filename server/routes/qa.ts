@@ -1,22 +1,31 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { runAllChecks, runSingleCheck } from '../lib/qa/runtimeChecks';
-import { requirePlatformRole, requireServiceKey, isServiceKeyRequest } from '../middleware/guards';
+import { requirePlatformRole, isServiceKeyRequest } from '../middleware/guards';
+import { recordProofRun } from '../lib/scm/p2_emergency_legal_insurance';
 
 const router = Router();
 
-// Admin-only guard: requires platform_admin role OR valid service key
-const requireAdminOrServiceKey = (req: Request, res: Response, next: Function) => {
-  // Allow service key access
+const requireAdminOrServiceKey = (req: Request, res: Response, next: NextFunction) => {
   if (isServiceKeyRequest(req)) {
     return next();
   }
-  // Otherwise require platform_admin role
   return requirePlatformRole('platform_admin')(req, res, next);
 };
 
 router.get('/status', requireAdminOrServiceKey, async (req: Request, res: Response) => {
   try {
     const result = await runAllChecks();
+    const shouldRecord = req.query.record === '1' || req.query.record === 'true';
+
+    if (shouldRecord) {
+      await recordProofRun({
+        runType: 'qa_status',
+        ok: result.ok,
+        details: result as unknown as Record<string, unknown>,
+        artifactRefs: [],
+      });
+    }
+
     res.json(result);
   } catch (err: any) {
     res.status(500).json({
