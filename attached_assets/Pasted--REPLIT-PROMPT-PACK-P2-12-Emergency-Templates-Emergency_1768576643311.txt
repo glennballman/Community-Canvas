@@ -1,0 +1,516 @@
+✅ REPLIT PROMPT PACK — P2.12 Emergency Templates + Emergency Circle Mode Hardening (Authoritative)
+P2.12.0 — Non-Negotiables
+
+Harden emergency operations so that:
+
+Property-specific emergency instructions are first-class, versioned, and sealable
+
+Emergency mode can temporarily escalate permissions (tools/vehicles/people) with TTL + audit
+
+Supports low-signal: generate offline playbooks and “printable” payload exports (JSON now, PDF later)
+
+Integrates with:
+
+P2.5 Evidence chain-of-custody
+
+P2.7 Legal holds (auto-preserve during emergencies)
+
+P2.8 Offline capture
+
+P2.9 Authority share (adjusters / authorities)
+
+No UI redesign. Backend primitives + endpoints + docs + tests only.
+
+P2.12.1 — Database Migration (New Tables)
+1) cc_emergency_templates
+
+Template definitions (tsunami, wildfire, power outage, etc.)
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+portal_id uuid null
+
+circle_id uuid null
+
+template_type text not null
+values: tsunami | wildfire | power_outage | storm | medical | security | evacuation | other
+
+title text not null
+
+description text null
+
+version int not null default 1
+
+status text not null default 'draft'
+values: draft | active | retired
+
+template_json jsonb not null
+(sections, checklists, contacts, maps/coords, device/offline instructions)
+
+template_sha256 text not null (hash of canonical template_json)
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+sealed_bundle_id uuid null (optional: sealed evidence bundle containing the active template snapshot)
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, template_type, status)
+
+unique (tenant_id, template_type, version)
+
+unique (tenant_id, client_request_id) where not null
+
+2) cc_property_emergency_profiles
+
+Property-specific overrides and instructions.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+portal_id uuid null
+
+property_asset_id uuid null (if you have property/asset registry id; else nullable for now)
+
+property_label text not null
+
+address text null
+
+lat numeric null
+
+lon numeric null
+
+hazard_overrides jsonb not null default '{}'::jsonb
+(e.g., tide line, muster points, generator location, gate codes policy pointers)
+
+contacts jsonb not null default '{}'::jsonb
+(owner/operator, onsite lead, emergency line, neighbors)
+
+dependencies jsonb not null default '{}'::jsonb
+(cpap guests, oxygen, meds refrigeration, generator fuel)
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, created_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+3) cc_emergency_runs
+
+An “active emergency” instance (what actually happened).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+portal_id uuid null
+
+circle_id uuid null
+
+template_id uuid null references cc_emergency_templates(id) on delete set null
+
+property_profile_id uuid null references cc_property_emergency_profiles(id) on delete set null
+
+run_type text not null (same values as template_type)
+
+status text not null default 'active'
+values: active | resolved | cancelled
+
+started_at timestamptz not null default now()
+
+started_by_individual_id uuid null
+
+resolved_at timestamptz null
+
+resolved_by_individual_id uuid null
+
+summary text null
+
+legal_hold_id uuid null (P2.7)
+
+coordination_bundle_id uuid null (P2.5 sealed bundle for this run)
+
+authority_grant_id uuid null (P2.9 share)
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, status)
+
+(tenant_id, started_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+4) cc_emergency_scope_grants
+
+Temporary privilege escalation for emergency operations.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+run_id uuid not null references cc_emergency_runs(id) on delete cascade
+
+grantee_individual_id uuid not null
+
+grant_type text not null
+values: asset_control | tool_access | vehicle_access | lodging_access | communications_interrupt | procurement_override | gate_access | other
+
+scope_json jsonb not null
+e.g., { asset_ids: [], tool_ids: [], location_ids: [] }
+
+granted_at timestamptz not null default now()
+
+granted_by_individual_id uuid null
+
+expires_at timestamptz not null
+
+revoked_at timestamptz null
+
+revoked_by_individual_id uuid null
+
+revoke_reason text null
+
+status text not null default 'active' values: active | expired | revoked
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, run_id)
+
+(tenant_id, grantee_individual_id, status)
+
+unique (tenant_id, client_request_id) where not null
+
+5) cc_emergency_run_events
+
+Append-only audit trail for runs.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+run_id uuid not null references cc_emergency_runs(id) on delete cascade
+
+event_type text not null
+values: run_started | template_bound | property_bound | scope_granted | scope_revoked | playbook_exported | evidence_attached | authority_shared | resolved | cancelled
+
+event_at timestamptz not null default now()
+
+actor_individual_id uuid null
+
+event_payload jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, run_id, event_at desc)
+
+P2.12.2 — RLS + Emergency Scope Enforcement
+
+Enable RLS on all new tables with standard tenant scope + circle membership rules.
+
+Additionally, implement an authorization helper:
+
+src/lib/emergency/scopes.ts
+
+It must expose:
+
+hasActiveEmergencyGrant(individualId, grantType, scopeMatcher): boolean
+Used by existing systems (assets, tools, procurement, messages) to allow temporary access.
+
+Important:
+
+Emergency grants must not bypass tenant isolation
+
+Emergency grants must be time-bounded and automatically expire
+
+P2.12.3 — Template & Property Binding (Hardening)
+
+Create server module:
+
+src/lib/emergency/bindings.ts
+
+Rules:
+
+Emergency Run can bind:
+
+a template snapshot (active version)
+
+a property profile
+
+At bind time:
+
+Create a sealed P2.5 evidence bundle snapshot of:
+
+template_json + template_sha256
+
+property profile details (safe fields)
+
+Store sealed bundle id on the run as coordination_bundle_id (or separate playbook_bundle_id if you prefer)
+
+This creates legal defensibility: “this is what we told people at the time.”
+
+P2.12.4 — Emergency Run Orchestrator (Auto Preserve + Share)
+
+Create: src/lib/emergency/orchestrate.ts
+
+startEmergencyRun({run_type, template_id?, property_profile_id?, circle_id?, portal_id?, summary?})
+
+Must:
+
+Create cc_emergency_runs row
+
+Create P2.7 Legal Hold:
+
+targets include:
+
+emergency run row (table_scope)
+
+evidence bundle(s) created for this run
+
+any evidence objects attached later (table_scope by run_id stored in metadata)
+
+Create initial sealed coordination bundle (P2.5):
+
+includes template snapshot + property snapshot + initial alerts placeholders
+
+Create run event run_started
+
+Return run id + bundle id + hold id
+
+resolveEmergencyRun(run_id, {summary})
+
+Set status resolved
+
+Append event
+
+Optionally auto-generate:
+
+authority share for adjuster/regulator (P2.9)
+
+export playbook bundle + timeline (JSON zip)
+
+P2.12.5 — Offline Playbook Export (JSON Now)
+
+Add endpoint to export an offline playbook package:
+
+POST /api/emergency/runs/:id/export-playbook
+Body: { format: "zip_json" }
+Output zip contains:
+
+playbook.json = merged:
+
+template sections
+
+property overrides
+
+emergency contacts
+
+checklists
+
+“what to do now” steps
+
+verification.json includes:
+
+template_sha256
+
+any sealed bundle manifest sha
+
+run id
+Store to R2, log event playbook_exported.
+
+This is explicitly to support low-signal: staff can download once and act offline.
+
+P2.12.6 — API Endpoints (Minimal)
+Templates
+
+POST /api/emergency/templates
+Create template version (draft).
+Body: { template_type, title, description?, template_json, portal_id?, circle_id?, client_request_id? }
+Server:
+
+compute template_sha256 from canonical template_json
+
+POST /api/emergency/templates/:id/activate
+Activates this version, retires prior active.
+Server:
+
+status transitions: prior active → retired, this → active
+
+optionally seal into P2.5 bundle and store sealed_bundle_id
+
+GET /api/emergency/templates
+List templates.
+
+Property profiles
+
+POST /api/emergency/properties
+Create property profile.
+
+GET /api/emergency/properties
+List property profiles.
+
+Runs
+
+POST /api/emergency/runs
+Start run (calls orchestrator).
+Body: { run_type, template_id?, property_profile_id?, circle_id?, portal_id?, summary?, client_request_id? }
+
+POST /api/emergency/runs/:id/grants
+Create scope grant.
+Body:
+
+{ grantee_individual_id, grant_type, scope_json, expires_at, client_request_id? }
+Rules:
+
+expires_at required and must be <= now + configured max (e.g., 72 hours)
+
+log scope_granted
+
+POST /api/emergency/runs/:id/grants/:grantId/revoke
+Body: { reason }
+Log scope_revoked
+
+POST /api/emergency/runs/:id/attach-evidence
+Body:
+
+{ evidence_object_id? , evidence_bundle_id? , label?, notes? }
+Rules:
+
+attached sources must be sealed (P2.5) OR if not sealed, system can attach but must mark as “pending seal” and encourage sealing (keep backend flexible)
+
+store attachment reference in run metadata or create small join table if preferred
+
+log evidence_attached
+
+POST /api/emergency/runs/:id/share-authority
+Creates an authority grant (P2.9) scoped to:
+
+the run’s coordination bundle
+
+any attached sealed evidence bundles/objects
+
+optional claim dossiers
+Returns share URL.
+Log authority_shared.
+
+POST /api/emergency/runs/:id/resolve
+Resolve run.
+Body: { summary }
+
+GET /api/emergency/runs
+List runs.
+
+GET /api/emergency/runs/:id
+Details, including grants + events + coordination bundle references.
+
+P2.12.7 — Expiry Sweeper (Server-side)
+
+Implement a simple sweeper function called on:
+
+run start
+
+grant create
+
+daily cron if available
+
+expireEmergencyGrants()
+
+sets status expired where now > expires_at and status active
+
+logs scope_revoked (reason: expired) into run events
+
+No UI required.
+
+P2.12.8 — Tests (Must Exist)
+
+Template hashing deterministic
+
+Activate template retires prior active
+
+Start run creates:
+
+run row
+
+legal hold
+
+sealed coordination bundle
+
+run event
+
+Scope grant expires automatically
+
+Authority share includes correct scopes
+
+Export playbook produces R2 artifact + verification.json
+
+RLS: cross-tenant cannot read runs/templates/properties
+
+P2.12.9 — Documentation
+
+Create docs/P2_12_EMERGENCY_TEMPLATES_AND_RUNS.md:
+
+Template schema expectations
+
+Property profile fields
+
+Run lifecycle
+
+Scope grants and TTL
+
+Offline playbook export format
+
+How this ties to evidence bundles + legal holds + authority shares
+
+✅ Definition of Done
+
+P2.12 is done only when:
+
+Templates + property profiles + runs + scope grants implemented with RLS
+
+Start run orchestrates hold + sealed bundle
+
+Scope grants enforce TTL and expire
+
+Offline playbook export works
+
+Authority share works
+
+Tests pass
+
+Docs exist
