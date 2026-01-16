@@ -3749,6 +3749,95 @@ export type OperatorDocument = typeof ccOperatorDocuments.$inferSelect;
 export type InsertOperatorDocument = z.infer<typeof insertOperatorDocumentSchema>;
 
 // ============================================================================
+// P2.18-B OPERATOR ROLES (Emergency/Legal/Insurance/Platform Operators)
+// ============================================================================
+
+export const operatorRoleKeyEnum = pgEnum('operator_role_key', [
+  'emergency_operator',
+  'legal_operator', 
+  'insurance_operator',
+  'platform_operator'
+]);
+
+export const operatorRoleAssignmentStatusEnum = pgEnum('operator_role_assignment_status', [
+  'active',
+  'revoked'
+]);
+
+export const ccOperatorRoles = pgTable('cc_operator_roles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  roleKey: operatorRoleKeyEnum('role_key').notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantRoleKeyUnique: uniqueIndex('cc_operator_roles_tenant_role_key_unique').on(table.tenantId, table.roleKey),
+  tenantIdx: index('idx_cc_operator_roles_tenant').on(table.tenantId),
+}));
+
+export const insertOperatorRoleSchema = createInsertSchema(ccOperatorRoles).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type OperatorRole = typeof ccOperatorRoles.$inferSelect;
+export type InsertOperatorRole = z.infer<typeof insertOperatorRoleSchema>;
+
+export const ccOperatorRoleAssignments = pgTable('cc_operator_role_assignments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  circleId: uuid('circle_id'),
+  individualId: uuid('individual_id').notNull(),
+  roleId: uuid('role_id').notNull().references(() => ccOperatorRoles.id, { onDelete: 'cascade' }),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
+  assignedByIndividualId: uuid('assigned_by_individual_id'),
+  status: operatorRoleAssignmentStatusEnum('status').notNull().default('active'),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  revokedByIndividualId: uuid('revoked_by_individual_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIndividualStatusIdx: index('idx_cc_operator_role_assignments_tenant_individual_status').on(table.tenantId, table.individualId, table.status),
+  roleIdx: index('idx_cc_operator_role_assignments_role').on(table.roleId),
+  circleIdx: index('idx_cc_operator_role_assignments_circle').on(table.circleId),
+}));
+
+export const insertOperatorRoleAssignmentSchema = createInsertSchema(ccOperatorRoleAssignments).omit({
+  id: true, createdAt: true
+});
+export type OperatorRoleAssignment = typeof ccOperatorRoleAssignments.$inferSelect;
+export type InsertOperatorRoleAssignment = z.infer<typeof insertOperatorRoleAssignmentSchema>;
+
+// ============================================================================
+// P2.18-B OPERATOR EVENTS (Audit Log - Append-Only)
+// ============================================================================
+
+export const ccOperatorEvents = pgTable('cc_operator_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  circleId: uuid('circle_id'),
+  operatorIndividualId: uuid('operator_individual_id').notNull(),
+  actionKey: text('action_key').notNull(),
+  subjectType: text('subject_type').notNull(),
+  subjectId: uuid('subject_id').notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  payload: jsonb('payload').notNull().default({}),
+}, (table) => ({
+  tenantIdx: index('idx_cc_operator_events_tenant').on(table.tenantId),
+  circleIdx: index('idx_cc_operator_events_circle').on(table.circleId),
+  operatorIdx: index('idx_cc_operator_events_operator').on(table.operatorIndividualId),
+  actionIdx: index('idx_cc_operator_events_action').on(table.actionKey),
+  subjectIdx: index('idx_cc_operator_events_subject').on(table.subjectType, table.subjectId),
+  occurredIdx: index('idx_cc_operator_events_occurred').on(table.occurredAt),
+}));
+
+export const insertOperatorEventSchema = createInsertSchema(ccOperatorEvents).omit({
+  id: true, createdAt: true
+});
+export type OperatorEvent = typeof ccOperatorEvents.$inferSelect;
+export type InsertOperatorEvent = z.infer<typeof insertOperatorEventSchema>;
+
+// ============================================================================
 // CONVERSATION PARTICIPANTS (Bundle 099)
 // ============================================================================
 

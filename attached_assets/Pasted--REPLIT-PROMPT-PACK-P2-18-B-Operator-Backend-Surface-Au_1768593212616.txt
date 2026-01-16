@@ -1,0 +1,142 @@
+✅ REPLIT PROMPT PACK — P2.18-B Operator Backend Surface (Authoritative)
+P2.18-B.1 — DB (Roles)
+
+If you already have platform role tables, reuse. If not, add:
+
+cc_operator_roles
+
+id uuid pk
+
+tenant_id uuid not null
+
+role_key text not null values: emergency_operator | legal_operator | insurance_operator | platform_operator
+
+title text not null
+
+unique (tenant_id, role_key)
+
+cc_operator_role_assignments
+
+id uuid pk
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+individual_id uuid not null
+
+role_id uuid not null references cc_operator_roles(id)
+
+assigned_at timestamptz default now()
+
+assigned_by_individual_id uuid null
+
+status text default 'active' values active|revoked
+
+index (tenant_id, individual_id, status)
+
+RLS: tenant + circle membership if circle_id set.
+
+P2.18-B.2 — Server Auth Helpers
+
+Create:
+
+src/lib/operator/authz.ts
+Functions:
+
+requireOperatorRole(roleKey, {circleId?, tenantId?})
+
+isOperatorRole(roleKey, ...)
+
+Must integrate with existing identity & circle membership.
+
+P2.18-B.3 — Operator Endpoints (No UI)
+Emergency Ops
+
+POST /api/operator/emergency/runs/start (wraps P2.12 start)
+
+POST /api/operator/emergency/runs/:id/resolve
+
+POST /api/operator/emergency/runs/:id/grant-scope
+
+POST /api/operator/emergency/runs/:id/revoke-scope
+
+POST /api/operator/emergency/runs/:id/export-playbook
+
+POST /api/operator/emergency/runs/:id/generate-record-pack (P2.13)
+
+POST /api/operator/emergency/runs/:id/share-authority (P2.9)
+
+GET /api/operator/emergency/runs/:id/dashboard (JSON only: status, grants, events, bundles, captures)
+
+Insurance Ops
+
+POST /api/operator/insurance/claims/:id/assemble
+
+POST /api/operator/insurance/dossiers/:id/export
+
+POST /api/operator/insurance/dossiers/:id/share-authority
+
+Legal Ops
+
+POST /api/operator/legal/holds
+
+POST /api/operator/legal/holds/:id/targets
+
+POST /api/operator/legal/holds/:id/release
+
+Dispute Ops
+
+POST /api/operator/disputes/:id/assemble-defense-pack
+
+POST /api/operator/defense-packs/:id/export
+
+POST /api/operator/defense-packs/:id/share-authority
+
+Each endpoint:
+
+checks operator role
+
+calls existing subsystem functions
+
+emits monetization events where applicable
+
+writes operator audit event (reuse existing audit sink or create cc_operator_events)
+
+P2.18-B.4 — Operator Audit Log
+
+Add cc_operator_events (append-only):
+
+tenant_id, circle_id, operator_individual_id
+
+action_key (e.g., run_start, pack_export, grant_scope)
+
+subject_type, subject_id
+
+occurred_at, created_at
+
+payload jsonb
+
+RLS: tenant + circle.
+
+P2.18-B.5 — QA
+
+Extend scripts/qa-emergency-legal-insurance-smoke.ts:
+
+call operator endpoints instead of raw subsystem endpoints for at least one full run
+
+verify audit log row created for each action
+
+P2.18-B.6 — Docs
+
+Create docs/P2_18_OPERATOR_BACKEND_SURFACE.md:
+
+role keys
+
+endpoint list
+
+required permissions
+
+audit logging expectations
+
+mapping to future console UI (just a list, not designs)
