@@ -1,0 +1,361 @@
+✅ REPLIT PROMPT PACK — P2.7 Legal Hold & Retention Policies (Authoritative)
+P2.7.0 — Non-Negotiables
+
+Implement a Legal Hold subsystem that:
+
+Prevents deletion/mutation of evidence, bundles, claim dossiers while on hold
+
+Supports multiple holds per tenant/circle (e.g., “Wildfire 2026”, “Chargeback extortion”, “Class action threshold group”)
+
+Is audit-grade: every hold action is logged
+
+Is compatible with existing RLS + GUC context
+
+Does not rely on UI redesign; add minimal endpoints + DB + tests
+
+Provides enforcement via database triggers (source of truth) + server-side checks
+
+Key principle: once a hold is applied, the platform becomes legally defensive by construction.
+
+P2.7.1 — Database Migration (New Tables)
+1) cc_legal_holds
+
+A hold container.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+portal_id uuid null
+
+hold_type text not null
+values: insurance_claim | dispute_defense | class_action | regulatory | litigation | other
+
+title text not null
+
+description text null
+
+hold_status text not null default 'active'
+values: active | released
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+released_at timestamptz null
+
+released_by_individual_id uuid null
+
+release_reason text null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, hold_status)
+
+(tenant_id, created_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+2) cc_legal_hold_targets
+
+Targets covered by a hold.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+hold_id uuid not null references cc_legal_holds(id) on delete cascade
+
+target_type text not null
+values: evidence_object | evidence_bundle | claim | claim_dossier | table_scope
+
+target_id uuid null (for specific row targets)
+
+table_name text null (for table_scope, optional)
+
+scope_filter jsonb null (for table_scope: e.g., {circle_id, portal_id, claim_id})
+
+added_at timestamptz not null default now()
+
+added_by_individual_id uuid null
+
+notes text null
+
+Rules:
+
+If target_type is not table_scope, target_id must be present.
+
+If target_type is table_scope, table_name must be present; scope_filter optional.
+
+Indexes:
+
+unique (tenant_id, hold_id, target_type, target_id)
+
+(tenant_id, target_type, target_id)
+
+3) cc_legal_hold_events
+
+Append-only audit log.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+hold_id uuid not null references cc_legal_holds(id) on delete cascade
+
+event_type text not null
+values: created | target_added | target_removed | released | access_blocked | export_blocked
+
+event_at timestamptz not null default now()
+
+actor_individual_id uuid null
+
+event_payload jsonb not null default '{}'::jsonb
+
+client_request_id text null
+
+Indexes:
+
+(tenant_id, hold_id, event_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+P2.7.2 — RLS Policies
+
+Enable RLS on all 3 tables:
+
+tenant_id = current_setting('app.tenant_id', true)::uuid
+
+circle access:
+
+if circle_id set → require circle membership
+
+else tenant-wide access permitted for authorized tenant roles (use existing patterns)
+
+events append-only: deny UPDATE/DELETE unless you already have a service role system (don’t invent)
+
+P2.7.3 — Enforcement (DB Triggers) — The Source of Truth
+
+Add database functions + triggers to block destructive changes when a target is under an active hold.
+
+Enforcement Targets (minimum)
+
+Block:
+
+DELETE or UPDATE of:
+
+cc_evidence_objects (especially content fields, chain_status, sealed fields)
+
+cc_evidence_events (should already be append-only)
+
+cc_evidence_bundles (especially manifest/seal)
+
+cc_evidence_bundle_items
+
+cc_insurance_claims (prevent deletion; allow status change only)
+
+cc_claim_dossiers (no mutation; prevent deletion)
+
+Any R2 deletion workflow if it exists (block at app layer; DB can’t see R2)
+
+Required DB function
+
+Create SQL function:
+
+cc_is_row_on_active_hold(p_tenant_id uuid, p_target_type text, p_target_id uuid) returns boolean
+
+Logic:
+
+returns true if exists a row in cc_legal_hold_targets joined to cc_legal_holds
+
+where hold_status='active'
+
+and matches:
+
+direct target (target_type + target_id)
+
+OR a table_scope rule that covers this row (simple support: match by table_name and optional scope_filter keys that exist in row JSON)
+
+To keep safe & simple for now:
+
+Implement direct target matching now (must)
+
+Implement table_scope in a limited way:
+
+only for tables that have circle_id / portal_id / claim_id columns
+
+scope_filter keys limited to {circle_id, portal_id, claim_id}
+
+Triggers
+
+For each protected table, add BEFORE UPDATE/DELETE trigger:
+
+Determine tenant_id and row id
+
+If cc_is_row_on_active_hold(tenant_id, <type>, id) true:
+
+raise exception LEGAL_HOLD_ACTIVE
+
+include hold_id list in message if easy (optional)
+Also log a cc_legal_hold_events row with event_type='access_blocked' (optional if it causes recursion; if logging inside trigger is risky, do app-layer logging instead).
+
+Do NOT break existing migrations. Use separate functions per table if necessary.
+
+P2.7.4 — Retention Policies (Metadata + Future Automation)
+
+Add retention fields (no automation yet, just the policy container):
+
+4) cc_retention_policies
+
+Stores retention rules for evidence/claims.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+policy_scope text not null
+values: evidence | bundles | claims | dossiers | all
+
+retain_days int null (null = indefinite)
+
+min_severity text null (optional)
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+metadata jsonb not null default '{}'::jsonb
+
+RLS same pattern.
+
+This sets up P2.8 automation later without refactor.
+
+P2.7.5 — API Endpoints (Minimal)
+
+Add routes:
+
+Holds
+
+POST /api/legal/holds
+Body: { hold_type, title, description?, circle_id?, portal_id?, client_request_id? }
+Server:
+
+create hold
+
+log hold event created
+
+POST /api/legal/holds/:id/targets
+Body:
+
+target_type
+
+either target_id OR table_name + scope_filter
+
+notes?
+Server:
+
+validate target exists for row targets
+
+insert target
+
+log event target_added
+
+POST /api/legal/holds/:id/release
+Body: { reason }
+Server:
+
+set hold_status='released'
+
+set released_at/by
+
+log event released
+
+GET /api/legal/holds
+List holds
+
+GET /api/legal/holds/:id
+Details + targets + events
+
+Retention
+
+POST /api/legal/retention-policies
+Create policy
+
+GET /api/legal/retention-policies
+List policies
+
+P2.7.6 — Integration Hooks (P2.5 / P2.6)
+
+Add server-side checks in:
+
+Evidence delete/update routes (if any exist): block if on hold
+
+Bundle modifications: block if on hold
+
+Claim deletion: block if on hold
+
+Dossier export: if claim/dossier is on hold, allow export (usually yes) but append event export_blocked only if you choose to restrict exports. Default: exports allowed under hold (that’s often the point), but deletions forbidden.
+
+Add helper:
+
+src/lib/legal/holds.ts
+
+assertNotOnHold({tenantId, targetType, targetId})
+
+listActiveHoldsForTarget(...)
+
+P2.7.7 — Tests (Must Exist)
+
+Create hold → attach evidence object target → attempt update/delete evidence → blocked with LEGAL_HOLD_ACTIVE
+
+Release hold → update allowed
+
+Bundle under hold cannot be modified (items insert should fail if you enforce)
+
+RLS: cross-tenant cannot view or modify holds
+
+Scope holds (circle) enforce membership
+
+P2.7.8 — Documentation
+
+Create docs/P2_7_LEGAL_HOLD_RETENTION.md:
+
+What is a legal hold
+
+What tables are protected
+
+What operations are blocked
+
+How to apply hold to a claim/bundle/evidence
+
+Threat model: spoliation prevention, audit trail
+
+✅ Definition of Done
+
+P2.7 is done only when:
+
+Holds can be created, targeted, released
+
+DB triggers block destructive changes on held rows
+
+RLS is enforced
+
+Tests pass
+
+Docs exist

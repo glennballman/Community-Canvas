@@ -87,6 +87,14 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
   - **Assembly Engine**: Deterministic dossier generation with sorted timelines and evidence categorization
   - **Export Format**: zip_json (dossier.json + inputs.json) stored to R2
   - **Tests**: 18 passing tests covering attach validation, deterministic hashing, versioning, immutability
+- **P2.7 Legal Hold & Retention Policies** (Migration 133): Spoliation prevention and audit-grade hold management:
+  - **Holds** (`cc_legal_holds`): Hold containers with types (insurance_claim, dispute_defense, class_action, regulatory, litigation)
+  - **Targets** (`cc_legal_hold_targets`): What's protected (evidence_object, evidence_bundle, claim, claim_dossier, table_scope)
+  - **Events** (`cc_legal_hold_events`): Append-only audit log for all hold actions
+  - **Retention** (`cc_retention_policies`): Metadata for future retention automation
+  - **DB Triggers**: BEFORE UPDATE/DELETE triggers on protected tables that call `cc_is_row_on_active_hold()` and raise `LEGAL_HOLD_ACTIVE`
+  - **Scope Inheritance**: Holding a claim automatically protects linked evidence and dossiers
+  - **Tests**: 16 passing tests covering hold creation, enforcement, release, and append-only events
 
 ## External Dependencies
 

@@ -80,6 +80,7 @@ import internalRtrRouter from "./routes/internal-rtr";
 import recordBundlesRouter from "./routes/record-bundles";
 import evidenceRouter from "./routes/evidence";
 import insuranceRouter from "./routes/insurance";
+import legalRouter from "./routes/legal";
 import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
@@ -201,6 +202,9 @@ export async function registerRoutes(
 
   // Register P2.6 insurance claim auto-assembler routes
   app.use('/api/insurance', insuranceRouter);
+
+  // Register legal hold routes
+  app.use('/api/legal', legalRouter);
 
   // Register incident prompts routes
   app.use('/api/incidents', incidentPromptsRouter);
