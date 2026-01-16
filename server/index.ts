@@ -139,13 +139,14 @@ app.use(tenantContext as any);
 app.use(attachTenantDb);
 
 // P0 HARDENING: Block service-key on tenant API routes
-// Service-key is NOT accepted on /api/* routes (except /api/internal, /api/jobs, /api/scm, /api/monetization)
+// Service-key is NOT accepted on /api/* routes (except /api/internal, /api/jobs, /api/scm, /api/monetization, /api/drills)
 // This prevents service-key from being used to bypass tenant authentication
 app.use('/api', (req, res, next) => {
   // Allow /api/internal (uses platform staff session), /api/jobs (background automation),
-  // /api/scm (certification tracking), /api/monetization (usage tracking)
+  // /api/scm (certification tracking), /api/monetization (usage tracking), /api/drills (drill mode)
   if (req.path.startsWith('/internal') || req.path.startsWith('/jobs') ||
-      req.path.startsWith('/scm') || req.path.startsWith('/monetization')) {
+      req.path.startsWith('/scm') || req.path.startsWith('/monetization') ||
+      req.path.startsWith('/drills')) {
     return next();
   }
   // Block service-key on all other /api/* routes

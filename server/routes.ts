@@ -91,6 +91,7 @@ import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-p
 import qaRouter from "./routes/qa";
 import monetizationRouter from "./routes/monetization";
 import scmRouter from "./routes/scm";
+import drillsRouter from "./routes/drills";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -350,6 +351,9 @@ export async function registerRoutes(
 
   // Register SCM (System Completion Matrix) routes for certification tracking
   app.use('/api/scm', scmRouter);
+
+  // Register P2.17 Emergency Drill Mode routes
+  app.use('/api/drills', drillsRouter);
 
   // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
   app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/cc_articles'));
