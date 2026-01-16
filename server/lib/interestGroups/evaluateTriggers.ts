@@ -315,25 +315,21 @@ async function onGroupTriggered(
   // 1. Create Legal Hold (P2.7)
   const holdResult = await serviceQuery<{ id: string }>(
     `INSERT INTO cc_legal_holds (
-       tenant_id, hold_type, title, initiated_by, 
-       initiated_at, status, reason, metadata
+       tenant_id, hold_type, title, hold_status, metadata
      )
-     VALUES ($1::uuid, 'class_action', $2, 'system',
-             $3, 'active', $4, $5::jsonb)
+     VALUES ($1::uuid, 'class_action', $2, 'active', $3::jsonb)
      RETURNING id`,
     [
       tenantId,
       `Legal Hold: ${group.title}`,
-      now.toISOString(),
-      reason,
-      JSON.stringify({ group_id: groupId, group_type: group.group_type }),
+      JSON.stringify({ group_id: groupId, group_type: group.group_type, reason }),
     ]
   );
   const holdId = holdResult.rows[0].id;
 
   // Add hold targets for the group and proof bundles
   await serviceQuery(
-    `INSERT INTO cc_legal_hold_targets (tenant_id, hold_id, target_type, target_table, table_scope_filter)
+    `INSERT INTO cc_legal_hold_targets (tenant_id, hold_id, target_type, table_name, scope_filter)
      VALUES ($1::uuid, $2::uuid, 'table_scope', 'cc_interest_group_signals', $3::jsonb)`,
     [tenantId, holdId, JSON.stringify({ group_id: groupId })]
   );
@@ -348,8 +344,8 @@ async function onGroupTriggered(
 
   // Log hold event
   await serviceQuery(
-    `INSERT INTO cc_legal_hold_events (tenant_id, hold_id, event_type, event_by, event_payload)
-     VALUES ($1::uuid, $2::uuid, 'created', 'system', $3::jsonb)`,
+    `INSERT INTO cc_legal_hold_events (tenant_id, hold_id, event_type, event_payload)
+     VALUES ($1::uuid, $2::uuid, 'created', $3::jsonb)`,
     [tenantId, holdId, JSON.stringify({ reason, group_id: groupId })]
   );
 
@@ -379,10 +375,10 @@ async function onGroupTriggered(
 
   const bundleResult = await serviceQuery<{ id: string }>(
     `INSERT INTO cc_evidence_bundles (
-       tenant_id, owner_individual_id, bundle_type, title,
-       chain_status, manifest, manifest_sha256, sealed_at
+       tenant_id, bundle_type, title,
+       bundle_status, manifest_json, manifest_sha256, sealed_at
      )
-     VALUES ($1::uuid, NULL, 'class_action', $2,
+     VALUES ($1::uuid, 'class_action', $2,
              'sealed', $3::jsonb, $4, $5)
      RETURNING id`,
     [
