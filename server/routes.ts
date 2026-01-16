@@ -84,6 +84,7 @@ import legalRouter from "./routes/legal";
 import offlineRouter from "./routes/offline";
 import { authorityRouter, publicAuthorityRouter } from "./routes/authority";
 import disputesRouter from "./routes/disputes";
+import emergencyRouter from "./routes/emergency";
 import interestGroupsRouter, { publicRouter as publicInterestGroupsRouter } from "./routes/interestGroups";
 import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
@@ -221,6 +222,7 @@ export async function registerRoutes(
 
   // Register P2.10 Disputes / Defense Pack routes
   app.use('/api/disputes', disputesRouter);
+  app.use('/api/emergency', emergencyRouter);
 
   // Register P2.11 Interest Groups routes (authenticated admin APIs)
   app.use('/api/interest-groups', interestGroupsRouter);
