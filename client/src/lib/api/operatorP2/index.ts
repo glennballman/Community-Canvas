@@ -32,4 +32,19 @@ export * from './useOperatorAuditEvents';
 export * from './useAddEvidence';         // POST /p2/emergency/runs/:id/evidence (NOT YET IMPLEMENTED)
 export * from './useCreateDefensePack';   // POST /p2/emergency/runs/:id/defense-pack (NOT YET IMPLEMENTED)
 
+// Legal Holds (POST /p2/legal/holds/*)
+export * from './useCreateLegalHold';      // POST /p2/legal/holds
+export * from './useAddLegalHoldTarget';   // POST /p2/legal/holds/:id/targets
+export * from './useReleaseLegalHold';     // POST /p2/legal/holds/:id/release
+
+// Insurance Dossiers (POST /p2/insurance/*)
+export * from './useAssembleInsuranceDossier';      // POST /p2/insurance/claims/:id/assemble
+export * from './useExportInsuranceDossier';        // POST /p2/insurance/dossiers/:id/export
+export * from './useShareInsuranceDossierAuthority'; // POST /p2/insurance/dossiers/:id/share-authority
+
+// Disputes / Defense Packs (POST /p2/disputes/* and /p2/defense-packs/*)
+export * from './useAssembleDefensePack';           // POST /p2/disputes/:id/assemble-defense-pack
+export * from './useExportDefensePack';             // POST /p2/defense-packs/:id/export
+export * from './useShareDefensePackAuthority';     // POST /p2/defense-packs/:id/share-authority
+
 export { P2ApiError } from '../operatorP2';

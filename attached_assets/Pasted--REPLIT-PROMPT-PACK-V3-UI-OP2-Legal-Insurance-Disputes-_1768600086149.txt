@@ -1,0 +1,383 @@
+✅ REPLIT PROMPT PACK — V3-UI-OP2 (Legal + Insurance + Disputes Workspaces, P2-only)
+
+You are Replit. Extend the existing V3-UI-OP1 operator console UI to add Legal Holds, Insurance Dossiers, and Dispute / Defense Packs operator workspaces.
+Hard constraints:
+
+UI must call only /api/operator/p2/* endpoints for these workflows.
+
+Preserve the P2 envelope handling ({ ok, error?, ...data }) and reuse the existing P2ApiError + operator API client wrapper.
+
+No pricing UI/CTAs. Keep dev pricing guardrails active.
+
+Minimal UI only (shadcn tables/forms/tabs). No redesign.
+
+Keep new code under client/src/.
+
+0) Verify/Align endpoint paths (P2-only)
+
+Before coding, scan your implemented backend routes under /api/operator/p2/ and confirm the exact paths for:
+
+legal holds create/list/detail/add-target/release
+
+insurance dossier assemble/export/share
+
+disputes defense pack assemble/export/share
+
+optional list/search endpoints
+
+If a list endpoint doesn’t exist, build UI that supports:
+
+manual ID entry + “Open”
+
+action-driven flows (create returns id, then navigate)
+
+Do NOT fall back to non-P2 endpoints.
+
+1) Routes: Add operator pages
+
+Add these routes to React Router:
+
+/app/operator/legal → OperatorLegalHoldsIndexPage
+
+/app/operator/legal/:holdId → OperatorLegalHoldDetailPage
+
+/app/operator/insurance → OperatorInsuranceIndexPage
+
+/app/operator/insurance/claims/:claimId → OperatorInsuranceClaimPage
+
+/app/operator/disputes → OperatorDisputesIndexPage
+
+/app/operator/disputes/:disputeId → OperatorDisputePage
+
+Also add internal links from /app/operator home to these new pages.
+
+2) Create new page files
+
+Create files:
+
+client/src/pages/app/operator/OperatorLegalHoldsIndexPage.tsx
+
+client/src/pages/app/operator/OperatorLegalHoldDetailPage.tsx
+
+client/src/pages/app/operator/OperatorInsuranceIndexPage.tsx
+
+client/src/pages/app/operator/OperatorInsuranceClaimPage.tsx
+
+client/src/pages/app/operator/OperatorDisputesIndexPage.tsx
+
+client/src/pages/app/operator/OperatorDisputePage.tsx
+
+Each page must include the dev pricing guardrail check (same pattern as OP1).
+
+3) Add/extend hooks (TanStack Query) — P2-only
+
+Create/extend hooks under:
+client/src/lib/api/operatorP2/
+
+3.1 Legal holds
+
+useLegalHolds.ts (if list endpoint exists)
+
+GET /legal/holds?limit=50
+
+useLegalHoldById.ts
+
+GET /legal/holds/:holdId
+
+useCreateLegalHold.ts
+
+POST /legal/holds
+
+body: { holdType, title, reason?, circleId?, portalId?, metadata? }
+
+returns { holdId }
+
+useAddLegalHoldTarget.ts
+
+POST /legal/holds/:holdId/targets
+
+body supports target union:
+{ targetType: "evidence_object"|"evidence_bundle"|"emergency_run"|"claim"|"dossier"|"defense_pack", targetId: string, note?: string }
+
+useReleaseLegalHold.ts
+
+POST /legal/holds/:holdId/release
+
+body: { reason? }
+
+If your backend target union differs, adapt body keys but keep UI semantics.
+
+3.2 Insurance
+
+useAssembleInsuranceDossier.ts
+
+POST /insurance/claims/:claimId/assemble
+
+body: { versionLabel?: string }
+
+returns { dossierId } (or whatever backend returns)
+
+useExportInsuranceDossier.ts
+
+POST /insurance/dossiers/:dossierId/export
+
+body: { format: "zip_json" }
+
+return includes { exportId? , r2Key? , url? } if provided
+
+useShareInsuranceDossierAuthority.ts
+
+POST /insurance/dossiers/:dossierId/share-authority
+
+body optional: { expiresAt?, scope? }
+
+returns { grantId? , accessUrl? } if provided
+
+If there is no way to fetch claim details, allow manual dossierId entry.
+
+3.3 Disputes / defense packs
+
+useAssembleDefensePack.ts
+
+POST /disputes/:disputeId/assemble-defense-pack
+
+body: { versionLabel?: string }
+
+returns { defensePackId }
+
+useExportDefensePack.ts
+
+POST /defense-packs/:defensePackId/export
+
+body: { format: "zip_json" }
+
+useShareDefensePackAuthority.ts
+
+POST /defense-packs/:defensePackId/share-authority
+
+body optional: { expiresAt?, scope? }
+
+3.4 Optional list hooks (only if endpoints exist)
+
+useDisputes.ts → GET /disputes?limit=50
+
+useClaims.ts → GET /insurance/claims?limit=50
+
+If not present, use ID-open flow.
+
+4) Shared UI components (extend)
+
+Add these components under client/src/components/operator/:
+
+4.1 OperatorIdOpenCard.tsx
+
+Reusable card:
+
+Input for ID (holdId/claimId/disputeId/dossierId/defensePackId)
+
+“Open” button navigates to route
+Props:
+
+label
+
+placeholder
+
+onOpen(id: string)
+
+4.2 OperatorResultLinks.tsx
+
+Given an object of returned IDs (holdId, dossierId, defensePackId), renders:
+
+a compact list of links to open the relevant workspace route.
+
+5) Page requirements (behavior + layout)
+5.1 OperatorLegalHoldsIndexPage (/app/operator/legal)
+
+Layout:
+
+Header: “Legal Holds”
+
+Left column: “Create Hold” (OperatorActionPanel)
+
+holdType select: class_action | insurance | dispute | regulatory | other
+
+title input
+
+reason textarea
+
+Right column:
+
+If list endpoint exists: table of holds with status + open link
+
+Always include “Open by ID” card
+
+On success:
+
+navigate to /app/operator/legal/:holdId
+
+5.2 OperatorLegalHoldDetailPage (/app/operator/legal/:holdId)
+
+Tabbed:
+
+Tab A: “Overview”
+
+Show holdId
+
+Release hold action (OperatorActionPanel)
+
+Tab B: “Targets”
+
+Add target form:
+
+targetType select (evidence_object, evidence_bundle, emergency_run, claim, dossier, defense_pack)
+
+targetId input
+
+note textarea
+
+If detail endpoint returns existing targets, list them in a table.
+
+Tab C: “Audit”
+
+Show OperatorAuditFeed filtered to holdId
+
+5.3 OperatorInsuranceIndexPage (/app/operator/insurance)
+
+Layout:
+
+Header: “Insurance Operations”
+
+Card: “Open Claim by ID” → routes to /app/operator/insurance/claims/:claimId
+
+Optional: list claims table if endpoint exists
+
+5.4 OperatorInsuranceClaimPage (/app/operator/insurance/claims/:claimId)
+
+Tabs:
+
+Tab A: “Dossier”
+
+Assemble dossier action panel
+
+optional versionLabel
+
+After assemble, show returned dossierId and link to export/share panels
+
+Tab B: “Export”
+
+Input dossierId (pre-fill from last assemble result if available)
+
+Export dossier panel (format zip_json)
+
+Display export refs returned (exportId/url/r2Key)
+
+Tab C: “Share”
+
+Input dossierId
+
+Share authority panel
+
+Display accessUrl/grantId if returned
+
+Tab D: “Audit”
+
+audit feed filtered to claimId and/or dossierId
+
+5.5 OperatorDisputesIndexPage (/app/operator/disputes)
+
+Layout:
+
+Header: “Disputes”
+
+Card: “Open Dispute by ID” → /app/operator/disputes/:disputeId
+
+Optional disputes list table if endpoint exists
+
+5.6 OperatorDisputePage (/app/operator/disputes/:disputeId)
+
+Tabs:
+
+Tab A: “Defense Pack”
+
+Assemble defense pack panel
+
+Show defensePackId + links
+
+Tab B: “Export”
+
+Input defensePackId (prefill)
+
+Export panel
+
+Show export refs
+
+Tab C: “Share”
+
+Input defensePackId
+
+Share authority panel
+
+Show grantId/accessUrl
+
+Tab D: “Audit”
+
+audit feed filtered to disputeId / defensePackId
+
+6) Audit feed filtering
+
+If your audit endpoint doesn’t support server filtering:
+
+Fetch latest N events and filter client-side by:
+
+subject_id === holdId / claimId / disputeId / dossierId / defensePackId
+
+OR payload contains those IDs (string match fallback)
+Keep the UI fast: cap at 200 items.
+
+7) Error UX rules
+
+Use OperatorErrorAlert everywhere.
+
+Errors must show:
+
+human-friendly error
+
+“Contact your administrator” only when error indicates access/role denial
+
+Do not show stack traces.
+
+8) Acceptance criteria
+
+All new routes render under TenantAppLayout
+
+Create hold → navigates to detail page
+
+Add target works and shows success state
+
+Release hold works
+
+Assemble dossier works and returns dossierId
+
+Export dossier works (renders refs if returned)
+
+Share dossier works (renders accessUrl/grantId if returned)
+
+Assemble defense pack works and returns defensePackId
+
+Export/share defense pack works
+
+No calls to non-P2 endpoints
+
+Dev pricing guardrail check remains active on all new pages
+
+9) Do not implement yet (OP3)
+
+Do NOT add:
+
+Authority portal UI for third parties
+
+Plan/usage summary UI
+
+Any billing UI
+
+Those come next after OP2 stabilizes.

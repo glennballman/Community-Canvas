@@ -88,6 +88,12 @@ import OperatorHomePage from './pages/app/operator/OperatorHomePage';
 import OperatorEmergencyIndexPage from './pages/app/operator/OperatorEmergencyIndexPage';
 import OperatorEmergencyRunPage from './pages/app/operator/OperatorEmergencyRunPage';
 import OperatorAuditPage from './pages/app/operator/OperatorAuditPage';
+import OperatorLegalHoldsIndexPage from './pages/app/operator/OperatorLegalHoldsIndexPage';
+import OperatorLegalHoldDetailPage from './pages/app/operator/OperatorLegalHoldDetailPage';
+import OperatorInsuranceIndexPage from './pages/app/operator/OperatorInsuranceIndexPage';
+import OperatorInsuranceClaimPage from './pages/app/operator/OperatorInsuranceClaimPage';
+import OperatorDisputesIndexPage from './pages/app/operator/OperatorDisputesIndexPage';
+import OperatorDisputePage from './pages/app/operator/OperatorDisputePage';
 import PortalsPage from './pages/app/admin/PortalsPage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
@@ -235,6 +241,12 @@ export default function App() {
                 <Route path="operator" element={<OperatorHomePage />} />
                 <Route path="operator/emergency" element={<OperatorEmergencyIndexPage />} />
                 <Route path="operator/emergency/:runId" element={<OperatorEmergencyRunPage />} />
+                <Route path="operator/legal" element={<OperatorLegalHoldsIndexPage />} />
+                <Route path="operator/legal/:holdId" element={<OperatorLegalHoldDetailPage />} />
+                <Route path="operator/insurance" element={<OperatorInsuranceIndexPage />} />
+                <Route path="operator/insurance/claims/:claimId" element={<OperatorInsuranceClaimPage />} />
+                <Route path="operator/disputes" element={<OperatorDisputesIndexPage />} />
+                <Route path="operator/disputes/:disputeId" element={<OperatorDisputePage />} />
                 <Route path="operator/audit" element={<OperatorAuditPage />} />
                 <Route path="admin/portals" element={<PortalsPage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />

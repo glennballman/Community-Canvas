@@ -118,27 +118,54 @@ export default function OperatorHomePage() {
           </CardContent>
         </Card>
         
-        <Card className="opacity-60" data-testid="card-other-modules">
+        <Card data-testid="card-legal">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Scale className="h-5 w-5" />
+              Legal Holds
+            </CardTitle>
+            <CardDescription>Create and manage legal hold containers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/app/operator/legal">
+              <Button variant="outline" className="w-full" data-testid="button-go-legal">
+                Go to Legal Holds
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        
+        <Card data-testid="card-insurance">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileCheck className="h-5 w-5" />
+              Insurance
+            </CardTitle>
+            <CardDescription>Manage claim dossiers and exports</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/app/operator/insurance">
+              <Button variant="outline" className="w-full" data-testid="button-go-insurance">
+                Go to Insurance
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        
+        <Card data-testid="card-disputes">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Shield className="h-5 w-5" />
-              Other Modules
+              Disputes
             </CardTitle>
-            <CardDescription>Coming in OP2</CardDescription>
+            <CardDescription>Manage dispute defense packs</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="ghost" className="w-full justify-start" disabled>
-              <Scale className="h-4 w-4 mr-2" />
-              Legal Holds
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" disabled>
-              <FileCheck className="h-4 w-4 mr-2" />
-              Insurance Dossiers
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" disabled>
-              <Shield className="h-4 w-4 mr-2" />
-              Dispute Defense
-            </Button>
+          <CardContent>
+            <Link to="/app/operator/disputes">
+              <Button variant="outline" className="w-full" data-testid="button-go-disputes">
+                Go to Disputes
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
