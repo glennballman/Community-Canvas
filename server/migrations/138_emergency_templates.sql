@@ -1,6 +1,22 @@
 -- P2.12 Emergency Templates + Emergency Circle Mode Hardening
 -- Migration 138: Emergency templates, property profiles, runs, scope grants, and events
 
+-- Add emergency_coordination bundle type to enum if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'emergency_coordination' AND enumtypid = 'cc_evidence_bundle_type_enum'::regtype) THEN
+    ALTER TYPE cc_evidence_bundle_type_enum ADD VALUE 'emergency_coordination';
+  END IF;
+END $$;
+
+-- Add emergency legal hold type to enum if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'emergency' AND enumtypid = 'legal_hold_type'::regtype) THEN
+    ALTER TYPE legal_hold_type ADD VALUE 'emergency';
+  END IF;
+END $$;
+
 -- 1) cc_emergency_templates
 CREATE TABLE IF NOT EXISTS cc_emergency_templates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -156,6 +172,11 @@ BEGIN
   IF TG_OP = 'UPDATE' THEN
     RAISE EXCEPTION 'EMERGENCY_RUN_EVENTS_IMMUTABLE: Cannot update emergency run events';
   ELSIF TG_OP = 'DELETE' THEN
+    -- Allow cascade deletes from parent run deletion by checking if the parent run exists
+    IF NOT EXISTS (SELECT 1 FROM cc_emergency_runs WHERE id = OLD.run_id) THEN
+      -- Parent run is being deleted, allow cascade
+      RETURN OLD;
+    END IF;
     RAISE EXCEPTION 'EMERGENCY_RUN_EVENTS_IMMUTABLE: Cannot delete emergency run events';
   END IF;
   RETURN NULL;
