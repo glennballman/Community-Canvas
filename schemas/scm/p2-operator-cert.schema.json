@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://community-canvas/schemas/scm/p2-operator-cert.schema.json",
+  "title": "P2OperatorCertification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cert_version", "generated_at", "input", "summary", "modules", "evidence"],
+  "properties": {
+    "cert_version": { "type": "string", "pattern": "^1\\.0\\.0$" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proof_path", "proof_sha256", "base_url", "started_at", "finished_at"],
+      "properties": {
+        "proof_path": { "type": "string" },
+        "proof_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "base_url": { "type": "string" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overall_status", "pass_modules", "held_modules", "fail_modules"],
+      "properties": {
+        "overall_status": { "type": "string", "enum": ["PASS", "HELD", "FAIL"] },
+        "pass_modules": { "type": "integer", "minimum": 0 },
+        "held_modules": { "type": "integer", "minimum": 0 },
+        "fail_modules": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["emergency", "authority", "legal", "insurance", "dispute", "monetization", "audit"],
+      "properties": {
+        "emergency": { "$ref": "#/$defs/moduleResult" },
+        "authority": { "$ref": "#/$defs/moduleResult" },
+        "legal": { "$ref": "#/$defs/moduleResult" },
+        "insurance": { "$ref": "#/$defs/moduleResult" },
+        "dispute": { "$ref": "#/$defs/moduleResult" },
+        "monetization": { "$ref": "#/$defs/moduleResult" },
+        "audit": { "$ref": "#/$defs/moduleResult" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ids", "steps", "assertions", "monetization_snapshot", "audit_snapshot"],
+      "properties": {
+        "ids": { "type": "object" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["step", "ok"],
+            "properties": {
+              "step": { "type": "string" },
+              "ok": {}
+            }
+          }
+        },
+        "assertions": { "type": "array" },
+        "monetization_snapshot": {},
+        "audit_snapshot": {}
+      }
+    }
+  },
+  "$defs": {
+    "moduleResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "required", "checks"],
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "HELD", "FAIL"] },
+        "required": { "type": "boolean" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status"],
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string", "enum": ["PASS", "HELD", "FAIL"] },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

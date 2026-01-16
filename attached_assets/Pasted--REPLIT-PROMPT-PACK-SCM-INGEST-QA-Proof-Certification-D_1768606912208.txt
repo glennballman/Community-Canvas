@@ -1,0 +1,388 @@
+✅ REPLIT PROMPT PACK — SCM INGEST (QA Proof → Certification Decision Artifacts)
+
+You are Replit. Implement an SCM ingest step that converts the QA proof artifacts into certification decision outputs.
+
+Inputs (already produced):
+
+artifacts/qa/p2-smoke-proof.json
+
+Outputs (to create):
+
+artifacts/qa/scm/p2-operator-cert.json (machine cert)
+
+artifacts/qa/scm/p2-operator-cert.md (human cert report)
+
+Hard constraints:
+
+Never “guess” PASS for skipped modules.
+
+Insurance/Dispute are HELD if their steps were skipped due to missing IDs.
+
+Emergency/Legal/Authority must be PASS to mark overall cert as PASS.
+
+Include hashes for integrity.
+
+1) Create JSON Schema: schemas/scm/p2-operator-cert.schema.json
+
+Create this file:
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://community-canvas/schemas/scm/p2-operator-cert.schema.json",
+  "title": "P2OperatorCertification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cert_version", "generated_at", "input", "summary", "modules", "evidence"],
+  "properties": {
+    "cert_version": { "type": "string", "pattern": "^1\\.0\\.0$" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proof_path", "proof_sha256", "base_url", "started_at", "finished_at"],
+      "properties": {
+        "proof_path": { "type": "string" },
+        "proof_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "base_url": { "type": "string" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overall_status", "pass_modules", "held_modules", "fail_modules"],
+      "properties": {
+        "overall_status": { "type": "string", "enum": ["PASS", "HELD", "FAIL"] },
+        "pass_modules": { "type": "integer", "minimum": 0 },
+        "held_modules": { "type": "integer", "minimum": 0 },
+        "fail_modules": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["emergency", "authority", "legal", "insurance", "dispute", "monetization", "audit"],
+      "properties": {
+        "emergency": { "$ref": "#/$defs/moduleResult" },
+        "authority": { "$ref": "#/$defs/moduleResult" },
+        "legal": { "$ref": "#/$defs/moduleResult" },
+        "insurance": { "$ref": "#/$defs/moduleResult" },
+        "dispute": { "$ref": "#/$defs/moduleResult" },
+        "monetization": { "$ref": "#/$defs/moduleResult" },
+        "audit": { "$ref": "#/$defs/moduleResult" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ids", "steps", "assertions", "monetization_snapshot", "audit_snapshot"],
+      "properties": {
+        "ids": { "type": "object" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["step", "ok"],
+            "properties": {
+              "step": { "type": "string" },
+              "ok": {}
+            }
+          }
+        },
+        "assertions": { "type": "array" },
+        "monetization_snapshot": {},
+        "audit_snapshot": {}
+      }
+    }
+  },
+  "$defs": {
+    "moduleResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "required", "checks"],
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "HELD", "FAIL"] },
+        "required": { "type": "boolean" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status"],
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string", "enum": ["PASS", "HELD", "FAIL"] },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+2) Create ingest script: scripts/qa/scm-ingest-p2-operator.ts
+
+This script will:
+
+read proof JSON
+
+compute SHA256
+
+evaluate module statuses
+
+write artifacts/qa/scm/p2-operator-cert.json and .md
+
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+
+type Step = { step: string; ok: any; [k: string]: any };
+
+function sha256File(p: string): string {
+  const buf = fs.readFileSync(p);
+  return crypto.createHash("sha256").update(buf).digest("hex");
+}
+
+function ensureDir(p: string) {
+  fs.mkdirSync(p, { recursive: true });
+}
+
+function isPass(ok: any): boolean {
+  return ok === true;
+}
+
+function isHeld(ok: any): boolean {
+  return typeof ok === "string" && ok.toLowerCase().includes("skipped");
+}
+
+function stepStatus(step: Step | undefined): "PASS" | "HELD" | "FAIL" {
+  if (!step) return "FAIL";
+  if (isPass(step.ok)) return "PASS";
+  if (isHeld(step.ok)) return "HELD";
+  return "FAIL";
+}
+
+function pickSteps(steps: Step[], prefix: string): Step[] {
+  return steps.filter((s) => s.step === prefix || s.step.startsWith(prefix + "."));
+}
+
+function moduleFromSteps(
+  steps: Step[],
+  required: boolean,
+  requiredStepNames: string[]
+): { status: "PASS" | "HELD" | "FAIL"; required: boolean; checks: any[] } {
+  const checks = requiredStepNames.map((name) => {
+    const st = stepStatus(steps.find((s) => s.step === name));
+    return { name, status: st, detail: st === "FAIL" ? "Missing or failed step" : "" };
+  });
+
+  // Determine module status:
+  // - FAIL if any required step FAIL
+  // - HELD if no FAIL but at least one HELD
+  // - PASS if all PASS
+  const statuses = checks.map((c) => c.status);
+  let status: "PASS" | "HELD" | "FAIL" = "PASS";
+  if (statuses.includes("FAIL")) status = "FAIL";
+  else if (statuses.includes("HELD")) status = "HELD";
+
+  // If module is optional and all steps HELD due to missing IDs -> HELD, not FAIL
+  if (!required) {
+    const allHeldOrPass = statuses.every((s) => s === "HELD" || s === "PASS");
+    if (allHeldOrPass && statuses.includes("HELD") && !statuses.includes("FAIL")) status = "HELD";
+  }
+
+  return { status, required, checks };
+}
+
+function main() {
+  const proofPath = path.resolve("artifacts/qa/p2-smoke-proof.json");
+  if (!fs.existsSync(proofPath)) {
+    console.error("Missing proof file:", proofPath);
+    process.exit(1);
+  }
+
+  const proofSha = sha256File(proofPath);
+  const proof = JSON.parse(fs.readFileSync(proofPath, "utf8"));
+
+  const steps: Step[] = Array.isArray(proof.steps) ? proof.steps : [];
+  const assertions: any[] = Array.isArray(proof.assertions) ? proof.assertions : [];
+  const ids = proof.ids || {};
+
+  const emergency = moduleFromSteps(steps, true, [
+    "emergency.start",
+    "emergency.exportPlaybook",
+    "emergency.generateRecordPack",
+    "emergency.shareAuthority",
+    "emergency.resolve"
+  ]);
+
+  const authority = moduleFromSteps(steps, true, [
+    "authority.getGrant",
+    "authority.revokeGrant",
+    "authority.getGrantAfterRevoke"
+  ]);
+
+  const legal = moduleFromSteps(steps, true, [
+    "legal.createHold",
+    "legal.addTarget",
+    "legal.releaseHold"
+  ]);
+
+  const insurance = moduleFromSteps(steps, false, [
+    "insurance.assembleDossier",
+    "insurance.exportDossier",
+    "insurance.shareAuthority"
+  ]);
+
+  const dispute = moduleFromSteps(steps, false, [
+    "dispute.assembleDefensePack",
+    "dispute.exportDefensePack",
+    "dispute.shareAuthority"
+  ]);
+
+  const monetization = moduleFromSteps(steps, true, ["monetization.usage"]);
+  const audit = moduleFromSteps(steps, false, ["audit.events"]);
+
+  // Assertions gate (if present)
+  // If any assertion has pass=false, overall becomes FAIL.
+  const failedAssertions = assertions.filter((a: any) => a && a.pass === false);
+
+  const modules = { emergency, authority, legal, insurance, dispute, monetization, audit };
+
+  const passModules = Object.values(modules).filter((m: any) => m.status === "PASS").length;
+  const heldModules = Object.values(modules).filter((m: any) => m.status === "HELD").length;
+  const failModules = Object.values(modules).filter((m: any) => m.status === "FAIL").length;
+
+  let overall: "PASS" | "HELD" | "FAIL" = "PASS";
+
+  // Required modules must PASS
+  const requiredFail = Object.values(modules).some((m: any) => m.required && m.status !== "PASS");
+  if (requiredFail) overall = "FAIL";
+  else if (failModules > 0) overall = "FAIL";
+  else if (heldModules > 0) overall = "HELD";
+  else overall = "PASS";
+
+  if (failedAssertions.length) overall = "FAIL";
+
+  const cert = {
+    cert_version: "1.0.0",
+    generated_at: new Date().toISOString(),
+    input: {
+      proof_path: "artifacts/qa/p2-smoke-proof.json",
+      proof_sha256: proofSha,
+      base_url: proof.baseUrl || proof.base_url || "",
+      started_at: proof.startedAt || proof.started_at || "",
+      finished_at: proof.finishedAt || proof.finished_at || ""
+    },
+    summary: {
+      overall_status: overall,
+      pass_modules: passModules,
+      held_modules: heldModules,
+      fail_modules: failModules
+    },
+    modules,
+    evidence: {
+      ids,
+      steps,
+      assertions,
+      monetization_snapshot: proof.monetization || {},
+      audit_snapshot: proof.audit || {}
+    }
+  };
+
+  // Write outputs
+  const outDir = path.resolve("artifacts/qa/scm");
+  ensureDir(outDir);
+
+  const jsonOut = path.join(outDir, "p2-operator-cert.json");
+  fs.writeFileSync(jsonOut, JSON.stringify(cert, null, 2), "utf8");
+
+  const mdLines: string[] = [];
+  mdLines.push(`# P2 Operator Certification`);
+  mdLines.push(``);
+  mdLines.push(`- **Overall**: ${overall}`);
+  mdLines.push(`- Proof SHA256: \`${proofSha}\``);
+  mdLines.push(`- Started: ${cert.input.started_at}`);
+  mdLines.push(`- Finished: ${cert.input.finished_at}`);
+  mdLines.push(`- Base URL: ${cert.input.base_url}`);
+  mdLines.push(``);
+  mdLines.push(`## Module Results`);
+  mdLines.push(``);
+  mdLines.push(`| Module | Required | Status |`);
+  mdLines.push(`|---|---:|---|`);
+  for (const [name, mod] of Object.entries(modules) as any) {
+    mdLines.push(`| ${name} | ${mod.required ? "YES" : "NO"} | ${mod.status} |`);
+  }
+  mdLines.push(``);
+  mdLines.push(`## IDs`);
+  mdLines.push("```json");
+  mdLines.push(JSON.stringify(ids, null, 2));
+  mdLines.push("```");
+  mdLines.push(``);
+  mdLines.push(`## Failed Assertions`);
+  if (failedAssertions.length === 0) mdLines.push(`- None`);
+  else {
+    for (const a of failedAssertions) mdLines.push(`- ${a.assert || "assertion"}: FAIL`);
+  }
+  mdLines.push(``);
+  mdLines.push(`## Checks (details)`);
+  for (const [name, mod] of Object.entries(modules) as any) {
+    mdLines.push(`### ${name} (${mod.status})`);
+    mdLines.push(``);
+    for (const c of mod.checks) {
+      mdLines.push(`- ${c.status}: ${c.name}${c.detail ? ` — ${c.detail}` : ""}`);
+    }
+    mdLines.push(``);
+  }
+
+  fs.writeFileSync(path.join(outDir, "p2-operator-cert.md"), mdLines.join("\n"), "utf8");
+
+  console.log("✅ Wrote SCM cert artifacts to artifacts/qa/scm/");
+  console.log(" -", jsonOut);
+  console.log(" -", path.join(outDir, "p2-operator-cert.md"));
+
+  // Exit non-zero if overall FAIL (so CI can gate merges)
+  if (overall === "FAIL") process.exit(1);
+}
+
+main();
+
+3) Add a run command (no package.json edits required)
+
+Run:
+
+npx tsx scripts/qa/scm-ingest-p2-operator.ts
+
+
+This assumes tsx exists as you’ve been using it already.
+
+4) Optional: Schema validation in CI (recommended)
+
+If you already have ajv or similar, validate the generated JSON against:
+
+schemas/scm/p2-operator-cert.schema.json
+
+If not, skip for now (the schema is still useful for future tooling).
+
+5) Acceptance criteria
+
+Running smoke test produces artifacts/qa/p2-smoke-proof.json
+
+Running SCM ingest produces:
+
+artifacts/qa/scm/p2-operator-cert.json
+
+artifacts/qa/scm/p2-operator-cert.md
+
+Overall status rules enforced:
+
+Emergency/Authority/Legal/Monetization must PASS
+
+Insurance/Dispute may be HELD if skipped
+
+Any FAIL causes exit code 1
+
+Implement exactly as above.
