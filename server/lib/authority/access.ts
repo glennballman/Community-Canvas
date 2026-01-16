@@ -599,21 +599,75 @@ export async function revokeToken(
 /**
  * Validate a raw token and optional passcode
  * Uses the SECURITY DEFINER function in the database
+ * Passcode verification is done in Node.js using bcrypt for compatibility
  */
 export async function validateToken(
   rawToken: string,
   passcode: string | null = null
 ): Promise<ValidationResult> {
+  // First pass: check token validity (not yet passcode verified)
   const result = await pool.query<any>(
-    `SELECT * FROM cc_authority_validate_token($1, $2)`,
-    [rawToken, passcode]
+    `SELECT * FROM cc_authority_validate_token($1, false)`,
+    [rawToken]
   );
   
-  if (result.rows.length === 0 || !result.rows[0].ok) {
+  if (result.rows.length === 0) {
     return { ok: false };
   }
   
   const row = result.rows[0];
+  
+  // If passcode is required, verify it in Node.js
+  if (row.require_passcode) {
+    if (!passcode || !row.passcode_hash) {
+      // Log passcode failed event
+      if (row.tenant_id && row.grant_id && row.token_id) {
+        await pool.query(
+          `INSERT INTO cc_authority_access_events (tenant_id, grant_id, token_id, event_type, event_payload)
+           VALUES ($1::uuid, $2::uuid, $3::uuid, 'passcode_failed', '{}'::jsonb)`,
+          [row.tenant_id, row.grant_id, row.token_id]
+        );
+      }
+      return { ok: false };
+    }
+    
+    const passcodeValid = await verifyPasscode(passcode, row.passcode_hash);
+    if (!passcodeValid) {
+      // Log passcode failed event
+      await pool.query(
+        `INSERT INTO cc_authority_access_events (tenant_id, grant_id, token_id, event_type, event_payload)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, 'passcode_failed', '{}'::jsonb)`,
+        [row.tenant_id, row.grant_id, row.token_id]
+      );
+      return { ok: false };
+    }
+    
+    // Second pass: now with passcode verified, complete the validation
+    const verifiedResult = await pool.query<any>(
+      `SELECT * FROM cc_authority_validate_token($1, true)`,
+      [rawToken]
+    );
+    
+    if (verifiedResult.rows.length === 0 || !verifiedResult.rows[0].ok) {
+      return { ok: false };
+    }
+    
+    const verifiedRow = verifiedResult.rows[0];
+    return {
+      ok: true,
+      tenantId: verifiedRow.tenant_id,
+      grantId: verifiedRow.grant_id,
+      tokenId: verifiedRow.token_id,
+      expiresAt: verifiedRow.expires_at,
+      scopes: verifiedRow.scopes || [],
+    };
+  }
+  
+  // No passcode required - check if ok
+  if (!row.ok) {
+    return { ok: false };
+  }
+  
   return {
     ok: true,
     tenantId: row.tenant_id,

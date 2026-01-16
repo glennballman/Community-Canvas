@@ -221,9 +221,11 @@ CREATE POLICY events_select_tenant ON cc_authority_access_events
 -- ============================================================
 
 -- Validate token and return access info
+-- Note: Passcode verification is done in Node.js using bcrypt for compatibility
+-- p_passcode_verified indicates if passcode was already verified in application layer
 CREATE OR REPLACE FUNCTION cc_authority_validate_token(
   p_token text,
-  p_passcode text DEFAULT NULL
+  p_passcode_verified boolean DEFAULT false
 )
 RETURNS TABLE (
   ok boolean,
@@ -231,7 +233,9 @@ RETURNS TABLE (
   grant_id uuid,
   token_id uuid,
   expires_at timestamptz,
-  scopes jsonb
+  scopes jsonb,
+  require_passcode boolean,
+  passcode_hash text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -240,7 +244,6 @@ AS $$
 DECLARE
   v_token_hash text;
   v_token_row RECORD;
-  v_grant_row RECORD;
   v_now timestamptz := now();
   v_scopes jsonb;
 BEGIN
@@ -250,7 +253,7 @@ BEGIN
   -- Find token (don't leak existence)
   SELECT t.*, g.tenant_id as g_tenant_id, g.status as g_status, 
          g.expires_at as g_expires_at, g.max_views as g_max_views,
-         g.require_passcode, g.passcode_hash
+         g.require_passcode as g_require_passcode, g.passcode_hash as g_passcode_hash
   INTO v_token_row
   FROM cc_authority_access_tokens t
   JOIN cc_authority_access_grants g ON g.id = t.grant_id
@@ -259,17 +262,16 @@ BEGIN
   
   -- Token not found
   IF v_token_row IS NULL THEN
-    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb;
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb, false, NULL::text;
     RETURN;
   END IF;
   
   -- Check token status
   IF v_token_row.status != 'active' THEN
-    -- Log access denied
     INSERT INTO cc_authority_access_events (tenant_id, grant_id, token_id, event_type, event_payload)
     VALUES (v_token_row.g_tenant_id, v_token_row.grant_id, v_token_row.id, 'access_denied', 
             jsonb_build_object('reason', 'token_' || v_token_row.status));
-    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb;
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb, false, NULL::text;
     RETURN;
   END IF;
   
@@ -278,18 +280,17 @@ BEGIN
     INSERT INTO cc_authority_access_events (tenant_id, grant_id, token_id, event_type, event_payload)
     VALUES (v_token_row.g_tenant_id, v_token_row.grant_id, v_token_row.id, 'access_denied',
             jsonb_build_object('reason', 'grant_' || v_token_row.g_status));
-    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb;
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb, false, NULL::text;
     RETURN;
   END IF;
   
-  -- Check expiry (use earlier of token or grant expiry)
+  -- Check expiry
   IF v_token_row.expires_at < v_now OR v_token_row.g_expires_at < v_now THEN
-    -- Auto-expire token
     UPDATE cc_authority_access_tokens SET status = 'expired' WHERE id = v_token_row.id;
     INSERT INTO cc_authority_access_events (tenant_id, grant_id, token_id, event_type, event_payload)
     VALUES (v_token_row.g_tenant_id, v_token_row.grant_id, v_token_row.id, 'access_denied',
             jsonb_build_object('reason', 'expired'));
-    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb;
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb, false, NULL::text;
     RETURN;
   END IF;
   
@@ -298,20 +299,22 @@ BEGIN
     INSERT INTO cc_authority_access_events (tenant_id, grant_id, token_id, event_type, event_payload)
     VALUES (v_token_row.g_tenant_id, v_token_row.grant_id, v_token_row.id, 'access_denied',
             jsonb_build_object('reason', 'max_views_exceeded'));
-    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb;
+    RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb, false, NULL::text;
     RETURN;
   END IF;
   
-  -- Check passcode if required
-  IF v_token_row.require_passcode THEN
-    IF p_passcode IS NULL OR 
-       v_token_row.passcode_hash IS NULL OR
-       v_token_row.passcode_hash != crypt(p_passcode, v_token_row.passcode_hash) THEN
-      INSERT INTO cc_authority_access_events (tenant_id, grant_id, token_id, event_type, event_payload)
-      VALUES (v_token_row.g_tenant_id, v_token_row.grant_id, v_token_row.id, 'passcode_failed', '{}'::jsonb);
-      RETURN QUERY SELECT false, NULL::uuid, NULL::uuid, NULL::uuid, NULL::timestamptz, NULL::jsonb;
-      RETURN;
-    END IF;
+  -- If passcode required but not verified, return info for Node.js verification
+  IF v_token_row.g_require_passcode AND NOT p_passcode_verified THEN
+    RETURN QUERY SELECT 
+      false,
+      v_token_row.g_tenant_id,
+      v_token_row.grant_id,
+      v_token_row.id,
+      LEAST(v_token_row.expires_at, v_token_row.g_expires_at),
+      NULL::jsonb,
+      true,
+      v_token_row.g_passcode_hash;
+    RETURN;
   END IF;
   
   -- Get scopes
@@ -337,7 +340,9 @@ BEGIN
     v_token_row.grant_id,
     v_token_row.id,
     LEAST(v_token_row.expires_at, v_token_row.g_expires_at),
-    COALESCE(v_scopes, '[]'::jsonb);
+    COALESCE(v_scopes, '[]'::jsonb),
+    false,
+    NULL::text;
 END;
 $$;
 
