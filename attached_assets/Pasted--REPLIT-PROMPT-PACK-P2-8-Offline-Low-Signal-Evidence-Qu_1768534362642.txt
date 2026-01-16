@@ -1,0 +1,475 @@
+✅ REPLIT PROMPT PACK — P2.8 Offline / Low-Signal Evidence Queue + Reconciliation (Authoritative)
+P2.8.0 — Non-Negotiateables
+
+Implement an offline/low-signal capture pipeline that:
+
+Lets clients capture evidence immediately even with no connectivity
+
+Syncs later using idempotent, conflict-safe APIs
+
+Preserves legal defensibility:
+
+immutable content hashes
+
+explicit capture timestamps
+
+append-only custody events
+
+Works for:
+
+manual notes, photos/files, url snapshots, json snapshots
+
+Never breaks P2.5 invariants:
+
+evidence object hash is the truth
+
+custody chain is verifiable
+
+No UI redesign. Add:
+
+client-side queue primitives
+
+server sync endpoints
+
+reconciliation strategy
+
+tests + docs
+
+P2.8.1 — Data Model (New Tables)
+1) cc_sync_sessions
+
+Tracks a client device sync session.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+portal_id uuid null
+
+individual_id uuid null
+
+device_id text not null (stable per device install)
+
+app_version text null
+
+last_seen_at timestamptz not null default now()
+
+created_at timestamptz not null default now()
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, device_id)
+
+(tenant_id, last_seen_at desc)
+
+2) cc_offline_ingest_queue
+
+Server-side “landing zone” for offline batches. (This is NOT the canonical evidence table.)
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+circle_id uuid null
+
+portal_id uuid null
+
+individual_id uuid null
+
+device_id text not null
+
+batch_client_request_id text not null (idempotency per batch)
+
+batch_created_at timestamptz not null (device-reported when batch formed)
+
+received_at timestamptz not null default now()
+
+batch_json jsonb not null (items metadata + pointers)
+
+status text not null default 'received'
+values: received | processed | rejected
+
+error jsonb null
+
+Indexes:
+
+unique (tenant_id, device_id, batch_client_request_id)
+
+(tenant_id, received_at desc)
+
+3) cc_offline_reconcile_log
+
+Append-only reconciliation log.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+device_id text not null
+
+batch_client_request_id text not null
+
+event_at timestamptz not null default now()
+
+result text not null values: applied | partially_applied | rejected
+
+details jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, device_id, event_at desc)
+
+P2.8.2 — RLS
+
+Enable RLS and enforce:
+
+tenant scope via app.tenant_id
+
+circle membership if circle_id is set (same pattern as prior subsystems)
+
+These tables are operational; keep access restricted to authenticated tenant/circle actors.
+
+P2.8.3 — Client Queue Primitive (No UI Work, Just Library)
+
+Create client library module:
+
+src/lib/offline/offlineQueue.ts
+
+Required features:
+
+Persistent queue (use whatever is already in stack; prefer IndexedDB if web, or local storage fallback):
+
+Store items with:
+
+local_id (uuid)
+
+client_request_id (uuid) per item
+
+batch_client_request_id (uuid) per batch
+
+device_id
+
+created_at_device (when user captured)
+
+occurred_at_device (optional)
+
+source_type
+
+metadata
+
+For file: store as Blob handle reference if possible; else store pointer and require immediate upload when online
+
+Queue states:
+
+queued | uploading | synced | failed
+
+Retry rules:
+
+exponential backoff
+
+stop after N attempts but keep item for manual retry
+
+Sync triggers:
+
+network regain
+
+app foreground
+
+explicit call from code (no new UI required)
+
+Important constraint:
+
+Hash must be computed client-side when possible (for defensibility), but if not feasible, server can compute from uploaded bytes.
+
+Client should include:
+
+content_sha256 if computed
+
+else content_sha256=null and server computes
+
+P2.8.4 — Server Sync Contract (Canonical)
+
+Add server module:
+
+src/lib/offline/ingest.ts
+
+Batch format (batch_json)
+
+A batch contains items:
+
+Each item:
+
+client_request_id (uuid) — idempotency per evidence object create
+
+local_id (uuid) — client local
+
+source_type one of: manual_note | file_r2 | url_snapshot | json_snapshot
+
+title, description
+
+created_at_device (timestamptz string)
+
+occurred_at_device (timestamptz string or null)
+
+captured_at_device (timestamptz string or null)
+
+circle_id?, portal_id?
+
+content_sha256? (optional; if client computed)
+
+content_mime?, content_bytes?
+
+payload:
+
+for manual_note: { text }
+
+for json_snapshot: { json }
+
+for url_snapshot: { url, fetched_at_device?, http_status?, headers? } (raw bytes still come later if you support offline fetch)
+
+for file: { upload_token } or { r2_key_pending } depending on your upload approach
+
+Reconciliation rule (non-negotiable)
+
+For each item, server must produce exactly one of:
+
+created_new (new cc_evidence_objects id)
+
+already_applied (existing evidence object id found via client_request_id)
+
+rejected (with reason)
+
+Server MUST NOT create duplicates for same (tenant_id, client_request_id).
+
+P2.8.5 — New API Endpoints
+1) Sync Session
+
+POST /api/offline/sync/session
+Body: { device_id, app_version?, circle_id?, portal_id? }
+Returns: { session_id }
+Also upserts into cc_sync_sessions and updates last_seen_at.
+
+2) Upload Evidence Bytes (chunk-friendly, minimal)
+
+If you already have an R2 upload mechanism, reuse it. Add a wrapper endpoint to support offline resume:
+
+POST /api/offline/upload/init
+Body: { device_id, client_request_id, content_mime, content_bytes? }
+Returns: { upload_url_or_token, r2_key_hint }
+
+POST /api/offline/upload/complete
+Body: { device_id, client_request_id, r2_key, content_sha256? }
+Server:
+
+verifies object exists in R2
+
+computes sha256 if not provided
+
+does NOT create evidence yet; just records that bytes are present (store in a lightweight cache table if needed, or embed into queue batch processing)
+
+3) Ingest Batch
+
+POST /api/offline/ingest
+Body:
+
+{ device_id, batch_client_request_id, batch_created_at, items: [...] }
+
+Server steps:
+
+Insert into cc_offline_ingest_queue (idempotent by unique key)
+
+Process items synchronously (keep it simple first; async later)
+
+For each item:
+
+Create/resolve evidence object:
+
+Call P2.5 POST /api/evidence/objects internally (or directly insert) using:
+
+client_request_id = item.client_request_id
+
+occurred_at = item.occurred_at_device
+
+created_at remains server now(); store device times in metadata
+
+Attach content:
+
+manual_note → create canonical JSON payload {text} and set as json_snapshot OR manual_note:
+
+compute sha256(canonical json) and store in evidence object
+
+append P2.5 event annotated or created+uploaded equivalent
+
+json_snapshot → hash canonical json, store in content_canonical_json
+
+file_r2 → require bytes already uploaded (via init/complete); set r2_key + sha
+
+url_snapshot:
+
+if offline-only, accept URL + device fetched_at, but mark content_sha256 as unknown until server fetches
+
+OR require server fetch now and store bytes to R2 (preferred)
+
+If evidence object content is complete:
+
+append custody events in order: created then (uploaded/fetched/annotated)
+
+do NOT auto-seal unless requested by item flag
+
+Return reconciliation response:
+
+{
+  "batch_client_request_id": "...",
+  "results": [
+    { "client_request_id": "...", "status": "created_new", "evidence_object_id": "..." },
+    { "client_request_id": "...", "status": "already_applied", "evidence_object_id": "..." },
+    { "client_request_id": "...", "status": "rejected", "reason": "..." }
+  ]
+}
+
+
+Write cc_offline_reconcile_log row.
+
+4) Seal After Sync (Optional but important)
+
+POST /api/offline/seal
+Body: { device_id, evidence_object_ids: [], reason }
+Server:
+
+seals each via P2.5 seal endpoint
+
+returns per-item results
+This supports “capture now, seal when online” without UI redesign.
+
+P2.8.6 — Conflict & Integrity Rules
+Identity / Idempotency
+
+Evidence object idempotency: (tenant_id, client_request_id) unique (already in P2.5)
+
+Batch idempotency: (tenant_id, device_id, batch_client_request_id) unique
+
+Timestamp integrity
+
+Store device timestamps in evidence metadata:
+
+metadata.device.created_at
+
+metadata.device.captured_at
+
+metadata.device.occurred_at
+Never overwrite server created_at.
+
+Hash integrity
+
+If client provides content_sha256, server verifies it matches computed hash when bytes are present.
+
+If mismatch → reject item with HASH_MISMATCH and do not create sealed evidence.
+
+Partial upload handling
+
+file items cannot be finalized until bytes exist in R2.
+
+Accept ingest item in “pending_bytes” state:
+
+Store in evidence metadata metadata.offline.pending_bytes=true
+
+Append custody event created
+
+Later, when upload_complete arrives, update evidence object content fields and append uploaded
+
+Legal hold interaction (P2.7)
+
+Offline ingest must respect holds:
+
+Creating NEW evidence is allowed
+
+Updating existing evidence content is blocked if evidence is on active hold and would mutate protected fields after seal/hold.
+
+If item targets an existing evidence object (via same client_request_id) and that evidence is held, return rejected: LEGAL_HOLD_ACTIVE.
+
+P2.8.7 — Minimal “Offline Snapshot” Support for URL/Feeds
+
+Add a safe size-capped fetch utility (reuse your existing fetcher if present):
+
+max_bytes cap (e.g., 5MB default)
+
+timeouts
+
+content-type allowlist (html, pdf, text, json)
+Store raw bytes to R2; hash raw bytes; store headers/status.
+
+This ensures that when a device only captured a URL during outage, the server can later fetch and freeze it.
+
+P2.8.8 — Tests (Must Exist)
+
+Batch idempotency
+
+post same batch twice → second returns same evidence ids, no new rows
+
+Item idempotency
+
+same item client_request_id in different batches → resolves to same evidence object
+
+Hash mismatch rejection
+
+client provides sha that doesn’t match uploaded bytes → reject with HASH_MISMATCH
+
+Pending bytes flow
+
+ingest file item before bytes exist → evidence created with pending flag
+
+upload_complete → evidence updated + custody event appended
+
+RLS / circle membership
+
+circle-scoped batch cannot be ingested by non-member actor
+
+Hold enforcement
+
+hold on existing evidence prevents mutation via offline reconciliation
+
+P2.8.9 — Documentation
+
+Create docs/P2_8_OFFLINE_LOW_SIGNAL_SYNC.md:
+
+Device model (device_id, sessions)
+
+Batch + item schema
+
+Idempotency rules
+
+Pending bytes lifecycle
+
+Hash verification rules
+
+Legal hold interactions
+
+Failure modes + recommended client retry behavior
+
+✅ Definition of Done
+
+P2.8 is done only when:
+
+Client queue module exists (even if not wired to UI)
+
+Server session + ingest + upload init/complete endpoints work
+
+Idempotency and pending-bytes flow verified
+
+Hash mismatch handled
+
+Holds respected
+
+Tests pass
+
+Docs exist

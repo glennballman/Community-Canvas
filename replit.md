@@ -95,6 +95,16 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
   - **DB Triggers**: BEFORE UPDATE/DELETE triggers on protected tables that call `cc_is_row_on_active_hold()` and raise `LEGAL_HOLD_ACTIVE`
   - **Scope Inheritance**: Holding a claim automatically protects linked evidence and dossiers
   - **Tests**: 16 passing tests covering hold creation, enforcement, release, and append-only events
+- **P2.8 Offline/Low-Signal Evidence Queue** (Migration 134): Evidence capture without connectivity:
+  - **Sync Sessions** (`cc_sync_sessions`): Device session tracking with app version and last seen timestamp
+  - **Ingest Queue** (`cc_offline_ingest_queue`): Idempotent batch processing with status tracking (received → processed)
+  - **Reconcile Log** (`cc_offline_reconcile_log`): Append-only audit trail with result tracking (applied, partially_applied, rejected)
+  - **Client Queue Library**: `client/src/lib/offline/offlineQueue.ts` with localStorage persistence, network status monitoring, batch creation
+  - **Server Ingest Module**: `server/lib/offline/ingest.ts` with batch idempotency (tenant_id + device_id + batch_client_request_id), item idempotency (tenant_id + client_request_id), hash verification, hold enforcement
+  - **Pending Bytes Flow**: file_r2 items without r2_key create evidence with pending_bytes=true, cannot be sealed until bytes uploaded
+  - **API Endpoints**: 7 routes under `/api/offline/*` for sync sessions, uploads, ingest, seal, and URL fetching
+  - **RLS Policies**: Individual access to own sessions/queued items with service mode bypass
+  - **Tests**: 10 passing tests covering sync sessions, batch/item idempotency, hash mismatch rejection, pending bytes, hold enforcement, sealing, and append-only logs
 
 ## External Dependencies
 

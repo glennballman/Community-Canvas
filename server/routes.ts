@@ -81,6 +81,7 @@ import recordBundlesRouter from "./routes/record-bundles";
 import evidenceRouter from "./routes/evidence";
 import insuranceRouter from "./routes/insurance";
 import legalRouter from "./routes/legal";
+import offlineRouter from "./routes/offline";
 import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
@@ -205,6 +206,9 @@ export async function registerRoutes(
 
   // Register legal hold routes
   app.use('/api/legal', legalRouter);
+  
+  // Register P2.8 offline sync routes
+  app.use('/api/offline', offlineRouter);
 
   // Register incident prompts routes
   app.use('/api/incidents', incidentPromptsRouter);
