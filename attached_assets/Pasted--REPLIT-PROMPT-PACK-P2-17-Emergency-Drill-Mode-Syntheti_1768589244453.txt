@@ -1,0 +1,306 @@
+✅ REPLIT PROMPT PACK — P2.17 Emergency Drill Mode + Synthetic Incident Generator (Authoritative)
+P2.17.0 — Non-Negotiables
+
+Implement a “Drill Mode” system that:
+
+Allows operators to rehearse tsunami/fire/power events safely
+
+Never contaminates real emergency/insurance/legal records
+
+Produces training-grade artifacts + optional “proof bundles” marked as DRILL
+
+Supports scripted synthetic captures (mock evacuation orders, mock outages, mock media)
+
+Uses the same primitives (P2.5–P2.15) but isolates data via:
+
+explicit is_drill flags + tagging
+
+separate visibility and export controls
+
+No UI redesign; backend + endpoints + docs + tests only.
+
+P2.17.1 — Database Migration (New Tables / Columns)
+A) Add is_drill flags (safe minimal columns)
+
+Add boolean is_drill not null default false to:
+
+cc_emergency_runs
+
+cc_record_captures
+
+cc_evidence_bundles
+
+cc_evidence_objects
+
+cc_insurance_claims
+
+cc_claim_dossiers
+
+cc_disputes
+
+cc_defense_packs
+
+Also add drill_id uuid null to the same tables to link to a drill session.
+
+If adding columns broadly is risky in your codebase, add only to cc_emergency_runs and store drill linkage in metadata elsewhere. Prefer explicit columns if you can do it cleanly.
+
+B) cc_drill_sessions
+
+Represents a drill program instance.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+portal_id uuid null
+
+circle_id uuid null
+
+title text not null
+
+scenario_type text not null
+values: tsunami | wildfire | power_outage | storm | evacuation | multi_hazard | other
+
+status text not null default 'active'
+values: active | completed | cancelled
+
+started_at timestamptz not null default now()
+
+started_by_individual_id uuid null
+
+completed_at timestamptz null
+
+completed_by_individual_id uuid null
+
+notes text null
+
+client_request_id text null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, started_at desc)
+
+unique (tenant_id, client_request_id) where not null
+
+C) cc_drill_scripts
+
+Reusable drill script definitions.
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+title text not null
+
+scenario_type text not null
+
+script_json jsonb not null
+
+script_sha256 text not null
+
+created_at timestamptz not null default now()
+
+created_by_individual_id uuid null
+
+metadata jsonb not null default '{}'::jsonb
+
+Indexes:
+
+(tenant_id, scenario_type)
+
+unique (tenant_id, script_sha256)
+
+P2.17.2 — RLS Rules (Drill Visibility)
+
+Default list endpoints should exclude drills unless explicitly requested:
+
+e.g., where is_drill=false for standard operations
+
+Drill endpoints should operate on is_drill=true only
+
+Authority sharing (P2.9) must refuse drill artifacts by default unless an explicit override is set:
+
+metadata.allow_drill_share=true on the grant
+
+This prevents accidental “sending mock evidence to adjuster”.
+
+P2.17.3 — Synthetic Record Generator
+
+Create: src/lib/drills/generate.ts
+
+runDrillScript(drillId, scriptJson)
+
+Script can include steps like:
+
+create emergency run (is_drill=true)
+
+attach template + property profile
+
+generate mock evacuation order snapshot (local generated PDF/text stored to R2)
+
+generate mock utility outage JSON snapshot
+
+generate mock media article HTML snapshot
+
+generate mock contemporaneous notes
+
+generate record pack bundle
+
+assemble mock insurance claim dossier
+
+assemble mock defense pack
+
+export playbook
+
+Each step:
+
+must create real objects in DB but tagged is_drill=true
+
+must emit custody events (P2.5) normally
+
+must emit monetization events to a separate event type namespace:
+
+prefix with drill_ (e.g., drill_emergency_run_started)
+
+OR mark monetization events as drill via metadata {is_drill:true}
+
+“Mock snapshot” generation rules
+
+Do not fetch the internet (keep deterministic)
+
+Generate synthetic HTML/PDF/text with:
+
+clear banner “DRILL / SYNTHETIC”
+
+timestamp
+
+scenario + tenant + drill_id
+
+Store to R2, hash, and create evidence object as normal
+
+P2.17.4 — API Endpoints (Minimal)
+Drill sessions
+
+POST /api/drills
+Body: { title, scenario_type, portal_id?, circle_id?, client_request_id? }
+Creates drill session.
+
+POST /api/drills/:id/complete
+Completes drill.
+
+GET /api/drills
+List drills.
+
+Scripts
+
+POST /api/drills/scripts
+Body: { title, scenario_type, script_json }
+Server hashes script_json → script_sha256.
+
+GET /api/drills/scripts
+List scripts.
+
+Run script
+
+POST /api/drills/:id/run
+Body: { script_id? , script_json? }
+
+If script_id provided, load it; else use inline script_json.
+
+Execute runDrillScript.
+
+Return summary: created run_id, bundle ids, dossier ids.
+
+Export training pack (safe)
+
+POST /api/drills/:id/export
+Body: { format: "zip_json" }
+Zip includes:
+
+drill session summary
+
+list of created artifacts with hashes
+
+record pack bundle manifest
+
+playbook export refs
+
+Must include DRILL flag in every file.
+
+P2.17.5 — Preventing Cross-Contamination
+
+Hard enforcement:
+
+Any endpoint that creates real emergency runs must default is_drill=false.
+
+Drill endpoints must set is_drill=true always.
+
+Pack generators must carry is_drill forward:
+
+if run.is_drill, generated bundles/evidence also is_drill.
+
+Claims/dossiers/defense packs created in drill must be drill-tagged.
+
+Optional: add DB constraint/triggers:
+
+if cc_emergency_runs.is_drill=true, then any cc_record_captures created with run_id must also set is_drill=true (trigger).
+
+P2.17.6 — QA + SCM Integration
+
+Update scripts/qa-emergency-legal-insurance-smoke.ts to optionally run in drill mode (--drill)
+
+Record proof run with metadata {is_drill:true}
+
+SCM should not treat drill proofs as certification proofs unless explicitly allowed (default: ignore drill proofs)
+
+P2.17.7 — Tests (Must Exist)
+
+Drill run produces is_drill=true artifacts only
+
+Normal list endpoints exclude drills by default
+
+Authority share refuses drill artifacts unless override enabled
+
+Export pack includes DRILL marker
+
+Monetization events recorded with drill tag/prefix
+
+No cross contamination:
+
+cannot attach drill bundle into real claim/defense pack without explicit override (recommended rule)
+
+P2.17.8 — Documentation
+
+Create docs/P2_17_DRILL_MODE.md:
+
+What drill mode is
+
+Script format examples
+
+How drill artifacts are tagged and isolated
+
+Safe export rules
+
+How to rehearse tsunami/fire/power outage without polluting records
+
+✅ Definition of Done
+
+P2.17 is done only when:
+
+Drill sessions + scripts exist
+
+Running a script creates drill-tagged emergency runs + evidence + packs
+
+Drill exports work and are clearly labeled
+
+Authority sharing is safe by default
+
+Tests pass
+
+Docs exist

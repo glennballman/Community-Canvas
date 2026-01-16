@@ -6100,3 +6100,58 @@ export const scmCertificationStates = pgTable("scm_certification_states", {
 export const insertScmCertificationStateSchema = createInsertSchema(scmCertificationStates).omit({ id: true, computedAt: true });
 export type ScmCertificationState = typeof scmCertificationStates.$inferSelect;
 export type InsertScmCertificationState = z.infer<typeof insertScmCertificationStateSchema>;
+
+// ============================================================================
+// P2.17 Emergency Drill Mode + Synthetic Incident Generator
+// ============================================================================
+
+export const drillScenarioTypeEnum = z.enum([
+  'tsunami', 'wildfire', 'power_outage', 'storm', 'evacuation', 'multi_hazard', 'other'
+]);
+export type DrillScenarioType = z.infer<typeof drillScenarioTypeEnum>;
+
+export const drillStatusEnum = z.enum(['active', 'completed', 'cancelled']);
+export type DrillStatus = z.infer<typeof drillStatusEnum>;
+
+export const ccDrillSessions = pgTable("cc_drill_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  portalId: uuid("portal_id"),
+  circleId: uuid("circle_id"),
+  title: text("title").notNull(),
+  scenarioType: text("scenario_type").notNull(),
+  status: text("status").notNull().default('active'),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  startedByIndividualId: uuid("started_by_individual_id"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  completedByIndividualId: uuid("completed_by_individual_id"),
+  notes: text("notes"),
+  clientRequestId: text("client_request_id"),
+  metadata: jsonb("metadata").notNull().$type<Record<string, unknown>>().default({}),
+}, (table) => ({
+  tenantStartedIdx: index("idx_drill_sessions_tenant_started").on(table.tenantId, table.startedAt),
+  clientRequestIdUnique: index("idx_drill_sessions_client_request_id").on(table.tenantId, table.clientRequestId),
+}));
+
+export const insertDrillSessionSchema = createInsertSchema(ccDrillSessions).omit({ id: true, startedAt: true });
+export type DrillSession = typeof ccDrillSessions.$inferSelect;
+export type InsertDrillSession = z.infer<typeof insertDrillSessionSchema>;
+
+export const ccDrillScripts = pgTable("cc_drill_scripts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  title: text("title").notNull(),
+  scenarioType: text("scenario_type").notNull(),
+  scriptJson: jsonb("script_json").notNull().$type<Record<string, unknown>>(),
+  scriptSha256: text("script_sha256").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdByIndividualId: uuid("created_by_individual_id"),
+  metadata: jsonb("metadata").notNull().$type<Record<string, unknown>>().default({}),
+}, (table) => ({
+  tenantScenarioIdx: index("idx_drill_scripts_tenant_scenario").on(table.tenantId, table.scenarioType),
+  tenantHashUnique: index("idx_drill_scripts_tenant_hash").on(table.tenantId, table.scriptSha256),
+}));
+
+export const insertDrillScriptSchema = createInsertSchema(ccDrillScripts).omit({ id: true, createdAt: true, scriptSha256: true });
+export type DrillScript = typeof ccDrillScripts.$inferSelect;
+export type InsertDrillScript = z.infer<typeof insertDrillScriptSchema>;
