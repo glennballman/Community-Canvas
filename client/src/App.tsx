@@ -85,6 +85,9 @@ import JobsPage from './pages/app/JobsPage';
 import EnforcementPage from './pages/app/EnforcementPage';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
 import OperatorHomePage from './pages/app/operator/OperatorHomePage';
+import OperatorEmergencyIndexPage from './pages/app/operator/OperatorEmergencyIndexPage';
+import OperatorEmergencyRunPage from './pages/app/operator/OperatorEmergencyRunPage';
+import OperatorAuditPage from './pages/app/operator/OperatorAuditPage';
 import PortalsPage from './pages/app/admin/PortalsPage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
@@ -230,6 +233,9 @@ export default function App() {
                 {/* V3 Admin */}
                 <Route path="admin" element={<AdminHomePage />} />
                 <Route path="operator" element={<OperatorHomePage />} />
+                <Route path="operator/emergency" element={<OperatorEmergencyIndexPage />} />
+                <Route path="operator/emergency/:runId" element={<OperatorEmergencyRunPage />} />
+                <Route path="operator/audit" element={<OperatorAuditPage />} />
                 <Route path="admin/portals" element={<PortalsPage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />
                 

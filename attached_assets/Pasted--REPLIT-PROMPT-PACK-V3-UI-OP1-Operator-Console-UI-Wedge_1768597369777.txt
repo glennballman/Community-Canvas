@@ -1,0 +1,369 @@
+✅ REPLIT PROMPT PACK — V3-UI-OP1 (Operator Console UI Wedge, P2-only)
+
+You are Replit. Implement the following in the client React SPA (Vite + React Router v6 + TanStack Query + shadcn/ui).
+Hard constraints:
+
+Operator UI MUST call only /api/operator/p2/* endpoints (do not use non-P2 operator endpoints).
+
+API envelope is { ok: boolean, error?: string, ...data } (data is top-level, not nested).
+
+No pricing UI, no upgrade UI, no modals that block workflows due to payment.
+
+Minimal, functional UI only (tables/forms/tabs), no redesign.
+
+Keep all new code under client/src/ unless otherwise specified.
+
+1) Routes: Add Operator nested routes under /app/operator/*
+1.1 Create pages (new files)
+
+Create these files:
+
+client/src/pages/app/operator/OperatorHomePage.tsx
+
+client/src/pages/app/operator/OperatorEmergencyIndexPage.tsx
+
+client/src/pages/app/operator/OperatorEmergencyRunPage.tsx
+
+client/src/pages/app/operator/OperatorAuditPage.tsx
+
+Use shadcn components: Card, Button, Input, Select, Tabs, Badge, Alert, Table, Separator.
+
+1.2 Wire routes
+
+Find your tenant app router setup (likely in client/src/App.tsx or client/src/routes.tsx) and add these routes:
+
+/app/operator → OperatorHomePage
+
+/app/operator/emergency → OperatorEmergencyIndexPage
+
+/app/operator/emergency/:runId → OperatorEmergencyRunPage
+
+/app/operator/audit → OperatorAuditPage
+
+Also add internal navigation links within /app/operator pages (tabs or buttons), without touching V3 nav structure unless necessary.
+
+2) API client wrapper: operatorP2() (single source of truth)
+2.1 Create file
+
+Create: client/src/lib/api/operatorP2.ts
+
+Implement:
+
+operatorP2<T extends object>(path: string, init?: RequestInit): Promise<{ ok: true } & T>
+
+Base URL prefix: /api/operator/p2
+
+Always set:
+
+credentials: "include"
+
+Content-Type: application/json for JSON bodies
+
+Parse JSON and enforce envelope:
+
+If response missing ok boolean → throw Error("Invalid server response")
+
+If ok === false → throw Error(error || "Request failed")
+
+Else return json
+
+Also export types:
+
+P2Ok<T>
+
+P2Err
+
+P2Resp<T>
+
+3) TanStack Query hooks for P2 operator endpoints (initial set)
+
+Create directory:
+
+client/src/lib/api/operatorP2/
+
+Create these hooks (each file exports one hook):
+
+3.1 Emergency
+
+useStartEmergencyRun.ts
+
+POST /emergency/runs/start
+
+body: { runType, templateId?, propertyProfileId?, circleId?, portalId?, summary? }
+
+returns { runId }
+
+useResolveEmergencyRun.ts
+
+POST /emergency/runs/:runId/resolve
+
+body: { summary? }
+
+useGrantEmergencyScope.ts
+
+POST /emergency/runs/:runId/grants
+
+body: { granteeIndividualId, grantType, scopeJson, expiresAt }
+
+returns { grantId? } if backend returns it; otherwise just { ok:true }
+
+useRevokeEmergencyScope.ts
+
+POST /emergency/runs/:runId/grants/:grantId/revoke
+
+body: { reason? }
+
+useExportEmergencyPlaybook.ts
+
+POST /emergency/runs/:runId/export-playbook
+
+body: { format: "zip_json" }
+
+return value should render any returned ids/urls (if provided)
+
+useGenerateEmergencyRecordPack.ts
+
+POST /emergency/runs/:runId/generate-record-pack
+
+body: { title?, includeTypes?, sealBundle?: true }
+
+useShareEmergencyAuthority.ts
+
+POST /emergency/runs/:runId/share-authority
+
+body: { scope?: "run" | "record_pack" | "all" } (if your backend expects something else, keep body empty and just call endpoint)
+
+3.2 Audit
+
+useOperatorAuditEvents.ts
+
+GET /audit/events?limit=50 (if your backend path differs, match actual)
+
+return list for table
+
+If the audit endpoint path/shape differs, adapt to the actual P2 endpoints you implemented, but keep the “P2-only” rule.
+
+3.3 Helper: Query key conventions
+
+Create client/src/lib/api/operatorP2/keys.ts exporting query key builders:
+
+operatorKeys.audit(limit)
+
+operatorKeys.emergencyRun(runId)
+
+operatorKeys.emergencyActiveRuns()
+
+4) Shared components (Operator UI primitives)
+
+Create directory:
+
+client/src/components/operator/
+
+Create these components:
+
+4.1 OperatorErrorAlert.tsx
+
+Props:
+
+error?: string | null
+Displays shadcn Alert with destructive variant when error exists.
+
+4.2 OperatorActionPanel.tsx
+
+A reusable card component that standardizes actions.
+
+Props:
+
+title: string
+
+description?: string
+
+children: ReactNode (inputs)
+
+actionLabel: string
+
+onAction: () => Promise<any> (wraps mutation)
+
+resultRenderer?: (result: any) => ReactNode
+
+Behavior:
+
+Shows loading state on button
+
+Catches errors and renders OperatorErrorAlert
+
+On success renders result (runId, bundleId, etc.)
+
+4.3 OperatorAuditFeed.tsx
+
+Props:
+
+items: any[]
+Shows a simple table:
+
+time, action_key, subject_type, subject_id, operator_id (if present)
+
+5) Pages (minimal but complete)
+5.1 OperatorHomePage (/app/operator)
+
+Layout:
+
+Header: “Operator Console”
+
+Role badges area (if you have a P2 endpoint to fetch roles, call it; otherwise show “Roles available by assignment” and link to audit/emergency)
+
+3 cards:
+
+“Emergency” → button to /app/operator/emergency
+
+“Audit” → button to /app/operator/audit
+
+“Quick Actions”:
+
+Start Emergency Run (inline form)
+
+Links to other modules “Legal / Insurance / Disputes” as disabled placeholders (coming in OP2)
+
+Implement “Start Emergency Run” using:
+
+OperatorActionPanel
+
+fields:
+
+runType (Select: tsunami/wildfire/power_outage/storm/evacuation/other)
+
+templateId (optional Input)
+
+propertyProfileId (optional Input)
+
+summary (Textarea)
+
+On success: navigate to /app/operator/emergency/:runId
+
+5.2 OperatorEmergencyIndexPage (/app/operator/emergency)
+
+Title: “Emergency Runs”
+
+Section A: “Start New Run” (same as above)
+
+Section B: “Open Run” (manual open by runId input)
+
+Input runId, button navigate to /app/operator/emergency/:runId
+
+(Optional if you have endpoint) Section C: Active runs list
+
+5.3 OperatorEmergencyRunPage (/app/operator/emergency/:runId)
+
+Tabbed layout (shadcn Tabs):
+
+Tab 1: “Overview”
+
+show runId
+
+show basic run actions:
+
+Resolve run (summary textarea)
+
+Generate Record Pack
+
+Export Playbook
+
+Share Authority
+
+Tab 2: “Scope Grants”
+
+Form to create a scope grant:
+
+granteeIndividualId
+
+grantType (Select: asset_control, tool_access, vehicle_access, lodging_access, communications_interrupt, procurement_override, gate_access, other)
+
+expiresAt (datetime-local input) (convert to ISO on submit)
+
+scopeJson (Textarea JSON)
+
+Form to revoke grant:
+
+grantId
+
+reason
+
+Tab 3: “Audit”
+
+Show recent operator audit events (use useOperatorAuditEvents, filtered client-side by subject_id==runId if no server filter)
+
+All actions must show results in the panel.
+
+5.4 OperatorAuditPage (/app/operator/audit)
+
+Fetch latest events via useOperatorAuditEvents
+
+Table view with columns:
+
+event_at
+
+action_key
+
+subject_type
+
+subject_id
+
+payload (collapsed / expandable JSON)
+
+6) Error handling standards (mandatory)
+
+Any failed P2 call must surface the server’s error string.
+
+Never swallow errors.
+
+No toasts required; inline alerts are fine.
+
+7) Minimal “pricing law” guardrails (UI-side)
+
+Add a small helper to prevent accidental pricing CTAs.
+
+7.1 Create client/src/lib/pricing/forbiddenCopy.ts
+
+Export a FORBIDDEN_PRICING_PATTERNS array (regexes) and a function:
+
+assertNoForbiddenPricingCopy(text: string, contextLabel: string): void
+
+Use it only in dev for now:
+
+In OperatorHomePage, OperatorEmergency* pages, run assertNoForbiddenPricingCopy(document.body.innerText, "operator") inside a useEffect guarded by import.meta.env.DEV.
+
+This is a cheap tripwire to prevent “upgrade/unlock” text from entering operator console pages.
+
+8) Do not modify existing nav IA (unless needed)
+
+Keep v3Nav.ts unchanged unless it’s missing /app/operator (it already exists per your notes).
+
+Add internal links within operator pages.
+
+9) Acceptance criteria
+
+All new pages compile and render without runtime errors
+
+Starting an emergency run hits /api/operator/p2/emergency/runs/start and navigates to the run page
+
+Resolve/grant/revoke/export/share endpoints call successfully and render result or error
+
+Audit page renders events from P2 audit endpoint (or the correct P2 path you implemented)
+
+No calls made to non-P2 operator endpoints
+
+10) Follow-up (OP2) note (do not implement yet)
+
+Next pack will add:
+
+Legal Holds UI
+
+Insurance Dossier UI
+
+Dispute Defense UI
+
+Operator role assignment UI (platform-only)
+
+Usage summary surface (event counts only)
+
+For now implement OP1 exactly as above.

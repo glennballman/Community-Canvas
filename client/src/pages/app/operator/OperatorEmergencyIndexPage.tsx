@@ -1,6 +1,6 @@
 /**
- * OperatorHomePage - Main operator console entry point
- * Route: /app/operator
+ * OperatorEmergencyIndexPage - Emergency runs index
+ * Route: /app/operator/emergency
  */
 
 import { useState, useEffect } from 'react';
@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Select,
@@ -18,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, AlertTriangle, ClipboardList, Shield, Scale, FileCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Search } from 'lucide-react';
 import { OperatorActionPanel } from '@/components/operator/OperatorActionPanel';
 import { useStartEmergencyRun } from '@/lib/api/operatorP2/useStartEmergencyRun';
 import { assertNoForbiddenPricingCopy } from '@/lib/pricing/forbiddenCopy';
@@ -33,7 +32,7 @@ const SCENARIO_TYPES = [
   { value: 'other', label: 'Other' },
 ];
 
-export default function OperatorHomePage() {
+export default function OperatorEmergencyIndexPage() {
   const navigate = useNavigate();
   const startEmergencyRun = useStartEmergencyRun();
   
@@ -42,11 +41,12 @@ export default function OperatorHomePage() {
   const [notes, setNotes] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [propertyProfileId, setPropertyProfileId] = useState('');
+  const [openRunId, setOpenRunId] = useState('');
   
   useEffect(() => {
     if (import.meta.env.DEV) {
       const timer = setTimeout(() => {
-        assertNoForbiddenPricingCopy(document.body.innerText, 'operator');
+        assertNoForbiddenPricingCopy(document.body.innerText, 'operator-emergency');
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -64,91 +64,33 @@ export default function OperatorHomePage() {
     return result;
   };
   
+  const handleOpenRun = () => {
+    if (openRunId.trim()) {
+      navigate(`/app/operator/emergency/${openRunId.trim()}`);
+    }
+  };
+  
   return (
-    <div className="p-6 space-y-6" data-testid="page-operator-home">
-      <div className="flex items-center gap-3">
-        <Building2 className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Operator Console</h1>
-          <p className="text-muted-foreground text-sm">P2 Emergency, Legal, Insurance, Dispute Operations</p>
+    <div className="p-6 space-y-6" data-testid="page-operator-emergency-index">
+      <div className="flex items-center gap-4">
+        <Link to="/app/operator">
+          <Button variant="ghost" size="icon" data-testid="button-back">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="h-8 w-8 text-destructive" />
+          <div>
+            <h1 className="text-2xl font-bold">Emergency Runs</h1>
+            <p className="text-muted-foreground text-sm">Start, manage, and monitor emergency operations</p>
+          </div>
         </div>
       </div>
       
-      <div className="flex items-center gap-2">
-        <Badge variant="outline">Roles available by assignment</Badge>
-        <Link to="/app/operator/audit">
-          <Button variant="ghost" size="sm" data-testid="link-audit">View Audit Log</Button>
-        </Link>
-      </div>
-      
-      <Separator />
-      
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card data-testid="card-emergency">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Emergency
-            </CardTitle>
-            <CardDescription>Manage emergency runs and scope grants</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link to="/app/operator/emergency">
-              <Button className="w-full" data-testid="button-go-emergency">
-                Go to Emergency Console
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-        
-        <Card data-testid="card-audit">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <ClipboardList className="h-5 w-5" />
-              Audit
-            </CardTitle>
-            <CardDescription>View operator action history</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link to="/app/operator/audit">
-              <Button variant="outline" className="w-full" data-testid="button-go-audit">
-                View Audit Log
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-        
-        <Card className="opacity-60" data-testid="card-other-modules">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Shield className="h-5 w-5" />
-              Other Modules
-            </CardTitle>
-            <CardDescription>Coming in OP2</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="ghost" className="w-full justify-start" disabled>
-              <Scale className="h-4 w-4 mr-2" />
-              Legal Holds
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" disabled>
-              <FileCheck className="h-4 w-4 mr-2" />
-              Insurance Dossiers
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" disabled>
-              <Shield className="h-4 w-4 mr-2" />
-              Dispute Defense
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Separator />
-      
-      <div className="max-w-xl">
+      <div className="grid gap-6 lg:grid-cols-2">
         <OperatorActionPanel
-          title="Quick Start: Emergency Run"
-          description="Start a new emergency run from the home page"
+          title="Start New Run"
+          description="Create a new emergency run with scope grants"
           actionLabel="Start Emergency Run"
           onAction={handleStartRun}
           resultRenderer={(result) => {
@@ -216,7 +158,51 @@ export default function OperatorHomePage() {
             </div>
           </div>
         </OperatorActionPanel>
+        
+        <Card data-testid="card-open-run">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Open Existing Run
+            </CardTitle>
+            <CardDescription>Navigate to an existing run by ID</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Run ID</label>
+              <Input
+                value={openRunId}
+                onChange={(e) => setOpenRunId(e.target.value)}
+                placeholder="Enter run UUID"
+                data-testid="input-open-run-id"
+              />
+            </div>
+            <Button
+              onClick={handleOpenRun}
+              disabled={!openRunId.trim()}
+              data-testid="button-open-run"
+            >
+              Open Run
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+      
+      <Separator />
+      
+      <Card className="opacity-60" data-testid="card-active-runs">
+        <CardHeader>
+          <CardTitle className="text-base">Active Runs</CardTitle>
+          <CardDescription>
+            List of active runs (requires endpoint implementation)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Active runs list will be available when the list endpoint is implemented.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1271,7 +1271,7 @@ router.post('/p2/defense-packs/:id/share-authority', authenticateToken, async (r
 // Role Management (for platform operators)
 router.get('/p2/roles', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const ctx = getP2OperatorContext(req);
+    const ctx = await getP2OperatorContext(req);
     await requireOperatorRole('platform_operator', ctx);
     
     const result = await db.execute(sql`
@@ -1286,7 +1286,7 @@ router.get('/p2/roles', authenticateToken, async (req: AuthRequest, res: Respons
 
 router.post('/p2/roles/assign', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const ctx = getP2OperatorContext(req);
+    const ctx = await getP2OperatorContext(req);
     await requireOperatorRole('platform_operator', ctx);
     
     const { role_key, target_individual_id, circle_id } = req.body;
@@ -1335,7 +1335,7 @@ router.post('/p2/roles/assign', authenticateToken, async (req: AuthRequest, res:
 
 router.get('/p2/events', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const ctx = getP2OperatorContext(req);
+    const ctx = await getP2OperatorContext(req);
     await requireOperatorRole('platform_operator', ctx);
     
     const limit = parseInt(req.query.limit as string) || 100;
