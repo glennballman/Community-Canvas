@@ -83,6 +83,7 @@ import insuranceRouter from "./routes/insurance";
 import legalRouter from "./routes/legal";
 import offlineRouter from "./routes/offline";
 import { authorityRouter, publicAuthorityRouter } from "./routes/authority";
+import disputesRouter from "./routes/disputes";
 import incidentPromptsRouter, { publicIncidentRouter } from "./routes/incident-prompts";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
@@ -216,6 +217,9 @@ export async function registerRoutes(
   
   // Register P2.9 Public Authority Access Portal routes (NO AUTH - token-based)
   app.use('/p/authority', publicAuthorityRouter);
+
+  // Register P2.10 Disputes / Defense Pack routes
+  app.use('/api/disputes', disputesRouter);
 
   // Register incident prompts routes
   app.use('/api/incidents', incidentPromptsRouter);
