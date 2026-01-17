@@ -114,11 +114,43 @@ function main(): void {
     "emergency.resolve"
   ]);
 
-  const authority = moduleFromSteps(steps, true, [
+  // Authority: required, but may be HELD if share succeeded without returning a grantId
+  const authorityBase = moduleFromSteps(steps, true, [
     "authority.getGrant",
     "authority.revokeGrant",
     "authority.getGrantAfterRevoke"
   ]);
+
+  const shareStep = steps.find((s) => s.step === "emergency.shareAuthority");
+  const shareStatus = shareStep ? stepStatus(shareStep) : "FAIL";
+
+  // Detect "no grantId returned" situation:
+  // - share step passed
+  // - proof.ids.emergencyGrantId missing (or empty)
+  const hasEmergencyGrantId =
+    proof?.ids?.emergencyGrantId && String(proof.ids.emergencyGrantId).trim().length > 0;
+
+  let authority = authorityBase;
+
+  // If share passed but no grantId exists, authority checks can't run → HELD, not FAIL.
+  if (shareStatus === "PASS" && !hasEmergencyGrantId) {
+    authority = {
+      status: "HELD" as Status,
+      required: true,
+      checks: [
+        ...authorityBase.checks.map((c) =>
+          c.status === "FAIL"
+            ? { ...c, status: "HELD" as Status, detail: "Skipped: share succeeded but no grantId returned" }
+            : c
+        ),
+        {
+          name: "authority.grantIdPresent",
+          status: "HELD" as Status,
+          detail: "No grantId returned from emergency.shareAuthority"
+        }
+      ]
+    };
+  }
 
   const legal = moduleFromSteps(steps, true, [
     "legal.createHold",

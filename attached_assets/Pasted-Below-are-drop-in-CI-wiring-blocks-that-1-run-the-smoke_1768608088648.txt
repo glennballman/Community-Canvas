@@ -1,0 +1,177 @@
+Below are drop-in CI wiring blocks that (1) run the smoke test, (2) run SCM ingest, (3) upload artifacts/qa/** every run, and (4) fail the job if certification is FAIL (your ingest already exits 1 on FAIL).
+
+Option A — GitHub Actions job (recommended)
+
+Add this job to your existing workflow YAML (or create .github/workflows/qa-scm.yml).
+
+name: QA + SCM Certification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  qa_scm_p2_operator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      # If your server must be running for these scripts, start it here.
+      # Adjust to your repo's start command (and ports).
+      - name: Start server (background)
+        run: |
+          nohup npm run dev > server.log 2>&1 &
+          echo "Server starting..."
+          # crude wait; replace with health check if you have one
+          sleep 5
+
+      - name: Run pricing guardrails (optional but recommended)
+        run: npx tsx scripts/lint-pricing-ui.ts
+
+      - name: Run P2 operator smoke test
+        env:
+          QA_BASE_URL: http://localhost:3000
+          QA_JWT: ${{ secrets.QA_JWT }}
+          QA_CLAIM_ID: ${{ secrets.QA_CLAIM_ID }}
+          QA_DISPUTE_ID: ${{ secrets.QA_DISPUTE_ID }}
+          QA_GRANTEE_INDIVIDUAL_ID: ${{ secrets.QA_GRANTEE_INDIVIDUAL_ID }}
+        run: npx tsx scripts/qa/qa-operator-p2-smoke.ts
+
+      - name: Run SCM ingest
+        run: npx tsx scripts/qa/scm-ingest-p2-operator.ts
+
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-artifacts
+          path: |
+            artifacts/qa/**
+            server.log
+          if-no-files-found: warn
+
+Notes
+
+Put QA_JWT (and optional IDs) into GitHub Actions Secrets.
+
+If your server start command isn’t npm run dev, swap it to whatever you use.
+
+If your app runs on a different port, update QA_BASE_URL.
+
+Option B — “No background server needed” variant
+
+If your scripts call a deployed environment instead of local server, remove the server start step and set:
+
+env:
+  QA_BASE_URL: ${{ secrets.QA_BASE_URL }}
+  QA_JWT: ${{ secrets.QA_JWT }}
+
+Option C — Replit CI / generic CI command sequence
+
+If your CI is just “run commands”:
+
+npm ci
+# (optional) start server if needed
+npm run dev &
+sleep 5
+
+# guardrails
+npx tsx scripts/lint-pricing-ui.ts
+
+# QA → Proof
+QA_BASE_URL="http://localhost:3000" QA_JWT="..." npx tsx scripts/qa/qa-operator-p2-smoke.ts
+
+# Proof → Cert
+npx tsx scripts/qa/scm-ingest-p2-operator.ts
+
+# artifacts now in artifacts/qa/
+
+Small improvement you probably want (Authority HELD vs FAIL)
+
+If you sometimes don’t get a grantId back from share endpoints, CI could fail “Authority” unfairly. The clean rule:
+
+If emergency.shareAuthority is PASS but no grantId, mark authority = HELD, not FAIL.
+
+If you want, paste your current scripts/qa/scm-ingest-p2-operator.ts authority module calculation and I’ll give you the exact patch block (few lines) to implement that behavior.
+
+Authority module calculation (lines 117-121):
+
+const authority = moduleFromSteps(steps, true, [
+  "authority.getGrant",
+  "authority.revokeGrant",
+  "authority.getGrantAfterRevoke"
+]);
+It's marked as required (true) and checks for these 3 steps:
+
+authority.getGrant
+authority.revokeGrant
+authority.getGrantAfterRevoke
+
+Here’s the exact patch you want: Authority becomes HELD (not FAIL) when the run was shared successfully but no grantId existed (so the get/revoke steps were legitimately skipped). Also, Authority stays required, so overall becomes HELD (not PASS) in that situation — which is the right “don’t guess PASS” stance.
+
+Drop-in replacement for the Authority calculation block
+
+Replace your current lines 117–121 with this:
+
+// Authority: required, but may be HELD if share succeeded without returning a grantId
+const authorityBase = moduleFromSteps(steps, true, [
+  "authority.getGrant",
+  "authority.revokeGrant",
+  "authority.getGrantAfterRevoke"
+]);
+
+const shareStep = steps.find((s) => s.step === "emergency.shareAuthority");
+const shareStatus = shareStep ? stepStatus(shareStep) : "FAIL";
+
+// Detect "no grantId returned" situation:
+// - share step passed
+// - proof.ids.emergencyGrantId missing (or empty)
+const hasEmergencyGrantId =
+  proof?.ids?.emergencyGrantId && String(proof.ids.emergencyGrantId).trim().length > 0;
+
+let authority = authorityBase;
+
+// If share passed but no grantId exists, authority checks can't run → HELD, not FAIL.
+if (shareStatus === "PASS" && !hasEmergencyGrantId) {
+  authority = {
+    status: "HELD",
+    required: true,
+    checks: [
+      ...authorityBase.checks.map((c) =>
+        c.status === "FAIL"
+          ? { ...c, status: "HELD", detail: "Skipped: share succeeded but no grantId returned" }
+          : c
+      ),
+      {
+        name: "authority.grantIdPresent",
+        status: "HELD",
+        detail: "No grantId returned from emergency.shareAuthority"
+      }
+    ]
+  };
+}
+
+Why this works
+
+If Authority steps are missing because the share call didn’t return a grantId, you get HELD not FAIL.
+
+Authority remains required, so your overall status becomes HELD (still blocks “PASS” certification, but doesn’t hard-fail CI unless you want it to).
+
+One more tiny tweak (recommended)
+
+If your proof sometimes stores the grantId somewhere else (e.g., proof.ids.grantId), adjust hasEmergencyGrantId accordingly.
+
+If you want the CI to still pass on HELD (and only fail on FAIL), keep your ingest exit rule as-is (exit 1 only on FAIL).
