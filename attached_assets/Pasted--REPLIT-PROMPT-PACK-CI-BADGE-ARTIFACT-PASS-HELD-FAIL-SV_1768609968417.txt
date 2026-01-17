@@ -1,0 +1,107 @@
+✅ REPLIT PROMPT PACK — CI BADGE ARTIFACT (PASS / HELD / FAIL SVG) + Upload
+
+You are Replit. Add a tiny step that generates an SVG status badge from artifacts/qa/scm/p2-operator-cert.json, saves it under artifacts/qa/scm/, and uploads it with the rest of the artifacts.
+
+1) Create badge generator script
+
+Create: scripts/qa/scm-badge.ts
+
+import fs from "fs";
+import path from "path";
+
+type Overall = "PASS" | "HELD" | "FAIL";
+
+function readOverall(certPath: string): Overall {
+  const raw = fs.readFileSync(certPath, "utf8");
+  const cert = JSON.parse(raw);
+  const s = cert?.summary?.overall_status as Overall | undefined;
+  if (s !== "PASS" && s !== "HELD" && s !== "FAIL") throw new Error("Invalid overall_status");
+  return s;
+}
+
+function escapeXml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function badgeSvg(label: string, value: string, valueColor: string) {
+  // Simple shields-like badge, no external deps
+  const leftW = Math.max(60, label.length * 7 + 20);
+  const rightW = Math.max(60, value.length * 7 + 20);
+  const w = leftW + rightW;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="20" role="img" aria-label="${escapeXml(
+    label
+  )}: ${escapeXml(value)}">
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#fff" stop-opacity=".7"/>
+    <stop offset=".1" stop-color="#aaa" stop-opacity=".1"/>
+    <stop offset=".9" stop-color="#000" stop-opacity=".3"/>
+    <stop offset="1" stop-color="#000" stop-opacity=".5"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="${w}" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="${leftW}" height="20" fill="#555"/>
+    <rect x="${leftW}" width="${rightW}" height="20" fill="${valueColor}"/>
+    <rect width="${w}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle"
+     font-family="Verdana,DejaVu Sans,Geneva,sans-serif" font-size="11">
+    <text x="${leftW / 2}" y="14">${escapeXml(label)}</text>
+    <text x="${leftW + rightW / 2}" y="14">${escapeXml(value)}</text>
+  </g>
+</svg>`;
+}
+
+function main() {
+  const certPath = path.resolve("artifacts/qa/scm/p2-operator-cert.json");
+  if (!fs.existsSync(certPath)) {
+    console.error("Missing cert:", certPath);
+    process.exit(1);
+  }
+
+  const overall = readOverall(certPath);
+
+  const color =
+    overall === "PASS" ? "#2ea44f" : overall === "HELD" ? "#dbab09" : "#d73a49";
+
+  const svg = badgeSvg("SCM", overall, color);
+
+  const outPath = path.resolve("artifacts/qa/scm/p2-operator-cert-badge.svg");
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, svg, "utf8");
+
+  console.log("✅ Wrote badge:", outPath);
+}
+
+main();
+
+2) Run the badge script in CI
+
+In .github/workflows/qa-scm.yml, add this step after SCM ingest and before artifact upload:
+
+      - name: Generate SCM badge
+        if: always()
+        run: npx tsx scripts/qa/scm-badge.ts
+
+
+Because you already upload artifacts/qa/**, the badge will be included automatically.
+
+3) Optional: show badge inline in Actions summary
+
+Add this to the end of your SCM Certification Summary step (same step is fine), to link the badge file:
+
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "- Badge: artifacts/qa/scm/p2-operator-cert-badge.svg (uploaded as build artifact)" >> $GITHUB_STEP_SUMMARY
+
+Acceptance criteria
+
+After SCM ingest, artifacts/qa/scm/p2-operator-cert-badge.svg exists
+
+Badge text reflects PASS / HELD / FAIL
+
+Badge is uploaded with the artifact bundle for every run (if: always())
+
+If you want the next step after this: a minimal /app/admin/certifications page that lists the latest cert JSON and shows the status badge + module table.

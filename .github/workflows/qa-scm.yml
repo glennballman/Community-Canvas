@@ -96,6 +96,13 @@ jobs:
             echo "❌ Certification FAILED — required module proof missing or failed." >> $GITHUB_STEP_SUMMARY
           fi
 
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Badge: artifacts/qa/scm/p2-operator-cert-badge.svg (uploaded as build artifact)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate SCM badge
+        if: always()
+        run: npx tsx scripts/qa/scm-badge.ts
+
       - name: Upload QA + SCM artifacts
         if: always()
         uses: actions/upload-artifact@v4
