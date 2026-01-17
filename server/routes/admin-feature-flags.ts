@@ -1,15 +1,29 @@
 /**
  * Feature Flags Admin Routes
  * 
- * Service/admin-only endpoints for managing feature flags.
- * These routes require service mode authentication.
+ * Service-key-only endpoints for managing feature flags.
+ * These routes require X-Service-Key header authentication.
  */
 
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
+import { isServiceKeyRequest } from '../middleware/guards';
 
 const router = express.Router();
+
+const requireServiceAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (!isServiceKeyRequest(req)) {
+    return res.status(403).json({
+      ok: false,
+      error: 'FORBIDDEN',
+      message: 'Service key authentication required'
+    });
+  }
+  next();
+};
+
+router.use(requireServiceAuth);
 
 router.get('/', async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;

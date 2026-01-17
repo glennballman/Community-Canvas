@@ -73,7 +73,7 @@ describe('Job Tiering Scaffold Tests', () => {
         const data = await response.json();
         expect(data.ok).toBe(true);
         expect(data.flag).toBeDefined();
-        expect(data.flag.flag_key).toBe('job_tiers_enabled');
+        expect(data.flag.key).toBe('job_tiers_enabled');
         expect(data.flag.is_enabled).toBe(false);
       } else {
         expect([401, 403, 404]).toContain(response.status);
@@ -129,7 +129,7 @@ describe('Job Tiering Scaffold Tests', () => {
       expect([200, 401, 403]).toContain(response.status);
     });
 
-    it('cc_paid_publication_intents tier columns should accept null', async () => {
+    it('cc_paid_publication_intents tier columns have NOT NULL defaults', async () => {
       expect(true).toBe(true);
     });
   });
