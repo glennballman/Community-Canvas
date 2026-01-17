@@ -819,4 +819,515 @@ router.get('/paid-publications/:intentId/receipt', requirePortalStaff, async (re
   }
 });
 
+// ============================================
+// COORDINATOR QUEUE - Application Triage
+// ============================================
+
+const statusChangeSchema = z.object({
+  status: z.enum([
+    'draft', 'submitted', 'under_review', 'shortlisted',
+    'interview_scheduled', 'interviewed', 'offer_extended',
+    'offer_accepted', 'offer_declined', 'rejected', 'withdrawn'
+  ]),
+  note: z.string().max(2000).optional()
+});
+
+const addNoteSchema = z.object({
+  note: z.string().min(1).max(2000)
+});
+
+const sendReplySchema = z.object({
+  templateCode: z.string(),
+  mergeFields: z.record(z.string()).optional(),
+  customMessage: z.string().max(5000).optional()
+});
+
+// Get coordinator queue - all applications for portal
+router.get('/applications', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const status = req.query.status as string;
+    const campaignKey = req.query.campaign as string;
+    const housingNeeded = req.query.housing_needed as string;
+    const needsReply = req.query.needs_reply as string;
+
+    let whereClause = 'WHERE jp.portal_id = $1';
+    const params: any[] = [ctx.portal_id];
+    let paramIndex = 2;
+
+    if (status) {
+      whereClause += ` AND a.status = $${paramIndex}::job_application_status`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    if (needsReply === 'true') {
+      whereClause += ` AND a.needs_reply = true`;
+    }
+
+    if (housingNeeded === 'true') {
+      whereClause += ` AND a.needs_accommodation = true`;
+    }
+
+    const result = await serviceQuery(`
+      SELECT 
+        a.id,
+        a.application_number,
+        a.status,
+        a.submitted_at,
+        a.last_activity_at,
+        a.needs_reply,
+        a.needs_accommodation,
+        a.internal_notes,
+        a.resume_url,
+        a.cover_letter,
+        j.id as job_id,
+        j.title as job_title,
+        j.role_category,
+        j.location_text,
+        jp.id as job_posting_id,
+        jp.custom_title,
+        i.id as individual_id,
+        i.display_name as applicant_name,
+        i.email as applicant_email,
+        i.phone as applicant_phone,
+        t.id as tenant_id,
+        t.name as employer_name,
+        EXTRACT(EPOCH FROM (now() - COALESCE(a.submitted_at, a.created_at))) / 3600 as hours_since_submission,
+        (SELECT COUNT(*) FROM cc_job_application_bundle_items bi WHERE bi.application_id = a.id) as bundle_count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      JOIN cc_jobs j ON j.id = a.job_id
+      JOIN cc_tenants t ON t.id = a.tenant_id
+      LEFT JOIN cc_individuals i ON i.id = a.applicant_individual_id
+      ${whereClause}
+      ORDER BY 
+        CASE WHEN a.status = 'submitted' THEN 0 ELSE 1 END,
+        a.submitted_at ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `, [...params, limit, offset]);
+
+    const countResult = await serviceQuery(`
+      SELECT COUNT(*) as total
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      ${whereClause}
+    `, params);
+
+    // Calculate SLA status for each application
+    const applications = result.rows.map((app: any) => {
+      const hours = parseFloat(app.hours_since_submission) || 0;
+      let slaStatus: 'green' | 'yellow' | 'red' = 'green';
+      if (hours > 24) slaStatus = 'red';
+      else if (hours > 2) slaStatus = 'yellow';
+
+      return {
+        ...app,
+        sla_status: slaStatus,
+        hours_since_submission: Math.round(hours * 10) / 10
+      };
+    });
+
+    res.json({
+      ok: true,
+      applications,
+      total: parseInt(countResult.rows[0]?.total || '0'),
+      limit,
+      offset
+    });
+  } catch (error: any) {
+    console.error('Coordinator queue error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch applications'
+    });
+  }
+});
+
+// Get queue stats (MUST be before :applicationId route)
+router.get('/applications/stats', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+
+  try {
+    const result = await serviceQuery(`
+      SELECT 
+        a.status,
+        COUNT(*) as count,
+        COUNT(*) FILTER (WHERE a.needs_reply = true) as needs_reply_count,
+        COUNT(*) FILTER (
+          WHERE EXTRACT(EPOCH FROM (now() - COALESCE(a.submitted_at, a.created_at))) / 3600 > 24
+        ) as sla_red_count,
+        COUNT(*) FILTER (
+          WHERE EXTRACT(EPOCH FROM (now() - COALESCE(a.submitted_at, a.created_at))) / 3600 BETWEEN 2 AND 24
+        ) as sla_yellow_count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE jp.portal_id = $1
+      GROUP BY a.status
+    `, [ctx.portal_id]);
+
+    const stats = result.rows.reduce((acc: any, row: any) => {
+      acc[row.status] = {
+        count: parseInt(row.count),
+        needs_reply: parseInt(row.needs_reply_count),
+        sla_red: parseInt(row.sla_red_count),
+        sla_yellow: parseInt(row.sla_yellow_count)
+      };
+      return acc;
+    }, {});
+
+    res.json({
+      ok: true,
+      stats
+    });
+  } catch (error: any) {
+    console.error('Stats error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch stats'
+    });
+  }
+});
+
+// Get single application detail
+router.get('/applications/:applicationId', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { applicationId } = req.params;
+
+  try {
+    const result = await serviceQuery(`
+      SELECT 
+        a.*,
+        j.id as job_id,
+        j.title as job_title,
+        j.role_category,
+        j.location_text,
+        j.description as job_description,
+        jp.id as job_posting_id,
+        jp.custom_title,
+        i.id as individual_id,
+        i.display_name as applicant_name,
+        i.email as applicant_email,
+        i.phone as applicant_phone,
+        i.location_text as applicant_location,
+        t.id as tenant_id,
+        t.name as employer_name
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      JOIN cc_jobs j ON j.id = a.job_id
+      JOIN cc_tenants t ON t.id = a.tenant_id
+      LEFT JOIN cc_individuals i ON i.id = a.applicant_individual_id
+      WHERE a.id = $1 AND jp.portal_id = $2
+    `, [applicationId, ctx.portal_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'APPLICATION_NOT_FOUND'
+      });
+    }
+
+    // Get events
+    const eventsResult = await serviceQuery(`
+      SELECT e.*, u.display_name as actor_name
+      FROM cc_job_application_events e
+      LEFT JOIN cc_users u ON u.id = e.actor_user_id
+      WHERE e.application_id = $1
+      ORDER BY e.created_at DESC
+      LIMIT 50
+    `, [applicationId]);
+
+    // Get bundle info if from campaign
+    const bundleResult = await serviceQuery(`
+      SELECT 
+        b.id as bundle_id,
+        b.campaign_key,
+        b.applicant_name as bundle_applicant_name,
+        b.housing_needed,
+        b.work_permit_question,
+        b.message as bundle_message
+      FROM cc_job_application_bundle_items bi
+      JOIN cc_job_application_bundles b ON b.id = bi.bundle_id
+      WHERE bi.application_id = $1
+      LIMIT 1
+    `, [applicationId]);
+
+    res.json({
+      ok: true,
+      application: result.rows[0],
+      events: eventsResult.rows,
+      bundle: bundleResult.rows[0] || null
+    });
+  } catch (error: any) {
+    console.error('Application detail error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch application'
+    });
+  }
+});
+
+// Change application status
+router.post('/applications/:applicationId/status', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { applicationId } = req.params;
+
+  try {
+    const parsed = statusChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_INPUT',
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { status, note } = parsed.data;
+
+    // Verify portal ownership
+    const appCheck = await serviceQuery(`
+      SELECT a.id, a.status as current_status, a.tenant_id, jp.portal_id
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE a.id = $1 AND jp.portal_id = $2
+    `, [applicationId, ctx.portal_id]);
+
+    if (appCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'APPLICATION_NOT_FOUND'
+      });
+    }
+
+    const currentStatus = appCheck.rows[0].current_status;
+    const tenantId = appCheck.rows[0].tenant_id;
+
+    await withServiceTransaction(async (client) => {
+      // Update status
+      await client.query(`
+        UPDATE cc_job_applications 
+        SET status = $1::job_application_status, 
+            last_activity_at = now(),
+            updated_at = now()
+        WHERE id = $2
+      `, [status, applicationId]);
+
+      // Add event
+      await client.query(`
+        INSERT INTO cc_job_application_events (
+          application_id, portal_id, tenant_id, actor_user_id,
+          event_type, previous_status, new_status, note
+        ) VALUES ($1, $2, $3, $4, 'status_changed', $5, $6, $7)
+      `, [applicationId, ctx.portal_id, tenantId, null, currentStatus, status, note || null]);
+    });
+
+    res.json({
+      ok: true,
+      message: 'Status updated'
+    });
+  } catch (error: any) {
+    console.error('Status change error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to update status'
+    });
+  }
+});
+
+// Add note to application
+router.post('/applications/:applicationId/notes', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { applicationId } = req.params;
+
+  try {
+    const parsed = addNoteSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_INPUT',
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { note } = parsed.data;
+
+    // Verify portal ownership
+    const appCheck = await serviceQuery(`
+      SELECT a.id, a.tenant_id, jp.portal_id
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE a.id = $1 AND jp.portal_id = $2
+    `, [applicationId, ctx.portal_id]);
+
+    if (appCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'APPLICATION_NOT_FOUND'
+      });
+    }
+
+    const tenantId = appCheck.rows[0].tenant_id;
+
+    await withServiceTransaction(async (client) => {
+      // Update last activity
+      await client.query(`
+        UPDATE cc_job_applications 
+        SET last_activity_at = now(),
+            updated_at = now()
+        WHERE id = $1
+      `, [applicationId]);
+
+      // Add event
+      await client.query(`
+        INSERT INTO cc_job_application_events (
+          application_id, portal_id, tenant_id, actor_user_id,
+          event_type, note
+        ) VALUES ($1, $2, $3, $4, 'note_added', $5)
+      `, [applicationId, ctx.portal_id, tenantId, null, note]);
+    });
+
+    res.json({
+      ok: true,
+      message: 'Note added'
+    });
+  } catch (error: any) {
+    console.error('Add note error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to add note'
+    });
+  }
+});
+
+// Send reply using template
+router.post('/applications/:applicationId/reply', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { applicationId } = req.params;
+
+  try {
+    const parsed = sendReplySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_INPUT',
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { templateCode, mergeFields, customMessage } = parsed.data;
+
+    // Verify portal ownership
+    const appCheck = await serviceQuery(`
+      SELECT a.id, a.tenant_id, jp.portal_id, i.email as applicant_email
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      LEFT JOIN cc_individuals i ON i.id = a.applicant_individual_id
+      WHERE a.id = $1 AND jp.portal_id = $2
+    `, [applicationId, ctx.portal_id]);
+
+    if (appCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'APPLICATION_NOT_FOUND'
+      });
+    }
+
+    const tenantId = appCheck.rows[0].tenant_id;
+
+    // Get template
+    const templateResult = await serviceQuery(`
+      SELECT id, code, subject_template, body_template
+      FROM cc_notification_templates
+      WHERE code = $1 AND is_active = true
+    `, [templateCode]);
+
+    if (templateResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'TEMPLATE_NOT_FOUND'
+      });
+    }
+
+    const template = templateResult.rows[0];
+
+    await withServiceTransaction(async (client) => {
+      // Update application
+      await client.query(`
+        UPDATE cc_job_applications 
+        SET needs_reply = false,
+            last_activity_at = now(),
+            updated_at = now()
+        WHERE id = $1
+      `, [applicationId]);
+
+      // Add event with template info
+      await client.query(`
+        INSERT INTO cc_job_application_events (
+          application_id, portal_id, tenant_id, actor_user_id,
+          event_type, template_code, note, metadata
+        ) VALUES ($1, $2, $3, $4, 'reply_sent', $5, $6, $7)
+      `, [
+        applicationId, 
+        ctx.portal_id, 
+        tenantId, 
+        null, 
+        templateCode,
+        customMessage || null,
+        JSON.stringify({ 
+          template_id: template.id,
+          merge_fields: mergeFields || {},
+          subject: template.subject_template
+        })
+      ]);
+    });
+
+    res.json({
+      ok: true,
+      message: 'Reply recorded',
+      template: {
+        code: template.code,
+        subject: template.subject_template
+      }
+    });
+  } catch (error: any) {
+    console.error('Send reply error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to send reply'
+    });
+  }
+});
+
+// Get reply templates
+router.get('/templates', async (req: Request, res: Response) => {
+  try {
+    const result = await serviceQuery(`
+      SELECT id, code, name, description, subject_template, body_template, is_actionable
+      FROM cc_notification_templates
+      WHERE category = 'job' AND is_active = true
+      ORDER BY name
+    `);
+
+    res.json({
+      ok: true,
+      templates: result.rows
+    });
+  } catch (error: any) {
+    console.error('Templates fetch error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch templates'
+    });
+  }
+});
+
 export default router;

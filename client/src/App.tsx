@@ -91,6 +91,8 @@ import PendingPaymentsPage from './pages/app/jobs/PendingPaymentsPage';
 import EmbedConfiguratorPage from './pages/app/jobs/EmbedConfiguratorPage';
 import JobsModerationPage from './pages/app/mod/JobsModerationPage';
 import PaidPublicationsModerationPage from './pages/app/mod/PaidPublicationsModerationPage';
+import ApplicationsQueuePage from './pages/app/mod/ApplicationsQueuePage';
+import JobApplicationsPage from './pages/app/jobs/JobApplicationsPage';
 
 // Pages - Public Jobs Portal
 import PortalJobsPage from './pages/public/PortalJobsPage';
@@ -266,6 +268,10 @@ export default function App() {
                 {/* V3.5 Jobs Moderation */}
                 <Route path="mod/jobs" element={<JobsModerationPage />} />
                 <Route path="mod/paid-publications" element={<PaidPublicationsModerationPage />} />
+                <Route path="mod/applications" element={<ApplicationsQueuePage />} />
+                
+                {/* V3.5 Jobs Applications */}
+                <Route path="jobs/:jobId/applications" element={<JobApplicationsPage />} />
                 
                 {/* V3 Work */}
                 <Route path="work-requests" element={<WorkRequestsList />} />

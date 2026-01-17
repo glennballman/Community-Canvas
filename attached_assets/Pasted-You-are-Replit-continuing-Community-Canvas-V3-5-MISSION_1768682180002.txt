@@ -1,0 +1,67 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Ship a high-ROI concierge workflow for cold start:
+- central coordinator (portal staff) triages applications fast
+- employer can see pipeline statuses
+- reply templates exist
+- SLA indicators exist
+No refactors. Additive UI + minimal data where necessary.
+
+HARD RULES
+- Never use banned terms.
+- Preserve tenant/portal isolation and staff authorization.
+- Use existing messaging/notification patterns where available; do not invent a parallel system.
+
+STEP 0 — HARD CHECK (print first)
+1) Show cc_job_applications statuses + any interview fields.
+2) Identify any existing notifications/templates tables (107_notifications...).
+3) Identify any portal staff/roles checks used in moderation endpoints.
+
+STEP 1 — Minimal pipeline + notes (migration 146 if needed)
+If not already present:
+- Ensure cc_job_applications.status supports:
+  new, reviewing, screened, interview, offered, accepted, rejected, withdrawn
+(If enum exists, map; if text, enforce via CHECK with additive migration.)
+Add:
+- cc_job_application_events (append-only) if not already present:
+  id, application_id, portal_id, tenant_id, actor_identity_id, event_type, note, created_at, metadata
+RLS: portal staff sees portal apps; tenant sees their apps; service bypass.
+
+STEP 2 — Staff UI: Coordinator Queue
+Route: /app/portals/:portalId/applications (or best existing admin area)
+Features:
+- Filters: campaign, housing_needed, status, “needs reply”
+- SLA badges:
+  - New < 2h (green), 2–24h (yellow), >24h (red)
+- Actions:
+  - Change status
+  - Assign to employer (if campaign bundle)
+  - Add note
+  - Send reply (template)
+
+Reply UX:
+- Choose template
+- Fill merge fields (applicant name, employer, role, start date)
+- “Send” uses existing messaging service if available; otherwise store as an event record + placeholder “sent” state.
+
+STEP 3 — Employer UI: Applicant Pipeline
+Route: /app/jobs/:jobId/applications
+- List/kanban by status
+- Quick actions: advance status, add note, send reply template
+- Read-only access to bundle info (if from campaign apply)
+
+STEP 4 — Templates (no refactor)
+If notification templates exist, add job/application templates:
+- acknowledgment (received)
+- request more info
+- invite to interview
+- not selected
+- housing follow-up
+- work permit follow-up
+Store templates in existing template system if present; else create minimal cc_message_templates (migration 146) scoped by tenant/portal.
+
+STEP 5 — Tests
+- Portal staff authorization for coordinator queue endpoints
+- Tenant isolation for employer pipeline
+STOP.

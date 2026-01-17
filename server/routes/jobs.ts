@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { z } from 'zod';
 import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
 import { 
@@ -1050,6 +1051,371 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
     res.status(500).json({
       ok: false,
       error: 'Failed to publish job'
+    });
+  }
+});
+
+// ============================================
+// EMPLOYER PIPELINE - Applicant Management
+// ============================================
+
+const employerStatusChangeSchema = z.object({
+  status: z.enum([
+    'draft', 'submitted', 'under_review', 'shortlisted',
+    'interview_scheduled', 'interviewed', 'offer_extended',
+    'offer_accepted', 'offer_declined', 'rejected', 'withdrawn'
+  ]),
+  note: z.string().max(2000).optional()
+});
+
+const employerNoteSchema = z.object({
+  note: z.string().min(1).max(2000)
+});
+
+// Get applications for a specific job (employer view)
+router.get('/:jobId/applications', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    // Verify job belongs to tenant
+    const jobCheck = await serviceQuery(`
+      SELECT id, title FROM cc_jobs WHERE id = $1 AND tenant_id = $2
+    `, [jobId, ctx.tenant_id]);
+
+    if (jobCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'JOB_NOT_FOUND'
+      });
+    }
+
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const status = req.query.status as string;
+
+    let whereClause = 'WHERE a.job_id = $1 AND a.tenant_id = $2';
+    const params: any[] = [jobId, ctx.tenant_id];
+    let paramIndex = 3;
+
+    if (status) {
+      whereClause += ` AND a.status = $${paramIndex}::job_application_status`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    const result = await serviceQuery(`
+      SELECT 
+        a.id,
+        a.application_number,
+        a.status,
+        a.submitted_at,
+        a.last_activity_at,
+        a.needs_reply,
+        a.needs_accommodation,
+        a.resume_url,
+        a.cover_letter,
+        a.interview_scheduled_at,
+        a.interview_completed_at,
+        a.rating,
+        a.internal_notes,
+        jp.id as job_posting_id,
+        jp.custom_title,
+        p.name as portal_name,
+        p.slug as portal_slug,
+        i.id as individual_id,
+        i.display_name as applicant_name,
+        i.email as applicant_email,
+        i.phone as applicant_phone,
+        i.location_text as applicant_location,
+        (SELECT COUNT(*) FROM cc_job_application_bundle_items bi WHERE bi.application_id = a.id) as bundle_count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      JOIN cc_portals p ON p.id = jp.portal_id
+      LEFT JOIN cc_individuals i ON i.id = a.applicant_individual_id
+      ${whereClause}
+      ORDER BY 
+        CASE a.status
+          WHEN 'submitted' THEN 0
+          WHEN 'under_review' THEN 1
+          WHEN 'shortlisted' THEN 2
+          WHEN 'interview_scheduled' THEN 3
+          WHEN 'interviewed' THEN 4
+          WHEN 'offer_extended' THEN 5
+          ELSE 6
+        END,
+        a.submitted_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `, [...params, limit, offset]);
+
+    const countResult = await serviceQuery(`
+      SELECT COUNT(*) as total
+      FROM cc_job_applications a
+      ${whereClause}
+    `, params);
+
+    // Get status counts for kanban
+    const statusCounts = await serviceQuery(`
+      SELECT status, COUNT(*) as count
+      FROM cc_job_applications
+      WHERE job_id = $1 AND tenant_id = $2
+      GROUP BY status
+    `, [jobId, ctx.tenant_id]);
+
+    res.json({
+      ok: true,
+      job: jobCheck.rows[0],
+      applications: result.rows,
+      statusCounts: statusCounts.rows.reduce((acc: Record<string, number>, row: any) => {
+        acc[row.status] = parseInt(row.count);
+        return acc;
+      }, {}),
+      pagination: {
+        total: parseInt(countResult.rows[0]?.total || '0'),
+        limit,
+        offset
+      }
+    });
+  } catch (error: any) {
+    console.error('Employer applications error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch applications'
+    });
+  }
+});
+
+// Get single application detail (employer view)
+router.get('/:jobId/applications/:applicationId', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, applicationId } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const result = await serviceQuery(`
+      SELECT 
+        a.*,
+        jp.id as job_posting_id,
+        jp.custom_title,
+        p.name as portal_name,
+        p.slug as portal_slug,
+        i.id as individual_id,
+        i.display_name as applicant_name,
+        i.email as applicant_email,
+        i.phone as applicant_phone,
+        i.location_text as applicant_location
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      JOIN cc_portals p ON p.id = jp.portal_id
+      LEFT JOIN cc_individuals i ON i.id = a.applicant_individual_id
+      WHERE a.id = $1 AND a.job_id = $2 AND a.tenant_id = $3
+    `, [applicationId, jobId, ctx.tenant_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'APPLICATION_NOT_FOUND'
+      });
+    }
+
+    // Get events
+    const eventsResult = await serviceQuery(`
+      SELECT e.*
+      FROM cc_job_application_events e
+      WHERE e.application_id = $1 AND e.tenant_id = $2
+      ORDER BY e.created_at DESC
+      LIMIT 50
+    `, [applicationId, ctx.tenant_id]);
+
+    // Get bundle info if from campaign
+    const bundleResult = await serviceQuery(`
+      SELECT 
+        b.id as bundle_id,
+        b.campaign_key,
+        b.applicant_name as bundle_applicant_name,
+        b.housing_needed,
+        b.work_permit_question,
+        b.message as bundle_message
+      FROM cc_job_application_bundle_items bi
+      JOIN cc_job_application_bundles b ON b.id = bi.bundle_id
+      WHERE bi.application_id = $1
+      LIMIT 1
+    `, [applicationId]);
+
+    res.json({
+      ok: true,
+      application: result.rows[0],
+      events: eventsResult.rows,
+      bundle: bundleResult.rows[0] || null
+    });
+  } catch (error: any) {
+    console.error('Employer application detail error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch application'
+    });
+  }
+});
+
+// Change application status (employer)
+router.post('/:jobId/applications/:applicationId/status', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, applicationId } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const parsed = employerStatusChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_INPUT',
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { status, note } = parsed.data;
+
+    // Verify ownership
+    const appCheck = await serviceQuery(`
+      SELECT a.id, a.status as current_status, jp.portal_id
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE a.id = $1 AND a.job_id = $2 AND a.tenant_id = $3
+    `, [applicationId, jobId, ctx.tenant_id]);
+
+    if (appCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'APPLICATION_NOT_FOUND'
+      });
+    }
+
+    const currentStatus = appCheck.rows[0].current_status;
+    const portalId = appCheck.rows[0].portal_id;
+
+    await withServiceTransaction(async (client) => {
+      // Update status
+      await client.query(`
+        UPDATE cc_job_applications 
+        SET status = $1::job_application_status, 
+            last_activity_at = now(),
+            updated_at = now()
+        WHERE id = $2
+      `, [status, applicationId]);
+
+      // Add event
+      await client.query(`
+        INSERT INTO cc_job_application_events (
+          application_id, portal_id, tenant_id,
+          event_type, previous_status, new_status, note
+        ) VALUES ($1, $2, $3, 'status_changed', $4, $5, $6)
+      `, [applicationId, portalId, ctx.tenant_id, currentStatus, status, note || null]);
+    });
+
+    res.json({
+      ok: true,
+      message: 'Status updated'
+    });
+  } catch (error: any) {
+    console.error('Employer status change error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to update status'
+    });
+  }
+});
+
+// Add note to application (employer)
+router.post('/:jobId/applications/:applicationId/notes', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, applicationId } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const parsed = employerNoteSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_INPUT',
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { note } = parsed.data;
+
+    // Verify ownership
+    const appCheck = await serviceQuery(`
+      SELECT a.id, jp.portal_id
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE a.id = $1 AND a.job_id = $2 AND a.tenant_id = $3
+    `, [applicationId, jobId, ctx.tenant_id]);
+
+    if (appCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'APPLICATION_NOT_FOUND'
+      });
+    }
+
+    const portalId = appCheck.rows[0].portal_id;
+
+    await withServiceTransaction(async (client) => {
+      // Update last activity
+      await client.query(`
+        UPDATE cc_job_applications 
+        SET last_activity_at = now(),
+            updated_at = now()
+        WHERE id = $1
+      `, [applicationId]);
+
+      // Add event
+      await client.query(`
+        INSERT INTO cc_job_application_events (
+          application_id, portal_id, tenant_id,
+          event_type, note
+        ) VALUES ($1, $2, $3, 'note_added', $4)
+      `, [applicationId, portalId, ctx.tenant_id, note]);
+    });
+
+    res.json({
+      ok: true,
+      message: 'Note added'
+    });
+  } catch (error: any) {
+    console.error('Employer add note error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to add note'
     });
   }
 });
