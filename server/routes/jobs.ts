@@ -1420,4 +1420,289 @@ router.post('/:jobId/applications/:applicationId/notes', async (req: Request, re
   }
 });
 
+// =====================================================
+// TENANT EMERGENCY REPLACEMENT REQUESTS
+// =====================================================
+
+const emergencyRequestSchema = z.object({
+  portal_id: z.string().uuid().optional(),
+  urgency: z.enum(['now', 'today', 'this_week']).default('today'),
+  notes: z.string().max(2000).optional()
+});
+
+router.post('/:jobId/emergency-replacement-request', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const parsed = emergencyRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_INPUT',
+        details: parsed.error.flatten()
+      });
+    }
+
+    const { portal_id: requestedPortalId, urgency, notes } = parsed.data;
+
+    const jobResult = await serviceQuery(`
+      SELECT j.id, j.title, j.tenant_id
+      FROM cc_jobs j
+      WHERE j.id = $1 AND j.tenant_id = $2
+    `, [jobId, ctx.tenant_id]);
+
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'JOB_NOT_FOUND'
+      });
+    }
+
+    const job = jobResult.rows[0];
+
+    const postingsResult = await serviceQuery(`
+      SELECT jp.id, jp.portal_id, jp.custom_title, p.name as portal_name
+      FROM cc_job_postings jp
+      JOIN cc_portals p ON p.id = jp.portal_id
+      WHERE jp.job_id = $1 AND jp.publish_state = 'published'
+    `, [jobId]);
+
+    let selectedPortalId: string;
+    let selectedPostingId: string | null = null;
+    let roleTitle: string;
+
+    if (requestedPortalId) {
+      const posting = postingsResult.rows.find((p: any) => p.portal_id === requestedPortalId);
+      if (!posting) {
+        return res.status(400).json({
+          ok: false,
+          error: 'PORTAL_NOT_FOUND_FOR_JOB',
+          message: 'Job has no active posting in the specified portal'
+        });
+      }
+      selectedPortalId = posting.portal_id;
+      selectedPostingId = posting.id;
+      roleTitle = posting.custom_title || job.title;
+    } else if (postingsResult.rows.length === 1) {
+      const posting = postingsResult.rows[0];
+      selectedPortalId = posting.portal_id;
+      selectedPostingId = posting.id;
+      roleTitle = posting.custom_title || job.title;
+    } else if (postingsResult.rows.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: 'NO_ACTIVE_POSTINGS',
+        message: 'Job has no active portal postings'
+      });
+    } else {
+      return res.status(400).json({
+        ok: false,
+        error: 'PORTAL_REQUIRED_FOR_EMERGENCY_REQUEST',
+        message: 'Job is posted to multiple portals. Please specify which portal.',
+        choices: postingsResult.rows.map((p: any) => ({
+          portal_id: p.portal_id,
+          portal_name: p.portal_name,
+          posting_id: p.id
+        }))
+      });
+    }
+
+    const insertResult = await serviceQuery(`
+      INSERT INTO cc_emergency_replacement_requests (
+        portal_id, tenant_id, job_id, job_posting_id,
+        role_title_snapshot, urgency, notes, status,
+        created_by_identity_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8)
+      RETURNING id, status, created_at
+    `, [
+      selectedPortalId,
+      ctx.tenant_id,
+      jobId,
+      selectedPostingId,
+      roleTitle,
+      urgency,
+      notes || null,
+      ctx.individual_id || null
+    ]);
+
+    const request = insertResult.rows[0];
+
+    res.status(201).json({
+      ok: true,
+      requestId: request.id,
+      portalId: selectedPortalId,
+      status: request.status,
+      employerConfirmationRoute: `/app/jobs/${jobId}/emergency/${request.id}`
+    });
+  } catch (error: any) {
+    console.error('Create emergency request error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to create emergency request'
+    });
+  }
+});
+
+router.get('/:jobId/emergency-replacement-request/:requestId', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, requestId } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const result = await serviceQuery(`
+      SELECT 
+        er.id,
+        er.status,
+        er.role_title_snapshot,
+        er.urgency,
+        er.notes,
+        er.created_at,
+        er.updated_at,
+        er.portal_id,
+        p.name as portal_name,
+        j.title as job_title
+      FROM cc_emergency_replacement_requests er
+      JOIN cc_portals p ON p.id = er.portal_id
+      LEFT JOIN cc_jobs j ON j.id = er.job_id
+      WHERE er.id = $1 
+        AND er.job_id = $2 
+        AND er.tenant_id = $3
+    `, [requestId, jobId, ctx.tenant_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'REQUEST_NOT_FOUND'
+      });
+    }
+
+    const request = result.rows[0];
+
+    const routingsResult = await serviceQuery(`
+      SELECT 
+        rr.id,
+        rr.action,
+        rr.created_at,
+        i.full_name as candidate_name
+      FROM cc_emergency_routing_records rr
+      JOIN cc_candidate_bench b ON b.id = rr.bench_id
+      JOIN cc_individuals i ON i.id = b.individual_id
+      WHERE rr.emergency_request_id = $1
+      ORDER BY rr.created_at DESC
+      LIMIT 5
+    `, [requestId]);
+
+    res.json({
+      ok: true,
+      request: {
+        ...request,
+        routings: routingsResult.rows
+      }
+    });
+  } catch (error: any) {
+    console.error('Get emergency request error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch emergency request'
+    });
+  }
+});
+
+router.patch('/:jobId/emergency-replacement-request/:requestId', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, requestId } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const { action, notes } = req.body;
+
+    if (action !== 'cancel' && !notes) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_ACTION',
+        message: 'Only cancel action or notes update allowed'
+      });
+    }
+
+    const checkResult = await serviceQuery(`
+      SELECT id, status FROM cc_emergency_replacement_requests
+      WHERE id = $1 AND job_id = $2 AND tenant_id = $3
+    `, [requestId, jobId, ctx.tenant_id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'REQUEST_NOT_FOUND'
+      });
+    }
+
+    const current = checkResult.rows[0];
+
+    if (action === 'cancel') {
+      if (current.status === 'filled' || current.status === 'cancelled') {
+        return res.status(400).json({
+          ok: false,
+          error: 'CANNOT_CANCEL',
+          message: `Request is already ${current.status}`
+        });
+      }
+
+      await serviceQuery(`
+        UPDATE cc_emergency_replacement_requests
+        SET status = 'cancelled', updated_at = now()
+        WHERE id = $1
+      `, [requestId]);
+
+      return res.json({
+        ok: true,
+        status: 'cancelled'
+      });
+    }
+
+    if (notes) {
+      await serviceQuery(`
+        UPDATE cc_emergency_replacement_requests
+        SET notes = $2, updated_at = now()
+        WHERE id = $1
+      `, [requestId, notes]);
+
+      return res.json({
+        ok: true,
+        message: 'Notes updated'
+      });
+    }
+
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Update emergency request error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to update emergency request'
+    });
+  }
+});
+
 export default router;

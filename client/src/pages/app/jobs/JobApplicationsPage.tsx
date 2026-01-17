@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Users, ChevronLeft, CheckCircle2, Clock, MessageSquare, 
   FileText, Mail, Phone, MapPin, Building2, Calendar,
-  Star, Briefcase
+  Star, Briefcase, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -103,6 +103,7 @@ const PIPELINE_STAGES = [
 
 export default function JobApplicationsPage() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -111,6 +112,9 @@ export default function JobApplicationsPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [emergencyDialogOpen, setEmergencyDialogOpen] = useState(false);
+  const [portalChoices, setPortalChoices] = useState<Array<{portal_id: string; portal_name: string; posting_id: string}> | null>(null);
+  const [selectedPortalId, setSelectedPortalId] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery<ApplicationsResponse>({
     queryKey: ['/api/p2/app/jobs', jobId, 'applications', activeTab],
@@ -152,6 +156,42 @@ export default function JobApplicationsPage() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
+
+  const emergencyMutation = useMutation({
+    mutationFn: async (portalId?: string) => {
+      const body: any = { urgency: 'today' };
+      if (portalId) body.portal_id = portalId;
+      const res = await apiRequest('POST', `/api/p2/app/jobs/${jobId}/emergency-replacement-request`, body);
+      return res.json();
+    },
+    onSuccess: (response: any) => {
+      if (response.ok) {
+        toast({ title: 'Emergency request created' });
+        setEmergencyDialogOpen(false);
+        setPortalChoices(null);
+        setSelectedPortalId(null);
+        navigate(response.employerConfirmationRoute);
+      } else if (response.error === 'PORTAL_REQUIRED_FOR_EMERGENCY_REQUEST') {
+        setPortalChoices(response.choices);
+        if (response.choices?.length > 0) {
+          setSelectedPortalId(response.choices[0].portal_id);
+        }
+      } else {
+        toast({ title: 'Error', description: response.message || response.error, variant: 'destructive' });
+      }
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  });
+
+  const handleEmergencySubmit = () => {
+    if (portalChoices && selectedPortalId) {
+      emergencyMutation.mutate(selectedPortalId);
+    } else {
+      emergencyMutation.mutate();
+    }
+  };
 
   const applications = data?.applications || [];
   const statusCounts = data?.statusCounts || {};
@@ -204,15 +244,91 @@ export default function JobApplicationsPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Users className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Applications</h1>
-          <p className="text-sm text-muted-foreground">
-            {job.title} - {applications.length} total applicants
-          </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Users className="h-8 w-8 text-foreground" />
+          <div>
+            <h1 className="text-2xl font-bold">Applications</h1>
+            <p className="text-sm text-muted-foreground">
+              {job.title} - {applications.length} total applicants
+            </p>
+          </div>
         </div>
+        <Button 
+          variant="destructive"
+          onClick={() => setEmergencyDialogOpen(true)}
+          data-testid="button-emergency-replacement"
+        >
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          Emergency Replacement
+        </Button>
       </div>
+
+      <Dialog open={emergencyDialogOpen} onOpenChange={(open) => {
+        setEmergencyDialogOpen(open);
+        if (!open) {
+          setPortalChoices(null);
+          setSelectedPortalId(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Request Emergency Replacement
+            </DialogTitle>
+            <DialogDescription>
+              {portalChoices 
+                ? 'This job is posted to multiple portals. Select which one to request from.'
+                : 'This creates a priority request to the portal coordinator for an immediate replacement for this position.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {portalChoices ? (
+              <div className="space-y-2">
+                {portalChoices.map((choice) => (
+                  <Button
+                    key={choice.portal_id}
+                    variant={selectedPortalId === choice.portal_id ? 'default' : 'outline'}
+                    className="w-full justify-start"
+                    onClick={() => setSelectedPortalId(choice.portal_id)}
+                    data-testid={`portal-choice-${choice.portal_id}`}
+                  >
+                    <Building2 className="h-4 w-4 mr-2" />
+                    {choice.portal_name}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                A coordinator will review your request and contact available candidates as quickly as possible.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setEmergencyDialogOpen(false);
+                setPortalChoices(null);
+                setSelectedPortalId(null);
+              }}
+              data-testid="button-cancel-emergency"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleEmergencySubmit}
+              disabled={emergencyMutation.isPending || (portalChoices && !selectedPortalId)}
+              data-testid="button-confirm-emergency"
+            >
+              {emergencyMutation.isPending ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
         {PIPELINE_STAGES.map(stage => (

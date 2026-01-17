@@ -99,6 +99,7 @@ import BenchPage from './pages/app/mod/BenchPage';
 import EmergencyPage from './pages/app/mod/EmergencyPage';
 import TenantHousingOfferPage from './pages/app/TenantHousingOfferPage';
 import JobApplicationsPage from './pages/app/jobs/JobApplicationsPage';
+import JobEmergencyConfirmationPage from './pages/app/jobs/JobEmergencyConfirmationPage';
 
 // Pages - Public Jobs Portal
 import PortalJobsPage from './pages/public/PortalJobsPage';
@@ -287,6 +288,7 @@ export default function App() {
                 
                 {/* V3.5 Jobs Applications */}
                 <Route path="jobs/:jobId/applications" element={<JobApplicationsPage />} />
+                <Route path="jobs/:jobId/emergency/:requestId" element={<JobEmergencyConfirmationPage />} />
                 
                 {/* V3 Work */}
                 <Route path="work-requests" element={<WorkRequestsList />} />
