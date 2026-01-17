@@ -56,6 +56,7 @@ import adminTenantsRouter from "./routes/admin-tenants";
 import adminCommunitiesRouter from "./routes/admin-communities";
 import adminModerationRouter from "./routes/admin-moderation";
 import adminInventoryRouter from "./routes/admin-inventory";
+import adminScmRouter from "./routes/admin-scm";
 import crmRouter from "./routes/crm";
 import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
@@ -339,6 +340,9 @@ export async function registerRoutes(
 
   // Register admin inventory routes (platform admin only)
   app.use('/api/admin/inventory', adminInventoryRouter);
+
+  // Register admin SCM routes (platform admin only)
+  app.use('/api/admin/scm', adminScmRouter);
   
   // Register system explorer routes (debug/discovery surface)
   app.use('/api/admin/system-explorer', systemExplorerRouter);

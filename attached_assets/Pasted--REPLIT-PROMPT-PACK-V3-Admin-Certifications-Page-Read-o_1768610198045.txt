@@ -1,0 +1,146 @@
+✅ REPLIT PROMPT PACK — V3 Admin Certifications Page (Read-only, Cert Ledger Viewer)
+
+You are Replit. Add a read-only Certifications page to the V3 tenant admin UI that displays the latest SCM certification artifact (P2 operator cert) and renders module statuses + evidence hashes.
+Hard constraints:
+
+No pricing UI/CTAs.
+
+No dollars required.
+
+Minimal UI (shadcn tables/cards).
+
+This page is informational and admin-only.
+
+It must not break if cert is missing.
+
+Because CI artifacts aren’t automatically available in the running app, implement this as a server endpoint that serves the latest cert JSON from the filesystem when present (dev/CI/staging), and returns a friendly “not available” in production unless you later wire object storage.
+
+1) Backend: add endpoint to serve latest cert
+
+Create a new route file (or add to existing admin routes):
+
+Endpoint
+
+GET /api/admin/scm/latest-p2-operator-cert
+
+Behavior
+
+Auth required, tenant admin required (match your existing admin gate)
+
+Reads file:
+
+artifacts/qa/scm/p2-operator-cert.json
+
+If file exists: return it as JSON (no envelope needed, but consistent { ok: true, cert } is fine)
+
+If missing: return { ok: false, error: "Certification artifact not available in this environment." }
+
+Keep it simple. This is for dev/staging initially.
+
+2) Frontend: hook
+
+Create:
+
+client/src/lib/api/admin/useLatestP2OperatorCert.ts
+
+TanStack Query:
+
+GET /api/admin/scm/latest-p2-operator-cert
+
+If response shape is { ok: true, cert }, return cert.
+
+If { ok: false, error }, throw.
+
+3) Frontend: page
+
+Create:
+
+client/src/pages/app/admin/CertificationsPage.tsx
+
+Route:
+
+/app/admin/certifications
+
+Add to v3Nav Admin section:
+
+“Certifications” → /app/admin/certifications
+
+Page layout
+
+Header: “Certifications”
+
+Cards:
+
+Latest P2 Operator Certification
+
+Overall status badge (PASS/HELD/FAIL)
+
+generated_at
+
+proof sha256
+
+base_url
+
+started_at / finished_at
+
+Module Results (Table)
+Columns:
+
+Module
+
+Required (Yes/No)
+
+Status (PASS/HELD/FAIL)
+
+Checks passed/held/failed counts
+
+Checks (Expandable)
+For each module:
+
+list checks with status + detail
+
+Evidence (collapsed)
+
+IDs JSON viewer (use <pre> with max height and scroll)
+
+Link to “Usage” page (/app/admin/usage) for monetization view
+
+Missing cert UX
+
+If endpoint returns not available:
+
+Show empty state:
+
+“No certification artifact is available in this environment.”
+
+“Run QA + SCM ingest to generate artifacts.”
+
+4) UI components
+
+Use shadcn:
+
+Card, Badge, Table, Accordion, Separator, Button
+
+For JSON: <pre className="text-xs overflow-auto max-h-64 bg-muted p-3 rounded">
+
+No styling beyond defaults.
+
+5) Guardrails
+
+Run assertNoForbiddenPricingCopy in DEV
+
+No currency display required
+
+6) Acceptance criteria
+
+/app/admin/certifications route renders
+
+Shows latest cert when file exists
+
+Shows friendly empty state when not
+
+No crashes if fields missing
+
+Admin nav updated
+
+Implement exactly.

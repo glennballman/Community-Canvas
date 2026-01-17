@@ -21,6 +21,7 @@ import {
   Building2,
   Users,
   BarChart3,
+  ShieldCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -90,6 +91,7 @@ export const V3_NAV: NavSection[] = [
     items: [
       { icon: Settings, label: 'Admin', href: '/app/admin', testId: 'nav-admin' },
       { icon: BarChart3, label: 'Usage', href: '/app/admin/usage', testId: 'nav-usage' },
+      { icon: ShieldCheck, label: 'Certifications', href: '/app/admin/certifications', testId: 'nav-certifications' },
       { icon: Building2, label: 'Operator', href: '/app/operator', testId: 'nav-operator' },
       { icon: Building2, label: 'Portals', href: '/app/admin/portals', testId: 'nav-portals' },
       { icon: Users, label: 'Tenants', href: '/app/admin/tenants', testId: 'nav-tenants' },

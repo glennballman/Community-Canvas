@@ -85,6 +85,7 @@ import JobsPage from './pages/app/JobsPage';
 import EnforcementPage from './pages/app/EnforcementPage';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
+import CertificationsPage from './pages/app/admin/CertificationsPage';
 import OperatorHomePage from './pages/app/operator/OperatorHomePage';
 import OperatorEmergencyIndexPage from './pages/app/operator/OperatorEmergencyIndexPage';
 import OperatorEmergencyRunPage from './pages/app/operator/OperatorEmergencyRunPage';
@@ -254,6 +255,7 @@ export default function App() {
                 <Route path="operator/authority/grants/:grantId" element={<OperatorAuthorityGrantPage />} />
                 <Route path="operator/audit" element={<OperatorAuditPage />} />
                 <Route path="admin/usage" element={<UsageSummaryPage />} />
+                <Route path="admin/certifications" element={<CertificationsPage />} />
                 <Route path="admin/portals" element={<PortalsPage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />
                 
