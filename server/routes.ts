@@ -93,6 +93,12 @@ import qaRouter from "./routes/qa";
 import monetizationRouter from "./routes/monetization";
 import scmRouter from "./routes/scm";
 import drillsRouter from "./routes/drills";
+import publicJobsRouter from "./routes/public-jobs";
+import jobsRouter from "./routes/jobs";
+import moderationJobsRouter from "./routes/moderation-jobs";
+import embedsRouter from "./routes/embeds";
+import jobIngestionRouter from "./routes/job-ingestion";
+import documentTemplatesRouter from "./routes/document-templates";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -322,6 +328,26 @@ export async function registerRoutes(
   // Mount at both standard path and /b/:slug dev path for portal resolution
   app.use('/api/public', publicPortalRouter);
   app.use('/b/:portalSlug/api/public', publicPortalRouter);
+
+  // Register jobs backend routes (Migration 140)
+  // Public jobs API (portal-scoped, no auth)
+  app.use('/api/public', publicJobsRouter);
+  app.use('/b/:portalSlug/api/public', publicJobsRouter);
+  
+  // Tenant/employer job management API (tenant auth required)
+  app.use('/api/p2/app/jobs', jobsRouter);
+  
+  // Portal moderation API (portal staff auth required)
+  app.use('/api/p2/moderation/jobs', moderationJobsRouter);
+  
+  // Embed widget API (embed key auth, CORS enabled)
+  app.use('/api/embed', embedsRouter);
+  
+  // Job ingestion API (tenant auth required)
+  app.use('/api/p2/app/jobs', jobIngestionRouter);
+  
+  // Document templates API (tenant auth required)
+  app.use('/api/p2/app/document-templates', documentTemplatesRouter);
 
   // Register user context routes (auth required)
   app.use('/api', userContextRouter);
