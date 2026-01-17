@@ -5,20 +5,26 @@
  * This is currently DISABLED by default - all tier functionality requires the
  * 'job_tiers_enabled' feature flag to be set to true.
  * 
+ * Scope Precedence (for feature flags):
+ * 1. portal-scoped (highest priority)
+ * 2. tenant-scoped
+ * 3. global (lowest priority)
+ * 
  * Attention Tiers:
  * - standard: Default, no additional cost
- * - featured: Highlighted in search results (+$1.00/day)
- * - urgent: Urgent badge for 7 days ($7 flat)
+ * - featured: Highlighted in search results (incremental pricing per day/month)
+ * - urgent: Urgent badge, timeboxed to 7 days max (flat pricing)
  * 
  * Assistance Tiers:
  * - none: Default, no additional cost
- * - assisted: Platform screening assistance ($9/month)
+ * - assisted: Platform screening assistance (monthly pricing)
  */
 
-import { serviceQuery } from '../../db/tenantDb';
+import { getBooleanFlag, FlagScope } from '../featureFlags';
 
 export type AttentionTier = 'standard' | 'featured' | 'urgent';
 export type AssistanceTier = 'none' | 'assisted';
+export type BillingInterval = 'day' | 'month' | 'flat';
 
 export interface TierPricing {
   priceCentsPerDay?: number;
@@ -30,13 +36,40 @@ export interface TierPricing {
 }
 
 export interface TieringConfig {
-  attentionTiers: Record<string, TierPricing>;
-  assistanceTiers: Record<string, TierPricing>;
+  attentionTiers?: Record<string, TierPricing>;
+  assistanceTiers?: Record<string, TierPricing>;
+  attention_tiers?: Record<string, any>;
+  assistance_tiers?: Record<string, any>;
 }
 
-export interface TieringAvailability {
+export interface AttentionTierInfo {
+  key: AttentionTier;
+  label: string;
+  description: string;
+  incrementalPriceCents: number;
+  unit: BillingInterval;
+  durationDays?: number;
+  notes?: string;
+}
+
+export interface AssistanceTierInfo {
+  key: AssistanceTier;
+  label: string;
+  incrementalPriceCents: number;
+  unit: BillingInterval;
+  notes?: string;
+}
+
+export interface TieringPayload {
   enabled: boolean;
-  attentionTiers: {
+  source: FlagScope;
+  currency: string;
+  attentionTiers: AttentionTierInfo[];
+  assistanceTiers: AssistanceTierInfo[];
+}
+
+export interface TieringAvailability extends TieringPayload {
+  attentionTiersLegacy: {
     tier: AttentionTier;
     label: string;
     description: string;
@@ -44,7 +77,7 @@ export interface TieringAvailability {
     priceCentsFlat?: number;
     durationDays?: number;
   }[];
-  assistanceTiers: {
+  assistanceTiersLegacy: {
     tier: AssistanceTier;
     label: string;
     description: string;
@@ -52,31 +85,47 @@ export interface TieringAvailability {
   }[];
 }
 
-const DEFAULT_TIER_CONFIG: TieringConfig = {
-  attentionTiers: {
-    featured: {
-      priceCentsPerDay: 100,
-      label: 'Featured Job',
-      description: 'Highlighted in search results'
-    },
-    urgent: {
-      priceCentsFlat: 700,
-      durationDays: 7,
-      label: 'Urgently Hiring',
-      description: 'Urgent badge for 7 days'
-    }
-  },
-  assistanceTiers: {
-    assisted: {
-      priceCentsPerMonth: 900,
-      label: 'Assisted Hiring',
-      description: 'Platform screening assistance'
-    }
-  }
+const DEFAULT_TIER_PRICING = {
+  featured_daily_cents: 100,
+  featured_monthly_cents: 1000,
+  urgent_flat_cents: 700,
+  urgent_duration_days: 7,
+  assisted_monthly_cents: 900
 };
+
+function parseConfigPricing(config: any): typeof DEFAULT_TIER_PRICING {
+  if (!config) return DEFAULT_TIER_PRICING;
+
+  const attentionTiers = config.attention_tiers || config.attentionTiers || {};
+  const assistanceTiers = config.assistance_tiers || config.assistanceTiers || {};
+
+  return {
+    featured_daily_cents: 
+      attentionTiers.featured?.price_cents_per_day ||
+      attentionTiers.featured?.priceCentsPerDay ||
+      DEFAULT_TIER_PRICING.featured_daily_cents,
+    featured_monthly_cents:
+      attentionTiers.featured?.price_cents_per_month ||
+      attentionTiers.featured?.priceCentsPerMonth ||
+      DEFAULT_TIER_PRICING.featured_monthly_cents,
+    urgent_flat_cents:
+      attentionTiers.urgent?.price_cents_flat ||
+      attentionTiers.urgent?.priceCentsFlat ||
+      DEFAULT_TIER_PRICING.urgent_flat_cents,
+    urgent_duration_days:
+      attentionTiers.urgent?.duration_days ||
+      attentionTiers.urgent?.durationDays ||
+      DEFAULT_TIER_PRICING.urgent_duration_days,
+    assisted_monthly_cents:
+      assistanceTiers.assisted?.price_cents_per_month ||
+      assistanceTiers.assisted?.priceCentsPerMonth ||
+      DEFAULT_TIER_PRICING.assisted_monthly_cents
+  };
+}
 
 /**
  * Check if job tiering is enabled and get available tiers
+ * Scope precedence: portal > tenant > global > default(false)
  */
 export async function getTieringAvailability(params: {
   tenantId?: string;
@@ -85,61 +134,82 @@ export async function getTieringAvailability(params: {
   const { tenantId, portalId } = params;
 
   try {
-    const result = await serviceQuery(`
-      SELECT is_enabled, config
-      FROM cc_feature_flags
-      WHERE key = 'job_tiers_enabled'
-        AND (
-          (scope_type = 'global' AND scope_id IS NULL)
-          OR (scope_type = 'portal' AND scope_id = $1)
-          OR (scope_type = 'tenant' AND scope_id = $2)
-        )
-      ORDER BY 
-        CASE scope_type 
-          WHEN 'tenant' THEN 1 
-          WHEN 'portal' THEN 2 
-          WHEN 'global' THEN 3 
-        END
-      LIMIT 1
-    `, [portalId || null, tenantId || null]);
+    const flagResult = await getBooleanFlag('job_tiers_enabled', { tenantId, portalId });
+    const enabled = flagResult.enabled;
+    const source = flagResult.source;
+    const pricing = parseConfigPricing(flagResult.config);
 
-    const flag = result.rows[0];
-    const enabled = flag?.is_enabled || false;
-    const config: TieringConfig = flag?.config || DEFAULT_TIER_CONFIG;
+    const attentionTiers: AttentionTierInfo[] = [
+      {
+        key: 'standard',
+        label: 'Standard',
+        description: 'Default visibility',
+        incrementalPriceCents: 0,
+        unit: 'day'
+      },
+      {
+        key: 'featured',
+        label: 'Featured Job',
+        description: 'Highlighted in search results',
+        incrementalPriceCents: pricing.featured_daily_cents,
+        unit: 'day',
+        notes: `or $${(pricing.featured_monthly_cents / 100).toFixed(2)}/month`
+      },
+      {
+        key: 'urgent',
+        label: 'Urgently Hiring',
+        description: `Urgent badge for ${pricing.urgent_duration_days} days`,
+        incrementalPriceCents: pricing.urgent_flat_cents,
+        unit: 'flat',
+        durationDays: pricing.urgent_duration_days
+      }
+    ];
+
+    const assistanceTiers: AssistanceTierInfo[] = [
+      {
+        key: 'none',
+        label: 'Self-Service',
+        incrementalPriceCents: 0,
+        unit: 'month'
+      },
+      {
+        key: 'assisted',
+        label: 'Assisted Hiring',
+        incrementalPriceCents: pricing.assisted_monthly_cents,
+        unit: 'month',
+        notes: 'Platform screening assistance'
+      }
+    ];
 
     return {
       enabled,
-      attentionTiers: [
-        {
-          tier: 'standard',
-          label: 'Standard',
-          description: 'Default visibility'
+      source,
+      currency: 'CAD',
+      attentionTiers,
+      assistanceTiers,
+      attentionTiersLegacy: [
+        { tier: 'standard', label: 'Standard', description: 'Default visibility' },
+        { 
+          tier: 'featured', 
+          label: 'Featured Job', 
+          description: 'Highlighted in search results',
+          priceCentsPerDay: pricing.featured_daily_cents
         },
-        {
-          tier: 'featured',
-          label: config.attentionTiers?.featured?.label || 'Featured Job',
-          description: config.attentionTiers?.featured?.description || 'Highlighted in search results',
-          priceCentsPerDay: config.attentionTiers?.featured?.priceCentsPerDay || 100
-        },
-        {
-          tier: 'urgent',
-          label: config.attentionTiers?.urgent?.label || 'Urgently Hiring',
-          description: config.attentionTiers?.urgent?.description || 'Urgent badge for 7 days',
-          priceCentsFlat: config.attentionTiers?.urgent?.priceCentsFlat || 700,
-          durationDays: config.attentionTiers?.urgent?.durationDays || 7
+        { 
+          tier: 'urgent', 
+          label: 'Urgently Hiring', 
+          description: `Urgent badge for ${pricing.urgent_duration_days} days`,
+          priceCentsFlat: pricing.urgent_flat_cents,
+          durationDays: pricing.urgent_duration_days
         }
       ],
-      assistanceTiers: [
-        {
-          tier: 'none',
-          label: 'Self-Service',
-          description: 'Manage applications yourself'
-        },
-        {
-          tier: 'assisted',
-          label: config.assistanceTiers?.assisted?.label || 'Assisted Hiring',
-          description: config.assistanceTiers?.assisted?.description || 'Platform screening assistance',
-          priceCentsPerMonth: config.assistanceTiers?.assisted?.priceCentsPerMonth || 900
+      assistanceTiersLegacy: [
+        { tier: 'none', label: 'Self-Service', description: 'Manage applications yourself' },
+        { 
+          tier: 'assisted', 
+          label: 'Assisted Hiring', 
+          description: 'Platform screening assistance',
+          priceCentsPerMonth: pricing.assisted_monthly_cents
         }
       ]
     };
@@ -147,35 +217,66 @@ export async function getTieringAvailability(params: {
     console.error('[tiering] Error fetching tier availability:', error);
     return {
       enabled: false,
+      source: 'default',
+      currency: 'CAD',
       attentionTiers: [
-        { tier: 'standard', label: 'Standard', description: 'Default visibility' }
+        { key: 'standard', label: 'Standard', description: 'Default visibility', incrementalPriceCents: 0, unit: 'day' }
       ],
       assistanceTiers: [
+        { key: 'none', label: 'Self-Service', incrementalPriceCents: 0, unit: 'month' }
+      ],
+      attentionTiersLegacy: [
+        { tier: 'standard', label: 'Standard', description: 'Default visibility' }
+      ],
+      assistanceTiersLegacy: [
         { tier: 'none', label: 'Self-Service', description: 'Manage applications yourself' }
       ]
     };
   }
 }
 
-/**
- * Compute incremental tier price (base portal price NOT included)
- * Returns 0 if tiering is disabled
- */
-export async function computeTierPrice(params: {
+export interface TierPriceParams {
   tenantId?: string;
   portalId?: string;
   attentionTier: AttentionTier;
   assistanceTier: AssistanceTier;
-  durationDays?: number;
-}): Promise<{
+  baseBillingInterval?: BillingInterval;
+  baseDurationDays?: number;
+}
+
+export interface TierPriceResult {
   tierPriceCents: number;
   breakdown: {
     attentionPriceCents: number;
     assistancePriceCents: number;
+    attentionTier: AttentionTier;
+    assistanceTier: AssistanceTier;
   };
+  urgentEndsAt?: string;
   enabled: boolean;
-}> {
-  const { tenantId, portalId, attentionTier, assistanceTier, durationDays = 30 } = params;
+  source: FlagScope;
+  warning?: string;
+}
+
+/**
+ * Compute incremental tier price (base portal price NOT included)
+ * Returns 0 if tiering is disabled
+ * 
+ * Pricing logic:
+ * - featured (daily): incrementalPriceCents * baseDurationDays
+ * - featured (monthly): featured_monthly_cents
+ * - urgent: flat price, urgentEndsAt = now + min(7, baseDurationDays)
+ * - assisted: monthly price (doesn't affect publication dates)
+ */
+export async function computeTierPrice(params: TierPriceParams): Promise<TierPriceResult> {
+  const { 
+    tenantId, 
+    portalId, 
+    attentionTier, 
+    assistanceTier, 
+    baseBillingInterval = 'day',
+    baseDurationDays = 30 
+  } = params;
 
   const availability = await getTieringAvailability({ tenantId, portalId });
 
@@ -184,32 +285,45 @@ export async function computeTierPrice(params: {
       tierPriceCents: 0,
       breakdown: {
         attentionPriceCents: 0,
-        assistancePriceCents: 0
+        assistancePriceCents: 0,
+        attentionTier,
+        assistanceTier
       },
-      enabled: false
+      enabled: false,
+      source: availability.source,
+      warning: 'TIERS_DISABLED'
     };
   }
 
   let attentionPriceCents = 0;
   let assistancePriceCents = 0;
+  let urgentEndsAt: string | undefined;
 
   if (attentionTier === 'featured') {
-    const featuredTier = availability.attentionTiers.find(t => t.tier === 'featured');
-    if (featuredTier?.priceCentsPerDay) {
-      attentionPriceCents = featuredTier.priceCentsPerDay * durationDays;
+    const featuredTier = availability.attentionTiers.find(t => t.key === 'featured');
+    if (featuredTier) {
+      if (baseBillingInterval === 'day') {
+        attentionPriceCents = featuredTier.incrementalPriceCents * baseDurationDays;
+      } else if (baseBillingInterval === 'month') {
+        attentionPriceCents = DEFAULT_TIER_PRICING.featured_monthly_cents;
+      }
     }
   } else if (attentionTier === 'urgent') {
-    const urgentTier = availability.attentionTiers.find(t => t.tier === 'urgent');
-    if (urgentTier?.priceCentsFlat) {
-      attentionPriceCents = urgentTier.priceCentsFlat;
+    const urgentTier = availability.attentionTiers.find(t => t.key === 'urgent');
+    if (urgentTier) {
+      attentionPriceCents = urgentTier.incrementalPriceCents;
+      const urgentDays = Math.min(urgentTier.durationDays || 7, baseDurationDays);
+      const urgentEnd = new Date();
+      urgentEnd.setDate(urgentEnd.getDate() + urgentDays);
+      urgentEndsAt = urgentEnd.toISOString();
     }
   }
 
   if (assistanceTier === 'assisted') {
-    const assistedTier = availability.assistanceTiers.find(t => t.tier === 'assisted');
-    if (assistedTier?.priceCentsPerMonth) {
-      const months = Math.ceil(durationDays / 30);
-      assistancePriceCents = assistedTier.priceCentsPerMonth * months;
+    const assistedTier = availability.assistanceTiers.find(t => t.key === 'assisted');
+    if (assistedTier) {
+      const months = baseBillingInterval === 'month' ? 1 : Math.ceil(baseDurationDays / 30);
+      assistancePriceCents = assistedTier.incrementalPriceCents * months;
     }
   }
 
@@ -217,9 +331,13 @@ export async function computeTierPrice(params: {
     tierPriceCents: attentionPriceCents + assistancePriceCents,
     breakdown: {
       attentionPriceCents,
-      assistancePriceCents
+      assistancePriceCents,
+      attentionTier,
+      assistanceTier
     },
-    enabled: true
+    urgentEndsAt,
+    enabled: true,
+    source: availability.source
   };
 }
 

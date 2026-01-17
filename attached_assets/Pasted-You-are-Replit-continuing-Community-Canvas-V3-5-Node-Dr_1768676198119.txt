@@ -1,0 +1,213 @@
+You are Replit continuing Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+
+MISSION
+Apply 4 “don’t get burned” hardening checks for the Jobs tiering scaffold.
+This is NOT a refactor. Only additive + small guarded changes.
+Tiering remains DISABLED by default unless feature flag(s) enable it.
+
+HARD RULES
+- NEVER use banned terminology: “book”, “booking”, “booked”, “bookings”, “booker” anywhere (UI copy, docs, code, tests).
+- Use schema.org semantics where relevant.
+- Do NOT redesign endpoints; only extend response payloads and add minimal new columns if unavoidable.
+- Preserve API envelope: { ok, error?, ...data }.
+- Preserve existing behavior when tiers disabled.
+- No payment provider integration. No subscriptions. No PPC. No credits.
+
+CURRENT STATE (AUTHORITATIVE)
+Tier scaffold is implemented (Migration 142):
+- enums job_attention_tier, job_assistance_tier
+- tier columns on cc_paid_publication_intents
+- cc_feature_flags + RLS
+- job_tiers_enabled flag (global; currently disabled)
+Backend:
+- tiering service getTieringAvailability + computeTierPrice
+- admin endpoints /api/p2/admin/feature-flags
+- publish endpoint accepts tier fields, ignores when disabled
+Frontend:
+- disabled “Boost visibility” and “Save time” sections (coming soon)
+Tests:
+- tests/tiering-scaffold.test.ts
+
+GOAL
+Implement + verify 4 operational hardening checks:
+1) Feature flag scope precedence (global vs portal vs tenant)
+2) Deterministic tier pricing source (no hardcoded UI prices)
+3) Tier + duration compatibility (daily/monthly + urgent timebox)
+4) Auditability + copy enforcement (pricing breakdown + scan coverage)
+
+STEP 0 — HARD CHECKS (PRINT RESULTS BEFORE CHANGES)
+A) Show cc_feature_flags schema and current RLS policies.
+B) Show paid intent schema (cc_paid_publication_intents) including tier columns.
+C) Identify the destinations endpoint implementation:
+   GET /api/p2/app/jobs/:id/destinations
+   and publish endpoint:
+   POST /api/p2/app/jobs/:id/publish
+D) Identify where the UI currently displays tier prices (if any). Confirm whether any tier price strings are hardcoded.
+
+--------------------------------------------------------------------------------
+CHECK 1 — Feature Flag Scope + Precedence
+--------------------------------------------------------------------------------
+REQUIREMENT
+getTieringAvailability({ tenantId, portalId }) must resolve flags in this order:
+1) portal-scoped (scope_type='portal' AND scope_id=portalId)
+2) tenant-scoped (scope_type='tenant' AND scope_id=tenantId)
+3) global (scope_type='global' AND scope_id IS NULL)
+Default false.
+
+IMPLEMENTATION
+1) Update tiering service to fetch flags with the precedence above.
+2) Add helper in server/services/featureFlags.ts (if not present):
+   - getBooleanFlag(key, { tenantId?, portalId? }): { enabled:boolean, source:'portal'|'tenant'|'global'|'default', config?:json }
+3) Ensure admin endpoints can create/update flags for any scope_type.
+
+TESTS
+Add tests:
+- global true + portal false => enabled=false, source=portal
+- tenant true + portal false => enabled=false, source=portal
+- portal true => enabled=true, source=portal
+- only global true => enabled=true, source=global
+- none => enabled=false, source=default
+
+--------------------------------------------------------------------------------
+CHECK 2 — Deterministic Tier Pricing Source (No UI Hardcodes)
+--------------------------------------------------------------------------------
+REQUIREMENT
+UI must display tier prices based on server payload from the destinations endpoint.
+No hardcoded tier prices in React components.
+
+IMPLEMENTATION (Server)
+1) Extend GET /api/p2/app/jobs/:id/destinations response to include for each PAID portal:
+   - tiering: {
+       enabled: boolean,
+       source: 'portal'|'tenant'|'global'|'default',
+       currency: 'CAD',
+       attentionTiers: [
+         { key:'standard', label:'Standard', incrementalPriceCents:0, unit:'day'|'month'|'flat', notes?:string },
+         { key:'featured', label:'Featured Job', incrementalPriceCents:<from config>, unit:'day'|'month', notes?:string },
+         { key:'urgent', label:'Urgently hiring', incrementalPriceCents:<from config>, unit:'flat', durationDays:7, notes?:string }
+       ],
+       assistanceTiers: [
+         { key:'none', label:'None', incrementalPriceCents:0, unit:'month' },
+         { key:'assisted', label:'Assisted hiring', incrementalPriceCents:<from config>, unit:'month', notes?:string }
+       ]
+     }
+2) Pricing config source:
+   - Prefer cc_feature_flags.config for key 'job_tiers_enabled' at the resolved scope.
+   - If no config provided, use safe defaults (all incremental prices 0, or keep tiers disabled).
+   - DO NOT rely on UI constants.
+
+Implement defaults in code (server-side only) as:
+config defaults when enabled:
+- featured_daily_cents = 100   ($1.00/day)
+- featured_monthly_cents = 1000 ($10/month)
+- urgent_flat_cents = 700     ($7 flat, 7 days)
+- assisted_monthly_cents = 900 ($9/month)
+Currency = CAD
+
+3) Ensure paid portal base pricing remains exactly as currently configured (do not change existing AdrenalineCanada base price logic).
+This check is only about tier incremental pricing.
+
+IMPLEMENTATION (Client)
+1) Update the disabled “Boost visibility” / “Save time” sections to read prices from destinations payload:
+   - If tiering payload absent => show “Coming soon” with no prices.
+   - If present => show formatted amounts (CAD) from payload.
+2) Ensure no hardcoded "$" values for tier prices remain.
+
+TESTS
+- API test: destinations endpoint includes tiering payload for paid portal
+- UI test (if you have component tests; otherwise a shallow render sanity test):
+  confirm rendered strings come from mocked payload values, not constants.
+
+--------------------------------------------------------------------------------
+CHECK 3 — Tier + Duration Compatibility (Daily vs Monthly + Urgent Timebox)
+--------------------------------------------------------------------------------
+REQUIREMENT
+Tier pricing must be incremental and consistent with publication duration.
+Urgent is timeboxed to 7 days max and must not silently extend paid placement end date.
+
+IMPLEMENTATION
+1) Add additive fields to cc_paid_publication_intents to support urgent timebox without refactor:
+   OPTION A (preferred minimal): store in existing tier_metadata JSONB:
+     { urgentEndsAt: <timestamp>, baseBillingInterval:'day'|'month', baseDurationDays:<int> }
+   OPTION B (add columns if JSONB not used elsewhere):
+     urgent_ends_at TIMESTAMP NULL
+     base_billing_interval TEXT NULL CHECK in ('day','month')
+     base_duration_days INT NULL
+Choose A unless a clear reason exists.
+
+2) Update computeTierPrice to:
+- Accept baseBillingInterval ('day'|'month'), baseDurationDays (int)
+- featured:
+  - if baseBillingInterval='day' => featured_daily_cents * baseDurationDays
+  - if baseBillingInterval='month' => featured_monthly_cents
+- urgent:
+  - flat urgent_flat_cents
+  - set urgentEndsAt = now() + min(7 days, baseDurationDays days if daily; or 7 days within month)
+- assisted:
+  - assisted_monthly_cents (does not affect publication dates)
+
+3) In publish flow (when tiers enabled):
+- Store tiers + tier_price_cents
+- Store urgentEndsAt in tier_metadata if urgent selected
+- Do NOT change base publication end dates.
+
+TESTS
+- Daily base (e.g., 10 days) + featured => tier_price_cents = 100*10
+- Monthly base + featured => tier_price_cents = 1000
+- Any base + urgent => tier_price_cents includes +700 and urgentEndsAt set (<= now+7d)
+- When tiers disabled => tier_price_cents remains 0 and urgentEndsAt not set (or absent)
+
+--------------------------------------------------------------------------------
+CHECK 4 — Auditability + Copy Enforcement
+--------------------------------------------------------------------------------
+REQUIREMENT
+When publish is called, response must include a pricing breakdown suitable for receipts/audit,
+even if tiers disabled (then tier values are 0 and warning indicates disabled).
+
+IMPLEMENTATION
+1) Extend POST /api/p2/app/jobs/:id/publish response with:
+- pricing: {
+    currency: 'CAD',
+    basePriceCents: <existing base portal price>,
+    tierPriceCents: <computed incremental; 0 if disabled>,
+    totalPriceCents: base + tier,
+    breakdown: {
+      portal: { portalId, name, basePriceCents, billingInterval:'day'|'month', durationDays },
+      tiers: { attentionTier, assistanceTier, tierPriceCents, urgentEndsAt? },
+      flags: { tiersEnabled:boolean, source }
+    }
+  }
+2) Ensure this response addition does not break existing callers (only additive fields).
+
+Copy enforcement:
+3) Update the existing forbidden-words scan to include:
+- docs/*.md (including new docs)
+- server/**/*.ts
+- client/**/*.tsx
+- tests/**/*.ts
+If a scan already exists, just expand its file globs. Do NOT rename scripts.
+
+TESTS
+- publish returns pricing.breakdown always
+- when tiers disabled => warning:'TIERS_DISABLED' present and tierPriceCents=0
+
+--------------------------------------------------------------------------------
+DOCS UPDATE
+Update docs/FUTURE_JOB_TIERING_SCAFFOLD.md to add:
+- precedence rules
+- config keys and defaults (in feature flag config JSON)
+- example flag records (global/portal/tenant)
+- warning behavior when disabled
+
+RUN + VERIFY
+- npx vitest run tests/tiering-scaffold.test.ts tests/tiering-scaffold-hardening.test.ts
+- Ensure lint + forbidden words scan passes.
+
+OUTPUT
+At end, print:
+- files changed
+- migration applied (if any)
+- test commands + pass confirmation
+- explicit statement: “Default behavior unchanged when tiers disabled.”
+
+STOP.
