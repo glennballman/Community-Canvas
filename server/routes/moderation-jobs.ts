@@ -1,10 +1,10 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
 
 const router = express.Router();
 
-router.get('/pending', async (req: Request, res: Response) => {
+async function requirePortalStaff(req: Request, res: Response, next: NextFunction) {
   const tenantReq = req as TenantRequest;
   const ctx = tenantReq.ctx;
 
@@ -15,6 +15,54 @@ router.get('/pending', async (req: Request, res: Response) => {
       message: 'Moderation requires portal context'
     });
   }
+
+  if (!ctx?.individual_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'AUTH_REQUIRED',
+      message: 'Authentication required for moderation actions'
+    });
+  }
+
+  try {
+    const staffCheck = await serviceQuery(`
+      SELECT 1 FROM cc_portal_staff ps
+      WHERE ps.portal_id = $1 
+        AND ps.individual_id = $2
+        AND ps.is_active = true
+        AND (ps.role IN ('admin', 'moderator', 'staff') OR ps.can_moderate_content = true)
+      UNION
+      SELECT 1 FROM cc_tenant_memberships tm
+      JOIN cc_portals p ON p.tenant_id = tm.tenant_id
+      WHERE p.id = $1 
+        AND tm.individual_id = $2 
+        AND tm.is_active = true
+        AND tm.role IN ('admin', 'owner')
+    `, [ctx.portal_id, ctx.individual_id]);
+
+    if (staffCheck.rows.length === 0) {
+      return res.status(403).json({
+        ok: false,
+        error: 'PORTAL_STAFF_REQUIRED',
+        message: 'Portal staff or admin access required for moderation'
+      });
+    }
+
+    next();
+  } catch (error: any) {
+    console.error('Portal staff check error:', error);
+    return res.status(500).json({
+      ok: false,
+      error: 'Failed to verify authorization'
+    });
+  }
+}
+
+router.use(requirePortalStaff);
+
+router.get('/pending', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
 
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);

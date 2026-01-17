@@ -188,6 +188,7 @@ router.get('/feed/:embedKey', async (req: Request, res: Response) => {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Vary', 'Origin');
     }
 
     res.json({
@@ -216,6 +217,7 @@ router.options('/feed/:embedKey', (req: Request, res: Response) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Vary', 'Origin');
   }
   res.status(204).send();
 });

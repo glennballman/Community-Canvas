@@ -423,16 +423,54 @@ router.post('/:id/postings', async (req: Request, res: Response) => {
     }
 
     const policyResult = await serviceQuery(`
-      SELECT portal_id, requires_moderation 
-      FROM cc_portal_distribution_policies 
-      WHERE portal_id = ANY($1)
+      SELECT pdp.portal_id, pdp.requires_moderation, pdp.is_accepting_job_postings,
+             pdp.accepts_external_postings,
+             p.tenant_id as portal_tenant_id
+      FROM cc_portal_distribution_policies pdp
+      JOIN cc_portals p ON p.id = pdp.portal_id
+      WHERE pdp.portal_id = ANY($1)
     `, [portalIds]);
 
-    const policyMap = new Map(policyResult.rows.map((r: any) => [r.portal_id, r.requires_moderation]));
+    const policyMap = new Map<string, { 
+      requiresModeration: boolean; 
+      isAccepting: boolean; 
+      acceptsExternal: boolean;
+      portalTenantId: string | null 
+    }>();
+    for (const row of policyResult.rows) {
+      policyMap.set(row.portal_id, {
+        requiresModeration: row.requires_moderation,
+        isAccepting: row.is_accepting_job_postings,
+        acceptsExternal: row.accepts_external_postings ?? true,
+        portalTenantId: row.portal_tenant_id
+      });
+    }
 
+    const rejectedPortals: { portalId: string; reason: string }[] = [];
     const postingResults = [];
+
     for (const portalId of portalIds) {
-      const requiresModeration = policyMap.get(portalId) ?? false;
+      const policy = policyMap.get(portalId);
+      
+      if (!policy) {
+        rejectedPortals.push({ portalId, reason: 'PORTAL_NOT_FOUND' });
+        continue;
+      }
+
+      if (!policy.isAccepting) {
+        rejectedPortals.push({ portalId, reason: 'NOT_ACCEPTING_POSTINGS' });
+        continue;
+      }
+
+      const isTenantOwnedPortal = policy.portalTenantId === ctx.tenant_id;
+      const canPostExternal = policy.acceptsExternal;
+
+      if (!isTenantOwnedPortal && !canPostExternal) {
+        rejectedPortals.push({ portalId, reason: 'EXTERNAL_POSTINGS_NOT_ALLOWED' });
+        continue;
+      }
+
+      const requiresModeration = policy.requiresModeration;
       const publishState = requiresModeration ? 'pending_review' : 'published';
       const publishedAt = requiresModeration ? null : new Date();
 
@@ -451,7 +489,11 @@ router.post('/:id/postings', async (req: Request, res: Response) => {
 
     res.status(201).json({
       ok: true,
-      postings: postingResults
+      postings: postingResults,
+      rejectedPortals: rejectedPortals.length > 0 ? rejectedPortals : undefined,
+      message: rejectedPortals.length > 0 
+        ? `${postingResults.length} postings created. ${rejectedPortals.length} portal(s) rejected.`
+        : undefined
     });
 
   } catch (error: any) {

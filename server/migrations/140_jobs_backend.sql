@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS cc_portal_distribution_policies (
   portal_id uuid PRIMARY KEY REFERENCES cc_portals(id) ON DELETE CASCADE,
   is_accepting_job_postings boolean NOT NULL DEFAULT true,
   requires_moderation boolean NOT NULL DEFAULT false,
+  accepts_external_postings boolean NOT NULL DEFAULT true,
   pricing_model text NOT NULL DEFAULT 'free',
   price_hint text,
   default_selected boolean NOT NULL DEFAULT true,
