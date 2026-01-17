@@ -255,6 +255,14 @@ function main(): void {
   for (const [name, mod] of Object.entries(modules)) {
     mdLines.push(`### ${name} (${mod.status})`);
     mdLines.push(``);
+    // Add human-readable "why HELD" summary for authority
+    if (name === "authority" && mod.status === "HELD") {
+      const noGrantCheck = mod.checks.find((c) => c.name === "authority.grantIdPresent");
+      if (noGrantCheck) {
+        mdLines.push(`> **Authority HELD**: share succeeded but no grantId was returned, so revoke could not be proven.`);
+        mdLines.push(``);
+      }
+    }
     for (const c of mod.checks) {
       mdLines.push(`- ${c.status}: ${c.name}${c.detail ? ` — ${c.detail}` : ""}`);
     }

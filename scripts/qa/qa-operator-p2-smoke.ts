@@ -147,7 +147,7 @@ async function main() {
       const share = await p2<{ grantId?: string; accessUrl?: string; expiresAt?: string }>(
         "POST",
         `/api/operator/p2/emergency/runs/${start.runId}/share-authority`,
-        { scope: "run_only" }
+        { scope: "run_only", returnGrantId: true }
       );
       proof.steps.push({ step: "emergency.shareAuthority", ok: true, grantId: share.grantId, accessUrl: share.accessUrl });
       emergencyGrantId = share.grantId;
