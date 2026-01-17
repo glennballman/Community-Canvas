@@ -26,7 +26,7 @@ export default function HospitalityPage() {
             <p className="font-medium mb-2">Next actions:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Room/unit inventory</li>
-              <li>Booking calendar</li>
+              <li>Reservation calendar</li>
               <li>Guest management</li>
               <li>Housekeeping schedules</li>
             </ul>

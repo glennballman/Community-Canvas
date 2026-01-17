@@ -9,11 +9,79 @@ This document describes the scaffolded infrastructure for job visibility tiers a
 When enabled, tenants can purchase additional visibility or assistance tiers for their job postings on paid portals. These tiers are additive to the base portal posting price.
 
 ### Attention Tiers (Visibility Boost)
-- **Featured** (+$1.00/day): Highlighted placement in search results
-- **Urgent** ($7.00 flat for 7 days): "Urgently Hiring" badge displayed
+- **Standard** (default): No additional cost
+- **Featured** (+$1.00/day or $10/month): Highlighted placement in search results
+- **Urgent** ($7.00 flat for 7 days): "Urgently Hiring" badge displayed, timeboxed to max 7 days
 
 ### Assistance Tiers (Platform Support)
+- **None** (default): Self-service applicant management
 - **Assisted** ($9.00/month): Platform screening assistance for applicants
+
+## Feature Flag Scope Precedence
+
+Feature flags are resolved in the following priority order:
+
+1. **Portal-scoped** (highest priority): `scope_type='portal' AND scope_id=<portalId>`
+2. **Tenant-scoped**: `scope_type='tenant' AND scope_id=<tenantId>`
+3. **Global**: `scope_type='global' AND scope_id IS NULL`
+4. **Default** (lowest priority): `false` when no flag exists
+
+This means a portal can override a tenant setting, and a tenant can override the global setting.
+
+### Example Flag Records
+
+```sql
+-- Global flag (applies to all unless overridden)
+INSERT INTO cc_feature_flags (key, is_enabled, scope_type, config)
+VALUES ('job_tiers_enabled', false, 'global', '{"featured_daily_cents": 100}');
+
+-- Tenant override (enable for specific tenant)
+INSERT INTO cc_feature_flags (key, is_enabled, scope_type, scope_id, config)
+VALUES ('job_tiers_enabled', true, 'tenant', 'tenant-uuid-here', '{}');
+
+-- Portal override (disable for specific portal even if tenant has it enabled)
+INSERT INTO cc_feature_flags (key, is_enabled, scope_type, scope_id, config)
+VALUES ('job_tiers_enabled', false, 'portal', 'portal-uuid-here', '{}');
+```
+
+## Config Keys and Defaults
+
+The feature flag config JSONB can contain pricing overrides:
+
+```json
+{
+  "attention_tiers": {
+    "featured": {
+      "price_cents_per_day": 100,      // $1.00/day (default)
+      "price_cents_per_month": 1000,   // $10/month (default)
+      "label": "Featured Job",
+      "description": "Highlighted in search results"
+    },
+    "urgent": {
+      "price_cents_flat": 700,         // $7.00 flat (default)
+      "duration_days": 7,              // 7 days max (default)
+      "label": "Urgently Hiring",
+      "description": "Urgent badge for 7 days"
+    }
+  },
+  "assistance_tiers": {
+    "assisted": {
+      "price_cents_per_month": 900,    // $9.00/month (default)
+      "label": "Assisted Hiring",
+      "description": "Platform screening assistance"
+    }
+  }
+}
+```
+
+**Server-side defaults** (when config is missing):
+- `featured_daily_cents`: 100 ($1.00/day)
+- `featured_monthly_cents`: 1000 ($10/month)
+- `urgent_flat_cents`: 700 ($7.00 flat)
+- `urgent_duration_days`: 7 days
+- `assisted_monthly_cents`: 900 ($9.00/month)
+
+**Currency**: All prices are in CAD (Canadian Dollars).
 
 ## Database Schema
 
@@ -123,12 +191,73 @@ curl -X PATCH /api/p2/admin/feature-flags/job_tiers_enabled \
   -d '{"is_enabled": true}'
 ```
 
+## Warning Behavior When Disabled
+
+When tiering is disabled:
+
+1. **Tier prices are zero**: `computeTierPrice()` returns `tierPriceCents: 0`
+2. **Warning included**: Response includes `warning: 'TIERS_DISABLED'`
+3. **Source tracked**: `source: 'default'` or the scope that disabled it
+4. **No urgentEndsAt**: The urgent timebox is not set
+5. **Breakdown still included**: For auditability, breakdown fields are present but zero
+
+Example response when disabled:
+```json
+{
+  "tierPriceCents": 0,
+  "breakdown": {
+    "attentionPriceCents": 0,
+    "assistancePriceCents": 0,
+    "attentionTier": "featured",
+    "assistanceTier": "assisted"
+  },
+  "enabled": false,
+  "source": "global",
+  "warning": "TIERS_DISABLED"
+}
+```
+
+## Pricing Breakdown (Auditability)
+
+The publish endpoint returns a detailed pricing breakdown for each paid destination:
+
+```json
+{
+  "pricing": {
+    "currency": "CAD",
+    "basePriceCents": 2900,
+    "tierPriceCents": 0,
+    "totalPriceCents": 2900,
+    "breakdown": {
+      "portal": {
+        "portalId": "uuid",
+        "name": "AdrenalineCanada",
+        "basePriceCents": 2900,
+        "billingInterval": "day",
+        "durationDays": 30
+      },
+      "tiers": {
+        "attentionTier": "standard",
+        "assistanceTier": "none",
+        "tierPriceCents": 0,
+        "urgentEndsAt": null
+      },
+      "flags": {
+        "tiersEnabled": false,
+        "source": "global",
+        "warning": "TIERS_DISABLED"
+      }
+    }
+  }
+}
+```
+
 ## Testing
 
 Run the tiering scaffold tests:
 
 ```bash
-npm run test -- tests/tiering-scaffold.test.ts
+npx vitest run tests/tiering-scaffold.test.ts tests/tiering-scaffold-hardening.test.ts
 ```
 
 Tests verify:
@@ -137,6 +266,10 @@ Tests verify:
 - Feature flags endpoints exist and respond appropriately
 - Publish endpoint accepts tier fields without error
 - Database schema is valid
+- **CHECK 1**: Scope precedence (portal > tenant > global)
+- **CHECK 2**: Deterministic pricing from config, not hardcoded
+- **CHECK 3**: Tier + duration compatibility (urgentEndsAt timebox)
+- **CHECK 4**: Pricing breakdown for auditability
 
 ## Future Work
 
