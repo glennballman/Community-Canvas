@@ -81,8 +81,20 @@ import OpsBoardPage from './pages/app/OpsBoardPage';
 import ParkingPage from './pages/app/ParkingPage';
 import MarinaPage from './pages/app/MarinaPage';
 import HospitalityPage from './pages/app/HospitalityPage';
-import JobsPage from './pages/app/JobsPage';
 import EnforcementPage from './pages/app/EnforcementPage';
+
+// Pages - Jobs (V3.5)
+import JobsIndexPage from './pages/app/jobs/JobsIndexPage';
+import JobEditorPage from './pages/app/jobs/JobEditorPage';
+import JobDestinationsPage from './pages/app/jobs/JobDestinationsPage';
+import PendingPaymentsPage from './pages/app/jobs/PendingPaymentsPage';
+import JobsModerationPage from './pages/app/mod/JobsModerationPage';
+import PaidPublicationsModerationPage from './pages/app/mod/PaidPublicationsModerationPage';
+
+// Pages - Public Jobs Portal
+import PortalJobsPage from './pages/public/PortalJobsPage';
+import PortalJobDetailPage from './pages/public/PortalJobDetailPage';
+import PortalJobApplyPage from './pages/public/PortalJobApplyPage';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
 import CertificationsPage from './pages/app/admin/CertificationsPage';
@@ -201,6 +213,13 @@ export default function App() {
               
               {/* Public Trip Portal - guest-facing trip view */}
               <Route path="/trip/:accessCode" element={<TripPortalPage />} />
+              
+              {/* ========================================== */}
+              {/* PUBLIC JOBS PORTAL - /b/:portalSlug/jobs  */}
+              {/* ========================================== */}
+              <Route path="/b/:portalSlug/jobs" element={<PortalJobsPage />} />
+              <Route path="/b/:portalSlug/jobs/:postingId" element={<PortalJobDetailPage />} />
+              <Route path="/b/:portalSlug/jobs/:postingId/apply" element={<PortalJobApplyPage />} />
 
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}
@@ -230,8 +249,18 @@ export default function App() {
                 <Route path="marina" element={<MarinaPage />} />
                 <Route path="hospitality" element={<HospitalityPage />} />
                 
+                {/* V3.5 Jobs */}
+                <Route path="jobs" element={<JobsIndexPage />} />
+                <Route path="jobs/new" element={<JobEditorPage />} />
+                <Route path="jobs/:id/edit" element={<JobEditorPage />} />
+                <Route path="jobs/:id/destinations" element={<JobDestinationsPage />} />
+                <Route path="jobs/payments/pending" element={<PendingPaymentsPage />} />
+                
+                {/* V3.5 Jobs Moderation */}
+                <Route path="mod/jobs" element={<JobsModerationPage />} />
+                <Route path="mod/paid-publications" element={<PaidPublicationsModerationPage />} />
+                
                 {/* V3 Work */}
-                <Route path="jobs" element={<JobsPage />} />
                 <Route path="work-requests" element={<WorkRequestsList />} />
                 <Route path="services/runs" element={<ServiceRuns />} />
                 <Route path="services/runs/new" element={<CreateServiceRun />} />

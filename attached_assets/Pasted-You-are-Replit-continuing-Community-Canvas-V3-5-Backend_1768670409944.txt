@@ -1,0 +1,163 @@
+You are Replit continuing Community Canvas V3.5. 
+Backend for Jobs + paid portal intents is complete (migrations 140 + 141). 
+Now implement the FRONT-END UI affordances to ship CanadaDirect (free, moderated) + AdrenalineCanada (paid, no moderation) and to support white-labeled “looks native” partner surfaces (embed + micro-portal).
+
+HARD RULES
+- Do NOT refactor backend. UI only (plus minimal route aliases if strictly needed).
+- Respect API envelope { ok, error?, ...data }.
+- Do NOT use the words "book" or "booking" anywhere in UI copy or code identifiers (use reserve/reservation if needed, but this work is jobs-focused).
+- Use existing design system/components and patterns in the repo. Keep styles consistent.
+
+STEP 0 — HARD CHECK (show results first)
+1) List existing UI routes/pages related to:
+   - portals (/b/:slug)
+   - public jobs pages
+   - tenant dashboard jobs
+   - moderation queue
+   - embeds configurator (if any)
+2) List existing API client helpers used in the UI and which router files exist for jobs.
+3) Confirm we have a portal context resolver already used by /b/:slug routes (domain/path resolution).
+Only after printing this report, implement Step 1+.
+
+STEP 1 — Tenant Dashboard: Jobs list + editor + distribution + publish
+Create/extend the tenant dashboard UI (p2/app) with these screens:
+
+A) Jobs Index
+Route: /app/jobs
+- Table/list of jobs: Title, Brand (tenant display name), Location, Publish status summary, Updated.
+- Actions: New Job, Edit, View destinations.
+
+B) Job Editor (create + edit)
+Route: /app/jobs/new and /app/jobs/:id/edit
+UI must support the “sticky note rule” sources:
+- Tabs/buttons at top: Paste link (ingestion), Upload file (screenshot/pdf/image), Write manually, AI draft.
+- Show a live preview panel on the right that updates as fields change.
+Structured fields required (schema-ish):
+- title, location (city/region), employment type, pay min/max + unit, schedule tags, housing provided (bool), start/season window, qualifications tags, full description, media uploads (photo/video).
+Legal hiring entity selection:
+- Show legal entity as “LEGAL NAME (dba TENANT)” with logo/letterhead hint (if available).
+Media uploads must use the existing public upload session flow where applicable; for employer job editor, use authenticated upload endpoints if present in backend; otherwise create a minimal authenticated wrapper that uses the same Cloudflare integration pattern already in repo.
+
+C) Destinations + Publish flow (the critical affordance)
+Route: /app/jobs/:id/destinations
+This page MUST call:
+GET /api/p2/app/jobs/:id/destinations
+and render:
+- A checklist of eligible destinations (default checked for new jobs; allow uncheck).
+Destinations include:
+- CanadaDirect (free, moderated)
+- AdrenalineCanada (paid, no moderation)
+- Bamfield + East/West Bamfield (free)
+- Any embed publications surfaced by API if included
+For each destination row show:
+- Price (if any)
+- Moderation requirement (if any)
+- Current state: not published / pending review / published / rejected / paused / archived
+- If paid: payment intent status (none / pending / paid)
+- CTA button changes by state:
+   - Free portals: “Submit” (if moderated) or “Publish”
+   - Paid portals: “Proceed to checkout” (creates intent) then “Mark paid” is not available here (moderation-only endpoint)
+Publish action:
+POST /api/p2/app/jobs/:id/publish
+- For paid portal: show a checkout modal (UI-only simulation for now if no payments UI exists). The goal is to model the UX and then send user to an internal “Pending payment” screen.
+- For free moderated: clearly show “Submitted for review”
+- For free non-moderated: show “Published”
+
+D) Pending Payment screen (tenant view)
+Route: /app/jobs/payments/pending
+- Lists jobs with AdrenalineCanada payment intents pending, with status and link to destinations page.
+
+STEP 2 — Portal Public UI (Indeed-style list + detail + filters)
+Implement portal public jobs surface under /b/:portalSlug:
+
+A) Jobs search/list page
+Route: /b/:portalSlug/jobs
+Layout:
+- Desktop: left results list + right detail panel (two column)
+- Mobile: list then detail page
+Filters:
+- Pay range
+- Job type
+- Location
+- Date posted
+- Employer (brand)
+- Housing provided
+Sort:
+- relevance (default), date, pay high→low
+Use:
+GET /api/p2/public/jobs (or existing alias /api/public/jobs depending on router)
+Must be portal-scoped and only show publish_state=published.
+
+B) Job detail page (shareable canonical URL)
+Route: /b/:portalSlug/jobs/:jobPostingId (or :slug if exists; use ID first)
+- Must render full details + media gallery + “Apply” CTA
+- Include “More jobs from {Employer}” link.
+
+C) Employer/Brand page inside portal (Indeed “company page” pattern)
+Route: /b/:portalSlug/employers/:brandSlugOrId
+- Shows employer profile blocks (logo, about, website link if present)
+- Lists “Jobs by this employer” (portal-scoped)
+
+D) Apply flow (anonymous)
+From job detail, Apply triggers:
+- If job apply destination is internal: use the existing anonymous apply endpoints + upload session token flow.
+- Support resumeDocument, referenceDocument, photo, videoIntroduction roles with MIME+size enforcement already done.
+- Applicant MUST be able to apply without an account.
+
+STEP 3 — Moderation UI (portal staff)
+Create a portal moderation area in the authenticated UI:
+
+Route group: /app/mod/jobs (or existing moderation nav)
+- Queue tabs: Pending Review, Published, Rejected, Paused, Archived
+- Each item shows job title, employer, portal, submitted date
+- Actions: Approve, Reject (with reason), Pause, Archive
+Must call the moderation endpoints already implemented.
+
+Paid intent moderation view (staff/admin only):
+Route: /app/mod/paid-publications
+- List pending intents via:
+GET /api/p2/app/mod/paid-publications/pending
+- Allow staff to “Mark paid and publish”:
+POST /api/p2/app/mod/paid-publications/:intentId/mark-paid
+This simulates the “payment confirmed” step until real payments are integrated.
+
+STEP 4 — Embed + “Looks Native” Partner Surface (minimum viable, real)
+We need two publish modes:
+
+A) Embed widget configurator (tenant)
+Route: /app/jobs/embeds (or /app/portal/embeds if that exists)
+- Create an embed surface (domain allowlist, style settings: primary color, logo, nav mode top/left, native links)
+- Show copy-paste snippet:
+   - <script> widget and/or <iframe> feed
+- Validate the domain allowlist.
+- Preview the widget live in-page.
+
+B) Micro-portal shell with “looks native” header
+On /b/:portalSlug jobs pages, add a portal setting toggle:
+- Navigation mode: top nav vs left nav
+- “Nav merge”: allow 2-3 external links (Home/About/Contact) + portal links (Jobs/Calendar/Leads)
+Render the shell consistent with portal settings:
+- Logo, colors
+- Prominent “Back to {external domain}” link
+- Subtle footer disclosure “Powered by Community Canvas” (tiny)
+
+STEP 5 — UI Copy Requirements
+- CanadaDirect: label as “Free”
+- AdrenalineCanada: label as “Paid placement”
+- Paid placement default price from API (29 CAD) and show “Requires checkout”
+- Moderated destinations show “Requires review” and status “Pending review” after submit
+- Never show “mark paid” in tenant UI; only in moderation/admin view.
+
+TESTS / QA
+- Add basic UI smoke coverage if the repo has a UI test harness; otherwise add a manual QA doc under docs/ that lists the exact routes to click and the expected state transitions:
+   1) Create job draft
+   2) Submit to CanadaDirect => pending review, not visible publicly
+   3) Approve in moderation => visible publicly
+   4) Publish to AdrenalineCanada => creates intent + pending payment
+   5) Mark paid in mod => visible publicly on AdrenalineCanada portal
+
+DELIVERABLES
+- Commit UI routes + components
+- Update nav to include Jobs in tenant dashboard + Moderation jobs for staff
+- Provide a short “UI Affordance Verification Report” with screenshots paths or route checklist
+- Ensure no console errors and all API calls use envelope handling.
