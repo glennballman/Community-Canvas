@@ -3,13 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Send, Check, Clock, AlertCircle, CreditCard,
-  Globe, Code, ExternalLink, DollarSign, Shield
+  Globe, Code, ExternalLink, DollarSign, Shield, Lock, Star, Zap, Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -290,6 +296,99 @@ export default function JobDestinationsPage() {
               )}
             </CardContent>
           </Card>
+
+          {portals.some(p => p.pricing.priceCents && p.pricing.priceCents > 0) && (
+            <Card className="border-dashed opacity-60">
+              <CardHeader className="pb-2">
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full group">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Star className="h-4 w-4" />
+                      Boost Visibility
+                      <Badge variant="outline" className="ml-2 text-xs">Coming Soon</Badge>
+                    </CardTitle>
+                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4">
+                    <CardDescription className="mb-4">
+                      These upgrades are not available yet.
+                    </CardDescription>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              <Zap className="h-3 w-3 text-amber-500" />
+                              Featured Job
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Highlighted in search results (+$1.00/day)
+                            </div>
+                          </div>
+                        </div>
+                        <Checkbox disabled data-testid="checkbox-tier-featured" />
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              <AlertCircle className="h-3 w-3 text-red-500" />
+                              Urgently Hiring
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Urgent badge for 7 days ($7.00 flat)
+                            </div>
+                          </div>
+                        </div>
+                        <Checkbox disabled data-testid="checkbox-tier-urgent" />
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </CardHeader>
+            </Card>
+          )}
+
+          {portals.some(p => p.pricing.priceCents && p.pricing.priceCents > 0) && (
+            <Card className="border-dashed opacity-60">
+              <CardHeader className="pb-2">
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full group">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-4 w-4" />
+                      Save Time
+                      <Badge variant="outline" className="ml-2 text-xs">Coming Soon</Badge>
+                    </CardTitle>
+                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4">
+                    <CardDescription className="mb-4">
+                      These upgrades are not available yet.
+                    </CardDescription>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              <Users className="h-3 w-3 text-blue-500" />
+                              Assisted Hiring
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Platform screening assistance ($9.00/month)
+                            </div>
+                          </div>
+                        </div>
+                        <Checkbox disabled data-testid="checkbox-tier-assisted" />
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </CardHeader>
+            </Card>
+          )}
 
           {embeds.length > 0 && (
             <Card>
