@@ -1,0 +1,157 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Add three “launch safety” enhancements with zero refactors:
+1) Employer confirmation page: redact contacted-candidate details (privacy-safe)
+2) Coordinator notification on emergency request creation (never miss a panic request)
+3) Growth Switches metrics: show bench + waitlist + emergency proof counts (adoption console)
+
+HARD RULES
+- Never use banned terminology (“book”, “booking”, “booked”, “bookings”, “booker”) anywhere.
+- Preserve API envelope { ok, error?, ...data }.
+- Additive only: no breaking endpoint changes, no table meaning changes.
+- Portal sovereignty: portal staff sees identities; employers (tenants) see redacted info only.
+- Use existing notifications/alerts framework if present; do NOT invent a parallel system.
+
+================================================================================
+STEP 0 — HARD CHECKS (PRINT EVIDENCE FIRST)
+================================================================================
+A) Identify where emergency replacement creation happens for tenants:
+- POST /api/p2/app/jobs/:jobId/emergency-replacement-request
+Show file + line ranges.
+B) Identify employer confirmation page component:
+- /app/jobs/:jobId/emergency/:requestId (file path)
+C) Identify staff-side emergency routing events storage:
+- Is “contacted candidates” derived from cc_job_application_events? metadata?
+Show the query used.
+D) Identify existing notification infra:
+- cc_notifications / templates / server/services/messagingRoutingService.ts
+- any “createNotification()” helper
+List relevant files + functions.
+E) Identify Growth Switches endpoint + UI:
+- GET/PATCH /api/p2/app/mod/portals/:portalId/growth-switches
+- /app/mod/portals/:portalId/growth page
+
+================================================================================
+PART 1 — PRIVACY-SAFE “CONTACTED CANDIDATES” (EMPLOYER VIEW)
+================================================================================
+GOAL
+Employers should see progress without seeing candidate PII unless explicitly permitted.
+On the employer confirmation page, display:
+- counts and statuses
+- optional anonymized labels (e.g., “Candidate A”, “Candidate B”)
+NOT: names, emails, phone, documents, location notes, staging notes.
+
+IMPLEMENTATION
+1) Define a “redacted routing summary” shape returned by the tenant-scoped GET endpoint:
+GET /api/p2/app/jobs/:jobId/emergency-replacement-request/:requestId
+
+Return fields:
+{
+ ok:true,
+ request:{ ... },
+ routingSummary:{
+   contactedCount:number,
+   contacted:[ { label:'Candidate A', state:'contacted'|'responded'|'declined'|'unknown', contactedAt } ] (optional)
+ }
+}
+
+Rules:
+- If you currently join to bench/individual and return names/emails, REMOVE for tenant response only.
+- Portal staff endpoints can continue to return full details.
+
+2) Update employer confirmation page to use routingSummary only.
+- Replace any name/email rendering with “Candidate A/B/…”
+- Add a subtle line: “Candidate details are managed by the portal coordinator.”
+
+3) Add tests:
+- tenant GET endpoint must not include applicant name/email fields in payload
+- portal staff GET endpoint may include details (no change)
+
+================================================================================
+PART 2 — COORDINATOR NOTIFICATION ON EMERGENCY REQUEST CREATE
+================================================================================
+GOAL
+When a tenant creates an emergency request, portal staff are notified immediately.
+
+IMPLEMENTATION (use existing infra)
+1) On tenant POST create endpoint:
+After inserting cc_emergency_replacement_requests:
+- Emit a portal-scoped notification event using existing notification utilities.
+Preferred:
+- Create a cc_notification (or equivalent) to all portal staff identities.
+Fallback:
+- Insert an application event into cc_job_application_events is NOT enough; must create a portal staff alert/notification record.
+
+Notification payload should include:
+- portal_id
+- category: 'jobs' or existing closest category (do not invent if one exists)
+- title: “Emergency replacement request”
+- body: role_title_snapshot + urgency
+- deepLink: /app/mod/emergency?requestId=...
+
+2) Ensure no duplicate notifications on repeated POST retries:
+- Use idempotency key if request already exists, or
+- Include request_id in notification and enforce unique constraint if such table exists, or
+- Check for existing notification in last 2 minutes for same request_id.
+
+3) Tests:
+- creating an emergency request creates a notification for portal staff
+- re-sending does not duplicate (if retries possible)
+
+================================================================================
+PART 3 — GROWTH SWITCHES METRICS (ADOPTION PROOF COUNTS)
+================================================================================
+GOAL
+Make /app/mod/portals/:portalId/growth the adoption console:
+Show live metrics cards for Jobs that prove value:
+- Bench counts by readiness_state (ready/on_site)
+- Housing waitlist “new” count
+- Emergency requests last 7 days (open + filled)
+
+IMPLEMENTATION
+1) Add backend endpoint (portal staff):
+GET /api/p2/app/mod/portals/:portalId/growth-metrics?range=7d|30d
+
+Returns:
+{
+ ok:true,
+ rangeDays,
+ metrics:{
+   bench:{ readyCount, onSiteCount, clearedCount, prospectCount },
+   housing:{ waitlistNewCount, waitlistOpenCount },
+   emergency:{ createdCount, openCount, filledCount }
+ }
+}
+
+Queries must be portal-scoped:
+- cc_portal_candidate_bench where portal_id=...
+- cc_portal_housing_waitlist_entries where portal_id=... and status in (...)
+- cc_emergency_replacement_requests where portal_id=... and created_at within range
+
+Add indexes ONLY if missing and needed.
+
+2) Update Growth page UI:
+- On Jobs card, display:
+  - “Bench ready: X”
+  - “On-site: Y”
+  - “Housing waitlist new: Z”
+  - “Emergency requests (7d): N”
+- Add a button:
+  “View bench” -> /app/mod/bench
+  “View housing” -> /app/mod/housing-waitlist?status=new
+  “View emergency” -> /app/mod/emergency
+
+3) Tests:
+- portal staff auth enforced
+- metrics computed correctly (seed minimal rows)
+
+================================================================================
+OUTPUT REQUIRED
+================================================================================
+At completion print:
+- files changed
+- endpoint contracts
+- tests + commands and passing output
+- confirm forbidden terms scan passes
+STOP.

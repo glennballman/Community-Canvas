@@ -1,12 +1,16 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
-import { Briefcase, CalendarRange, Package, Truck, Users, ChevronRight, Settings2, Check, X, Loader2 } from 'lucide-react';
+import { 
+  Briefcase, CalendarRange, Package, Truck, Users, ChevronRight, Settings2, 
+  Check, X, Loader2, UserCheck, Home, AlertTriangle, ExternalLink
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { Link } from 'wouter';
 
 interface GrowthSwitchesResponse {
   ok: boolean;
@@ -24,6 +28,28 @@ interface GrowthSwitchesResponse {
     route: string;
   } | null;
   updatedAt: string;
+}
+
+interface GrowthMetricsResponse {
+  ok: boolean;
+  rangeDays: number;
+  metrics: {
+    bench: {
+      readyCount: number;
+      onSiteCount: number;
+      clearedCount: number;
+      prospectCount: number;
+    };
+    housing: {
+      waitlistNewCount: number;
+      waitlistOpenCount: number;
+    };
+    emergency: {
+      createdCount: number;
+      openCount: number;
+      filledCount: number;
+    };
+  };
 }
 
 interface ModuleConfig {
@@ -171,6 +197,11 @@ export default function PortalGrowthPage() {
     enabled: !!portalId
   });
 
+  const { data: metricsData } = useQuery<GrowthMetricsResponse>({
+    queryKey: ['/api/p2/app/mod/portals', portalId, 'growth-metrics'],
+    enabled: !!portalId && !!data?.switches?.jobs_enabled
+  });
+
   const updateMutation = useMutation({
     mutationFn: async (updates: Partial<GrowthSwitchesResponse['switches']>) => {
       return apiRequest('PATCH', `/api/p2/app/mod/portals/${portalId}/growth-switches`, updates);
@@ -247,6 +278,94 @@ export default function PortalGrowthPage() {
           />
         ))}
       </div>
+
+      {data.switches.jobs_enabled && metricsData?.ok && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 flex-wrap">
+            <Briefcase className="h-5 w-5" />
+            Jobs Module Metrics
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card data-testid="metrics-card-bench">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+                  <UserCheck className="h-4 w-4" />
+                  Candidate Bench
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between items-center gap-2 flex-wrap" data-testid="text-bench-ready">
+                    <span className="text-muted-foreground">Ready:</span>
+                    <Badge variant="default">{metricsData.metrics.bench.readyCount}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center gap-2 flex-wrap" data-testid="text-bench-onsite">
+                    <span className="text-muted-foreground">On-site:</span>
+                    <Badge variant="secondary">{metricsData.metrics.bench.onSiteCount}</Badge>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" asChild className="w-full mt-3" data-testid="button-view-bench">
+                  <Link to="/app/mod/bench">
+                    View bench <ExternalLink className="h-3 w-3 ml-1" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="metrics-card-housing">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+                  <Home className="h-4 w-4" />
+                  Housing Waitlist
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between items-center gap-2 flex-wrap" data-testid="text-housing-new">
+                    <span className="text-muted-foreground">New:</span>
+                    <Badge variant="default">{metricsData.metrics.housing.waitlistNewCount}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center gap-2 flex-wrap" data-testid="text-housing-open">
+                    <span className="text-muted-foreground">Open:</span>
+                    <Badge variant="secondary">{metricsData.metrics.housing.waitlistOpenCount}</Badge>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" asChild className="w-full mt-3" data-testid="button-view-housing">
+                  <Link to="/app/mod/housing-waitlist?status=new">
+                    View waitlist <ExternalLink className="h-3 w-3 ml-1" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="metrics-card-emergency">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+                  <AlertTriangle className="h-4 w-4" />
+                  Emergency ({metricsData.rangeDays}d)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between items-center gap-2 flex-wrap" data-testid="text-emergency-open">
+                    <span className="text-muted-foreground">Open:</span>
+                    <Badge variant="destructive">{metricsData.metrics.emergency.openCount}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center gap-2 flex-wrap" data-testid="text-emergency-filled">
+                    <span className="text-muted-foreground">Filled:</span>
+                    <Badge variant="default">{metricsData.metrics.emergency.filledCount}</Badge>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" asChild className="w-full mt-3" data-testid="button-view-emergency">
+                  <Link to="/app/mod/emergency">
+                    View requests <ExternalLink className="h-3 w-3 ml-1" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

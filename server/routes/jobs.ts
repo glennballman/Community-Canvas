@@ -1424,6 +1424,26 @@ router.post('/:jobId/applications/:applicationId/notes', async (req: Request, re
 // TENANT EMERGENCY REPLACEMENT REQUESTS
 // =====================================================
 
+// Helper to map routing action to privacy-safe state
+function mapActionToState(action: string): 'contacted' | 'responded' | 'declined' | 'unknown' {
+  switch (action) {
+    case 'contact':
+    case 'contacted':
+    case 'offered':
+      return 'contacted';
+    case 'accepted':
+    case 'confirmed':
+    case 'responded':
+      return 'responded';
+    case 'declined':
+    case 'rejected':
+    case 'unavailable':
+      return 'declined';
+    default:
+      return 'unknown';
+  }
+}
+
 const emergencyRequestSchema = z.object({
   portal_id: z.string().uuid().optional(),
   urgency: z.enum(['now', 'today', 'this_week']).default('today'),
@@ -1536,6 +1556,16 @@ router.post('/:jobId/emergency-replacement-request', async (req: Request, res: R
 
     const request = insertResult.rows[0];
 
+    // Notify portal staff about emergency request
+    try {
+      await serviceQuery(`
+        SELECT cc_notify_portal_staff_emergency($1, $2, $3, $4)
+      `, [selectedPortalId, request.id, roleTitle, urgency]);
+    } catch (notifyErr: any) {
+      // Log but don't fail the request creation
+      console.error('Failed to notify portal staff:', notifyErr.message);
+    }
+
     res.status(201).json({
       ok: true,
       requestId: request.id,
@@ -1594,25 +1624,36 @@ router.get('/:jobId/emergency-replacement-request/:requestId', async (req: Reque
 
     const request = result.rows[0];
 
+    // Privacy-safe: Return redacted routing summary for tenant view
+    // Employers see counts and anonymized labels only, not candidate PII
     const routingsResult = await serviceQuery(`
       SELECT 
         rr.id,
         rr.action,
         rr.created_at,
-        i.full_name as candidate_name
+        ROW_NUMBER() OVER (ORDER BY rr.created_at ASC) as candidate_index
       FROM cc_emergency_routing_records rr
-      JOIN cc_candidate_bench b ON b.id = rr.bench_id
-      JOIN cc_individuals i ON i.id = b.individual_id
       WHERE rr.emergency_request_id = $1
-      ORDER BY rr.created_at DESC
-      LIMIT 5
+      ORDER BY rr.created_at ASC
     `, [requestId]);
+
+    // Build privacy-safe routing summary with anonymized labels
+    const contacted = routingsResult.rows.map((r: any) => ({
+      label: `Candidate ${String.fromCharCode(64 + parseInt(r.candidate_index))}`, // A, B, C...
+      state: mapActionToState(r.action),
+      contactedAt: r.created_at
+    }));
 
     res.json({
       ok: true,
       request: {
         ...request,
-        routings: routingsResult.rows
+        // Deprecated: routings no longer returned (privacy)
+        routings: undefined
+      },
+      routingSummary: {
+        contactedCount: routingsResult.rows.length,
+        contacted
       }
     });
   } catch (error: any) {

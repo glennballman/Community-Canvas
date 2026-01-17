@@ -1657,6 +1657,83 @@ router.patch('/portals/:portalId/growth-switches', async (req: Request, res: Res
   }
 });
 
+// Growth Metrics - Adoption proof counts for bench/housing/emergency
+router.get('/portals/:portalId/growth-metrics', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { portalId } = req.params;
+
+  if (portalId !== ctx.portal_id) {
+    return res.status(403).json({ ok: false, error: 'Portal mismatch' });
+  }
+
+  const range = req.query.range as string || '7d';
+  const rangeDays = range === '30d' ? 30 : 7;
+  const rangeStart = new Date();
+  rangeStart.setDate(rangeStart.getDate() - rangeDays);
+
+  try {
+    // Bench metrics by readiness state
+    const benchResult = await serviceQuery(`
+      SELECT 
+        COUNT(*) FILTER (WHERE readiness_state = 'ready') as ready_count,
+        COUNT(*) FILTER (WHERE readiness_state = 'on_site') as on_site_count,
+        COUNT(*) FILTER (WHERE readiness_state = 'cleared') as cleared_count,
+        COUNT(*) FILTER (WHERE readiness_state = 'prospect') as prospect_count
+      FROM cc_portal_candidate_bench
+      WHERE portal_id = $1
+    `, [portalId]);
+
+    // Housing waitlist metrics
+    const housingResult = await serviceQuery(`
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'new') as new_count,
+        COUNT(*) FILTER (WHERE status IN ('new', 'contacted', 'waitlisted')) as open_count
+      FROM cc_portal_housing_waitlist_entries
+      WHERE portal_id = $1
+    `, [portalId]);
+
+    // Emergency metrics within range
+    const emergencyResult = await serviceQuery(`
+      SELECT 
+        COUNT(*) as created_count,
+        COUNT(*) FILTER (WHERE status = 'open') as open_count,
+        COUNT(*) FILTER (WHERE status = 'filled') as filled_count
+      FROM cc_emergency_replacement_requests
+      WHERE portal_id = $1 AND created_at >= $2
+    `, [portalId, rangeStart.toISOString()]);
+
+    const bench = benchResult.rows[0] || {};
+    const housing = housingResult.rows[0] || {};
+    const emergency = emergencyResult.rows[0] || {};
+
+    res.json({
+      ok: true,
+      rangeDays,
+      metrics: {
+        bench: {
+          readyCount: parseInt(bench.ready_count || '0'),
+          onSiteCount: parseInt(bench.on_site_count || '0'),
+          clearedCount: parseInt(bench.cleared_count || '0'),
+          prospectCount: parseInt(bench.prospect_count || '0')
+        },
+        housing: {
+          waitlistNewCount: parseInt(housing.new_count || '0'),
+          waitlistOpenCount: parseInt(housing.open_count || '0')
+        },
+        emergency: {
+          createdCount: parseInt(emergency.created_count || '0'),
+          openCount: parseInt(emergency.open_count || '0'),
+          filledCount: parseInt(emergency.filled_count || '0')
+        }
+      }
+    });
+  } catch (error: any) {
+    console.error('Get growth metrics error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch growth metrics' });
+  }
+});
+
 // =============================================================================
 // HOUSING WAITLIST (Staff)
 // =============================================================================

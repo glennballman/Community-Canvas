@@ -10,6 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 
+interface RoutingSummaryContact {
+  label: string;
+  state: 'contacted' | 'responded' | 'declined' | 'unknown';
+  contactedAt: string;
+}
+
 interface EmergencyRequestResponse {
   ok: boolean;
   error?: string;
@@ -24,12 +30,10 @@ interface EmergencyRequestResponse {
     portal_id: string;
     portal_name: string;
     job_title: string | null;
-    routings: Array<{
-      id: string;
-      action: string;
-      created_at: string;
-      candidate_name: string;
-    }>;
+  };
+  routingSummary: {
+    contactedCount: number;
+    contacted: RoutingSummaryContact[];
   };
 }
 
@@ -182,25 +186,36 @@ export default function JobEmergencyConfirmationPage() {
         </CardContent>
       </Card>
 
-      {request.routings && request.routings.length > 0 && (
+      {data.routingSummary && data.routingSummary.contactedCount > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
               <User className="h-5 w-5" />
-              Candidates Contacted
+              Candidates Contacted ({data.routingSummary.contactedCount})
             </CardTitle>
+            <CardDescription>
+              Candidate details are managed by the portal coordinator.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {request.routings.map((routing) => (
+              {data.routingSummary.contacted.map((contact, idx) => (
                 <div 
-                  key={routing.id}
+                  key={idx}
                   className="flex items-center justify-between gap-2 p-2 rounded bg-muted/50 flex-wrap"
-                  data-testid={`row-routing-${routing.id}`}
+                  data-testid={`row-routing-${idx}`}
                 >
-                  <span className="font-medium" data-testid={`text-candidate-${routing.id}`}>{routing.candidate_name}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium" data-testid={`text-candidate-${idx}`}>{contact.label}</span>
+                    <Badge 
+                      variant={contact.state === 'responded' ? 'default' : contact.state === 'declined' ? 'destructive' : 'secondary'}
+                      data-testid={`badge-state-${idx}`}
+                    >
+                      {contact.state}
+                    </Badge>
+                  </div>
                   <span className="text-sm text-muted-foreground">
-                    {new Date(routing.created_at).toLocaleString()}
+                    {new Date(contact.contactedAt).toLocaleString()}
                   </span>
                 </div>
               ))}
