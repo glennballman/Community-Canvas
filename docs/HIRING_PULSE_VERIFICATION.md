@@ -23,7 +23,8 @@ Hiring Pulse is a lightweight dashboard widget for portal staff to track cold-st
 | Metric | Description | Source |
 |--------|-------------|--------|
 | **New Applications** | Count of applications received in selected period | `cc_job_applications.created_at` |
-| **Median Response Time** | Median time (minutes) to first staff response | `cc_job_application_events` (reply_sent, status_changed) |
+| **Median Response Time** | Median time (minutes) to first staff reply | `cc_job_application_events` (reply_sent) |
+| **Needs Reply** | Applications awaiting first response | `status IN ('new','reviewing')` with no reply_sent event |
 | **Housing Needed** | Applicants who indicated they need housing | `cc_job_applications.housing_needed = true` |
 | **Work Permit Questions** | Applicants with work permit status (not 'not_applicable') | `cc_job_applications.work_permit_status` |
 
@@ -79,6 +80,7 @@ All queries are indexed and portal-scoped:
 {
   "ok": true,
   "range": "7d",
+  "rangeDays": 7,
   "portalName": "CanadaDirect",
   "metrics": {
     "newApplicationsCount": 42,
@@ -89,7 +91,8 @@ All queries are indexed and portal-scoped:
       "hired": 5,
       "rejected": 2
     },
-    "medianFirstResponseMinutes": 47,
+    "medianFirstReplyMinutes": 47,
+    "needsReplyCount": 8,
     "housingNeededCount": 18,
     "workPermitQuestionsCount": 23,
     "topEmployersByApplications": [

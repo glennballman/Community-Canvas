@@ -1399,25 +1399,41 @@ router.get('/hiring-pulse', async (req: Request, res: Response) => {
       FROM first_responses
     `, [ctx.portal_id]);
 
-    // Housing needed count
+    // Housing needed count (uses needs_accommodation column)
     const housingResult = await serviceQuery(`
       SELECT COUNT(*) as count
       FROM cc_job_applications a
       JOIN cc_job_postings jp ON jp.id = a.job_posting_id
       WHERE jp.portal_id = $1
         AND a.created_at >= NOW() - INTERVAL '${days} days'
-        AND a.housing_needed = true
+        AND a.needs_accommodation = true
     `, [ctx.portal_id]);
 
-    // Work permit questions count
+    // Work permit questions count (from screening_responses JSON if present)
     const workPermitResult = await serviceQuery(`
       SELECT COUNT(*) as count
       FROM cc_job_applications a
       JOIN cc_job_postings jp ON jp.id = a.job_posting_id
       WHERE jp.portal_id = $1
         AND a.created_at >= NOW() - INTERVAL '${days} days'
-        AND a.work_permit_status IS NOT NULL
-        AND a.work_permit_status != 'not_applicable'
+        AND a.screening_responses IS NOT NULL
+        AND a.screening_responses->>'work_permit_status' IS NOT NULL
+        AND a.screening_responses->>'work_permit_status' != 'not_applicable'
+    `, [ctx.portal_id]);
+
+    // Needs reply count - applications with no reply_sent event
+    const needsReplyResult = await serviceQuery(`
+      SELECT COUNT(*) as count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE jp.portal_id = $1
+        AND a.created_at >= NOW() - INTERVAL '${days} days'
+        AND a.status IN ('new', 'reviewing')
+        AND NOT EXISTS (
+          SELECT 1 FROM cc_job_application_events e
+          WHERE e.application_id = a.id
+            AND e.event_type = 'reply_sent'
+        )
     `, [ctx.portal_id]);
 
     // Top employers by application count
@@ -1469,6 +1485,7 @@ router.get('/hiring-pulse', async (req: Request, res: Response) => {
     res.json({
       ok: true,
       range,
+      rangeDays: days,
       portalName: portal.name,
       metrics: {
         newApplicationsCount: parseInt(newAppsResult.rows[0]?.count || '0'),
@@ -1476,9 +1493,10 @@ router.get('/hiring-pulse', async (req: Request, res: Response) => {
           acc[row.status] = parseInt(row.count);
           return acc;
         }, {}),
-        medianFirstResponseMinutes: medianResponseResult.rows[0]?.median 
+        medianFirstReplyMinutes: medianResponseResult.rows[0]?.median 
           ? Math.round(parseFloat(medianResponseResult.rows[0].median))
           : null,
+        needsReplyCount: parseInt(needsReplyResult.rows[0]?.count || '0'),
         housingNeededCount: parseInt(housingResult.rows[0]?.count || '0'),
         workPermitQuestionsCount: parseInt(workPermitResult.rows[0]?.count || '0'),
         topEmployersByApplications: topEmployersResult.rows.map((row: any) => ({

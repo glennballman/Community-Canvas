@@ -1,0 +1,83 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Implement Hiring Pulse: a portal staff widget showing cold-start health:
+- application volume
+- SLA (time to first reply)
+- funnel by status
+- housing/work permit signals
+- share links for jobs + campaigns
+No refactors. Additive only.
+
+HARD RULES
+- Never use banned terms.
+- Portal staff authorization required.
+- Must be portal-scoped and efficient (indexes / bounded queries).
+- Preserve API envelope { ok, error?, ...data }.
+
+STEP 0 — HARD CHECK (print first)
+1) Identify where portal staff admin pages live and how /app/mod/* is structured.
+2) Confirm cc_job_application_events has event_type for replies and timestamps.
+3) Confirm campaigns endpoint exists: GET /public/:portalSlug/jobs/campaigns and returns campaign keys.
+
+STEP 1 — Backend endpoint
+Add:
+GET /api/p2/app/mod/portals/:portalId/hiring-pulse?range=7d|30d
+Auth: requirePortalStaff(portalId)
+
+Response:
+{
+  ok:true,
+  rangeDays,
+  metrics:{
+    newApplicationsCount,
+    applicationsByStatus:{...},
+    medianFirstReplyMinutes,
+    needsReplyCount,
+    housingNeededCount,
+    workPermitQuestionsCount,
+    topEmployers:[{ tenantId, employerName, applicationsCount }],
+    campaigns:[{ campaignKey, jobCount, applyUrl }]
+  },
+  shareLinks:{
+    portalJobsUrl,
+    campaignApplyUrls:[...]
+  }
+}
+
+Definitions:
+- newApplicationsCount: applications created within range
+- needsReplyCount: applications with no reply event within range (or status=new/reviewing and no template reply sent)
+- medianFirstReplyMinutes:
+   compute time from application.created_at to first event_type in ('reply_sent','template_reply_sent') for that application
+- housingNeededCount/workPermitQuestionsCount:
+   derived from bundle fields if campaign apply, else from application fields if stored, else 0.
+
+Add any missing indexes (additive migration 148 if needed) for:
+- cc_job_applications(portal_id, created_at)
+- cc_job_application_events(application_id, created_at)
+- cc_job_application_bundles(portal_id, created_at)
+
+STEP 2 — UI widget
+Add to /app/mod/applications page (top section) or a portal staff dashboard if one exists:
+- KPI cards + simple bar breakdown
+- “Copy jobs link”
+- “Copy campaign apply link” buttons per campaign
+
+STEP 3 — Docs
+docs/HIRING_PULSE_VERIFICATION.md:
+- 3 test scenarios with expected counts
+- how to verify SLA calculation
+- where to click
+
+STEP 4 — Tests
+Vitest:
+- portal staff auth enforced
+- metrics computed correctly with seeded applications + events
+- medianFirstReplyMinutes returns null when no replies exist
+
+OUTPUT
+- files changed
+- endpoint contract
+- test command and passing results
+STOP.

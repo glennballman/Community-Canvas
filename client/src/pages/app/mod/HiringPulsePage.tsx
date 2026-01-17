@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   TrendingUp, Users, Clock, Home, FileCheck, Building2, 
-  Share2, Copy, Check, ExternalLink, BarChart3
+  Share2, Copy, Check, ExternalLink, BarChart3, MessageCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 interface HiringPulseMetrics {
   newApplicationsCount: number;
   applicationsByStatus: Record<string, number>;
-  medianFirstResponseMinutes: number | null;
+  medianFirstReplyMinutes: number | null;
+  needsReplyCount: number;
   housingNeededCount: number;
   workPermitQuestionsCount: number;
   topEmployersByApplications: Array<{
@@ -218,12 +219,22 @@ export default function HiringPulsePage() {
             <MetricCard
               icon={Clock}
               title="Median Response Time"
-              value={metrics?.medianFirstResponseMinutes != null 
-                ? `${metrics?.medianFirstResponseMinutes}m`
+              value={metrics?.medianFirstReplyMinutes != null 
+                ? `${metrics?.medianFirstReplyMinutes}m`
                 : 'N/A'}
-              subtitle="first response"
+              subtitle="first reply"
               testId="metric-response-time"
             />
+            <MetricCard
+              icon={MessageCircle}
+              title="Needs Reply"
+              value={metrics?.needsReplyCount || 0}
+              subtitle="awaiting response"
+              testId="metric-needs-reply"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               icon={Home}
               title="Housing Needed"
