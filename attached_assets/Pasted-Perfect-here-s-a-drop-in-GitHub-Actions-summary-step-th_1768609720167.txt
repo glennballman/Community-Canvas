@@ -1,60 +1,8 @@
-name: QA + SCM Certification
+Perfect — here’s a drop-in GitHub Actions summary step that reads your generated cert and prints a clean PASS / HELD / FAIL block directly into the PR check summary.
 
-on:
-  push:
-    branches: ["main"]
-  pull_request:
+Add this after the SCM ingest step and before artifact upload (order doesn’t strictly matter, but this reads the cert).
 
-concurrency:
-  group: qa-scm-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  qa_scm_p2_operator:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install deps
-        run: npm ci
-
-      - name: Set build timestamp
-        if: always()
-        run: echo "BUILD_TS=$(date -u +'%Y%m%dT%H%M%SZ')" >> $GITHUB_ENV
-
-      # Start server if your QA scripts hit localhost.
-      # If you instead hit a deployed environment via QA_BASE_URL, remove this step.
-      - name: Start server (background)
-        run: |
-          nohup npm run dev > server.log 2>&1 &
-          echo "Server starting..."
-          sleep 5
-
-      - name: Guardrails - Pricing UI lint
-        run: npx tsx scripts/lint-pricing-ui.ts
-
-      - name: Run P2 operator smoke test
-        env:
-          QA_BASE_URL: http://localhost:3000
-          QA_JWT: ${{ secrets.QA_JWT }}
-          QA_COOKIE: ${{ secrets.QA_COOKIE }}
-          QA_CLAIM_ID: ${{ secrets.QA_CLAIM_ID }}
-          QA_DISPUTE_ID: ${{ secrets.QA_DISPUTE_ID }}
-          QA_GRANTEE_INDIVIDUAL_ID: ${{ secrets.QA_GRANTEE_INDIVIDUAL_ID }}
-        run: npx tsx scripts/qa/qa-operator-p2-smoke.ts
-
-      - name: Run SCM ingest
-        run: npx tsx scripts/qa/scm-ingest-p2-operator.ts
-
+✅ GitHub Actions — SCM Certification Summary Step
       - name: SCM Certification Summary
         if: always()
         run: |
@@ -96,13 +44,22 @@ jobs:
             echo "❌ Certification FAILED — required module proof missing or failed." >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Upload QA + SCM artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: qa-scm-${{ github.sha }}-${{ env.BUILD_TS }}
-          path: |
-            artifacts/qa/**
-            server.log
-          if-no-files-found: warn
-          retention-days: 14
+What this gives you in every PR
+
+A clear, human-readable certification verdict at the top of the check
+
+Explicit distinction between:
+
+✅ PASS (fully certifiable)
+
+⚠️ HELD (no guessing, incomplete proof)
+
+❌ FAIL (hard break)
+
+A cryptographic link (SHA256) tying the verdict to the proof bundle
+
+No need to open artifacts just to know if the system is safe
+
+This completes the loop:
+
+Code → Proof → Certification → Human-readable trust signal
