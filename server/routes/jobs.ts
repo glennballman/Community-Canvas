@@ -532,4 +532,290 @@ router.get('/portal-policies', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/:id/destinations', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { id } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const jobCheck = await serviceQuery(`
+      SELECT id FROM cc_jobs WHERE id = $1 AND tenant_id = $2
+    `, [id, ctx.tenant_id]);
+
+    if (jobCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'JOB_NOT_FOUND'
+      });
+    }
+
+    const portalsResult = await serviceQuery(`
+      SELECT 
+        p.id, p.name, p.slug,
+        pdp.default_selected,
+        pdp.pricing_model,
+        pdp.price_cents,
+        pdp.currency,
+        pdp.billing_unit,
+        pdp.requires_checkout,
+        pdp.requires_moderation,
+        jp.publish_state,
+        jp.published_at,
+        ppi.id as intent_id,
+        ppi.status as intent_status,
+        ppi.amount_cents as intent_amount
+      FROM cc_portals p
+      JOIN cc_portal_distribution_policies pdp ON pdp.portal_id = p.id
+      LEFT JOIN cc_job_postings jp ON jp.portal_id = p.id AND jp.job_id = $1
+      LEFT JOIN cc_paid_publication_intents ppi ON ppi.portal_id = p.id AND ppi.job_id = $1
+      WHERE pdp.is_accepting_job_postings = true
+        AND p.status = 'active'
+      ORDER BY pdp.default_selected DESC, p.name ASC
+    `, [id]);
+
+    const embedsResult = await serviceQuery(`
+      SELECT 
+        es.id, es.label,
+        jep.publish_state,
+        jep.published_at
+      FROM cc_embed_surfaces es
+      LEFT JOIN cc_job_embed_publications jep ON jep.embed_surface_id = es.id AND jep.job_id = $1
+      WHERE es.tenant_id = $2 AND es.is_active = true
+      ORDER BY es.label ASC
+    `, [id, ctx.tenant_id]);
+
+    const destinations: any[] = [];
+
+    for (const portal of portalsResult.rows) {
+      destinations.push({
+        destinationType: 'portal',
+        id: portal.id,
+        name: portal.name,
+        slug: portal.slug,
+        defaultSelected: portal.default_selected,
+        pricing: {
+          pricingModel: portal.pricing_model,
+          priceCents: portal.price_cents,
+          currency: portal.currency || 'CAD',
+          billingUnit: portal.billing_unit,
+          requiresCheckout: portal.requires_checkout || false
+        },
+        moderation: {
+          requiresModeration: portal.requires_moderation || false
+        },
+        state: portal.publish_state ? {
+          publishState: portal.publish_state,
+          publishedAt: portal.published_at
+        } : null,
+        paymentIntent: portal.intent_id ? {
+          intentId: portal.intent_id,
+          status: portal.intent_status,
+          amountCents: portal.intent_amount
+        } : null
+      });
+    }
+
+    for (const embed of embedsResult.rows) {
+      destinations.push({
+        destinationType: 'embed',
+        id: embed.id,
+        name: embed.label,
+        defaultSelected: true,
+        pricing: {
+          pricingModel: 'free',
+          priceCents: null,
+          currency: 'CAD',
+          billingUnit: null,
+          requiresCheckout: false
+        },
+        moderation: {
+          requiresModeration: false
+        },
+        state: embed.publish_state ? {
+          publishState: embed.publish_state,
+          publishedAt: embed.published_at
+        } : null
+      });
+    }
+
+    res.json({
+      ok: true,
+      jobId: id,
+      destinations
+    });
+
+  } catch (error: any) {
+    console.error('Destinations error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch destinations'
+    });
+  }
+});
+
+router.post('/:id/publish', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { id } = req.params;
+  const { portalIds, embedSurfaceIds } = req.body;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  if ((!portalIds || portalIds.length === 0) && (!embedSurfaceIds || embedSurfaceIds.length === 0)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'NO_DESTINATIONS_SELECTED',
+      message: 'At least one portal or embed surface must be selected'
+    });
+  }
+
+  try {
+    const jobCheck = await serviceQuery(`
+      SELECT id FROM cc_jobs WHERE id = $1 AND tenant_id = $2
+    `, [id, ctx.tenant_id]);
+
+    if (jobCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'JOB_NOT_FOUND'
+      });
+    }
+
+    const publishedDestinations: any[] = [];
+    const paymentRequiredDestinations: any[] = [];
+
+    if (portalIds && portalIds.length > 0) {
+      const policiesResult = await serviceQuery(`
+        SELECT 
+          p.id as portal_id, p.name as portal_name,
+          pdp.requires_moderation, pdp.requires_checkout,
+          pdp.price_cents, pdp.currency, pdp.billing_unit
+        FROM cc_portals p
+        JOIN cc_portal_distribution_policies pdp ON pdp.portal_id = p.id
+        WHERE p.id = ANY($1)
+          AND pdp.is_accepting_job_postings = true
+      `, [portalIds]);
+
+      const policyMap = new Map();
+      for (const row of policiesResult.rows) {
+        policyMap.set(row.portal_id, row);
+      }
+
+      for (const portalId of portalIds) {
+        const policy = policyMap.get(portalId);
+        if (!policy) continue;
+
+        if (policy.requires_checkout && policy.price_cents > 0) {
+          await serviceQuery(`
+            INSERT INTO cc_job_postings (job_id, portal_id, publish_state, is_hidden)
+            VALUES ($1, $2, 'draft', true)
+            ON CONFLICT (job_id, portal_id) DO UPDATE SET
+              updated_at = now()
+            RETURNING id
+          `, [id, portalId]);
+
+          const intentResult = await serviceQuery(`
+            INSERT INTO cc_paid_publication_intents (
+              tenant_id, job_id, portal_id, amount_cents, currency, billing_unit, status
+            ) VALUES ($1, $2, $3, $4, $5, $6, 'requires_action')
+            ON CONFLICT (job_id, portal_id) DO UPDATE SET
+              amount_cents = EXCLUDED.amount_cents,
+              status = CASE 
+                WHEN cc_paid_publication_intents.status IN ('paid', 'refunded') 
+                THEN cc_paid_publication_intents.status 
+                ELSE 'requires_action' 
+              END,
+              updated_at = now()
+            RETURNING id, status
+          `, [ctx.tenant_id, id, portalId, policy.price_cents, policy.currency || 'CAD', policy.billing_unit || 'perPosting']);
+
+          paymentRequiredDestinations.push({
+            portalId,
+            portalName: policy.portal_name,
+            intentId: intentResult.rows[0].id,
+            amountCents: policy.price_cents,
+            currency: policy.currency || 'CAD',
+            status: intentResult.rows[0].status
+          });
+        } else {
+          const publishState = policy.requires_moderation ? 'pending_review' : 'published';
+          const publishedAt = policy.requires_moderation ? null : new Date();
+
+          const postingResult = await serviceQuery(`
+            INSERT INTO cc_job_postings (job_id, portal_id, publish_state, published_at, is_hidden)
+            VALUES ($1, $2, $3, $4, false)
+            ON CONFLICT (job_id, portal_id) DO UPDATE SET
+              publish_state = EXCLUDED.publish_state,
+              published_at = COALESCE(cc_job_postings.published_at, EXCLUDED.published_at),
+              is_hidden = false,
+              updated_at = now()
+            RETURNING id, publish_state
+          `, [id, portalId, publishState, publishedAt]);
+
+          publishedDestinations.push({
+            destinationType: 'portal',
+            portalId,
+            portalName: policy.portal_name,
+            postingId: postingResult.rows[0].id,
+            publishState: postingResult.rows[0].publish_state
+          });
+        }
+      }
+    }
+
+    if (embedSurfaceIds && embedSurfaceIds.length > 0) {
+      for (const surfaceId of embedSurfaceIds) {
+        const surfaceCheck = await serviceQuery(`
+          SELECT id, label FROM cc_embed_surfaces WHERE id = $1 AND tenant_id = $2 AND is_active = true
+        `, [surfaceId, ctx.tenant_id]);
+
+        if (surfaceCheck.rows.length === 0) continue;
+
+        await serviceQuery(`
+          INSERT INTO cc_job_embed_publications (job_id, embed_surface_id, publish_state, published_at)
+          VALUES ($1, $2, 'published', now())
+          ON CONFLICT (job_id, embed_surface_id) DO UPDATE SET
+            publish_state = 'published',
+            published_at = COALESCE(cc_job_embed_publications.published_at, now()),
+            updated_at = now()
+          RETURNING id
+        `, [id, surfaceId]);
+
+        publishedDestinations.push({
+          destinationType: 'embed',
+          embedSurfaceId: surfaceId,
+          embedSurfaceName: surfaceCheck.rows[0].label,
+          publishState: 'published'
+        });
+      }
+    }
+
+    res.json({
+      ok: true,
+      jobId: id,
+      publishedDestinations,
+      paymentRequiredDestinations: paymentRequiredDestinations.length > 0 ? paymentRequiredDestinations : undefined
+    });
+
+  } catch (error: any) {
+    console.error('Publish error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to publish job'
+    });
+  }
+});
+
 export default router;

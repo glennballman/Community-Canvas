@@ -1,0 +1,48 @@
+Implement AdrenalineCanada paid portal launch support (additive only, no refactors).
+
+Context:
+- CanadaDirect is free.
+- AdrenalineCanada is a paid portal used to harden paid placement design (PSP-agnostic).
+- Destinations endpoint is currently missing and must be implemented.
+
+Requirements:
+1) Add AdrenalineCanada portal (if not already present):
+   - Create cc_portals row (slug/adrenalinecanada, name “AdrenalineCanada”)
+   - Ensure domain/route resolution supports it like CanadaDirect
+2) Extend cc_portal_distribution_policies to support paid pricing metadata:
+   - Add price_cents int, currency varchar(3) default 'CAD', billing_unit text default 'perPosting', requires_checkout boolean default false
+3) Seed distribution policies:
+   - CanadaDirect: pricing_model='free', requires_checkout=false
+   - AdrenalineCanada: pricing_model='paid', price_cents=2900, currency='CAD', billing_unit='perPosting', requires_checkout=true
+4) Add PSP-agnostic paid placement intent table:
+   - cc_paid_publication_intents (tenant_id, job_posting_id, portal_id, amount_cents, currency, status, psp_provider, psp_reference, timestamps)
+5) Implement Destinations endpoint:
+   - GET /api/p2/app/jobs/:id/destinations
+   - Returns combined destinations: portals + embed surfaces + external channels
+   - Include for each destination:
+     destinationType (portal|embed|external), id, name, defaultSelected,
+     pricing { pricingModel, priceCents, currency, billingUnit, requiresCheckout },
+     moderation { requiresModeration },
+     state { publishState } if already exists for this job
+6) Update publish logic (additive behavior):
+   - When publishing to a portal with requires_checkout=true:
+     - upsert cc_job_postings row with publish_state='draft' (or keep existing if present)
+     - create cc_paid_publication_intents status='requires_action'
+     - DO NOT make public-visible
+   - For free portals:
+     - existing behavior continues (published or pending_review for moderated)
+   - Response must include paymentRequiredDestinations with intent IDs
+7) Add an internal moderation endpoint to mark intents paid (dev/internal ok):
+   - POST /api/p2/app/mod/paid-publications/:id/mark-paid
+     - sets intent status='paid'
+     - sets cc_job_postings.publish_state='published', published_at=now()
+8) Add tests:
+   - AdrenalineCanada selected → creates paid intent, posting not publicly visible
+   - Mark-paid → posting becomes publicly visible on AdrenalineCanada portal
+   - Destinations endpoint returns AdrenalineCanada with pricing metadata and requiresCheckout=true
+
+Output:
+- migration file(s)
+- files changed
+- how to run tests
+STOP. No UI work yet.
