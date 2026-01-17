@@ -69,6 +69,32 @@ export interface PortalDistributionPolicy {
   default_selected: boolean;
 }
 
+export interface AttentionTierInfo {
+  key: 'standard' | 'featured' | 'urgent';
+  label: string;
+  description: string;
+  incrementalPriceCents: number;
+  unit: 'day' | 'month' | 'flat';
+  durationDays?: number;
+  notes?: string;
+}
+
+export interface AssistanceTierInfo {
+  key: 'none' | 'assisted';
+  label: string;
+  incrementalPriceCents: number;
+  unit: 'day' | 'month' | 'flat';
+  notes?: string;
+}
+
+export interface TieringPayload {
+  enabled: boolean;
+  source: 'portal' | 'tenant' | 'global' | 'default';
+  currency: string;
+  attentionTiers: AttentionTierInfo[];
+  assistanceTiers: AssistanceTierInfo[];
+}
+
 export interface Destination {
   destinationType: 'portal' | 'embed' | 'external';
   id: string;
@@ -94,6 +120,7 @@ export interface Destination {
     status: string;
     amountCents: number;
   } | null;
+  tiering?: TieringPayload | null;
 }
 
 export interface DestinationsResponse {

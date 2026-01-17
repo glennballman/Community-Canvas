@@ -602,6 +602,24 @@ router.get('/:id/destinations', async (req: Request, res: Response) => {
     const destinations: any[] = [];
 
     for (const portal of portalsResult.rows) {
+      const isPaid = portal.pricing_model === 'paid';
+      let tiering = null;
+
+      if (isPaid) {
+        const tieringAvailability = await getTieringAvailability({ 
+          tenantId: ctx.tenant_id, 
+          portalId: portal.id 
+        });
+        
+        tiering = {
+          enabled: tieringAvailability.enabled,
+          source: tieringAvailability.source,
+          currency: tieringAvailability.currency,
+          attentionTiers: tieringAvailability.attentionTiers,
+          assistanceTiers: tieringAvailability.assistanceTiers
+        };
+      }
+
       destinations.push({
         destinationType: 'portal',
         id: portal.id,
@@ -626,7 +644,8 @@ router.get('/:id/destinations', async (req: Request, res: Response) => {
           intentId: portal.intent_id,
           status: portal.intent_status,
           amountCents: portal.intent_amount
-        } : null
+        } : null,
+        tiering
       });
     }
 
@@ -757,7 +776,7 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
                 portalId,
                 attentionTier: validAttentionTier,
                 assistanceTier: validAssistanceTier,
-                durationDays: 30
+                baseDurationDays: 30
               })
             : { tierPriceCents: 0, breakdown: { attentionPriceCents: 0, assistancePriceCents: 0 }, enabled: false };
 
