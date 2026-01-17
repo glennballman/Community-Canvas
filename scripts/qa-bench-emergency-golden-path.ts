@@ -6,9 +6,9 @@
  * - Housing waitlist tiering + staging
  * - Emergency replacement ranking + dedupe
  * 
- * Safe to run repeatedly (idempotent via client_request_id cleanup)
+ * Safe to run repeatedly (idempotent via qa_bench_emergency_ prefix cleanup)
  * 
- * Usage: npm run qa:bench-emergency
+ * Usage: npx tsx scripts/qa-bench-emergency-golden-path.ts
  */
 
 import { Pool } from 'pg';
@@ -315,20 +315,37 @@ async function main() {
     });
     console.log('');
     
-    // Verify ordering: on_site candidates should come before ready
+    // Verify ordering: on_site candidates should come before ready, ready before cleared
     const orderedNames = candidatesQuery.rows.map(r => r.full_name);
+    const orderedStates = candidatesQuery.rows.map(r => r.readiness_state);
+    
     const aliceIdx = orderedNames.indexOf('Alice OnSite Hostel');
     const bobIdx = orderedNames.indexOf('Bob OnSite Campground');
     const carolIdx = orderedNames.indexOf('Carol Ready One');
+    const danIdx = orderedNames.indexOf('Dan Ready Two');
+    const eveIdx = orderedNames.indexOf('Eve Ready Three');
     const frankIdx = orderedNames.indexOf('Frank Cleared');
     
+    // Verify readiness state ordering is correct
+    const onSiteLast = Math.max(aliceIdx, bobIdx);
+    const readyFirst = Math.min(carolIdx, danIdx, eveIdx);
+    const readyLast = Math.max(carolIdx, danIdx, eveIdx);
+    
     // Alice (priority 80) should be before Bob (priority 50) within on_site
-    // Both should be before Carol (ready)
+    // All on_site (Alice, Bob) should be before any ready (Carol, Dan, Eve)
+    // All ready should be before cleared (Frank)
     // Frank (cleared) should be last
-    if (aliceIdx < bobIdx && bobIdx < carolIdx && carolIdx < frankIdx) {
-      pass('Candidate ordering', `on_site (by priority) > ready > cleared`);
+    const orderCorrect = 
+      aliceIdx === 0 && 
+      bobIdx === 1 && 
+      onSiteLast < readyFirst && 
+      readyLast < frankIdx &&
+      frankIdx === 5;
+    
+    if (orderCorrect) {
+      pass('Candidate ordering', `on_site (by priority) > ready > cleared (Frank last at idx 5)`);
     } else {
-      fail('Candidate ordering', `unexpected order: Alice=${aliceIdx}, Bob=${bobIdx}, Carol=${carolIdx}, Frank=${frankIdx}`);
+      fail('Candidate ordering', `unexpected order: Alice=${aliceIdx}, Bob=${bobIdx}, Carol=${carolIdx}, Dan=${danIdx}, Eve=${eveIdx}, Frank=${frankIdx}`);
     }
 
     // ============================================
