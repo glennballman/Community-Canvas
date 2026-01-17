@@ -1,0 +1,76 @@
+You are Replit in Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+Do NOT implement anything yet.
+
+GOAL
+Perform a HARD INVENTORY of the existing payments/billing/accounting system so we can integrate paid job placements (AdrenalineCanada tiers) without creating a second source of truth.
+
+HARD RULES
+- Do NOT refactor.
+- Do NOT create new tables, endpoints, or UI.
+- Output hard evidence: SQL results, file paths, and code excerpts.
+- Never use banned terminology (“book”, “booking”, etc.) in any new strings.
+
+STEP 1 — Database inventory (Neon SQL)
+Run and paste results:
+
+1) List all billing/accounting/payment tables:
+   - any table name containing:
+     payment, payments, billing, invoice, receipt, folio, ledger, charge, credit, debit, refund, payout, settlement, tax, fee, stripe, psp, wallet
+   Output:
+   - table_schema, table_name
+
+2) For the top 15 most relevant tables found, output columns:
+   - column_name, data_type, is_nullable, default
+
+3) Identify the “single accounting spine” tables (if any):
+   - tables named like cc_folios, cc_folio_ledger, cc_rate_plans, cc_line_items, etc.
+   Output their columns and any key relationships.
+
+4) Identify any enums/types used for payments:
+   - pg_type where typname ILIKE '%payment%' OR '%invoice%' OR '%folio%' OR '%ledger%' OR '%charge%'
+
+5) Identify any RLS policies for these tables:
+   - pg_policies rows where tablename in those tables
+
+STEP 2 — Repo inventory (code scan)
+Search and report:
+
+1) All server routes touching payments/billing/folios:
+   - file paths + endpoints
+2) All services touching ledger/folio/billing:
+   - file paths + key exported functions
+3) Any “PSP-agnostic” abstraction layer:
+   - identify interface(s) for providers (Stripe etc.)
+4) Any existing receipt generation:
+   - PDF, HTML, email templates, or “pricing breakdown snapshot” pattern
+5) Any existing “intent” concept:
+   - payment intents, authorization holds, pending payments, etc.
+
+STEP 3 — Current payment flows (behavior map)
+Based on code found, summarize (with pointers to files):
+- How a payable amount is created (what table/event)
+- How it becomes authorized/paid
+- How it is reflected in ledger/folio
+- How refunds/voids are represented
+- Where taxes/fees are applied
+- Where currency is enforced
+
+STEP 4 — Integration recommendation (NO IMPLEMENTATION)
+Given what exists, answer:
+A) Where should “AdrenalineCanada paid publication intents” map into the accounting spine?
+   Options likely:
+   - create a folio line item per intent
+   - create a ledger entry per state transition
+   - attach intent id as external_reference
+B) What is the minimal integration surface (1–2 functions) we should add later?
+C) Identify collisions/duplication risks if we add any new “receipt snapshot” column.
+
+OUTPUT FORMAT
+Return a single report:
+1) DB Findings (SQL + results)
+2) Repo Findings (paths + excerpts)
+3) Payment Flow Map (steps + sources)
+4) Recommended Integration Point (single source of truth)
+5) “Safe to proceed” checklist for the next implementation prompt
+
+STOP after the report. Do NOT implement.
