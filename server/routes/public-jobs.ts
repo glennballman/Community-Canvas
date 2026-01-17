@@ -1039,6 +1039,21 @@ router.post('/jobs/campaign-apply', async (req: Request, res: Response) => {
       `, [sessionTokenHash]);
     }
 
+    // Create housing waitlist entry if housing needed
+    if (housingNeeded) {
+      try {
+        await serviceQuery(`
+          INSERT INTO cc_portal_housing_waitlist_entries (
+            portal_id, bundle_id, applicant_individual_id, applicant_name, applicant_email, status
+          ) VALUES ($1, $2, $3, $4, $5, 'new')
+          ON CONFLICT (portal_id, bundle_id) WHERE bundle_id IS NOT NULL DO NOTHING
+        `, [ctx.portal_id, bundleId, individualId, applicantName, applicantEmail.toLowerCase()]);
+      } catch (hwErr: any) {
+        // Log but don't fail the application
+        console.error('Failed to create housing waitlist entry:', hwErr);
+      }
+    }
+
     res.json({
       ok: true,
       bundleId,

@@ -101,6 +101,7 @@ import embedsRouter from "./routes/embeds";
 import jobIngestionRouter from "./routes/job-ingestion";
 import adminPortalsRouter from "./routes/admin-portals";
 import documentTemplatesRouter from "./routes/document-templates";
+import tenantHousingRouter from "./routes/tenant-housing";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -380,6 +381,9 @@ export async function registerRoutes(
   
   // Document templates API (tenant auth required)
   app.use('/api/p2/app/document-templates', documentTemplatesRouter);
+
+  // Tenant housing API (tenant auth required)
+  app.use('/api/p2/app', tenantHousingRouter);
 
   // Register user context routes (auth required)
   app.use('/api', userContextRouter);

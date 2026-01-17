@@ -1516,4 +1516,288 @@ router.get('/hiring-pulse', async (req: Request, res: Response) => {
   }
 });
 
+// =============================================================================
+// PORTAL GROWTH SWITCHES
+// =============================================================================
+
+const growthSwitchesPatchSchema = z.object({
+  jobs_enabled: z.boolean().optional(),
+  reservations_state: z.enum(['available', 'request_only', 'enabled']).optional(),
+  assets_enabled: z.boolean().optional(),
+  service_runs_enabled: z.boolean().optional(),
+  leads_enabled: z.boolean().optional()
+}).refine(data => Object.keys(data).length > 0, { message: 'At least one field required' });
+
+router.get('/portals/:portalId/growth-switches', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { portalId } = req.params;
+
+  if (portalId !== ctx.portal_id) {
+    return res.status(403).json({ ok: false, error: 'Portal mismatch' });
+  }
+
+  try {
+    // Ensure row exists (on-demand insert)
+    await serviceQuery(`
+      INSERT INTO cc_portal_growth_switches (portal_id)
+      VALUES ($1)
+      ON CONFLICT (portal_id) DO NOTHING
+    `, [portalId]);
+
+    const result = await serviceQuery(`
+      SELECT 
+        gs.*,
+        p.name as portal_name,
+        p.slug as portal_slug
+      FROM cc_portal_growth_switches gs
+      JOIN cc_portals p ON p.id = gs.portal_id
+      WHERE gs.portal_id = $1
+    `, [portalId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Growth switches not found' });
+    }
+
+    const gs = result.rows[0];
+
+    // Determine next step for reservations
+    let reservationsNextStep: { action: string; route: string } | null = null;
+    switch (gs.reservations_state) {
+      case 'available':
+        reservationsNextStep = { action: 'enable', route: '/app/reservations' };
+        break;
+      case 'request_only':
+        reservationsNextStep = { action: 'request', route: '/app/mod/support?topic=reservations' };
+        break;
+      case 'enabled':
+        reservationsNextStep = { action: 'manage', route: '/app/reservations' };
+        break;
+    }
+
+    res.json({
+      ok: true,
+      portalId,
+      portalName: gs.portal_name,
+      switches: {
+        jobs_enabled: gs.jobs_enabled,
+        reservations_state: gs.reservations_state,
+        assets_enabled: gs.assets_enabled,
+        service_runs_enabled: gs.service_runs_enabled,
+        leads_enabled: gs.leads_enabled
+      },
+      reservationsNextStep,
+      updatedAt: gs.updated_at
+    });
+  } catch (error: any) {
+    console.error('Get growth switches error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch growth switches' });
+  }
+});
+
+router.patch('/portals/:portalId/growth-switches', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { portalId } = req.params;
+
+  if (portalId !== ctx.portal_id) {
+    return res.status(403).json({ ok: false, error: 'Portal mismatch' });
+  }
+
+  const parseResult = growthSwitchesPatchSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ 
+      ok: false, 
+      error: 'VALIDATION_ERROR',
+      details: parseResult.error.flatten() 
+    });
+  }
+
+  const updates = parseResult.data;
+
+  try {
+    // Build dynamic update
+    const setClauses: string[] = ['updated_at = now()'];
+    const params: any[] = [portalId, ctx.individual_id];
+    let paramIndex = 3;
+
+    if (updates.jobs_enabled !== undefined) {
+      setClauses.push(`jobs_enabled = $${paramIndex++}`);
+      params.push(updates.jobs_enabled);
+    }
+    if (updates.reservations_state !== undefined) {
+      setClauses.push(`reservations_state = $${paramIndex++}`);
+      params.push(updates.reservations_state);
+    }
+    if (updates.assets_enabled !== undefined) {
+      setClauses.push(`assets_enabled = $${paramIndex++}`);
+      params.push(updates.assets_enabled);
+    }
+    if (updates.service_runs_enabled !== undefined) {
+      setClauses.push(`service_runs_enabled = $${paramIndex++}`);
+      params.push(updates.service_runs_enabled);
+    }
+    if (updates.leads_enabled !== undefined) {
+      setClauses.push(`leads_enabled = $${paramIndex++}`);
+      params.push(updates.leads_enabled);
+    }
+
+    setClauses.push('updated_by_identity_id = $2');
+
+    await serviceQuery(`
+      UPDATE cc_portal_growth_switches
+      SET ${setClauses.join(', ')}
+      WHERE portal_id = $1
+    `, params);
+
+    res.json({ ok: true, updated: Object.keys(updates) });
+  } catch (error: any) {
+    console.error('Patch growth switches error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to update growth switches' });
+  }
+});
+
+// =============================================================================
+// HOUSING WAITLIST (Staff)
+// =============================================================================
+
+const waitlistPatchSchema = z.object({
+  status: z.enum(['new', 'contacted', 'matched', 'waitlisted', 'closed']).optional(),
+  assigned_to_identity_id: z.string().uuid().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional()
+});
+
+router.get('/portals/:portalId/housing-waitlist', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { portalId } = req.params;
+
+  if (portalId !== ctx.portal_id) {
+    return res.status(403).json({ ok: false, error: 'Portal mismatch' });
+  }
+
+  try {
+    const status = req.query.status as string || null;
+    const search = req.query.q as string || null;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    let whereClause = 'WHERE w.portal_id = $1';
+    const params: any[] = [portalId];
+    let paramIndex = 2;
+
+    if (status) {
+      whereClause += ` AND w.status = $${paramIndex++}`;
+      params.push(status);
+    }
+    if (search) {
+      whereClause += ` AND (w.applicant_name ILIKE $${paramIndex} OR w.applicant_email ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    params.push(limit, offset);
+
+    const result = await serviceQuery(`
+      SELECT 
+        w.*,
+        EXTRACT(EPOCH FROM (now() - w.created_at)) / 3600 as hours_since_created
+      FROM cc_portal_housing_waitlist_entries w
+      ${whereClause}
+      ORDER BY w.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `, params);
+
+    const countResult = await serviceQuery(`
+      SELECT COUNT(*) as total
+      FROM cc_portal_housing_waitlist_entries w
+      ${whereClause}
+    `, params.slice(0, -2));
+
+    res.json({
+      ok: true,
+      entries: result.rows.map((row: any) => ({
+        id: row.id,
+        portalId: row.portal_id,
+        bundleId: row.bundle_id,
+        applicationId: row.application_id,
+        applicantName: row.applicant_name,
+        applicantEmail: row.applicant_email,
+        preferredStartDate: row.preferred_start_date,
+        preferredEndDate: row.preferred_end_date,
+        budgetNote: row.budget_note,
+        status: row.status,
+        assignedToIdentityId: row.assigned_to_identity_id,
+        notes: row.notes,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        hoursSinceCreated: Math.round(parseFloat(row.hours_since_created || '0'))
+      })),
+      total: parseInt(countResult.rows[0]?.total || '0'),
+      limit,
+      offset
+    });
+  } catch (error: any) {
+    console.error('Get housing waitlist error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch housing waitlist' });
+  }
+});
+
+router.patch('/housing-waitlist/:id', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+  const { id } = req.params;
+
+  const parseResult = waitlistPatchSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({ 
+      ok: false, 
+      error: 'VALIDATION_ERROR',
+      details: parseResult.error.flatten() 
+    });
+  }
+
+  const updates = parseResult.data;
+
+  try {
+    // Verify entry belongs to staff's portal
+    const entryCheck = await serviceQuery(`
+      SELECT id FROM cc_portal_housing_waitlist_entries
+      WHERE id = $1 AND portal_id = $2
+    `, [id, ctx.portal_id]);
+
+    if (entryCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Entry not found' });
+    }
+
+    const setClauses: string[] = ['updated_at = now()'];
+    const params: any[] = [id];
+    let paramIndex = 2;
+
+    if (updates.status !== undefined) {
+      setClauses.push(`status = $${paramIndex++}`);
+      params.push(updates.status);
+    }
+    if (updates.assigned_to_identity_id !== undefined) {
+      setClauses.push(`assigned_to_identity_id = $${paramIndex++}`);
+      params.push(updates.assigned_to_identity_id);
+    }
+    if (updates.notes !== undefined) {
+      setClauses.push(`notes = $${paramIndex++}`);
+      params.push(updates.notes);
+    }
+
+    await serviceQuery(`
+      UPDATE cc_portal_housing_waitlist_entries
+      SET ${setClauses.join(', ')}
+      WHERE id = $1
+    `, params);
+
+    res.json({ ok: true, updated: Object.keys(updates) });
+  } catch (error: any) {
+    console.error('Patch housing waitlist error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to update waitlist entry' });
+  }
+});
+
 export default router;

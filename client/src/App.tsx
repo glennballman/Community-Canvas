@@ -93,6 +93,9 @@ import JobsModerationPage from './pages/app/mod/JobsModerationPage';
 import PaidPublicationsModerationPage from './pages/app/mod/PaidPublicationsModerationPage';
 import ApplicationsQueuePage from './pages/app/mod/ApplicationsQueuePage';
 import HiringPulsePage from './pages/app/mod/HiringPulsePage';
+import PortalGrowthPage from './pages/app/mod/PortalGrowthPage';
+import HousingWaitlistPage from './pages/app/mod/HousingWaitlistPage';
+import TenantHousingOfferPage from './pages/app/TenantHousingOfferPage';
 import JobApplicationsPage from './pages/app/jobs/JobApplicationsPage';
 
 // Pages - Public Jobs Portal
@@ -271,6 +274,12 @@ export default function App() {
                 <Route path="mod/paid-publications" element={<PaidPublicationsModerationPage />} />
                 <Route path="mod/applications" element={<ApplicationsQueuePage />} />
                 <Route path="mod/hiring-pulse" element={<HiringPulsePage />} />
+                <Route path="mod/portals/:portalId/growth" element={<PortalGrowthPage />} />
+                <Route path="mod/portals/:portalId/housing-waitlist" element={<HousingWaitlistPage />} />
+                <Route path="mod/housing" element={<HousingWaitlistPage />} />
+                
+                {/* Tenant Portal Routes */}
+                <Route path="portals/:portalId/housing" element={<TenantHousingOfferPage />} />
                 
                 {/* V3.5 Jobs Applications */}
                 <Route path="jobs/:jobId/applications" element={<JobApplicationsPage />} />
