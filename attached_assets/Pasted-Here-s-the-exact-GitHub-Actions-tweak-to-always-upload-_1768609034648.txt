@@ -1,0 +1,74 @@
+Here’s the exact GitHub Actions tweak to always upload proof + cert artifacts with a name that includes commit SHA (and optionally a timestamp). This makes every PR build carry its own evidence bundle.
+
+1) Drop-in upload step (commit SHA in name)
+
+Add/replace your upload step with this:
+
+      - name: Upload QA + SCM artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-scm-${{ github.sha }}
+          path: |
+            artifacts/qa/p2-smoke-proof.json
+            artifacts/qa/p2-smoke-proof.md
+            artifacts/qa/scm/p2-operator-cert.json
+            artifacts/qa/scm/p2-operator-cert.md
+            server.log
+          if-no-files-found: warn
+          retention-days: 14
+
+
+if: always() ensures you get artifacts even on FAIL (critical for debugging).
+
+retention-days is adjustable.
+
+2) Optional: add a timestamp to the artifact name
+
+GitHub expressions don’t format timestamps nicely without a step. Add this step before upload:
+
+      - name: Set build timestamp
+        if: always()
+        run: echo "BUILD_TS=$(date -u +'%Y%m%dT%H%M%SZ')" >> $GITHUB_ENV
+
+
+Then name the artifact:
+
+      - name: Upload QA + SCM artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-scm-${{ github.sha }}-${{ env.BUILD_TS }}
+          path: |
+            artifacts/qa/p2-smoke-proof.json
+            artifacts/qa/p2-smoke-proof.md
+            artifacts/qa/scm/p2-operator-cert.json
+            artifacts/qa/scm/p2-operator-cert.md
+            server.log
+          if-no-files-found: warn
+          retention-days: 14
+
+3) Optional: upload the whole folder (simpler)
+
+If you prefer not to enumerate files:
+
+      - name: Upload QA folder
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-${{ github.sha }}
+          path: artifacts/qa/**
+          if-no-files-found: warn
+          retention-days: 14
+
+4) Recommended CI “truth rule”
+
+Keep your ingest behavior:
+
+smoke test fails → job fails
+
+ingest FAIL → job fails
+
+ingest HELD → job passes but cert shows HELD
+
+If you ever want PRs to require PASS only, you can add a final step that parses the cert JSON and fails on HELD too — but I wouldn’t do that yet.
