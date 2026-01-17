@@ -1330,4 +1330,172 @@ router.get('/templates', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// HIRING PULSE - Cold-start health dashboard metrics
+// ============================================================================
+
+const hiringPulseRangeSchema = z.enum(['7d', '30d']).default('7d');
+
+router.get('/hiring-pulse', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx!;
+
+  const rangeResult = hiringPulseRangeSchema.safeParse(req.query.range);
+  const range = rangeResult.success ? rangeResult.data : '7d';
+  const days = range === '30d' ? 30 : 7;
+
+  try {
+    // Get portal info for share links
+    const portalResult = await serviceQuery(`
+      SELECT id, slug, name, config
+      FROM cc_portals
+      WHERE id = $1
+    `, [ctx.portal_id]);
+
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Portal not found' });
+    }
+
+    const portal = portalResult.rows[0];
+
+    // New applications in range
+    const newAppsResult = await serviceQuery(`
+      SELECT COUNT(*) as count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE jp.portal_id = $1
+        AND a.created_at >= NOW() - INTERVAL '${days} days'
+    `, [ctx.portal_id]);
+
+    // Applications by status
+    const byStatusResult = await serviceQuery(`
+      SELECT a.status, COUNT(*) as count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE jp.portal_id = $1
+        AND a.created_at >= NOW() - INTERVAL '${days} days'
+      GROUP BY a.status
+      ORDER BY count DESC
+    `, [ctx.portal_id]);
+
+    // Median first response time (minutes) from events
+    const medianResponseResult = await serviceQuery(`
+      WITH first_responses AS (
+        SELECT 
+          a.id as application_id,
+          EXTRACT(EPOCH FROM (
+            MIN(e.created_at) - COALESCE(a.submitted_at, a.created_at)
+          )) / 60 as minutes_to_first_response
+        FROM cc_job_applications a
+        JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+        LEFT JOIN cc_job_application_events e ON e.application_id = a.id
+          AND e.event_type IN ('reply_sent', 'status_changed')
+        WHERE jp.portal_id = $1
+          AND a.created_at >= NOW() - INTERVAL '${days} days'
+        GROUP BY a.id, a.submitted_at, a.created_at
+        HAVING MIN(e.created_at) IS NOT NULL
+      )
+      SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY minutes_to_first_response) as median
+      FROM first_responses
+    `, [ctx.portal_id]);
+
+    // Housing needed count
+    const housingResult = await serviceQuery(`
+      SELECT COUNT(*) as count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE jp.portal_id = $1
+        AND a.created_at >= NOW() - INTERVAL '${days} days'
+        AND a.housing_needed = true
+    `, [ctx.portal_id]);
+
+    // Work permit questions count
+    const workPermitResult = await serviceQuery(`
+      SELECT COUNT(*) as count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      WHERE jp.portal_id = $1
+        AND a.created_at >= NOW() - INTERVAL '${days} days'
+        AND a.work_permit_status IS NOT NULL
+        AND a.work_permit_status != 'not_applicable'
+    `, [ctx.portal_id]);
+
+    // Top employers by application count
+    const topEmployersResult = await serviceQuery(`
+      SELECT 
+        t.id as tenant_id,
+        t.name as tenant_name,
+        COUNT(*) as application_count
+      FROM cc_job_applications a
+      JOIN cc_job_postings jp ON jp.id = a.job_posting_id
+      JOIN cc_tenants t ON t.id = a.tenant_id
+      WHERE jp.portal_id = $1
+        AND a.created_at >= NOW() - INTERVAL '${days} days'
+      GROUP BY t.id, t.name
+      ORDER BY application_count DESC
+      LIMIT 5
+    `, [ctx.portal_id]);
+
+    // Build share links
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : '';
+    
+    const shareLinks: { label: string; url: string }[] = [];
+    
+    // Portal jobs page
+    shareLinks.push({
+      label: 'Jobs Board',
+      url: `${baseUrl}/b/${portal.slug}/jobs`
+    });
+
+    // Check for campaign apply pages
+    const campaignsResult = await serviceQuery(`
+      SELECT c.id, c.slug, c.name
+      FROM cc_job_campaigns c
+      WHERE c.portal_id = $1
+        AND c.is_active = true
+      ORDER BY c.name
+      LIMIT 5
+    `, [ctx.portal_id]);
+
+    for (const campaign of campaignsResult.rows) {
+      shareLinks.push({
+        label: `Campaign: ${campaign.name}`,
+        url: `${baseUrl}/b/${portal.slug}/apply/${campaign.slug}`
+      });
+    }
+
+    res.json({
+      ok: true,
+      range,
+      portalName: portal.name,
+      metrics: {
+        newApplicationsCount: parseInt(newAppsResult.rows[0]?.count || '0'),
+        applicationsByStatus: byStatusResult.rows.reduce((acc: Record<string, number>, row: any) => {
+          acc[row.status] = parseInt(row.count);
+          return acc;
+        }, {}),
+        medianFirstResponseMinutes: medianResponseResult.rows[0]?.median 
+          ? Math.round(parseFloat(medianResponseResult.rows[0].median))
+          : null,
+        housingNeededCount: parseInt(housingResult.rows[0]?.count || '0'),
+        workPermitQuestionsCount: parseInt(workPermitResult.rows[0]?.count || '0'),
+        topEmployersByApplications: topEmployersResult.rows.map((row: any) => ({
+          tenantId: row.tenant_id,
+          tenantName: row.tenant_name,
+          applicationCount: parseInt(row.application_count)
+        }))
+      },
+      shareLinks
+    });
+  } catch (error: any) {
+    console.error('Hiring pulse error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch hiring pulse metrics'
+    });
+  }
+});
+
 export default router;

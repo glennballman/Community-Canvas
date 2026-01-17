@@ -92,6 +92,7 @@ import EmbedConfiguratorPage from './pages/app/jobs/EmbedConfiguratorPage';
 import JobsModerationPage from './pages/app/mod/JobsModerationPage';
 import PaidPublicationsModerationPage from './pages/app/mod/PaidPublicationsModerationPage';
 import ApplicationsQueuePage from './pages/app/mod/ApplicationsQueuePage';
+import HiringPulsePage from './pages/app/mod/HiringPulsePage';
 import JobApplicationsPage from './pages/app/jobs/JobApplicationsPage';
 
 // Pages - Public Jobs Portal
@@ -269,6 +270,7 @@ export default function App() {
                 <Route path="mod/jobs" element={<JobsModerationPage />} />
                 <Route path="mod/paid-publications" element={<PaidPublicationsModerationPage />} />
                 <Route path="mod/applications" element={<ApplicationsQueuePage />} />
+                <Route path="mod/hiring-pulse" element={<HiringPulsePage />} />
                 
                 {/* V3.5 Jobs Applications */}
                 <Route path="jobs/:jobId/applications" element={<JobApplicationsPage />} />
