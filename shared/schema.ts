@@ -4144,12 +4144,25 @@ export const ccJobs = pgTable("cc_jobs", {
   viewCount: integer("view_count").default(0),
   applicationCount: integer("application_count").default(0),
   
+  nocCode: varchar("noc_code", { length: 10 }),
+  socCode: varchar("soc_code", { length: 10 }),
+  occupationalCategory: text("occupational_category"),
+  taxonomy: jsonb("taxonomy").default({}),
+  
+  brandTenantId: uuid("brand_tenant_id"),
+  brandNameSnapshot: text("brand_name_snapshot"),
+  legalPartyId: uuid("legal_party_id"),
+  legalNameSnapshot: text("legal_name_snapshot"),
+  legalTradeNameSnapshot: text("legal_trade_name_snapshot"),
+  
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   communityIdx: index("idx_cc_jobs_community").on(table.communityId),
   statusIdx: index("idx_cc_jobs_status").on(table.status),
   roleIdx: index("idx_cc_jobs_role").on(table.roleCategory),
+  nocCodeIdx: index("idx_jobs_noc_code").on(table.nocCode),
+  brandTenantIdx: index("idx_jobs_brand_tenant").on(table.brandTenantId),
 }));
 
 export const insertJobSchema = createInsertSchema(ccJobs).omit({
@@ -4181,9 +4194,18 @@ export const ccJobPostings = pgTable("cc_job_postings", {
   postedAt: timestamp("posted_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  
+  publishState: text("publish_state").notNull().default("draft"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedByIdentityId: uuid("reviewed_by_identity_id"),
+  rejectionReason: text("rejection_reason"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  pausedAt: timestamp("paused_at", { withTimezone: true }),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
 }, (table) => ({
   uniqueJobPortal: uniqueIndex("idx_cc_job_postings_unique").on(table.jobId, table.portalId),
   portalIdx: index("idx_cc_job_postings_portal").on(table.portalId),
+  publishStateIdx: index("idx_job_postings_publish_state").on(table.publishState),
 }));
 
 export const insertJobPostingSchema = createInsertSchema(ccJobPostings).omit({
@@ -6244,3 +6266,198 @@ export const ccDrillScripts = pgTable("cc_drill_scripts", {
 export const insertDrillScriptSchema = createInsertSchema(ccDrillScripts).omit({ id: true, createdAt: true, scriptSha256: true });
 export type DrillScript = typeof ccDrillScripts.$inferSelect;
 export type InsertDrillScript = z.infer<typeof insertDrillScriptSchema>;
+
+// ============================================================================
+// JOBS BACKEND - Distribution, Moderation, Public Apply (Migration 140)
+// ============================================================================
+
+// Job Posting Publish State enum
+export const jobPostingPublishStateEnum = pgEnum("job_posting_publish_state", [
+  "draft", "pending_review", "published", "rejected", "paused", "archived"
+]);
+
+// Tenant → Legal Entity mapping
+export const ccTenantLegalEntities = pgTable("cc_tenant_legal_entities", {
+  tenantId: uuid("tenant_id").primaryKey(),
+  legalPartyId: uuid("legal_party_id").notNull(),
+  dbaNameSnapshot: text("dba_name_snapshot").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertTenantLegalEntitySchema = createInsertSchema(ccTenantLegalEntities).omit({ createdAt: true, updatedAt: true });
+export type TenantLegalEntity = typeof ccTenantLegalEntities.$inferSelect;
+export type InsertTenantLegalEntity = z.infer<typeof insertTenantLegalEntitySchema>;
+
+// Portal Distribution Policies
+export const ccPortalDistributionPolicies = pgTable("cc_portal_distribution_policies", {
+  portalId: uuid("portal_id").primaryKey(),
+  isAcceptingJobPostings: boolean("is_accepting_job_postings").notNull().default(true),
+  requiresModeration: boolean("requires_moderation").notNull().default(false),
+  pricingModel: text("pricing_model").notNull().default("free"),
+  priceHint: text("price_hint"),
+  defaultSelected: boolean("default_selected").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertPortalDistributionPolicySchema = createInsertSchema(ccPortalDistributionPolicies).omit({ createdAt: true, updatedAt: true });
+export type PortalDistributionPolicy = typeof ccPortalDistributionPolicies.$inferSelect;
+export type InsertPortalDistributionPolicy = z.infer<typeof insertPortalDistributionPolicySchema>;
+
+// Embed Surfaces
+export const ccEmbedSurfaces = pgTable("cc_embed_surfaces", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  label: text("label").notNull(),
+  embedKeyHash: text("embed_key_hash").notNull().unique(),
+  allowedDomains: text("allowed_domains").array().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_embed_surfaces_tenant").on(table.tenantId),
+}));
+
+export const insertEmbedSurfaceSchema = createInsertSchema(ccEmbedSurfaces).omit({ id: true, createdAt: true, updatedAt: true });
+export type EmbedSurface = typeof ccEmbedSurfaces.$inferSelect;
+export type InsertEmbedSurface = z.infer<typeof insertEmbedSurfaceSchema>;
+
+// Job Embed Publications
+export const ccJobEmbedPublications = pgTable("cc_job_embed_publications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  jobId: uuid("job_id").notNull(),
+  embedSurfaceId: uuid("embed_surface_id").notNull(),
+  publishState: jobPostingPublishStateEnum("publish_state").notNull().default("draft"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  pausedAt: timestamp("paused_at", { withTimezone: true }),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  jobIdx: index("idx_job_embed_pubs_job").on(table.jobId),
+  surfaceIdx: index("idx_job_embed_pubs_surface").on(table.embedSurfaceId),
+  uniqueJobSurface: uniqueIndex("uq_job_embed_pub").on(table.jobId, table.embedSurfaceId),
+}));
+
+export const insertJobEmbedPublicationSchema = createInsertSchema(ccJobEmbedPublications).omit({ id: true, createdAt: true, updatedAt: true });
+export type JobEmbedPublication = typeof ccJobEmbedPublications.$inferSelect;
+export type InsertJobEmbedPublication = z.infer<typeof insertJobEmbedPublicationSchema>;
+
+// External Job Distribution Channels
+export const ccJobDistributionChannels = pgTable("cc_job_distribution_channels", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  providerKey: text("provider_key").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  pricingModel: text("pricing_model").notNull().default("paid"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertJobDistributionChannelSchema = createInsertSchema(ccJobDistributionChannels).omit({ id: true, createdAt: true, updatedAt: true });
+export type JobDistributionChannel = typeof ccJobDistributionChannels.$inferSelect;
+export type InsertJobDistributionChannel = z.infer<typeof insertJobDistributionChannelSchema>;
+
+// Job Channel Publications (queued publications to external channels)
+export const ccJobChannelPublications = pgTable("cc_job_channel_publications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  jobId: uuid("job_id").notNull(),
+  channelId: uuid("channel_id").notNull(),
+  publishState: text("publish_state").notNull().default("queued"),
+  externalPostingId: text("external_posting_id"),
+  externalPostingUrl: text("external_posting_url"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  jobIdx: index("idx_job_channel_pubs_job").on(table.jobId),
+  uniqueJobChannel: uniqueIndex("uq_job_channel_pub").on(table.jobId, table.channelId),
+}));
+
+export const insertJobChannelPublicationSchema = createInsertSchema(ccJobChannelPublications).omit({ id: true, createdAt: true, updatedAt: true });
+export type JobChannelPublication = typeof ccJobChannelPublications.$inferSelect;
+export type InsertJobChannelPublication = z.infer<typeof insertJobChannelPublicationSchema>;
+
+// Document Templates for employer hiring docs
+export const ccDocumentTemplates = pgTable("cc_document_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerLegalPartyId: uuid("owner_legal_party_id").notNull(),
+  templateType: text("template_type").notNull(),
+  name: text("name").notNull(),
+  sourceMediaId: uuid("source_media_id"),
+  templatePayload: jsonb("template_payload").notNull().default({}),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  ownerIdx: index("idx_doc_templates_owner").on(table.ownerLegalPartyId),
+}));
+
+export const insertDocumentTemplateSchema = createInsertSchema(ccDocumentTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type DocumentTemplate = typeof ccDocumentTemplates.$inferSelect;
+export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
+
+// Public Upload Sessions for anonymous applicant uploads
+export const ccPublicUploadSessions = pgTable("cc_public_upload_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionTokenHash: text("session_token_hash").notNull().unique(),
+  purpose: text("purpose").notNull(),
+  portalId: uuid("portal_id"),
+  jobId: uuid("job_id"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tokenIdx: index("idx_public_upload_sessions_token").on(table.sessionTokenHash),
+}));
+
+export const insertPublicUploadSessionSchema = createInsertSchema(ccPublicUploadSessions).omit({ id: true, createdAt: true });
+export type PublicUploadSession = typeof ccPublicUploadSessions.$inferSelect;
+export type InsertPublicUploadSession = z.infer<typeof insertPublicUploadSessionSchema>;
+
+// Public Upload Session Media
+export const ccPublicUploadSessionMedia = pgTable("cc_public_upload_session_media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: uuid("session_id").notNull(),
+  mediaId: uuid("media_id"),
+  f2Key: text("f2_key"),
+  role: text("role").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  sessionIdx: index("idx_pub_upload_media_session").on(table.sessionId),
+}));
+
+export const insertPublicUploadSessionMediaSchema = createInsertSchema(ccPublicUploadSessionMedia).omit({ id: true, createdAt: true });
+export type PublicUploadSessionMedia = typeof ccPublicUploadSessionMedia.$inferSelect;
+export type InsertPublicUploadSessionMedia = z.infer<typeof insertPublicUploadSessionMediaSchema>;
+
+// Job Ingestion Status enum
+export const jobIngestionStatusEnum = pgEnum("job_ingestion_status", [
+  "pending", "processing", "draft_ready", "approved", "failed", "cancelled"
+]);
+
+// Job Ingestion Tasks
+export const ccJobIngestionTasks = pgTable("cc_job_ingestion_tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  ingestionType: text("ingestion_type").notNull(),
+  sourceUrl: text("source_url"),
+  sourceMediaId: uuid("source_media_id"),
+  aiPrompt: text("ai_prompt"),
+  status: jobIngestionStatusEnum("status").notNull().default("pending"),
+  extractedData: jsonb("extracted_data").default({}),
+  draftJobData: jsonb("draft_job_data").default({}),
+  errorMessage: text("error_message"),
+  jobId: uuid("job_id"),
+  createdByUserId: uuid("created_by_user_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_job_ingestion_tenant").on(table.tenantId),
+  statusIdx: index("idx_job_ingestion_status").on(table.status),
+}));
+
+export const insertJobIngestionTaskSchema = createInsertSchema(ccJobIngestionTasks).omit({ id: true, createdAt: true, updatedAt: true });
+export type JobIngestionTask = typeof ccJobIngestionTasks.$inferSelect;
+export type InsertJobIngestionTask = z.infer<typeof insertJobIngestionTaskSchema>;

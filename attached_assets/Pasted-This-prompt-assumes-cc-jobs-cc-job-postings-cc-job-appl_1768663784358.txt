@@ -1,0 +1,312 @@
+This prompt assumes:
+
+cc_jobs, cc_job_postings, cc_job_applications already exist
+
+Cloudflare F2 integration exists
+
+No tenant→legal party mapping table exists (we will add cc_tenant_legal_entities)
+
+No embed key system exists (we will add cc_embed_surfaces)
+
+Public applicants can upload media without an account (we will implement tokenized public upload + claim-on-submit)
+
+✅ Paste this into Replit (single prompt)
+You are Replit working in Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+Implement the COMPLETE Jobs backend now. Additive only. No refactors. No breaking changes.
+
+NON-NEGOTIABLE PLATFORM STANDARDS
+- Use schema.org entity/property semantics for JSON payloads and internal meaning. Do not invent schema names when schema.org exists.
+- BANNED TERMS: never use “book”, “booking”, “booked”, “bookings”, “booker”. Use “reserve/reservation/reserved/scheduled”.
+- “Contacts” must be “People”. “Inventory” must be “Assets”.
+- Portals are sovereign: public reads must be portal-scoped.
+- Jobs are first-class: can exist without tenant, but tenant-created jobs MUST have tenant_id.
+- Employer identity is schema.org Organization via cc_parties (NOT cc_organizations for employers).
+- Payments PSP-agnostic. No Stripe assumptions.
+- Cloudflare F2 media upload integration exists and must be used.
+
+KNOWN STATE
+- Tables exist: cc_jobs, cc_job_postings, cc_job_applications, cc_job_matches
+- Legacy: cc_job_applicants exists (DO NOT use in any new API)
+- cc_job_postings missing publish_state + moderation fields
+- cc_jobs missing noc_code/soc_code/occupational_category/taxonomy
+- Missing tables: cc_tenant_legal_entities, cc_embed_surfaces, cc_portal_distribution_policies, channel distribution tables
+- Public applicants must upload resume/photos/videos during apply WITHOUT an account
+
+GOALS
+1) Tenant creates JobPosting and selects destinations (portals + external channels)
+   - Default select: tenant website embed + Bamfield (combined) + West + East + CanadaDirect
+   - Let tenant unselect any
+2) CanadaDirect requires Community Canvas moderation before public visibility
+3) Jobs must render publicly as BRAND (tenant/DBA) while legal hiring org may be numbered company shared by multiple tenants
+   - Offer letters: “LEGAL_NAME (dba BRAND_NAME)”
+4) Publish jobs on existing websites via embed feed/widget even if tenant does not have a visible CC public portal page
+5) Ingestion: URL scrape + upload (pdf/image/video) + AI draft -> produces JobPostingDraft -> tenant approves -> creates job + distribution rows
+6) Employer-specific offer templates:
+   - upload 2+ standard hiring docs -> extract template -> approve -> activate
+   - support employer logo + letterhead (required for immigration)
+7) Public media uploads during apply:
+   - resumeDocument (pdf/doc), optional photos/video intro
+   - must use signed upload URL to F2, then claim/attach on application submit
+   - enforce ACL so public cannot read application attachments
+
+STEP 1 — DB MIGRATIONS (additive only)
+A) Enum for job posting publication lifecycle
+- Create enum: job_posting_publish_state = (draft, pending_review, published, rejected, paused, archived)
+
+B) Alter cc_job_postings to add required columns:
+- publish_state job_posting_publish_state NOT NULL DEFAULT 'draft'
+- reviewed_at timestamptz
+- reviewed_by_identity_id uuid (FK if identity table exists, else plain uuid)
+- rejection_reason text
+- published_at timestamptz
+- paused_at timestamptz
+- archived_at timestamptz
+
+C) Alter cc_jobs to add taxonomy + schema.org-aligned fields:
+- noc_code varchar
+- soc_code varchar
+- occupational_category text
+- taxonomy jsonb
+Also add brand/legal display snapshots:
+- brand_tenant_id uuid  (the tenant/DBA brand used publicly)
+- brand_name_snapshot text
+- legal_party_id uuid  (FK to cc_parties; legal hiring org)
+- legal_name_snapshot text
+- legal_trade_name_snapshot text
+
+NOTE: cc_jobs already has party_id FK to cc_parties. Do NOT refactor existing column. Keep it.
+Set rule:
+- party_id remains as-is (legacy hiring org ref)
+- legal_party_id is the canonical legal hiring org going forward (use it for letters)
+- brand_tenant_id + brand_name_snapshot drive public branding
+(We will populate snapshots at create/publish time.)
+
+D) Tenant → legal entity mapping table (required)
+Create cc_tenant_legal_entities:
+- tenant_id uuid PK FK cc_tenants
+- legal_party_id uuid NOT NULL FK cc_parties
+- dba_name_snapshot text NOT NULL
+- created_at timestamptz, updated_at timestamptz
+Purpose: map tenant brand to legal numbered company (shared across tenants)
+
+E) Portal distribution policies table
+Create cc_portal_distribution_policies:
+- portal_id uuid PK FK cc_portals
+- is_accepting_job_postings boolean NOT NULL DEFAULT true
+- requires_moderation boolean NOT NULL DEFAULT false
+- pricing_model text NOT NULL DEFAULT 'free'  -- free|paid|invite_only|unknown
+- price_hint text
+- default_selected boolean NOT NULL DEFAULT true
+- created_at, updated_at
+Seed rows for known portals (if present):
+- Bamfield combined, West, East: requires_moderation=false
+- CanadaDirect: requires_moderation=true
+Also create a policy for any tenant’s own portal if such a portal exists, else skip.
+
+F) Embed surfaces table (required)
+Create cc_embed_surfaces:
+- id uuid PK
+- tenant_id uuid NOT NULL FK cc_tenants
+- label text NOT NULL
+- embed_key_hash text NOT NULL UNIQUE  -- store hash only
+- allowed_domains text[]  -- allowlist
+- is_active boolean NOT NULL DEFAULT true
+- created_at, updated_at
+Also create cc_embed_surface_jobs (or reuse cc_job_postings pattern for embeds):
+Option 1 (recommended): cc_job_embed_publications:
+- id uuid PK
+- job_id uuid NOT NULL FK cc_jobs
+- embed_surface_id uuid NOT NULL FK cc_embed_surfaces
+- publish_state job_posting_publish_state NOT NULL DEFAULT 'draft'
+- published_at, paused_at, archived_at
+- created_at, updated_at
+
+G) External channel distribution spine
+Create cc_job_distribution_channels:
+- id uuid PK
+- provider_key text UNIQUE NOT NULL  -- indeed|linkedin|monster
+- display_name text NOT NULL
+- pricing_model text NOT NULL DEFAULT 'paid'
+- is_active boolean NOT NULL DEFAULT true
+- created_at, updated_at
+Seed indeed/linkedin/monster
+
+Create cc_job_channel_publications:
+- id uuid PK
+- job_id uuid NOT NULL FK cc_jobs
+- channel_id uuid NOT NULL FK cc_job_distribution_channels
+- publish_state text NOT NULL DEFAULT 'queued' -- queued|publishing|published|failed|paused|removed
+- external_posting_id text
+- external_posting_url text
+- last_error text
+- created_at, updated_at
+
+H) Document templates for employer hiring docs
+Create cc_document_templates:
+- id uuid PK
+- owner_legal_party_id uuid NOT NULL FK cc_parties
+- template_type text NOT NULL  -- employmentOffer|employmentAgreement|hiringPacket
+- name text NOT NULL
+- source_media_id uuid  -- references existing media table if present; otherwise store f2_key
+- template_payload jsonb NOT NULL DEFAULT '{}'
+- status text NOT NULL DEFAULT 'draft' -- draft|active|archived
+- created_at, updated_at
+
+I) Public upload session table for anonymous applicant uploads (required)
+Create cc_public_upload_sessions:
+- id uuid PK
+- session_token_hash text NOT NULL UNIQUE
+- purpose text NOT NULL  -- job_apply
+- portal_id uuid  -- to bind to portal scope
+- job_id uuid  -- bind to job scope
+- expires_at timestamptz NOT NULL
+- created_at timestamptz NOT NULL
+Also create cc_public_upload_session_media:
+- id uuid PK
+- session_id uuid FK cc_public_upload_sessions
+- media_id uuid (or f2_key if your media table differs)
+- role text NOT NULL  -- resumeDocument|photo|videoIntroduction|referenceDocument
+- created_at
+
+Use this so public can upload, then on submit we “claim” the media into cc_entity_media links.
+
+STEP 2 — RLS / SECURITY (additive, defense in depth)
+A) Tighten public read for cc_job_postings:
+Public can read ONLY if:
+- portal_id = current_portal_id() (reuse existing helper or implement safely)
+- publish_state = 'published'
+- is_hidden = false
+- expires_at is null OR expires_at > now()
+Keep service mode bypass intact.
+
+B) Ensure cc_job_embed_publications public access is via embed key only (NOT general public read):
+- No public select directly.
+- Only API endpoint with embed_key performs read after verifying allowed_domains.
+
+C) Public uploads:
+- session_token must be required for signed upload URL.
+- session must be bound to portal_id + job_id + expires_at.
+- On apply submit: session media is claimed, session invalidated.
+
+STEP 3 — ROUTES (new files, p2 envelope)
+Create:
+- server/routes/public-jobs.ts
+- server/routes/jobs.ts
+- server/routes/moderation-jobs.ts
+- server/routes/embeds.ts
+- server/routes/job-ingestion.ts
+- server/routes/document-templates.ts
+Wire into server/routes.ts without collisions.
+
+Employer APIs (tenant auth):
+1) POST /api/p2/app/jobs
+   Body includes: tenant_id implicit, brand name (from tenant), legal_party_id (from cc_tenant_legal_entities), and JobPosting fields.
+   - Populate cc_jobs.tenant_id=current_tenant_id
+   - Set brand_tenant_id=current_tenant_id
+   - Set brand_name_snapshot from tenant display name
+   - Set legal_party_id from cc_tenant_legal_entities (required; error if missing)
+   - Snapshot legal_name/trade_name from cc_parties row
+   - Return JobPosting schema.org shaped JSON
+
+2) PATCH /api/p2/app/jobs/:id
+
+3) GET /api/p2/app/jobs/:id/destinations
+   Return:
+   - portals (from cc_portal_distribution_policies) with requires_moderation, pricing_model, default_selected
+   - embed surfaces for this tenant (create default if none exists)
+   - external channels (indeed/linkedin/monster)
+
+4) POST /api/p2/app/jobs/:id/publish
+   Body: { portalIds: uuid[], embedSurfaceIds?: uuid[], externalChannelKeys?: string[] }
+   - Upsert cc_job_postings per portalId:
+     - if portal requires_moderation => publish_state='pending_review'
+     - else publish_state='published', published_at=now()
+   - Upsert cc_job_embed_publications for embed surfaces:
+     - publish_state='published', published_at=now()
+   - Create queued cc_job_channel_publications rows for external channels.
+
+5) POST /api/p2/app/jobs/:id/unpublish
+   Body: { portalIds?: uuid[], embedSurfaceIds?: uuid[] }
+   - set publish_state='paused', paused_at=now()
+
+6) Applications:
+- GET /api/p2/app/jobs/:id/applications
+- PATCH /api/p2/app/job-applications/:id
+
+Moderation APIs (CC staff):
+- GET /api/p2/app/mod/jobs/queue?portalSlug=canadadirect
+- POST /api/p2/app/mod/job-postings/:id/approve
+- POST /api/p2/app/mod/job-postings/:id/reject (requires rejection_reason)
+
+Public portal APIs (portal scoped):
+- GET /api/p2/public/jobs
+- GET /api/p2/public/jobs/:id
+- POST /api/p2/public/jobs/:id/apply
+  - Must accept applicant details + uploadSessionToken
+  - Creates cc_job_applications
+  - Claims media from session onto the application via cc_entity_media
+  - Invalidates session token
+
+Public upload session APIs:
+- POST /api/p2/public/jobs/:id/upload-session
+  - returns sessionToken + expiresAt
+- POST /api/p2/public/uploads/upload-url
+  - requires sessionToken, role, contentType
+  - returns signed F2 upload URL + resulting media record reference
+- POST /api/p2/public/uploads/attach
+  - attaches uploaded media to session (cc_public_upload_session_media)
+
+Embed APIs:
+- GET /api/p2/public/embed/:embedKey/jobs
+  - verify embedKey hash matches active surface
+  - verify request Origin/Host matches allowed_domains allowlist
+  - return published jobs for that embed surface (via cc_job_embed_publications)
+  - include schema.org JobPosting shaped JSON
+
+Ingestion APIs (tenant auth):
+- POST /api/p2/app/jobs/ingest-url { url }
+- POST /api/p2/app/jobs/ingest-upload { mediaId }
+- POST /api/p2/app/jobs/ai-draft { prompt }
+- GET  /api/p2/app/jobs/ingestion/:id
+- POST /api/p2/app/jobs/from-draft { draftId, destination selections }
+Use existing ingestion engine patterns if present; otherwise create minimal cc_ingestion_jobs + cc_ingestion_artifacts tables additively.
+
+Document templates APIs:
+- POST /api/p2/app/document-templates (upload source doc mediaId + type)
+- GET /api/p2/app/document-templates?ownerLegalPartyId=...
+- PATCH /api/p2/app/document-templates/:id (activate/archive)
+- POST /api/p2/app/document-templates/:id/generate (generate EmploymentOffer PDF using logo/letterhead if present)
+
+Offer letter generation:
+- Use legal_party_id snapshots + brand_name_snapshot and include “LEGAL (dba BRAND)”
+- If employer letterhead/logo exists in cc_entity_media roles (letterhead/brandLogo), include in PDF header.
+
+All endpoints use { ok, error?, ...data }.
+Return schema.org shaped JSON fields: title, description, hiringOrganization, occupationalCategory, employmentType, baseSalary, jobLocation, etc.
+
+STEP 4 — QA TESTS (must add)
+1) Portal sovereignty: public jobs list returns only jobs published to current portal.
+2) Moderation: CanadaDirect pending_review invisible until approved.
+3) Tenant isolation: tenant A cannot read tenant B applications.
+4) Embed: embedKey returns jobs only for that surface; domain allowlist enforced.
+5) Public upload session:
+   - cannot upload without valid session token
+   - cannot reuse expired token
+   - cannot reuse token after apply (single-use)
+6) Attachment ACL:
+   - job media visible publicly only when job is visible
+   - application attachments visible only to owning tenant and service mode
+
+OUTPUT
+- List migrations created (filenames)
+- List files created/modified
+- How to run tests
+STOP after implementation. Do NOT build UI yet.
+
+Two quick implementation notes (so Replit doesn’t go off-road)
+
+Enum additions
+If your migrations are SQL-based, Replit must add enum creation safely (idempotent pattern).
+
+Origin/domain checks for embeds
+Replit should enforce allowlist using Origin header (browser) and fallback to Host. If missing, deny.
