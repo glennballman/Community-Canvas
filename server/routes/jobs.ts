@@ -715,15 +715,106 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
   }
 
   try {
-    const jobCheck = await serviceQuery(`
-      SELECT id FROM cc_jobs WHERE id = $1 AND tenant_id = $2
+    const jobResult = await serviceQuery(`
+      SELECT id, title, pay_min, pay_max, pay_unit, housing_status, 
+             housing_cost_min_cents, housing_cost_max_cents,
+             work_permit_support, work_permit_conditions
+      FROM cc_jobs WHERE id = $1 AND tenant_id = $2
     `, [id, ctx.tenant_id]);
 
-    if (jobCheck.rows.length === 0) {
+    if (jobResult.rows.length === 0) {
       return res.status(404).json({
         ok: false,
         error: 'JOB_NOT_FOUND'
       });
+    }
+
+    const job = jobResult.rows[0];
+
+    const STRICT_VALIDATION_SLUGS = ['canadadirect', 'adrenalinecanada'];
+
+    if (portalIds && portalIds.length > 0) {
+      const strictPortalsResult = await serviceQuery(`
+        SELECT p.id, p.slug, p.name FROM cc_portals p
+        WHERE p.id = ANY($1) AND p.slug = ANY($2)
+      `, [portalIds, STRICT_VALIDATION_SLUGS]);
+
+      const strictPortals = strictPortalsResult.rows;
+
+      if (strictPortals.length > 0) {
+        const missing: string[] = [];
+        const invalid: string[] = [];
+
+        if (job.pay_min == null) missing.push('pay_min');
+        if (job.pay_max == null) missing.push('pay_max');
+        if (job.pay_min != null && job.pay_max != null && parseFloat(job.pay_max) < parseFloat(job.pay_min)) {
+          invalid.push('pay_max must be >= pay_min');
+        }
+
+        if (!job.housing_status || job.housing_status === 'unknown') {
+          missing.push('housing_status');
+        }
+
+        if (job.housing_cost_min_cents != null || job.housing_cost_max_cents != null) {
+          if (job.housing_cost_min_cents != null && job.housing_cost_max_cents == null) {
+            invalid.push('housing_cost_max_cents required when housing_cost_min_cents provided');
+          }
+          if (job.housing_cost_min_cents == null && job.housing_cost_max_cents != null) {
+            invalid.push('housing_cost_min_cents required when housing_cost_max_cents provided');
+          }
+          if (job.housing_cost_min_cents != null && job.housing_cost_max_cents != null) {
+            if (job.housing_cost_min_cents < 0) invalid.push('housing_cost_min_cents must be non-negative');
+            if (job.housing_cost_max_cents < job.housing_cost_min_cents) {
+              invalid.push('housing_cost_max_cents must be >= housing_cost_min_cents');
+            }
+          }
+        }
+
+        if (!job.work_permit_support || job.work_permit_support === 'unknown') {
+          missing.push('work_permit_support');
+        }
+
+        if (missing.length > 0 || invalid.length > 0) {
+          return res.status(400).json({
+            ok: false,
+            error: 'JOB_PUBLISH_VALIDATION_FAILED',
+            details: {
+              missing: missing.length > 0 ? missing : undefined,
+              invalid: invalid.length > 0 ? invalid : undefined,
+              destinationsRequiringValidation: strictPortals.map((p: any) => ({
+                portalId: p.id,
+                portalSlug: p.slug,
+                portalName: p.name
+              }))
+            }
+          });
+        }
+      }
+    }
+
+    let hasNonStrictDestinations = false;
+    if (portalIds && portalIds.length > 0) {
+      const nonStrictResult = await serviceQuery(`
+        SELECT COUNT(*) as count FROM cc_portals p
+        WHERE p.id = ANY($1) AND p.slug NOT IN ('canadadirect', 'adrenalinecanada')
+      `, [portalIds]);
+      hasNonStrictDestinations = parseInt(nonStrictResult.rows[0]?.count || '0') > 0;
+    }
+    if (embedSurfaceIds && embedSurfaceIds.length > 0) {
+      hasNonStrictDestinations = true;
+    }
+
+    const softValidationWarnings: string[] = [];
+    if (hasNonStrictDestinations) {
+      if (job.pay_min == null || job.pay_max == null) {
+        softValidationWarnings.push('pay_range_missing');
+      }
+      if (!job.housing_status || job.housing_status === 'unknown') {
+        softValidationWarnings.push('housing_status_unknown');
+      }
+      if (!job.work_permit_support || job.work_permit_support === 'unknown') {
+        softValidationWarnings.push('work_permit_support_unknown');
+      }
     }
 
     const validAttentionTier: AttentionTier = isValidAttentionTier(attentionTier) ? attentionTier : 'standard';
@@ -947,7 +1038,11 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
       jobId: id,
       publishedDestinations,
       paymentRequiredDestinations: paymentRequiredDestinations.length > 0 ? paymentRequiredDestinations : undefined,
-      ...(tierWarning ? { warning: tierWarning } : {})
+      ...(tierWarning ? { warning: tierWarning } : {}),
+      ...(softValidationWarnings.length > 0 ? { 
+        validationWarnings: softValidationWarnings,
+        validationWarningMessage: 'Job published but missing some recommended fields for premium portals'
+      } : {})
     });
 
   } catch (error: any) {

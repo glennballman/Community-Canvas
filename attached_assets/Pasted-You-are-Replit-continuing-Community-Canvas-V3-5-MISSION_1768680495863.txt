@@ -1,0 +1,64 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Add mandatory publish-time validation for job postings on specific destinations:
+- CanadaDirect (moderated) and AdrenalineCanada (paid)
+Enforce pay + housing + work-permit clarity to prevent junk inbound.
+NO refactors. Additive only.
+
+HARD RULES
+- Never use banned terms (“book”, “booking”, etc.)
+- Preserve API envelope { ok, error?, ...data }.
+- Do not change existing table meanings; only add columns if required.
+- Keep tenant/portal scoping and RLS intact.
+
+STEP 0 — HARD CHECK (print first)
+1) Show current cc_jobs columns related to pay/housing and any work-permit fields.
+2) Show current publish flow code path for POST /api/p2/app/jobs/:id/publish.
+3) Show how destinations are represented (CanadaDirect vs AdrenalineCanada) in code and DB.
+
+STEP 1 — Data model (minimal additive)
+If NOT already present, add these additive columns to cc_jobs via migration 144:
+- housing_status TEXT NOT NULL DEFAULT 'unknown' CHECK in ('available','limited','none','unknown')
+- housing_cost_min_cents INTEGER NULL
+- housing_cost_max_cents INTEGER NULL
+- work_permit_support TEXT NOT NULL DEFAULT 'unknown' CHECK in ('none','consider','yes_with_conditions','unknown')
+- work_permit_conditions TEXT NULL
+Also add:
+- pay_unit TEXT NOT NULL DEFAULT 'hour' CHECK in ('hour','year','day','week','month') if missing
+If these already exist in any form, do not duplicate—map and only add missing.
+
+STEP 2 — Destination-specific validation (server)
+In POST /api/p2/app/jobs/:id/publish:
+- When publishing/submitting to CanadaDirect or AdrenalineCanada:
+  Require:
+  A) pay_min and pay_max present and pay_max >= pay_min
+  B) housing_status != 'unknown'
+  C) work_permit_support != 'unknown'
+  If housing_cost_min/max provided: ensure max>=min and both non-negative.
+- For free community portals/embeds: do not hard-block, but return warnings.
+
+Return failures as:
+{ ok:false, error:'JOB_PUBLISH_VALIDATION_FAILED', details:{ missing:[...], invalid:[...] } }
+
+STEP 3 — UI enforcement
+In Job Editor + Destinations page:
+- Add required field indicators and inline helper copy:
+  - Pay range required for CanadaDirect/AdrenalineCanada
+  - Housing status required (available/limited/none)
+  - Work permit support required (none/consider/yes with conditions)
+- If user attempts publish and validation fails, render missing/invalid list and deep-link to the fields.
+
+STEP 4 — Tests
+Add Vitest tests:
+- CanadaDirect publish fails if pay missing
+- fails if housing_status='unknown'
+- fails if work_permit_support='unknown'
+- succeeds when all present
+- free portal publish returns ok with warning if missing (no hard block)
+
+OUTPUT
+- migration 144 summary
+- files changed
+- tests + command to run
+STOP.

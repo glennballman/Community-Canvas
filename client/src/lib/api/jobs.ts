@@ -15,6 +15,11 @@ export interface Job {
   pay_unit: string | null;
   schedule_tags: string[] | null;
   housing_provided: boolean;
+  housing_status: string;
+  housing_cost_min_cents: number | null;
+  housing_cost_max_cents: number | null;
+  work_permit_support: string;
+  work_permit_conditions: string | null;
   start_date: string | null;
   end_date: string | null;
   season_window: string | null;
@@ -231,4 +236,18 @@ export const payUnits = [
   { value: 'monthly', label: 'Per Month' },
   { value: 'annually', label: 'Per Year' },
   { value: 'fixed', label: 'Fixed Amount' },
+];
+
+export const housingStatuses = [
+  { value: 'unknown', label: 'Not specified' },
+  { value: 'available', label: 'Available' },
+  { value: 'limited', label: 'Limited availability' },
+  { value: 'none', label: 'Not provided' },
+];
+
+export const workPermitSupports = [
+  { value: 'unknown', label: 'Not specified' },
+  { value: 'none', label: 'No work permit support' },
+  { value: 'consider', label: 'Will consider sponsoring' },
+  { value: 'yes_with_conditions', label: 'Yes, with conditions' },
 ];

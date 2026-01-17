@@ -23,8 +23,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { 
   Job, JobDetailResponse, createJob, updateJob,
-  roleCategories, employmentTypes, payUnits 
+  roleCategories, employmentTypes, payUnits, housingStatuses, workPermitSupports 
 } from '@/lib/api/jobs';
+import { AlertCircle } from 'lucide-react';
 
 type InputMode = 'manual' | 'paste' | 'upload' | 'ai';
 
@@ -46,6 +47,11 @@ export default function JobEditorPage() {
     pay_max: null,
     pay_unit: 'hourly',
     housing_provided: false,
+    housing_status: 'unknown',
+    housing_cost_min_cents: null,
+    housing_cost_max_cents: null,
+    work_permit_support: 'unknown',
+    work_permit_conditions: null,
     start_date: null,
     end_date: null,
     season_window: '',
@@ -265,11 +271,18 @@ export default function JobEditorPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Compensation</CardTitle>
+              <CardDescription className="flex items-center gap-2 text-xs">
+                <AlertCircle className="h-3 w-3" />
+                Pay range, housing status, and work permit support are required for CanadaDirect and AdrenalineCanada
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Pay Min</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Pay Min</Label>
+                    <span className="text-red-500 text-xs">*</span>
+                  </div>
                   <Input
                     type="number"
                     value={formData.pay_min || ''}
@@ -279,7 +292,10 @@ export default function JobEditorPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Pay Max</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Pay Max</Label>
+                    <span className="text-red-500 text-xs">*</span>
+                  </div>
                   <Input
                     type="number"
                     value={formData.pay_max || ''}
@@ -317,6 +333,69 @@ export default function JobEditorPage() {
                   onCheckedChange={v => updateField('housing_provided', v)}
                   data-testid="switch-housing"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label>Housing Status</Label>
+                  <Badge variant="outline" className="text-xs">Required for CanadaDirect/AdrenalineCanada</Badge>
+                </div>
+                <Select
+                  value={formData.housing_status || 'unknown'}
+                  onValueChange={v => updateField('housing_status', v)}
+                >
+                  <SelectTrigger data-testid="select-housing-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {housingStatuses.map(status => (
+                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.housing_status === 'unknown' && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Select a housing status to publish on major portals
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label>Work Permit Support</Label>
+                  <Badge variant="outline" className="text-xs">Required for CanadaDirect/AdrenalineCanada</Badge>
+                </div>
+                <Select
+                  value={formData.work_permit_support || 'unknown'}
+                  onValueChange={v => updateField('work_permit_support', v)}
+                >
+                  <SelectTrigger data-testid="select-work-permit-support">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workPermitSupports.map(support => (
+                      <SelectItem key={support.value} value={support.value}>{support.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.work_permit_support === 'unknown' && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Select work permit support to publish on major portals
+                  </p>
+                )}
+                {formData.work_permit_support === 'yes_with_conditions' && (
+                  <div className="space-y-1 mt-2">
+                    <Label className="text-xs">Conditions (optional)</Label>
+                    <Input
+                      value={formData.work_permit_conditions || ''}
+                      onChange={e => updateField('work_permit_conditions', e.target.value || null)}
+                      placeholder="e.g. LMIA-approved positions only"
+                      data-testid="input-work-permit-conditions"
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
