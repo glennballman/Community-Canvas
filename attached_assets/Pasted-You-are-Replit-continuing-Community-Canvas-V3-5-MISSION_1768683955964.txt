@@ -1,0 +1,58 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Enforce pay + housing + work-permit clarity at publish time for:
+- CanadaDirect
+- AdrenalineCanada
+No refactors. Additive only.
+
+HARD RULES
+- Never use banned terms (“book”, “booking”, etc.)
+- Preserve API envelope { ok, error?, ...data }.
+- Maintain portal sovereignty and tenant isolation.
+- Do not change existing meaning of fields; only add missing columns and validation.
+
+STEP 0 — HARD CHECK (print first)
+1) Show cc_jobs columns for pay (min/max), pay_unit, housing, work permit (if any).
+2) Show server/routes/jobs.ts publish handler for POST /api/p2/app/jobs/:id/publish (line ranges).
+3) Confirm how the publish handler detects destination portals (portal_id or portal slug).
+
+STEP 1 — Additive schema (ONLY if missing)
+If any are missing, create migration 147_enforce_job_publish_fields.sql to add:
+- housing_status TEXT NOT NULL DEFAULT 'unknown' CHECK in ('available','limited','none','unknown')
+- housing_cost_min_cents INTEGER NULL
+- housing_cost_max_cents INTEGER NULL
+- work_permit_support TEXT NOT NULL DEFAULT 'unknown' CHECK in ('none','consider','yes_with_conditions','unknown')
+- work_permit_conditions TEXT NULL
+- pay_unit TEXT NOT NULL DEFAULT 'hour' CHECK in ('hour','year','day','week','month')
+If equivalents already exist, do not duplicate.
+
+STEP 2 — Server validation (destination-specific)
+In publish handler:
+- If destination includes CanadaDirect OR AdrenalineCanada:
+  Require:
+  A) pay_min_cents and pay_max_cents both present AND pay_max_cents >= pay_min_cents
+  B) housing_status != 'unknown'
+  C) work_permit_support != 'unknown'
+  If housing_cost_min/max present: both non-negative AND max>=min
+- For other portals/embeds: do not hard-block; return ok:true with warnings[].
+
+On failure return:
+{ ok:false, error:'JOB_PUBLISH_VALIDATION_FAILED', details:{ missing:[...], invalid:[...], portalIds:[...] } }
+
+STEP 3 — UI affordances
+In Job edit + destinations UI:
+- Show required field badges only when CanadaDirect/AdrenalineCanada selected.
+- On validation failure, render missing/invalid list with field anchors.
+
+STEP 4 — Tests
+Vitest:
+- Selecting CanadaDirect fails if pay missing
+- Fails if housing_status unknown
+- Fails if work_permit_support unknown
+- Succeeds when present
+- Community portal publish returns ok with warnings when missing
+
+OUTPUT
+- Evidence: file paths + line excerpts + test command + pass output
+STOP.
