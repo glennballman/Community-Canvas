@@ -1,0 +1,134 @@
+You are Replit continuing Community Canvas V3.5 (Node + Drizzle + Postgres).
+
+GOAL
+Scaffold future job placement tiering in a way that requires NO refactors later.
+This scaffold must be present but DISABLED by default in UI and API behavior.
+
+HARD RULES
+- Do NOT use banned terminology: never use “book” or “booking” anywhere.
+- Use schema.org terms where applicable (JobPosting, Organization, etc.).
+- Do NOT change or redesign existing Jobs/Labor backend routes or tables beyond additive columns/enums/tables.
+- Keep API envelope { ok, error?, ...data }.
+- Keep RLS patterns consistent (current_tenant_id(), is_service_mode()).
+- No payment provider integration. No subscriptions. No credits. No PPC. Scaffold only.
+- All existing tests must keep passing; add new tests.
+
+CONTEXT (AUTHORITATIVE)
+Already implemented:
+- Paid portal support (Migration 141) with paid publication intents table.
+- Destinations UI + publish logic for free + paid portals:
+  - CanadaDirect: Free, moderated (pending_review)
+  - AdrenalineCanada: Paid, no moderation (intent required)
+- Employer/portal jobs UI + portal shell + portal appearance config
+- Embeds + embed configurator + /embed/jobs-widget.js
+Now we need tier scaffolding for:
+- Attention tiers: standard | featured | urgent
+- Assistance tiers: none | assisted
+These are FUTURE features and must be DISABLED (no effect) unless explicitly enabled via config flags.
+
+STEP 0 — HARD CHECKS (print results then proceed)
+1) Locate the paid publication intents table name + columns created in migration 141 and summarize it.
+2) Locate current publish endpoints and confirm where publish logic occurs:
+   - POST /api/p2/app/jobs/:id/publish
+   - mark-paid endpoint
+3) Confirm where portal pricing config is stored (table/columns).
+4) Confirm whether any “feature flags” framework exists. If none, propose minimal additive flags.
+
+STEP 1 — Database: Additive Tier Fields (Scaffold Only)
+Create a new migration 142_future_job_tiers_scaffold.sql with:
+
+A) New enums (if repo uses Postgres enums; otherwise use CHECK constraints consistent with existing patterns):
+- job_attention_tier: 'standard', 'featured', 'urgent'
+- job_assistance_tier: 'none', 'assisted'
+
+B) Additive columns on the correct canonical table(s) used for portal publication / paid intents:
+- On the paid publication intents table (from migration 141), add:
+  - attention_tier job_attention_tier NOT NULL DEFAULT 'standard'
+  - assistance_tier job_assistance_tier NOT NULL DEFAULT 'none'
+  - tier_price_cents INTEGER NOT NULL DEFAULT 0
+  - tier_currency CHAR(3) NOT NULL DEFAULT 'CAD'
+  - tier_metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+  Notes:
+  - tier_price_cents is only the incremental price for tier add-ons (NOT base portal price).
+  - No behavior changes yet.
+
+C) Add a minimal feature flag store (only if none exists):
+- New table cc_feature_flags:
+  - key TEXT PRIMARY KEY
+  - is_enabled BOOLEAN NOT NULL DEFAULT false
+  - scope_type TEXT NOT NULL DEFAULT 'global'  (global|portal|tenant)
+  - scope_id UUID NULL
+  - config JSONB NOT NULL DEFAULT '{}'::jsonb
+  - updated_at TIMESTAMP NOT NULL DEFAULT now()
+- Add RLS: read allowed to service mode; app admins as appropriate; tenant-scoped flags only visible to that tenant.
+If a feature flag system already exists, do NOT create this table—use existing.
+
+STEP 2 — Server: Tier Config + Disabled Enforcement
+A) Add a shared tier config module:
+- server/services/jobs/tiering.ts
+Exports:
+- getTieringAvailability({ tenantId, portalId }): { enabled: boolean, attentionTiers: ..., assistanceTiers: ... }
+- computeTierPrice({ basePortalPriceCents, attentionTier, assistanceTier, durationDays }): returns incremental tier price (but only if enabled)
+
+B) Hard disable behavior:
+- In publish endpoint flow, accept optional tier fields but IGNORE them unless feature flag is enabled.
+- Still store them (for future), but set tier_price_cents = 0 unless enabled.
+
+C) Validation:
+- Zod schema for publish payload accepts:
+  - attentionTier?: 'standard'|'featured'|'urgent'
+  - assistanceTier?: 'none'|'assisted'
+- If tiers provided but feature flag disabled:
+  - respond ok:true and include warning field:
+    { ok:true, warning:'TIERS_DISABLED', ... }
+  - Do NOT fail request.
+
+D) Admin gating:
+- Only allow enabling tiering via service-mode or platform-admin route (if existing).
+- If adding an endpoint, keep it internal:
+  POST /api/p2/admin/feature-flags (service/admin only)
+  GET /api/p2/admin/feature-flags
+If admin routes already exist, hook into them.
+
+STEP 3 — UI: Disabled “Boost Visibility” + “Save Time” section (Greyed)
+A) Tenant Destinations UI (/app/jobs/:id/destinations):
+- Add a collapsible section under AdrenalineCanada (and any paid portal) called:
+  - “Boost visibility (coming soon)”
+  - “Save time (coming soon)”
+- Show choices but DISABLED with lock icon:
+  Attention:
+   - Featured Job (+$1.00/day) [disabled]
+   - Urgently Hiring ($7 / 7 days) [disabled]
+  Assistance:
+   - Assisted Hiring ($9 / month) [disabled]
+- Show helper text:
+  “These upgrades are not available yet.”
+- Do not show these sections for free portals.
+
+B) Do NOT add any new navigation. Keep it within existing destinations page.
+
+STEP 4 — Tests (Scaffold Verification)
+Add tests (Vitest) ensuring:
+1) Publish payload containing tiers does not error when tiers disabled:
+   - response ok:true and warning:'TIERS_DISABLED'
+   - stored tiers exist but tier_price_cents remains 0
+2) When feature flag enabled (simulate by inserting flag in DB in test):
+   - computeTierPrice returns non-zero incremental tier price
+   - publish stores tiers and tier_price_cents equals computed incremental
+(Still no payment provider; we only verify data + pricing computation.)
+
+STEP 5 — Docs
+Add docs/FUTURE_JOB_TIERING_SCAFFOLD.md with:
+- Tier definitions
+- Current status: disabled
+- How to enable (admin/service only)
+- Test commands
+
+OUTPUT
+After completion, print:
+- migration number + summary of schema changes
+- files changed/added
+- new tests added and how to run them
+- confirmation that default behavior is unchanged (tiers disabled)
+
+STOP.
