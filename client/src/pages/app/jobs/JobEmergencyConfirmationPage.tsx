@@ -1,4 +1,5 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'wouter';
+import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { 
   ChevronLeft, AlertTriangle, Clock, RefreshCw, 

@@ -155,7 +155,7 @@ function ModuleCard({
   return (
     <Card data-testid={`module-card-${config.key}`}>
       <CardContent className="pt-6">
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 flex-wrap">
           <div className="p-3 rounded-lg bg-primary/10 shrink-0">
             <Icon className="h-6 w-6 text-primary" />
           </div>
@@ -226,7 +226,7 @@ export default function PortalGrowthPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-4xl">
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-8 flex-wrap">
           <Settings2 className="h-8 w-8" />
           <div>
             <Skeleton className="h-8 w-48 mb-2" />
@@ -258,7 +258,7 @@ export default function PortalGrowthPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl" data-testid="portal-growth-page">
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-8 flex-wrap">
         <Settings2 className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-2xl font-bold">{data.portalName} Growth</h1>
