@@ -1,6 +1,14 @@
 import express, { Request, Response } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
+import { 
+  getTieringAvailability, 
+  computeTierPrice, 
+  isValidAttentionTier, 
+  isValidAssistanceTier,
+  type AttentionTier,
+  type AssistanceTier
+} from '../services/jobs/tiering';
 
 const router = express.Router();
 
@@ -664,7 +672,12 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   const ctx = tenantReq.ctx;
   const { id } = req.params;
-  const { portalIds, embedSurfaceIds } = req.body;
+  const { 
+    portalIds, 
+    embedSurfaceIds,
+    attentionTier = 'standard',
+    assistanceTier = 'none'
+  } = req.body;
 
   if (!ctx?.tenant_id) {
     return res.status(401).json({
@@ -691,6 +704,18 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
         ok: false,
         error: 'JOB_NOT_FOUND'
       });
+    }
+
+    const validAttentionTier: AttentionTier = isValidAttentionTier(attentionTier) ? attentionTier : 'standard';
+    const validAssistanceTier: AssistanceTier = isValidAssistanceTier(assistanceTier) ? assistanceTier : 'none';
+    
+    const tiersRequested = validAttentionTier !== 'standard' || validAssistanceTier !== 'none';
+    const tieringAvailability = await getTieringAvailability({ tenantId: ctx.tenant_id });
+    const tieringEnabled = tieringAvailability.enabled;
+    
+    let tierWarning: string | undefined;
+    if (tiersRequested && !tieringEnabled) {
+      tierWarning = 'TIERS_DISABLED';
     }
 
     const publishedDestinations: any[] = [];
@@ -726,20 +751,39 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
             RETURNING id
           `, [id, portalId]);
 
+          const tierPriceResult = tieringEnabled 
+            ? await computeTierPrice({
+                tenantId: ctx.tenant_id,
+                portalId,
+                attentionTier: validAttentionTier,
+                assistanceTier: validAssistanceTier,
+                durationDays: 30
+              })
+            : { tierPriceCents: 0, breakdown: { attentionPriceCents: 0, assistancePriceCents: 0 }, enabled: false };
+
           const intentResult = await serviceQuery(`
             INSERT INTO cc_paid_publication_intents (
-              tenant_id, job_id, portal_id, amount_cents, currency, billing_unit, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, 'requires_action')
+              tenant_id, job_id, portal_id, amount_cents, currency, billing_unit, status,
+              attention_tier, assistance_tier, tier_price_cents, tier_currency, tier_metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, 'requires_action', $7, $8, $9, $10, $11)
             ON CONFLICT (job_id, portal_id) DO UPDATE SET
               amount_cents = EXCLUDED.amount_cents,
+              attention_tier = EXCLUDED.attention_tier,
+              assistance_tier = EXCLUDED.assistance_tier,
+              tier_price_cents = EXCLUDED.tier_price_cents,
+              tier_metadata = EXCLUDED.tier_metadata,
               status = CASE 
                 WHEN cc_paid_publication_intents.status IN ('paid', 'refunded') 
                 THEN cc_paid_publication_intents.status 
                 ELSE 'requires_action' 
               END,
               updated_at = now()
-            RETURNING id, status
-          `, [ctx.tenant_id, id, portalId, policy.price_cents, policy.currency || 'CAD', policy.billing_unit || 'perPosting']);
+            RETURNING id, status, attention_tier, assistance_tier, tier_price_cents
+          `, [
+            ctx.tenant_id, id, portalId, policy.price_cents, policy.currency || 'CAD', policy.billing_unit || 'perPosting',
+            validAttentionTier, validAssistanceTier, tierPriceResult.tierPriceCents, 'CAD',
+            JSON.stringify({ breakdown: tierPriceResult.breakdown, tieringEnabled })
+          ]);
 
           paymentRequiredDestinations.push({
             portalId,
@@ -806,7 +850,8 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
       ok: true,
       jobId: id,
       publishedDestinations,
-      paymentRequiredDestinations: paymentRequiredDestinations.length > 0 ? paymentRequiredDestinations : undefined
+      paymentRequiredDestinations: paymentRequiredDestinations.length > 0 ? paymentRequiredDestinations : undefined,
+      ...(tierWarning ? { warning: tierWarning } : {})
     });
 
   } catch (error: any) {
