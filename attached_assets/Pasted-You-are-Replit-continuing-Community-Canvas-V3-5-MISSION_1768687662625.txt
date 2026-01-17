@@ -1,0 +1,99 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Add a one-click “Emergency Replacement” action from the employer applicant pipeline so an employer can trigger Panic Mode immediately with the job pre-selected.
+
+HARD RULES
+- Never use banned terminology (“book”, “booking”, etc.) anywhere (UI copy, code, comments).
+- No refactors. Additive, minimal change.
+- Preserve tenant isolation + portal sovereignty.
+- Preserve API envelope { ok, error?, ...data }.
+- Do not weaken authorization. Tenants must NOT gain portal-staff powers.
+
+DESIGN CONSTRAINT
+Tenants can REQUEST an emergency replacement, but only portal staff can TRIAGE and ROUTE candidates.
+So the “button” creates an emergency replacement request and then sends the employer to a confirmation view.
+Portal staff continues to manage routing in /app/mod/emergency.
+
+STEP 0 — HARD CHECK (print first)
+1) Locate the employer pipeline page route:
+   - /app/jobs/:jobId/applications (or the current file)
+2) Identify how portal context is known for a job:
+   - job_postings? assigned_portal_id? posting portal selection?
+3) Identify current emergency replacement endpoints:
+   - POST /api/p2/app/mod/portals/:portalId/emergency-replacements (staff-only)
+   - any tenant-scoped endpoints? If none, we must add a tenant-scoped create endpoint.
+4) Identify existing tenant auth middleware + ctx.tenant_id usage patterns.
+
+IMPLEMENTATION PLAN (Additive)
+A) Add a TENANT-SCOPED create endpoint (additive, safe)
+Create:
+POST /api/p2/app/jobs/:jobId/emergency-replacement-request
+
+Behavior:
+- Auth: tenant session required.
+- Determine the portal_id to attach:
+  - If the job has active postings, pick the portal_id of the posting selected in UI (if provided), else:
+  - If exactly one active posting exists, use it.
+  - Else return { ok:false, error:'PORTAL_REQUIRED_FOR_EMERGENCY_REQUEST' } with choices.
+- Create cc_emergency_replacement_requests row:
+  - portal_id
+  - tenant_id = ctx.tenant_id
+  - job_id = :jobId
+  - job_posting_id if resolved
+  - role_title_snapshot from job.title (fallback to posting.custom_title)
+  - urgency default 'today' (allow override)
+  - notes optional
+  - created_by_identity_id from session identity if available
+  - status='open'
+- IMPORTANT: tenant can create only for their own tenant_id and only for jobs they own.
+- Return:
+  { ok:true, requestId, portalId, routeTo:'/app/mod/emergency?requestId=...' (staff), employerConfirmationRoute:'/app/jobs/:jobId/emergency/:requestId' }
+
+RLS/DB:
+- If cc_emergency_replacement_requests RLS currently staff-only, add additive policy:
+  - tenant can INSERT where tenant_id=current_tenant_id() AND job belongs to tenant
+  - tenant can SELECT their own requests (tenant_id match)
+  - tenant cannot UPDATE status beyond maybe cancelling their own request (optional; skip unless requested)
+
+B) Employer UI: One-click button
+On /app/jobs/:jobId/applications page:
+- Add a prominent button:
+  Label: “Emergency replacement”
+  Helper text (small): “Creates a priority request to the portal coordinator.”
+- On click:
+  - Call the new endpoint
+  - Show success toast and redirect to a new employer confirmation page:
+    /app/jobs/:jobId/emergency/:requestId
+
+C) Employer Confirmation Page (tenant view)
+Create page: /app/jobs/:jobId/emergency/:requestId
+- Displays:
+  - request status (open/triaging/filled/cancelled)
+  - role title snapshot
+  - urgency
+  - created time
+  - next steps copy:
+    “A coordinator will respond quickly. Keep this tab open for updates.”
+- Poll (or manual refresh) via:
+  GET /api/p2/app/jobs/:jobId/emergency-replacement-request/:requestId
+  (tenant-scoped read)
+- Optional: allow tenant to add a note (PATCH) or cancel (PATCH status cancelled) ONLY if safe.
+
+D) Staff UI deep-link (optional)
+If portal staff visits /app/mod/emergency?requestId=...
+- Preselect that request and open it.
+
+TESTS (Vitest)
+1) Tenant can create emergency request for their own job
+2) Tenant cannot create for another tenant’s job
+3) If multiple portals available and none specified, returns PORTAL_REQUIRED_FOR_EMERGENCY_REQUEST with choices
+4) Tenant can read their own request, cannot read others
+5) Forbidden terms scan remains clean
+
+OUTPUT
+- files changed
+- endpoints added
+- tests + commands and passing output
+- short verification curl examples
+STOP.
