@@ -32,17 +32,16 @@ interface BenchCandidate {
   id: string;
   portalId: string;
   individualId: string;
-  individualName: string;
-  individualEmail: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
   readinessState: 'prospect' | 'cleared' | 'ready' | 'on_site' | 'placed' | 'inactive';
   housingNeeded: boolean;
   housingTierPreference: 'premium' | 'standard' | 'temporary' | 'emergency' | null;
   locationNote: string | null;
-  staffNotes: string | null;
   lastActivityAt: string | null;
   createdAt: string;
-  updatedAt: string;
-  daysSinceActivity: number;
+  applicationCount: number;
 }
 
 interface BenchResponse {
@@ -64,7 +63,9 @@ interface TimelineEntry {
 interface TimelineResponse {
   ok: boolean;
   candidate: BenchCandidate;
-  timeline: TimelineEntry[];
+  applications: any[];
+  events: any[];
+  housingWaitlist: any[];
 }
 
 const READINESS_OPTIONS = [
@@ -83,7 +84,15 @@ const HOUSING_TIERS = [
   { value: 'emergency', label: 'Emergency' }
 ];
 
-function ActivityBadge({ days }: { days: number }) {
+function daysSinceDate(dateStr: string | null): number {
+  if (!dateStr) return 0;
+  const date = new Date(dateStr);
+  const now = new Date();
+  return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function ActivityBadge({ lastActivityAt }: { lastActivityAt: string | null }) {
+  const days = daysSinceDate(lastActivityAt);
   let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
   let label = 'Active today';
   
@@ -132,20 +141,26 @@ function BenchRow({
         <div className="flex items-start gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-medium" data-testid="text-candidate-name">{candidate.individualName}</span>
+              <span className="font-medium" data-testid="text-candidate-name">{candidate.fullName}</span>
               <ReadinessBadge state={candidate.readinessState} />
-              <ActivityBadge days={candidate.daysSinceActivity} />
+              <ActivityBadge lastActivityAt={candidate.lastActivityAt} />
               {candidate.housingNeeded && (
                 <Badge variant="secondary" className="text-xs">
                   <Home className="h-3 w-3 mr-1" />
                   Housing Needed
                 </Badge>
               )}
+              {candidate.applicationCount > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  <Briefcase className="h-3 w-3 mr-1" />
+                  {candidate.applicationCount} apps
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1">
                 <Mail className="h-3 w-3" />
-                {candidate.individualEmail}
+                {candidate.email}
               </span>
               {candidate.locationNote && (
                 <span className="flex items-center gap-1">
@@ -219,7 +234,7 @@ function TimelineDrawer({
       <SheetContent className="w-[400px] sm:w-[540px]">
         <SheetHeader>
           <SheetTitle data-testid="text-timeline-title">
-            {data?.candidate?.individualName || 'Candidate Timeline'}
+            {data?.candidate?.fullName || 'Candidate Timeline'}
           </SheetTitle>
           <SheetDescription>
             Application history and activity
@@ -233,31 +248,46 @@ function TimelineDrawer({
                 <Skeleton key={i} className="h-20 w-full" />
               ))}
             </div>
-          ) : data?.timeline?.length === 0 ? (
+          ) : (data?.applications?.length === 0 && data?.housingWaitlist?.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">No activity yet</p>
           ) : (
             <div className="space-y-4">
-              {data?.timeline?.map((entry, idx) => (
-                <Card key={idx} data-testid={`timeline-entry-${idx}`}>
+              {data?.applications?.map((app: any, idx: number) => (
+                <Card key={`app-${idx}`} data-testid={`timeline-app-${idx}`}>
                   <CardContent className="py-3">
                     <div className="flex items-start gap-3">
                       <div className="mt-1">
-                        {entry.type === 'application' && <Briefcase className="h-4 w-4 text-blue-500" />}
-                        {entry.type === 'housing' && <Home className="h-4 w-4 text-green-500" />}
-                        {entry.type === 'event' && <Clock className="h-4 w-4 text-gray-500" />}
+                        <Briefcase className="h-4 w-4 text-blue-500" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{entry.title}</p>
-                        {entry.detail && (
-                          <p className="text-sm text-muted-foreground">{entry.detail}</p>
-                        )}
+                        <p className="font-medium text-sm">{app.jobTitle || 'Job Application'}</p>
+                        <p className="text-sm text-muted-foreground">{app.tenantName}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(entry.date).toLocaleDateString()}
+                          {new Date(app.submittedAt || app.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-                      {entry.status && (
-                        <Badge variant="outline" className="text-xs">{entry.status}</Badge>
-                      )}
+                      <Badge variant="outline" className="text-xs">{app.status}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {data?.housingWaitlist?.map((hw: any, idx: number) => (
+                <Card key={`hw-${idx}`} data-testid={`timeline-housing-${idx}`}>
+                  <CardContent className="py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        <Home className="h-4 w-4 text-green-500" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Housing Waitlist</p>
+                        {hw.budgetNote && (
+                          <p className="text-sm text-muted-foreground">{hw.budgetNote}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(hw.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">{hw.status}</Badge>
                     </div>
                   </CardContent>
                 </Card>

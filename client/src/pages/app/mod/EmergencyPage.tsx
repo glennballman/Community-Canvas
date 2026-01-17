@@ -41,16 +41,15 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 interface EmergencyRequest {
   id: string;
   portalId: string;
-  tenantId: string;
+  tenantId: string | null;
   tenantName: string | null;
   jobId: string | null;
   jobTitle: string | null;
   urgency: 'now' | 'today' | 'this_week';
-  roleNeeded: string;
-  headcountNeeded: number;
+  roleTitleSnapshot: string;
   startDate: string | null;
   notes: string | null;
-  status: 'open' | 'searching' | 'filled' | 'cancelled';
+  status: 'open' | 'triaging' | 'filled' | 'cancelled';
   filledByBenchId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -67,11 +66,11 @@ interface EmergencyResponse {
 
 interface BenchCandidate {
   id: string;
-  individualName: string;
-  individualEmail: string;
+  fullName: string;
+  email: string;
   readinessState: string;
   housingNeeded: boolean;
-  daysSinceActivity: number;
+  lastActivityAt: string | null;
 }
 
 interface CandidatesResponse {
@@ -87,7 +86,7 @@ const URGENCY_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: 'open', label: 'Open', color: 'bg-blue-500' },
-  { value: 'searching', label: 'Searching', color: 'bg-yellow-500' },
+  { value: 'triaging', label: 'Triaging', color: 'bg-yellow-500' },
   { value: 'filled', label: 'Filled', color: 'bg-green-500' },
   { value: 'cancelled', label: 'Cancelled', color: 'bg-gray-500' }
 ];
@@ -129,13 +128,9 @@ function EmergencyRow({
         <div className="flex items-start gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-medium" data-testid="text-role-needed">{request.roleNeeded}</span>
+              <span className="font-medium" data-testid="text-role-needed">{request.roleTitleSnapshot}</span>
               <UrgencyBadge urgency={request.urgency} />
               <StatusBadge status={request.status} />
-              <Badge variant="secondary" className="text-xs">
-                <Users className="h-3 w-3 mr-1" />
-                {request.headcountNeeded} needed
-              </Badge>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               {request.tenantName && (
@@ -208,9 +203,8 @@ function CreateRequestDialog({
   portalId: string;
 }) {
   const { toast } = useToast();
-  const [roleNeeded, setRoleNeeded] = useState('');
+  const [roleTitle, setRoleTitle] = useState('');
   const [urgency, setUrgency] = useState<string>('today');
-  const [headcount, setHeadcount] = useState('1');
   const [notes, setNotes] = useState('');
 
   const createMutation = useMutation({
@@ -223,9 +217,8 @@ function CreateRequestDialog({
       });
       toast({ title: 'Emergency request created' });
       onClose();
-      setRoleNeeded('');
+      setRoleTitle('');
       setUrgency('today');
-      setHeadcount('1');
       setNotes('');
     },
     onError: (error: any) => {
@@ -238,14 +231,13 @@ function CreateRequestDialog({
   });
 
   const handleSubmit = () => {
-    if (!roleNeeded.trim()) {
-      toast({ title: 'Role needed is required', variant: 'destructive' });
+    if (!roleTitle.trim()) {
+      toast({ title: 'Role is required', variant: 'destructive' });
       return;
     }
     createMutation.mutate({
-      role_needed: roleNeeded,
+      role_title_snapshot: roleTitle,
       urgency,
-      headcount_needed: parseInt(headcount) || 1,
       notes: notes || null
     });
   };
@@ -262,13 +254,13 @@ function CreateRequestDialog({
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="roleNeeded">Role Needed</Label>
+            <Label htmlFor="roleTitle">Role Title</Label>
             <Input
-              id="roleNeeded"
+              id="roleTitle"
               placeholder="e.g., Line Cook, Server, Driver"
-              value={roleNeeded}
-              onChange={(e) => setRoleNeeded(e.target.value)}
-              data-testid="input-role-needed"
+              value={roleTitle}
+              onChange={(e) => setRoleTitle(e.target.value)}
+              data-testid="input-role-title"
             />
           </div>
 
@@ -289,18 +281,6 @@ function CreateRequestDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="headcount">Headcount Needed</Label>
-            <Input
-              id="headcount"
-              type="number"
-              min="1"
-              value={headcount}
-              onChange={(e) => setHeadcount(e.target.value)}
-              data-testid="input-headcount"
-            />
           </div>
 
           <div>
@@ -356,7 +336,8 @@ function CandidatesSheet({
   const routeMutation = useMutation({
     mutationFn: async ({ requestId, benchId }: { requestId: string; benchId: string }) => {
       return apiRequest('POST', `/api/p2/app/mod/emergency-replacements/${requestId}/route`, {
-        bench_id: benchId
+        bench_id: benchId,
+        action: 'mark_filled'
       });
     },
     onSuccess: () => {
@@ -383,7 +364,7 @@ function CandidatesSheet({
             Available Candidates
           </SheetTitle>
           <SheetDescription>
-            {request?.roleNeeded} - {request?.headcountNeeded} needed
+            {request?.roleTitleSnapshot}
           </SheetDescription>
         </SheetHeader>
 
@@ -409,8 +390,8 @@ function CandidatesSheet({
                   <CardContent className="py-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-1">
-                        <p className="font-medium">{candidate.individualName}</p>
-                        <p className="text-sm text-muted-foreground">{candidate.individualEmail}</p>
+                        <p className="font-medium">{candidate.fullName}</p>
+                        <p className="text-sm text-muted-foreground">{candidate.email}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline" className="text-xs">
                             {candidate.readinessState}
@@ -418,9 +399,6 @@ function CandidatesSheet({
                           {candidate.housingNeeded && (
                             <Badge variant="secondary" className="text-xs">Housing</Badge>
                           )}
-                          <span className="text-xs text-muted-foreground">
-                            Active {candidate.daysSinceActivity}d ago
-                          </span>
                         </div>
                       </div>
                       <Button
