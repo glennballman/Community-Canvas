@@ -190,6 +190,7 @@ router.get('/feed/:embedKey', async (req: Request, res: Response) => {
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
       res.setHeader('Vary', 'Origin');
     }
+    res.setHeader('Cache-Control', 'private, max-age=60');
 
     res.json({
       ok: true,
@@ -219,6 +220,7 @@ router.options('/feed/:embedKey', (req: Request, res: Response) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Vary', 'Origin');
   }
+  res.setHeader('Cache-Control', 'private, max-age=60');
   res.status(204).send();
 });
 

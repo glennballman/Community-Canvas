@@ -1,0 +1,77 @@
+You are Replit working in Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+Do NOT refactor. Do NOT change existing Jobs backend behavior. This is a “don’t get burned” verification + tiny config/cron patch only.
+
+NON-NEGOTIABLE PLATFORM STANDARDS
+- Never use banned terms: book, booking, booked, bookings, booker.
+- Use schema.org semantics. Do not invent schema names.
+- Use “People” not Contacts. Use “Assets” not Inventory.
+- Portals are sovereign. Public reads must be portal-scoped.
+
+GOAL
+Run 4 operational checks and apply only minimal additive fixes if required:
+1) Portal context source of truth
+2) CORS caching correctness (embeds)
+3) Media lifecycle cleanup for abandoned anonymous upload sessions
+4) Default destinations policy (portals+embed default selected; external channels default unselected)
+
+DELIVERABLE
+Return a single report with hard evidence (file paths, code excerpts, SQL, curl examples) and only then apply minimal additive patches if something is missing.
+
+CHECK 1 — Portal context source of truth
+A) Identify where current_portal_id() (or portal context) is set for public requests:
+- Find middleware that resolves portal from domain and from path (e.g., /p/:slug, /c/:slug, or host-based).
+- Show the exact code path that sets the portal id used by Jobs public routes.
+B) Validate determinism:
+- If a portal can be reached by both domain and path, confirm which wins and that it’s consistent.
+C) Provide curl tests:
+- One request against CanadaDirect (domain-based) and confirm portal id resolution.
+- One request against Bamfield (path-based) and confirm portal id resolution.
+- One negative test: ensure a job posted only to portal A is not visible from portal B.
+
+CHECK 2 — CORS caching correctness for embeds
+A) Inspect embed feed handler (/api/embed/feed/:embedKey and alias /api/p2/public/embed/:embedKey/jobs):
+- Confirm it sets Vary: Origin
+- Confirm it sets Cache-Control to a safe value for dynamic content (recommend short TTL, e.g., max-age=60 or no-store if appropriate).
+B) Confirm CORS headers are not overly permissive:
+- Origin allowlist enforced before returning data
+- If Origin is missing, fall back to Host only if safe; otherwise deny.
+C) Provide curl tests:
+- Allowed Origin returns 200 with correct headers.
+- Disallowed Origin returns 403/401 with correct headers.
+- Header diff showing Vary and Cache-Control.
+
+CHECK 3 — Media lifecycle cleanup (abandoned upload sessions)
+A) Confirm schema:
+- cc_public_upload_sessions has expires_at and used_at.
+- cc_public_upload_session_media links uploads to sessions.
+B) Identify storage linkage:
+- Determine how uploaded media is recorded (media table or f2 key reference) and how it’s attached.
+C) Implement cleanup if missing (additive only):
+- Add a server-side scheduled cleanup job OR lightweight script that can be run via cron:
+  - Find sessions where expires_at < now() AND used_at IS NULL
+  - For each, delete/mark media as garbage collectible (do NOT delete media that has been claimed/attached to a job application)
+  - Remove cc_public_upload_session_media rows and mark session as expired/cleaned
+- If hard delete from F2 is not safely available, implement a DB-side “garbage_collect_after” marker so a separate storage janitor can delete later.
+D) Provide a dry-run mode and show sample output.
+
+CHECK 4 — Default destinations policy correctness
+A) Inspect GET /api/p2/app/jobs/:id/destinations:
+- Confirm portals are returned with default_selected=true (and requires_moderation flagged for CanadaDirect)
+- Confirm embed surfaces default selected=true (ensure at least one default embed surface exists for tenant; auto-create if none)
+- Confirm external distribution channels default_selected=false (unchecked by default)
+B) Confirm “publish” respects selections:
+- Selecting none should be rejected with a clear error code
+- CanadaDirect selected -> publish_state pending_review
+- Others selected -> publish_state published
+C) Provide request/response examples (curl) showing defaults and publish outcomes.
+
+OUTPUT FORMAT
+1) “DON’T GET BURNED” REPORT
+- Check 1: findings + evidence + pass/fail
+- Check 2: findings + evidence + pass/fail
+- Check 3: findings + evidence + pass/fail
+- Check 4: findings + evidence + pass/fail
+2) If any fail:
+- Apply minimal additive patch (new small file(s) or small guarded changes)
+- List files changed and how to run/verify
+STOP after completing report + any minimal patch. Do NOT build UI.
