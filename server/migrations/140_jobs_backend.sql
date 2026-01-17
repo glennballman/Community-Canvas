@@ -246,6 +246,7 @@ CREATE TABLE IF NOT EXISTS cc_public_upload_sessions (
   portal_id uuid REFERENCES cc_portals(id) ON DELETE SET NULL,
   job_id uuid REFERENCES cc_jobs(id) ON DELETE SET NULL,
   expires_at timestamptz NOT NULL,
+  used_at timestamptz,
   consumed_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -261,7 +262,9 @@ CREATE TABLE IF NOT EXISTS cc_public_upload_session_media (
   media_id uuid,
   f2_key text,
   role text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+  mime_type text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (session_id, role)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pub_upload_media_session ON cc_public_upload_session_media(session_id);

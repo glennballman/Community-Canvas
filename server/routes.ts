@@ -333,15 +333,28 @@ export async function registerRoutes(
   // Public jobs API (portal-scoped, no auth)
   app.use('/api/public', publicJobsRouter);
   app.use('/b/:portalSlug/api/public', publicJobsRouter);
+  // Alias: /api/p2/public/jobs/*
+  app.use('/api/p2/public', publicJobsRouter);
   
   // Tenant/employer job management API (tenant auth required)
   app.use('/api/p2/app/jobs', jobsRouter);
   
   // Portal moderation API (portal staff auth required)
   app.use('/api/p2/moderation/jobs', moderationJobsRouter);
+  // Alias: /api/p2/app/mod/*
+  app.use('/api/p2/app/mod', moderationJobsRouter);
   
   // Embed widget API (embed key auth, CORS enabled)
   app.use('/api/embed', embedsRouter);
+  // Alias: /api/p2/public/embed/:embedKey/jobs -> rewrite to /api/embed/feed/:embedKey
+  app.get('/api/p2/public/embed/:embedKey/jobs', (req, res) => {
+    req.url = `/feed/${req.params.embedKey}`;
+    embedsRouter(req, res, () => {});
+  });
+  app.options('/api/p2/public/embed/:embedKey/jobs', (req, res) => {
+    req.url = `/feed/${req.params.embedKey}`;
+    embedsRouter(req, res, () => {});
+  });
   
   // Job ingestion API (tenant auth required)
   app.use('/api/p2/app/jobs', jobIngestionRouter);

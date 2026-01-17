@@ -5,6 +5,23 @@ import { TenantRequest } from '../middleware/tenantContext';
 
 const router = express.Router();
 
+const ALLOWED_UPLOAD_ROLES = ['resumeDocument', 'referenceDocument', 'photo', 'videoIntroduction'] as const;
+type AllowedRole = typeof ALLOWED_UPLOAD_ROLES[number];
+
+const ROLE_MIME_ALLOWLIST: Record<AllowedRole, string[]> = {
+  resumeDocument: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+  referenceDocument: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+  photo: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+  videoIntroduction: ['video/mp4', 'video/webm', 'video/quicktime']
+};
+
+const ROLE_SIZE_LIMITS: Record<AllowedRole, number> = {
+  resumeDocument: 10 * 1024 * 1024,
+  referenceDocument: 10 * 1024 * 1024,
+  photo: 5 * 1024 * 1024,
+  videoIntroduction: 100 * 1024 * 1024
+};
+
 function toSchemaOrgJobPosting(job: any, posting: any): any {
   const hiringOrg: any = {
     "@type": "Organization",
@@ -301,7 +318,7 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response) => {
 
   try {
     const sessionResult = await serviceQuery(`
-      SELECT id, job_id, expires_at, consumed_at
+      SELECT id, job_id, portal_id, expires_at, used_at
       FROM cc_public_upload_sessions
       WHERE session_token_hash = $1
         AND purpose = 'job_application'
@@ -316,7 +333,7 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response) => {
 
     const session = sessionResult.rows[0];
 
-    if (session.consumed_at) {
+    if (session.used_at) {
       return res.status(401).json({
         ok: false,
         error: 'SESSION_ALREADY_USED'
@@ -334,6 +351,13 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response) => {
       return res.status(401).json({
         ok: false,
         error: 'SESSION_JOB_MISMATCH'
+      });
+    }
+
+    if (session.portal_id !== ctx.portal_id) {
+      return res.status(401).json({
+        ok: false,
+        error: 'SESSION_PORTAL_MISMATCH'
       });
     }
 
@@ -385,7 +409,7 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response) => {
     ]);
 
     await serviceQuery(`
-      UPDATE cc_public_upload_sessions SET consumed_at = now() WHERE id = $1
+      UPDATE cc_public_upload_sessions SET used_at = now() WHERE id = $1
     `, [session.id]);
 
     await serviceQuery(`
@@ -407,8 +431,8 @@ router.post('/jobs/:id/apply', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/jobs/upload', async (req: Request, res: Response) => {
-  const { sessionToken, role } = req.body;
+router.post('/jobs/upload-url', async (req: Request, res: Response) => {
+  const { sessionToken, role, mimeType, fileSize } = req.body;
 
   if (!sessionToken) {
     return res.status(401).json({
@@ -417,11 +441,48 @@ router.post('/jobs/upload', async (req: Request, res: Response) => {
     });
   }
 
+  if (!role || !ALLOWED_UPLOAD_ROLES.includes(role as AllowedRole)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'INVALID_ROLE',
+      message: `Role must be one of: ${ALLOWED_UPLOAD_ROLES.join(', ')}`
+    });
+  }
+
+  const typedRole = role as AllowedRole;
+
+  if (!mimeType) {
+    return res.status(400).json({
+      ok: false,
+      error: 'MIME_TYPE_REQUIRED'
+    });
+  }
+
+  const allowedMimes = ROLE_MIME_ALLOWLIST[typedRole];
+  if (!allowedMimes.includes(mimeType)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'MIME_TYPE_NOT_ALLOWED',
+      message: `For role '${role}', allowed MIME types are: ${allowedMimes.join(', ')}`
+    });
+  }
+
+  if (fileSize) {
+    const sizeLimit = ROLE_SIZE_LIMITS[typedRole];
+    if (fileSize > sizeLimit) {
+      return res.status(400).json({
+        ok: false,
+        error: 'FILE_TOO_LARGE',
+        message: `For role '${role}', maximum file size is ${Math.floor(sizeLimit / 1024 / 1024)}MB`
+      });
+    }
+  }
+
   const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
 
   try {
     const sessionResult = await serviceQuery(`
-      SELECT id, expires_at, consumed_at
+      SELECT id, expires_at, used_at
       FROM cc_public_upload_sessions
       WHERE session_token_hash = $1
         AND purpose = 'job_application'
@@ -436,7 +497,7 @@ router.post('/jobs/upload', async (req: Request, res: Response) => {
 
     const session = sessionResult.rows[0];
 
-    if (session.consumed_at) {
+    if (session.used_at) {
       return res.status(401).json({
         ok: false,
         error: 'SESSION_ALREADY_USED'
@@ -452,21 +513,100 @@ router.post('/jobs/upload', async (req: Request, res: Response) => {
 
     const mediaId = crypto.randomUUID();
     await serviceQuery(`
-      INSERT INTO cc_public_upload_session_media (session_id, media_id, role)
-      VALUES ($1, $2, $3)
-    `, [session.id, mediaId, role || 'resume']);
+      INSERT INTO cc_public_upload_session_media (session_id, media_id, role, mime_type)
+      VALUES ($1, $2, $3, $4)
+    `, [session.id, mediaId, role, mimeType]);
 
     res.json({
       ok: true,
       mediaId,
-      message: 'Upload placeholder created. File upload handling would go here.'
+      uploadUrl: `/api/cc_media/upload/${mediaId}`,
+      expiresIn: 300
     });
 
   } catch (error: any) {
-    console.error('Upload error:', error);
+    console.error('Upload URL error:', error);
     res.status(500).json({
       ok: false,
-      error: 'Failed to process upload'
+      error: 'Failed to generate upload URL'
+    });
+  }
+});
+
+router.post('/jobs/attach', async (req: Request, res: Response) => {
+  const { sessionToken, mediaId, role } = req.body;
+
+  if (!sessionToken) {
+    return res.status(401).json({
+      ok: false,
+      error: 'SESSION_TOKEN_REQUIRED'
+    });
+  }
+
+  if (!mediaId) {
+    return res.status(400).json({
+      ok: false,
+      error: 'MEDIA_ID_REQUIRED'
+    });
+  }
+
+  if (!role || !ALLOWED_UPLOAD_ROLES.includes(role as AllowedRole)) {
+    return res.status(400).json({
+      ok: false,
+      error: 'INVALID_ROLE',
+      message: `Role must be one of: ${ALLOWED_UPLOAD_ROLES.join(', ')}`
+    });
+  }
+
+  const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+
+  try {
+    const sessionResult = await serviceQuery(`
+      SELECT id, expires_at, used_at
+      FROM cc_public_upload_sessions
+      WHERE session_token_hash = $1
+        AND purpose = 'job_application'
+    `, [sessionTokenHash]);
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(401).json({
+        ok: false,
+        error: 'INVALID_SESSION'
+      });
+    }
+
+    const session = sessionResult.rows[0];
+
+    if (session.used_at) {
+      return res.status(401).json({
+        ok: false,
+        error: 'SESSION_ALREADY_USED'
+      });
+    }
+
+    if (new Date(session.expires_at) < new Date()) {
+      return res.status(401).json({
+        ok: false,
+        error: 'SESSION_EXPIRED'
+      });
+    }
+
+    await serviceQuery(`
+      INSERT INTO cc_public_upload_session_media (session_id, media_id, role)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (session_id, role) DO UPDATE SET media_id = EXCLUDED.media_id
+    `, [session.id, mediaId, role]);
+
+    res.json({
+      ok: true,
+      attached: true
+    });
+
+  } catch (error: any) {
+    console.error('Attach error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to attach media'
     });
   }
 });
