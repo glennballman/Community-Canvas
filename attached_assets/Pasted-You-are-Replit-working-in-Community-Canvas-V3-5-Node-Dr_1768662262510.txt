@@ -1,0 +1,100 @@
+You are Replit working in Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+We will design + implement the COMPLETE Jobs backend now, additively, with schema.org terminology.
+
+NON-NEGOTIABLE PLATFORM STANDARDS
+- Use schema.org entity/property naming for JSON payloads and internal semantics. Do not invent names if schema.org already has them.
+- BANNED TERMS: never use “book”, “booking”, “booked”, “bookings”, “booker”. Use “reserve/reservation/reserved/scheduled”.
+- “Contacts” must be “People”. “Inventory” must be “Assets”.
+- Portals are sovereign: public reads must be portal-scoped.
+- Jobs are first-class: they may exist without tenant, but tenant-created jobs MUST have tenant_id.
+- Employer identity uses schema.org Organization via cc_parties (party_id on cc_jobs). Do NOT use cc_organizations for employers.
+- Payments are PSP-agnostic. No Stripe assumptions.
+
+KNOWN STATE (from prior inventory)
+- Tables exist: cc_jobs, cc_job_postings, cc_job_applications, cc_job_matches
+- Legacy table exists: cc_job_applicants (DO NOT use in new APIs)
+- Attachments tables exist: cc_entity_media etc.
+- RLS exists but cc_job_postings public read is not portal-scoped.
+- No dedicated jobs API routes exist yet.
+- UI placeholder exists at /app/jobs but DO NOT build UI yet.
+
+REQUIREMENTS
+- Each tenant creates jobs and selects distribution destinations.
+- Default destinations selected: employer’s own portal + Bamfield combined + West Bamfield + East Bamfield + CanadaDirect.
+- Tenant can unselect any destination.
+- CanadaDirect requires Community Canvas moderation before public visibility.
+- Future: add more portals (e.g., Adrenaline Canada).
+- Future: external distribution channels (Indeed, LinkedIn, Monster) — implement the backend spine to queue/publish, even if adapters ship later.
+
+STEP 0 — HARD CHECKS (DB)
+1) Confirm cc_parties.party_type enum values and provide the list.
+2) Inspect cc_job_postings columns; confirm if it already has publish_state / reviewed_at / reviewed_by / rejection_reason.
+3) Inspect cc_jobs columns; confirm if it already has noc_code/soc_code and any taxonomy jsonb field.
+Return results before implementing changes.
+
+STEP 1 — Additive migrations (ONLY if missing)
+A) Add portal distribution policy table:
+- cc_portal_distribution_policies (portal_id, requires_moderation, pricing_model, price_hint, is_accepting_job_postings, default_selected)
+B) Ensure cc_job_postings has:
+- publish_state enum (draft, pending_review, published, rejected, paused, archived)
+- reviewed_at, reviewed_by_identity_id, rejection_reason
+- published_at, paused_at, archived_at, expires_at (if not present)
+C) Ensure cc_jobs has taxonomy columns:
+- noc_code, soc_code (or taxonomy jsonb). Add additively if missing.
+D) Add external distribution channel spine:
+- cc_job_distribution_channels
+- cc_job_channel_publications
+- cc_job_distribution_budget_intents (optional but preferred)
+
+STEP 2 — RLS fixes (additive)
+- Update/extend cc_job_postings public read policy to enforce:
+  portal_id = current_portal_id() AND publish_state = 'published' AND not expired
+- Ensure service mode bypass remains intact.
+- Ensure tenant isolation remains intact.
+
+STEP 3 — Implement API routes (NEW FILES)
+Create:
+- server/routes/public-jobs.ts
+- server/routes/jobs.ts
+- server/routes/moderation-jobs.ts
+Wire into server/routes.ts (no collisions).
+
+Employer APIs:
+- POST /api/p2/app/jobs (create JobPosting in cc_jobs; link to cc_parties hiringOrganization via party_id)
+- PATCH /api/p2/app/jobs/:id
+- GET /api/p2/app/jobs/:id/destinations (returns eligible portals + metadata: requires_moderation, pricing_model, default_selected)
+- POST /api/p2/app/jobs/:id/publish
+   Behavior: create/update cc_job_postings rows for selected portal_ids.
+   For CanadaDirect portal: publish_state='pending_review'.
+   For others: publish_state='published'.
+   If external channels selected: create queued rows in cc_job_channel_publications.
+- POST /api/p2/app/jobs/:id/unpublish (sets publish_state='paused' for specified portal_ids)
+- GET /api/p2/app/jobs/:id/applications
+- PATCH /api/p2/app/job-applications/:id
+
+Public APIs (portal-scoped):
+- GET /api/p2/public/jobs
+- GET /api/p2/public/jobs/:id
+- POST /api/p2/public/jobs/:id/apply (writes cc_job_applications)
+
+Moderation APIs (CC staff):
+- GET /api/p2/app/mod/jobs/queue?portalSlug=canadadirect
+- POST /api/p2/app/mod/job-postings/:id/approve (sets publish_state='published', sets reviewed fields)
+- POST /api/p2/app/mod/job-postings/:id/reject (sets publish_state='rejected', sets rejection_reason)
+
+All responses must use { ok, error?, ...data }.
+All JSON payloads should use schema.org naming where applicable (JobPosting, hiringOrganization, baseSalary, jobLocation, employmentType, occupationalCategory).
+
+STEP 4 — QA tests (required)
+Add tests:
+1) Portal sovereignty: public CanadaDirect cannot see postings that are only published to Bamfield portals, and vice versa.
+2) Moderation: CanadaDirect postings are invisible until approved.
+3) Tenant isolation: tenant A cannot read tenant B applications.
+4) Publish/unpublish affects visibility deterministically.
+5) Service mode bypass still works.
+
+OUTPUT
+- Summarize migrations created
+- List files created/modified
+- Provide how to run tests
+STOP. Do NOT implement UI yet.
