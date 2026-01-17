@@ -770,15 +770,40 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
             RETURNING id
           `, [id, portalId]);
 
+          const baseBillingInterval = policy.billing_unit === 'monthly' ? 'month' : 'day';
+          const baseDurationDays = baseBillingInterval === 'month' ? 30 : 30;
+          
           const tierPriceResult = tieringEnabled 
             ? await computeTierPrice({
                 tenantId: ctx.tenant_id,
                 portalId,
                 attentionTier: validAttentionTier,
                 assistanceTier: validAssistanceTier,
-                baseDurationDays: 30
+                baseBillingInterval: baseBillingInterval as 'day' | 'month',
+                baseDurationDays
               })
-            : { tierPriceCents: 0, breakdown: { attentionPriceCents: 0, assistancePriceCents: 0 }, enabled: false };
+            : { 
+                tierPriceCents: 0, 
+                breakdown: { 
+                  attentionPriceCents: 0, 
+                  assistancePriceCents: 0,
+                  attentionTier: validAttentionTier,
+                  assistanceTier: validAssistanceTier
+                }, 
+                enabled: false,
+                source: 'default' as const,
+                warning: 'TIERS_DISABLED'
+              };
+
+          const tierMetadata = {
+            breakdown: tierPriceResult.breakdown,
+            tieringEnabled,
+            baseBillingInterval,
+            baseDurationDays,
+            urgentEndsAt: tierPriceResult.urgentEndsAt || null,
+            source: tierPriceResult.source,
+            warning: tierPriceResult.warning || null
+          };
 
           const intentResult = await serviceQuery(`
             INSERT INTO cc_paid_publication_intents (
@@ -801,7 +826,7 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
           `, [
             ctx.tenant_id, id, portalId, policy.price_cents, policy.currency || 'CAD', policy.billing_unit || 'perPosting',
             validAttentionTier, validAssistanceTier, tierPriceResult.tierPriceCents, 'CAD',
-            JSON.stringify({ breakdown: tierPriceResult.breakdown, tieringEnabled })
+            JSON.stringify(tierMetadata)
           ]);
 
           paymentRequiredDestinations.push({
@@ -810,7 +835,33 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
             intentId: intentResult.rows[0].id,
             amountCents: policy.price_cents,
             currency: policy.currency || 'CAD',
-            status: intentResult.rows[0].status
+            status: intentResult.rows[0].status,
+            pricing: {
+              currency: 'CAD',
+              basePriceCents: policy.price_cents,
+              tierPriceCents: tierPriceResult.tierPriceCents,
+              totalPriceCents: policy.price_cents + tierPriceResult.tierPriceCents,
+              breakdown: {
+                portal: {
+                  portalId,
+                  name: policy.portal_name,
+                  basePriceCents: policy.price_cents,
+                  billingInterval: baseBillingInterval,
+                  durationDays: baseDurationDays
+                },
+                tiers: {
+                  attentionTier: tierPriceResult.breakdown.attentionTier,
+                  assistanceTier: tierPriceResult.breakdown.assistanceTier,
+                  tierPriceCents: tierPriceResult.tierPriceCents,
+                  urgentEndsAt: tierPriceResult.urgentEndsAt || null
+                },
+                flags: {
+                  tiersEnabled: tierPriceResult.enabled,
+                  source: tierPriceResult.source,
+                  warning: tierPriceResult.warning || null
+                }
+              }
+            }
           });
         } else {
           const publishState = policy.requires_moderation ? 'pending_review' : 'published';
