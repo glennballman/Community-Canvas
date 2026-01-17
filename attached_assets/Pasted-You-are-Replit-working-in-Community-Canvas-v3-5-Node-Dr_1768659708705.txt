@@ -1,0 +1,46 @@
+You are Replit working in Community Canvas v3.5 (Node + Drizzle + Postgres/Neon). 
+DO NOT implement anything yet.
+
+TASK: Produce a HARD INVENTORY of what already exists for Jobs/Labor in the codebase and database.
+We will use this to design and implement the full Jobs backend without refactors or collisions.
+
+CRITICAL RULES
+- Do not use the words “book” or “booking” anywhere in UI copy or comments. Use “reserve”/“reservation” only.
+- Do not change existing reservation backend endpoints or tables.
+- Output must include evidence: SQL results, file paths, and excerpts.
+
+STEP 1 — Database inventory (run SQL in Neon)
+1) List any existing jobs/labor tables:
+   - tables with names like: job, jobs, labor, labour, worker, applicant, application, posting, hiring, recruit, offer, visa, credential
+   Provide:
+   - table_name, column_name, data_type for each match
+
+2) Search for any existing enums/types related to jobs:
+   - list pg_type where typname ILIKE '%job%' OR '%labor%' OR '%worker%' OR '%applic%'
+
+3) Search for any existing RLS policies related to those tables:
+   - show policies from pg_policies where tablename matches those results
+
+4) Check for any existing storage/attachments tables:
+   - tables like: attachment, file, upload, document, blob, media
+   Provide schema and any RLS
+
+5) Show current migrations list:
+   - list migration filenames and the latest migration number
+
+STEP 2 — Code inventory (repo scan)
+1) Search the codebase for:
+   - routes/endpoints containing '/jobs', 'job', 'application', 'applicant', 'hiring', 'offer', 'visa', 'worker'
+2) Identify any Drizzle schema files that define anything job-related
+3) Identify any UI routes/pages already created for jobs
+4) Identify any existing email/SMS notification utilities that could be reused
+5) Identify any existing auth/RLS helper patterns used by the reservation public API (we will mirror the pattern)
+
+STEP 3 — Output format
+Return a single report with:
+A) Database Findings (with SQL + results)
+B) Repo Findings (file paths + short excerpts)
+C) Collision Risks (anything that might conflict with new Jobs backend)
+D) Recommendation: “Safe to proceed” or “Not safe” and why
+
+STOP after the report. Do NOT implement.
