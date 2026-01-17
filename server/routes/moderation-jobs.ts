@@ -1664,7 +1664,13 @@ router.patch('/portals/:portalId/growth-switches', async (req: Request, res: Res
 const waitlistPatchSchema = z.object({
   status: z.enum(['new', 'contacted', 'matched', 'waitlisted', 'closed']).optional(),
   assigned_to_identity_id: z.string().uuid().nullable().optional(),
-  notes: z.string().max(2000).nullable().optional()
+  notes: z.string().max(2000).nullable().optional(),
+  housing_tier_assigned: z.enum(['premium', 'standard', 'temporary', 'emergency']).nullable().optional(),
+  staging_location_note: z.string().max(500).nullable().optional(),
+  staging_start_date: z.string().nullable().optional(),
+  staging_end_date: z.string().nullable().optional(),
+  matched_housing_offer_id: z.string().uuid().nullable().optional(),
+  priority_score: z.number().int().min(0).max(100).optional()
 });
 
 router.get('/portals/:portalId/housing-waitlist', async (req: Request, res: Response) => {
@@ -1729,6 +1735,12 @@ router.get('/portals/:portalId/housing-waitlist', async (req: Request, res: Resp
         status: row.status,
         assignedToIdentityId: row.assigned_to_identity_id,
         notes: row.notes,
+        housingTierAssigned: row.housing_tier_assigned,
+        stagingLocationNote: row.staging_location_note,
+        stagingStartDate: row.staging_start_date,
+        stagingEndDate: row.staging_end_date,
+        matchedHousingOfferId: row.matched_housing_offer_id,
+        priorityScore: row.priority_score,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         hoursSinceCreated: Math.round(parseFloat(row.hours_since_created || '0'))
@@ -1785,6 +1797,30 @@ router.patch('/housing-waitlist/:id', async (req: Request, res: Response) => {
     if (updates.notes !== undefined) {
       setClauses.push(`notes = $${paramIndex++}`);
       params.push(updates.notes);
+    }
+    if (updates.housing_tier_assigned !== undefined) {
+      setClauses.push(`housing_tier_assigned = $${paramIndex++}`);
+      params.push(updates.housing_tier_assigned);
+    }
+    if (updates.staging_location_note !== undefined) {
+      setClauses.push(`staging_location_note = $${paramIndex++}`);
+      params.push(updates.staging_location_note);
+    }
+    if (updates.staging_start_date !== undefined) {
+      setClauses.push(`staging_start_date = $${paramIndex++}`);
+      params.push(updates.staging_start_date);
+    }
+    if (updates.staging_end_date !== undefined) {
+      setClauses.push(`staging_end_date = $${paramIndex++}`);
+      params.push(updates.staging_end_date);
+    }
+    if (updates.matched_housing_offer_id !== undefined) {
+      setClauses.push(`matched_housing_offer_id = $${paramIndex++}`);
+      params.push(updates.matched_housing_offer_id);
+    }
+    if (updates.priority_score !== undefined) {
+      setClauses.push(`priority_score = $${paramIndex++}`);
+      params.push(updates.priority_score);
     }
 
     await serviceQuery(`

@@ -102,6 +102,7 @@ import jobIngestionRouter from "./routes/job-ingestion";
 import adminPortalsRouter from "./routes/admin-portals";
 import documentTemplatesRouter from "./routes/document-templates";
 import tenantHousingRouter from "./routes/tenant-housing";
+import benchEmergencyRouter from "./routes/bench-emergency";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -384,6 +385,9 @@ export async function registerRoutes(
 
   // Tenant housing API (tenant auth required)
   app.use('/api/p2/app', tenantHousingRouter);
+
+  // Bench + Emergency replacement API (portal staff auth required)
+  app.use('/api/p2/app/mod', benchEmergencyRouter);
 
   // Register user context routes (auth required)
   app.use('/api', userContextRouter);

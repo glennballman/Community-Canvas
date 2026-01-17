@@ -1054,6 +1054,24 @@ router.post('/jobs/campaign-apply', async (req: Request, res: Response) => {
       }
     }
 
+    // Upsert candidate bench entry (autofill from campaign apply)
+    try {
+      await serviceQuery(`
+        INSERT INTO cc_portal_candidate_bench (
+          portal_id, individual_id, readiness_state, housing_needed, 
+          location_note, last_activity_at
+        ) VALUES ($1, $2, 'prospect', $3, $4, now())
+        ON CONFLICT (portal_id, individual_id) DO UPDATE SET
+          housing_needed = COALESCE(EXCLUDED.housing_needed, cc_portal_candidate_bench.housing_needed),
+          location_note = COALESCE(EXCLUDED.location_note, cc_portal_candidate_bench.location_note),
+          last_activity_at = now(),
+          updated_at = now()
+      `, [ctx.portal_id, individualId, housingNeeded || false, applicantLocation || null]);
+    } catch (benchErr: any) {
+      // Log but don't fail the application
+      console.error('Failed to upsert bench entry:', benchErr);
+    }
+
     res.json({
       ok: true,
       bundleId,

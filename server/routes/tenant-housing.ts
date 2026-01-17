@@ -36,7 +36,8 @@ const housingOfferSchema = z.object({
   nightly_cost_min_cents: z.number().int().min(0).nullable().optional(),
   nightly_cost_max_cents: z.number().int().min(0).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
-  status: z.enum(['active', 'paused']).default('active')
+  status: z.enum(['active', 'paused']).default('active'),
+  housing_tier: z.enum(['premium', 'standard', 'temporary', 'emergency']).default('standard')
 });
 
 // GET /api/p2/app/portals/:portalId/housing-offer
@@ -71,6 +72,7 @@ router.get('/portals/:portalId/housing-offer', async (req: Request, res: Respons
         nightlyCostMaxCents: offer.nightly_cost_max_cents,
         notes: offer.notes,
         status: offer.status,
+        housingTier: offer.housing_tier,
         updatedAt: offer.updated_at
       }
     });
@@ -111,9 +113,9 @@ router.put('/portals/:portalId/housing-offer', async (req: Request, res: Respons
     const result = await serviceQuery(`
       INSERT INTO cc_portal_housing_offers (
         portal_id, tenant_id, capacity_beds, capacity_rooms,
-        nightly_cost_min_cents, nightly_cost_max_cents, notes, status
+        nightly_cost_min_cents, nightly_cost_max_cents, notes, status, housing_tier
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (portal_id, tenant_id) DO UPDATE SET
         capacity_beds = EXCLUDED.capacity_beds,
         capacity_rooms = EXCLUDED.capacity_rooms,
@@ -121,6 +123,7 @@ router.put('/portals/:portalId/housing-offer', async (req: Request, res: Respons
         nightly_cost_max_cents = EXCLUDED.nightly_cost_max_cents,
         notes = EXCLUDED.notes,
         status = EXCLUDED.status,
+        housing_tier = EXCLUDED.housing_tier,
         updated_at = now()
       RETURNING *
     `, [
@@ -131,7 +134,8 @@ router.put('/portals/:portalId/housing-offer', async (req: Request, res: Respons
       data.nightly_cost_min_cents ?? null,
       data.nightly_cost_max_cents ?? null,
       data.notes ?? null,
-      data.status
+      data.status,
+      data.housing_tier
     ]);
 
     const offer = result.rows[0];
@@ -147,6 +151,7 @@ router.put('/portals/:portalId/housing-offer', async (req: Request, res: Respons
         nightlyCostMaxCents: offer.nightly_cost_max_cents,
         notes: offer.notes,
         status: offer.status,
+        housingTier: offer.housing_tier,
         updatedAt: offer.updated_at
       }
     });
