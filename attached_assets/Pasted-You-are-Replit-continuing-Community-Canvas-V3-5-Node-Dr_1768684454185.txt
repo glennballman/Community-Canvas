@@ -1,0 +1,248 @@
+You are Replit continuing Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+
+MISSION
+Implement two additive cold-start accelerators with ZERO refactors:
+1) Portal “Growth Switches” (explicit bridge: Jobs → Reservations)
+2) Housing Waitlist v1 (controlled resource + concierge routing)
+
+HARD RULES
+- Never use banned terminology (“book”, “booking”, “booked”, “bookings”, “booker”) anywhere.
+- Use schema.org semantics where applicable.
+- Preserve API envelope { ok, error?, ...data }.
+- Additive migrations only. No breaking route changes. No redesign of existing systems.
+- Portal sovereignty: everything portal-scoped. Tenant isolation enforced.
+- RLS must exist for all new tables.
+- No PSP changes. No payment work.
+
+================================================================================
+STEP 0 — HARD CHECKS (PRINT EVIDENCE FIRST)
+================================================================================
+A) Identify existing portal admin settings endpoints and tables:
+- cc_portals schema
+- any portal_settings / portal_appearance routes
+B) Identify existing reservations module routes/pages in UI (if any):
+- confirm where /app/reservations lives (or equivalent)
+C) Identify existing staff auth middleware:
+- requirePortalStaff usage patterns
+D) Identify where campaign apply and concierge queue live:
+- /b/:portalSlug/apply/:campaignKey
+- /app/mod/applications
+E) Identify existing “waitlist” or “intake” tables (search for waitlist, intake, lead).
+
+If any of these already exist, reuse rather than duplicate.
+
+================================================================================
+PART 1 — PORTAL “GROWTH SWITCHES”
+================================================================================
+GOAL
+A portal admin page that shows module switches and next steps:
+- Jobs (already enabled)
+- Reservations (bridge action)
+- Assets
+- Service runs
+- Leads
+This is an adoption bridge UX, not a permissions system.
+
+DATA MODEL (Additive)
+Create migration 149_portal_growth_switches.sql if no equivalent exists:
+
+Table: cc_portal_growth_switches
+- id uuid PK default random
+- portal_id uuid NOT NULL UNIQUE references cc_portals(id) ON DELETE CASCADE
+- jobs_enabled boolean NOT NULL DEFAULT true
+- reservations_state text NOT NULL DEFAULT 'available' CHECK in ('available','request_only','enabled')
+- assets_enabled boolean NOT NULL DEFAULT false
+- service_runs_enabled boolean NOT NULL DEFAULT false
+- leads_enabled boolean NOT NULL DEFAULT false
+- updated_by_identity_id uuid NULL
+- updated_at timestamp NOT NULL DEFAULT now()
+- created_at timestamp NOT NULL DEFAULT now()
+
+RLS:
+- Portal staff can SELECT/UPDATE for their portal
+- Tenants cannot access unless they are portal staff
+- Service mode bypass allowed
+
+SEEDING
+On portal creation (or via backfill script), ensure each portal has a row.
+If there is an existing portal provisioning script, add an insert-if-missing there.
+Otherwise, create a one-time script server/jobs/backfillPortalGrowthSwitches.ts.
+
+BACKEND ENDPOINTS
+Add to appropriate router (portal admin/mod):
+GET  /api/p2/app/mod/portals/:portalId/growth-switches
+PATCH /api/p2/app/mod/portals/:portalId/growth-switches
+Auth: requirePortalStaff(portalId)
+
+PATCH behavior:
+- Only allow flipping booleans + reservations_state.
+- Record updated_by_identity_id, updated_at.
+
+BRIDGE AFFORDANCE (Reservations)
+In response payload include:
+- reservationsNextStep:
+  - if reservations_state='available' -> { action:'enable', route:'/app/reservations' or '/app/reservations/setup' if exists }
+  - if reservations_state='request_only' -> { action:'request', route:'/app/mod/support?topic=reservations' (or create minimal request endpoint if support system exists) }
+  - if 'enabled' -> { action:'manage', route:'/app/reservations' }
+
+UI
+Create /app/mod/portals/:portalId/growth page OR integrate into PortalAppearancePage as a new tab “Growth”.
+Must include:
+- A card per module with:
+  - status pill (On/Off/Available/Request)
+  - short description
+  - primary CTA button
+- Jobs card shows:
+  - “On”
+  - counts pulled from existing hiring pulse endpoint (optional): applications last 7d, active postings
+- Reservations card shows:
+  - state + CTA “Enable reservations” (navigates to route) or “Request enable”
+No new nav required; add a link from existing portal admin area.
+
+TESTS
+Vitest:
+- portal staff can GET/PATCH
+- non-staff denied
+- row auto-created (via backfill or on-demand insert in GET handler)
+- forbidden terms scan still passes
+
+DOCS
+docs/PORTAL_GROWTH_SWITCHES.md
+- purpose
+- states
+- endpoints
+- click path
+
+================================================================================
+PART 2 — HOUSING WAITLIST v1 (Controlled Resource)
+================================================================================
+GOAL
+Capture housing needs as a controlled resource:
+- Candidate indicates housing needed in campaign apply / application
+- Coordinator sees a housing queue
+- Employers can optionally mark “housing capacity” for their org/tenant within a portal
+This is NOT full housing management. It is a waitlist + routing tool.
+
+DATA MODEL (Additive)
+Create migration 150_portal_housing_waitlist.sql:
+
+A) cc_portal_housing_policies (optional, minimal)
+- id uuid PK
+- portal_id uuid NOT NULL UNIQUE references cc_portals(id) ON DELETE CASCADE
+- is_enabled boolean NOT NULL DEFAULT true
+- disclosure_text text NULL (e.g., “Housing is limited; waitlist first-come.”)
+- updated_at timestamp default now()
+
+B) cc_portal_housing_offers (employer-provided signals; optional but valuable)
+- id uuid PK
+- portal_id uuid NOT NULL
+- tenant_id uuid NOT NULL
+- employer_party_id uuid NULL (if you have employer party linkage)
+- capacity_beds integer NOT NULL DEFAULT 0
+- capacity_rooms integer NOT NULL DEFAULT 0
+- nightly_cost_min_cents integer NULL
+- nightly_cost_max_cents integer NULL
+- notes text NULL
+- status text NOT NULL DEFAULT 'active' CHECK in ('active','paused')
+- updated_at timestamp default now()
+Unique: (portal_id, tenant_id)
+
+C) cc_portal_housing_waitlist_entries
+- id uuid PK
+- portal_id uuid NOT NULL references cc_portals(id) ON DELETE CASCADE
+- bundle_id uuid NULL references cc_job_application_bundles(id) ON DELETE SET NULL
+- application_id uuid NULL references cc_job_applications(id) ON DELETE SET NULL
+- applicant_individual_id uuid NULL references cc_individuals(id) ON DELETE SET NULL
+- applicant_name text NOT NULL
+- applicant_email text NOT NULL
+- preferred_start_date date NULL
+- preferred_end_date date NULL
+- budget_note text NULL
+- status text NOT NULL DEFAULT 'new' CHECK in ('new','contacted','matched','waitlisted','closed')
+- assigned_to_identity_id uuid NULL
+- created_at timestamp default now()
+- updated_at timestamp default now()
+
+INDEXES:
+- (portal_id, status, created_at)
+- (portal_id, applicant_email)
+- (bundle_id)
+- (application_id)
+
+RLS
+- Portal staff can SELECT/UPDATE all for portal_id
+- Tenant can SELECT housing_offers for their own tenant_id and portal_id, and UPDATE their own offer row
+- Tenant cannot read waitlist entries (portal-controlled queue)
+- Service bypass allowed
+
+AUTOMATION HOOKS (Additive server-side wiring)
+1) When campaign apply is submitted:
+- If housing_needed=true, create a waitlist entry tied to bundle_id and applicant fields.
+2) When a single job application is submitted (non-campaign):
+- If application indicates housing needed OR job housing_status in ('limited','none') and applicant flags housing:
+  create waitlist entry tied to application_id.
+
+Implement in the existing apply handlers (public jobs and campaign-apply) with insert-if-not-exists:
+- Use unique constraint key (portal_id + bundle_id) or (portal_id + application_id) to avoid duplicates.
+
+BACKEND ENDPOINTS
+Portal staff:
+GET  /api/p2/app/mod/portals/:portalId/housing-waitlist?status=&q=
+PATCH /api/p2/app/mod/housing-waitlist/:id  (status changes, assignment, notes)
+Tenant:
+GET  /api/p2/app/portals/:portalId/housing-offer
+PUT  /api/p2/app/portals/:portalId/housing-offer
+
+Auth:
+- requirePortalStaff for staff routes
+- tenant isolation for tenant routes
+
+UI
+A) Staff UI: /app/mod/housing
+- Portal selector (if needed) or portalId in route
+- Table list with:
+  - applicant name/email
+  - source (bundle/application)
+  - created time + SLA-style age badge
+  - status dropdown
+  - assign-to dropdown (portal staff identities)
+  - quick note
+- Filters by status + search
+
+B) Tenant UI: /app/portals/:portalId/housing
+- Simple form to declare:
+  - beds/rooms capacity
+  - cost range
+  - notes
+  - active/paused
+This is what makes “controlled resource” real.
+
+INTEGRATION WITH CONCIERGE QUEUE
+- On /app/mod/applications add a filter chip:
+  “Housing needed”
+- Clicking it can optionally deep-link to /app/mod/housing with status=new.
+
+TESTS
+Vitest:
+- campaign apply with housing_needed creates waitlist entry
+- duplicate prevention works (bundle resubmit does not duplicate)
+- portal staff can read/update waitlist; tenants cannot
+- tenant can upsert housing offer for their portal
+
+DOCS
+docs/HOUSING_WAITLIST_V1.md with:
+- tables
+- endpoints
+- click path
+- verification curls + SQL checks
+
+================================================================================
+OUTPUT REQUIRED
+================================================================================
+At completion, print:
+- migrations created (149,150) and summaries
+- files changed/added
+- endpoints list
+- test commands and passing output
+- confirm forbidden terms scan passes
+STOP. Do NOT implement reservations module itself.
