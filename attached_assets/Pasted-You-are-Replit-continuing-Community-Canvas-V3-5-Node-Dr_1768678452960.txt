@@ -1,0 +1,244 @@
+You are Replit continuing Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+
+AUTHORITATIVE DIRECTIVE
+We do this right NOW. No “later.” No refactors later.
+There is no production data, so implement the complete, correct accounting integration for paid job placements immediately.
+
+SCOPE
+Implement full General Ledger integration + refund/reversal semantics + receipt-grade artifacts for cc_paid_publication_intents (AdrenalineCanada paid placements), using the existing accounting spine and maintaining a single source of truth.
+
+HARD RULES
+- NEVER use banned terminology (“book”, “booking”, “booked”, “bookings”, “booker”) anywhere (copy, code, comments, docs, tests).
+- Do NOT refactor existing tables or endpoints; only additive changes.
+- Preserve API envelope: { ok, error?, ...data }.
+- Follow RLS patterns (current_tenant_id(), is_service_mode()).
+- All financial state transitions must be transactional (DB transaction).
+- Do NOT touch hospitality folios for job placements.
+- Jobs paid placements remain canonical in cc_paid_publication_intents; GL is the accounting view posted from intent state transitions.
+
+STEP 0 — HARD CHECK (PRINT RESULTS BEFORE ANY CHANGES)
+A) Print cc_ledger_entries schema (columns, types) and any related enums.
+B) Print cc_activity_ledger + cc_settlement_batches schemas (if used).
+C) Identify any existing helper functions to post ledger entries (SQL functions or TS services).
+D) Identify current cc_paid_publication_intents lifecycle transitions and where mark-paid is implemented.
+E) Identify existing “refund” patterns in the system (wallet or folio reversal patterns) to mirror semantics.
+
+STOP after printing Step 0 report if anything is missing or unclear; otherwise proceed.
+
+--------------------------------------------------------------------------------
+STEP 1 — Define the Accounting Contract (Single Truth)
+--------------------------------------------------------------------------------
+1) Adopt this reference contract for GL entries posted from job intents:
+- reference_type = 'paid_publication_intent'
+- reference_id = cc_paid_publication_intents.id
+- tenant_id = intent.tenant_id
+- currency = intent.currency
+
+2) Define GL entry taxonomy (do not invent if existing; if none, add additive enum or use text):
+- entry_kind:
+  - 'job_publication_charge'
+  - 'job_publication_payment'
+  - 'job_publication_refund'
+  - 'job_publication_reversal'
+If cc_ledger_entries already has a suitable column (entry_type/kind/category), reuse it.
+If not, add additive columns rather than creating a new ledger table.
+
+3) Pricing snapshot source of truth:
+- Use intent fields:
+  - amount_cents (base)
+  - tier_price_cents (incremental)
+  - total = base + tier
+  - tier_metadata (already contains pricing breakdown and urgentEndsAt)
+No secondary “receipt snapshot” tables unless required by Step 0 findings.
+
+--------------------------------------------------------------------------------
+STEP 2 — Migration 143 (Additive Only)
+--------------------------------------------------------------------------------
+Create server/migrations/143_job_intent_gl_integration.sql implementing only what is REQUIRED:
+
+A) Ensure cc_ledger_entries can represent these events. If missing, add:
+- reference_type TEXT NOT NULL
+- reference_id UUID NOT NULL
+- entry_kind TEXT NOT NULL
+- amount_cents INTEGER NOT NULL
+- currency CHAR(3) NOT NULL
+- occurred_at TIMESTAMP NOT NULL DEFAULT now()
+- metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+- reverses_entry_id UUID NULL (if reversal pattern exists elsewhere, match it)
+Add indexes:
+- (tenant_id, reference_type, reference_id)
+- (reference_type, reference_id)
+- (occurred_at)
+
+If cc_ledger_entries already has equivalents, DO NOT add duplicates—map to existing columns.
+
+B) Add to cc_paid_publication_intents:
+- ledger_charge_entry_id UUID NULL
+- ledger_payment_entry_id UUID NULL
+- ledger_refund_entry_id UUID NULL
+This makes linkage explicit, avoids expensive queries, and supports audit/receipt rendering.
+
+C) Add immutable state transition audit (if not present already):
+- create cc_paid_publication_intent_events (append-only) ONLY if an events table does not already exist.
+Columns:
+  id, tenant_id, intent_id, from_status, to_status, actor_identity_id, note, created_at, metadata
+RLS tenant isolation + service bypass. No UPDATE/DELETE.
+
+If you already have a generic events/audit table used for other flows, reuse it instead of creating a new one.
+
+--------------------------------------------------------------------------------
+STEP 3 — Server: Transactional Posting Services (Authoritative)
+--------------------------------------------------------------------------------
+Implement server/services/jobs/jobPublicationAccounting.ts with:
+
+1) postIntentCharge(intent, tx)
+- Creates a GL charge entry for (amount_cents + tier_price_cents) with entry_kind='job_publication_charge'
+- Links ledger_charge_entry_id on intent
+- Writes intent_event row
+
+2) recordIntentPayment(intent, paymentInfo, tx)
+- Preconditions:
+  - intent.status in ('requires_action','pending_payment')
+  - total amount computed
+- Creates GL payment entry entry_kind='job_publication_payment' for total amount
+- Links ledger_payment_entry_id on intent
+- Updates intent.status='paid', paid_at=now()
+- Stores psp_provider/psp_reference/psp_metadata/psp_checkout_url as available
+- Writes intent_event row
+- Publishes cc_job_postings for the portal (existing behavior must remain)
+
+3) recordIntentRefund(intent, refundInfo, tx)
+- Preconditions:
+  - intent.status='paid'
+- Creates GL refund entry entry_kind='job_publication_refund' for total amount (or partial if supported)
+- Links ledger_refund_entry_id on intent
+- Updates intent.status='refunded'
+- Writes intent_event row
+- Updates portal job posting state appropriately:
+  - If you support “unpublish on refund”, set publish_state='archived' (or 'paused') based on your existing allowed states.
+  - Do NOT delete anything.
+
+4) reverseIntentEntries(intent, tx)
+- If your ledger supports reversal entries via reverses_entry_id, implement a reversal entry_kind='job_publication_reversal'
+- Mirror folio reversal semantics if they exist.
+
+IMPORTANT
+- All four functions must run inside a single DB transaction and enforce tenant mismatch guards.
+
+--------------------------------------------------------------------------------
+STEP 4 — Wire into Existing Endpoints (No Redesign)
+--------------------------------------------------------------------------------
+A) In POST /api/p2/app/jobs/:id/publish:
+- When creating an intent (paid portal), immediately create the GL CHARGE entry (postIntentCharge) in the same transaction as intent creation.
+- This ensures every paid intent has a posted charge for audit even before payment is collected.
+
+B) In POST /api/p2/app/mod/paid-publications/:intentId/mark-paid:
+- Replace direct updates with recordIntentPayment(intent, paymentInfo)
+- paymentInfo must accept:
+  - psp_provider (string, required; allow 'manual')
+  - psp_reference (optional)
+  - psp_metadata (optional json)
+  - note (optional)
+- Must remain portal-boundary safe.
+
+C) Add Refund endpoint (admin/mod only, additive):
+POST /api/p2/app/mod/paid-publications/:intentId/refund
+- Uses recordIntentRefund()
+- Requires reason/note, allows optional partial refund amount if you want; if partial not implemented, enforce full.
+
+D) Add Read endpoints (tenant/staff) for audit:
+GET /api/p2/app/jobs/:id/payments
+- Returns intents + linked ledger entries + intent events timeline.
+
+GET /api/p2/app/mod/paid-publications/:intentId
+- Returns full audit: intent + ledger links + events.
+
+--------------------------------------------------------------------------------
+STEP 5 — Receipt-Grade Rendering (No New Financial Spine)
+--------------------------------------------------------------------------------
+We need a “receipt artifact” now.
+
+Implement:
+A) Tenant receipt view endpoint:
+GET /api/p2/app/paid-publications/:intentId/receipt
+- Returns JSON receipt payload:
+  - receiptId (intentId)
+  - issuedAt
+  - seller: legal entity snapshot (LEGAL + dba)
+  - buyer: tenant brand snapshot
+  - line items:
+    - base placement
+    - tier add-ons
+  - totals
+  - payment info (psp_provider/reference)
+  - GL entry ids
+- Must be stable and purely derived from intent + tier_metadata + linked ledger entries.
+
+B) Optional PDF generation (if repo already has PDF tooling):
+- If there is an existing PDF generator service, generate a PDF and store it in your media system, linking media_id in intent metadata.
+- If no PDF tooling exists, DO NOT invent a heavy solution—ship JSON receipt now and create a docs placeholder for PDF.
+
+(We are doing this right now without refactors; JSON receipt is acceptable evidence-grade output if stable.)
+
+--------------------------------------------------------------------------------
+STEP 6 — UI Wiring (Tenant + Staff)
+--------------------------------------------------------------------------------
+A) Tenant UI:
+- /app/jobs/payments/pending
+  - Show intent status, total, tier summary, and receipt link (JSON view for now)
+- Add “View receipt” action in job destinations/payment area.
+
+B) Staff UI:
+- /app/mod/paid-publications
+  - Add “Refund” action with reason modal
+  - Add “View audit timeline” (events + ledger links)
+  - Ensure role gating consistent with existing moderation staff authorization.
+
+No new nav paradigms; extend existing pages.
+
+--------------------------------------------------------------------------------
+STEP 7 — Tests (Must be Strong)
+--------------------------------------------------------------------------------
+Add Vitest tests covering:
+
+1) Publish to paid portal creates intent AND GL CHARGE entry
+- Assert ledger_charge_entry_id not null
+- Assert ledger entry reference_type/id matches
+
+2) Mark paid posts GL PAYMENT entry and transitions intent to paid
+- Assert ledger_payment_entry_id not null
+- Assert job posting becomes published
+
+3) Refund posts GL REFUND entry and transitions intent to refunded
+- Assert ledger_refund_entry_id not null
+- Assert job posting state changes appropriately (archived/paused per your chosen rule)
+
+4) Idempotency / double-call protection
+- mark-paid called twice => second fails safely with clear error or returns ok with already_paid (choose consistent pattern)
+- refund called when not paid => fails with domain error
+
+5) Tenant isolation
+- cross-tenant access denied for receipt/audit
+
+--------------------------------------------------------------------------------
+STEP 8 — Docs + Evidence
+--------------------------------------------------------------------------------
+Create docs/JOB_PUBLICATION_ACCOUNTING_INTEGRATION.md:
+- Lifecycle with diagrams
+- What posts to GL and when
+- Refund semantics
+- Receipt JSON schema
+- How to verify via curl + SQL
+
+At the end, print a short “Accounting Integration Verification Report”:
+- list of new columns/tables
+- the GL contract (reference_type/id)
+- test commands and pass confirmation
+
+OUTPUT
+- migration number + summary
+- files changed
+- tests added and commands
+- confirmation: no hospitality folio changes; no wallet changes required
+
+STOP.

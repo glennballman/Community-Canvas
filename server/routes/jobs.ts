@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { serviceQuery } from '../db/tenantDb';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
 import { 
   getTieringAvailability, 
@@ -9,6 +9,7 @@ import {
   type AttentionTier,
   type AssistanceTier
 } from '../services/jobs/tiering';
+import { postIntentCharge, type IntentRecord } from '../services/jobs/jobPublicationAccounting';
 
 const router = express.Router();
 
@@ -822,12 +823,37 @@ router.post('/:id/publish', async (req: Request, res: Response) => {
                 ELSE 'requires_action' 
               END,
               updated_at = now()
-            RETURNING id, status, attention_tier, assistance_tier, tier_price_cents
+            RETURNING id, status, attention_tier, assistance_tier, tier_price_cents, ledger_charge_entry_id
           `, [
             ctx.tenant_id, id, portalId, policy.price_cents, policy.currency || 'CAD', policy.billing_unit || 'perPosting',
             validAttentionTier, validAssistanceTier, tierPriceResult.tierPriceCents, 'CAD',
             JSON.stringify(tierMetadata)
           ]);
+
+          const intentRow = intentResult.rows[0];
+          
+          if (intentRow.status === 'requires_action' && !intentRow.ledger_charge_entry_id && ctx.tenant_id) {
+            try {
+              await withServiceTransaction(async (client) => {
+                const intentRecord: IntentRecord = {
+                  id: intentRow.id,
+                  tenant_id: ctx.tenant_id!,
+                  job_id: id,
+                  portal_id: portalId,
+                  amount_cents: policy.price_cents,
+                  tier_price_cents: tierPriceResult.tierPriceCents,
+                  currency: policy.currency || 'CAD',
+                  status: intentRow.status,
+                  tier_metadata: tierMetadata,
+                  attention_tier: validAttentionTier,
+                  assistance_tier: validAssistanceTier
+                };
+                await postIntentCharge(client, intentRecord);
+              });
+            } catch (chargeErr) {
+              console.error('Failed to post GL charge for intent:', chargeErr);
+            }
+          }
 
           paymentRequiredDestinations.push({
             portalId,

@@ -1,11 +1,28 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { serviceQuery } from '../db/tenantDb';
+import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
+import { 
+  recordIntentPayment, 
+  recordIntentRefund,
+  getIntentAuditTrail,
+  generateReceiptPayload,
+  type IntentRecord,
+  type PaymentInfo,
+  type RefundInfo
+} from '../services/jobs/jobPublicationAccounting';
 
 const markPaidSchema = z.object({
-  pspProvider: z.string().max(50).optional(),
-  pspReference: z.string().max(255).optional()
+  pspProvider: z.string().max(50).default('manual'),
+  pspReference: z.string().max(255).optional(),
+  pspMetadata: z.record(z.any()).optional(),
+  note: z.string().max(1000).optional()
+});
+
+const refundSchema = z.object({
+  reason: z.string().min(1).max(1000),
+  amountCents: z.number().int().positive().optional(),
+  note: z.string().max(1000).optional()
 });
 
 const router = express.Router();
@@ -446,11 +463,11 @@ router.post('/paid-publications/:intentId/mark-paid', async (req: Request, res: 
     });
   }
 
-  const { pspProvider, pspReference } = parseResult.data;
+  const { pspProvider, pspReference, pspMetadata, note } = parseResult.data;
 
   try {
     const intentCheck = await serviceQuery(`
-      SELECT ppi.id, ppi.job_id, ppi.portal_id, ppi.status, ppi.amount_cents
+      SELECT ppi.*
       FROM cc_paid_publication_intents ppi
       WHERE ppi.id = $1 AND ppi.portal_id = $2
     `, [intentId, ctx.portal_id]);
@@ -462,9 +479,9 @@ router.post('/paid-publications/:intentId/mark-paid', async (req: Request, res: 
       });
     }
 
-    const intent = intentCheck.rows[0];
+    const intentRow = intentCheck.rows[0];
 
-    if (intent.status === 'paid') {
+    if (intentRow.status === 'paid') {
       return res.status(400).json({
         ok: false,
         error: 'ALREADY_PAID',
@@ -472,43 +489,63 @@ router.post('/paid-publications/:intentId/mark-paid', async (req: Request, res: 
       });
     }
 
-    if (intent.status === 'refunded' || intent.status === 'cancelled') {
+    if (intentRow.status === 'refunded' || intentRow.status === 'cancelled') {
       return res.status(400).json({
         ok: false,
         error: 'INVALID_STATE',
-        message: `Cannot mark ${intent.status} intent as paid`
+        message: `Cannot mark ${intentRow.status} intent as paid`
       });
     }
 
-    await serviceQuery(`
-      UPDATE cc_paid_publication_intents SET
-        status = 'paid',
-        psp_provider = COALESCE($3, psp_provider),
-        psp_reference = COALESCE($4, psp_reference),
-        paid_at = now(),
-        updated_at = now()
-      WHERE id = $1 AND portal_id = $2
-    `, [intentId, ctx.portal_id, pspProvider || null, pspReference || null]);
+    const result = await withServiceTransaction(async (client) => {
+      const intent: IntentRecord = {
+        id: intentRow.id,
+        tenant_id: intentRow.tenant_id,
+        job_id: intentRow.job_id,
+        portal_id: intentRow.portal_id,
+        amount_cents: intentRow.amount_cents,
+        tier_price_cents: intentRow.tier_price_cents || 0,
+        currency: intentRow.currency || 'CAD',
+        status: intentRow.status,
+        tier_metadata: intentRow.tier_metadata || {},
+        attention_tier: intentRow.attention_tier,
+        assistance_tier: intentRow.assistance_tier,
+        psp_provider: intentRow.psp_provider,
+        psp_reference: intentRow.psp_reference,
+        ledger_charge_entry_id: intentRow.ledger_charge_entry_id
+      };
 
-    await serviceQuery(`
-      UPDATE cc_job_postings SET
-        publish_state = 'published',
-        published_at = now(),
-        is_hidden = false,
-        updated_at = now()
-      WHERE job_id = $1 AND portal_id = $2
-    `, [intent.job_id, intent.portal_id]);
+      const paymentInfo: PaymentInfo = {
+        pspProvider: pspProvider || 'manual',
+        pspReference,
+        pspMetadata,
+        note,
+        actorIndividualId: ctx.individual_id || undefined
+      };
+
+      return recordIntentPayment(client, intent, paymentInfo);
+    });
 
     res.json({
       ok: true,
       intentId,
-      jobId: intent.job_id,
-      portalId: intent.portal_id,
+      jobId: intentRow.job_id,
+      portalId: intentRow.portal_id,
+      ledgerPaymentEntryId: result.ledgerEntryId,
       message: 'Payment confirmed and job posting published'
     });
 
   } catch (error: any) {
     console.error('Mark paid error:', error);
+    
+    if (error.message?.includes('Cannot record payment')) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_STATE',
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       ok: false,
       error: 'Failed to mark payment as paid'
@@ -573,6 +610,211 @@ router.get('/paid-publications/pending', async (req: Request, res: Response) => 
     res.status(500).json({
       ok: false,
       error: 'Failed to fetch pending payments'
+    });
+  }
+});
+
+router.post('/paid-publications/:intentId/refund', requirePortalStaff, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { intentId } = req.params;
+
+  if (!ctx?.portal_id) {
+    return res.status(400).json({
+      ok: false,
+      error: 'PORTAL_CONTEXT_REQUIRED'
+    });
+  }
+
+  const parseResult = refundSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      ok: false,
+      error: 'VALIDATION_ERROR',
+      details: parseResult.error.flatten()
+    });
+  }
+
+  const { reason, amountCents, note } = parseResult.data;
+
+  try {
+    const intentCheck = await serviceQuery(`
+      SELECT ppi.*
+      FROM cc_paid_publication_intents ppi
+      WHERE ppi.id = $1 AND ppi.portal_id = $2
+    `, [intentId, ctx.portal_id]);
+
+    if (intentCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'INTENT_NOT_FOUND'
+      });
+    }
+
+    const intentRow = intentCheck.rows[0];
+
+    if (intentRow.status !== 'paid') {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_STATE',
+        message: `Cannot refund intent in ${intentRow.status} status - must be paid`
+      });
+    }
+
+    const result = await withServiceTransaction(async (client) => {
+      const intent: IntentRecord = {
+        id: intentRow.id,
+        tenant_id: intentRow.tenant_id,
+        job_id: intentRow.job_id,
+        portal_id: intentRow.portal_id,
+        amount_cents: intentRow.amount_cents,
+        tier_price_cents: intentRow.tier_price_cents || 0,
+        currency: intentRow.currency || 'CAD',
+        status: intentRow.status,
+        tier_metadata: intentRow.tier_metadata || {},
+        attention_tier: intentRow.attention_tier,
+        assistance_tier: intentRow.assistance_tier,
+        psp_provider: intentRow.psp_provider,
+        psp_reference: intentRow.psp_reference,
+        ledger_charge_entry_id: intentRow.ledger_charge_entry_id,
+        ledger_payment_entry_id: intentRow.ledger_payment_entry_id
+      };
+
+      const refundInfo: RefundInfo = {
+        reason,
+        amountCents,
+        note,
+        actorIndividualId: ctx.individual_id || undefined
+      };
+
+      return recordIntentRefund(client, intent, refundInfo);
+    });
+
+    res.json({
+      ok: true,
+      intentId,
+      jobId: intentRow.job_id,
+      portalId: intentRow.portal_id,
+      ledgerRefundEntryId: result.ledgerEntryId,
+      message: 'Refund processed and job posting archived'
+    });
+
+  } catch (error: any) {
+    console.error('Refund error:', error);
+    
+    if (error.message?.includes('Cannot refund')) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_STATE',
+        message: error.message
+      });
+    }
+    
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to process refund'
+    });
+  }
+});
+
+router.get('/paid-publications/:intentId', requirePortalStaff, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { intentId } = req.params;
+
+  if (!ctx?.portal_id) {
+    return res.status(400).json({
+      ok: false,
+      error: 'PORTAL_CONTEXT_REQUIRED'
+    });
+  }
+
+  try {
+    const intentCheck = await serviceQuery(`
+      SELECT ppi.tenant_id, ppi.portal_id
+      FROM cc_paid_publication_intents ppi
+      WHERE ppi.id = $1 AND ppi.portal_id = $2
+    `, [intentId, ctx.portal_id]);
+
+    if (intentCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'INTENT_NOT_FOUND'
+      });
+    }
+
+    const tenantId = intentCheck.rows[0].tenant_id;
+
+    const auditTrail = await withServiceTransaction(async (client) => {
+      return getIntentAuditTrail(client, intentId, tenantId);
+    });
+
+    res.json({
+      ok: true,
+      intent: auditTrail.intent,
+      ledgerEntries: auditTrail.ledgerEntries,
+      events: auditTrail.events
+    });
+
+  } catch (error: any) {
+    console.error('Intent audit error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch intent audit trail'
+    });
+  }
+});
+
+router.get('/paid-publications/:intentId/receipt', requirePortalStaff, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { intentId } = req.params;
+
+  if (!ctx?.portal_id) {
+    return res.status(400).json({
+      ok: false,
+      error: 'PORTAL_CONTEXT_REQUIRED'
+    });
+  }
+
+  try {
+    const intentCheck = await serviceQuery(`
+      SELECT ppi.tenant_id, ppi.portal_id, ppi.status
+      FROM cc_paid_publication_intents ppi
+      WHERE ppi.id = $1 AND ppi.portal_id = $2
+    `, [intentId, ctx.portal_id]);
+
+    if (intentCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'INTENT_NOT_FOUND'
+      });
+    }
+
+    if (intentCheck.rows[0].status !== 'paid' && intentCheck.rows[0].status !== 'refunded') {
+      return res.status(400).json({
+        ok: false,
+        error: 'RECEIPT_NOT_AVAILABLE',
+        message: 'Receipt is only available for paid or refunded intents'
+      });
+    }
+
+    const tenantId = intentCheck.rows[0].tenant_id;
+
+    const receipt = await withServiceTransaction(async (client) => {
+      return generateReceiptPayload(client, intentId, tenantId);
+    });
+
+    res.json({
+      ok: true,
+      receipt
+    });
+
+  } catch (error: any) {
+    console.error('Receipt generation error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to generate receipt'
     });
   }
 });
