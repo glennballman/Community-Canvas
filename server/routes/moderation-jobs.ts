@@ -419,4 +419,146 @@ router.get('/stats', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/paid-publications/:intentId/mark-paid', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { intentId } = req.params;
+  const { pspProvider, pspReference } = req.body;
+
+  if (!ctx?.portal_id) {
+    return res.status(400).json({
+      ok: false,
+      error: 'PORTAL_CONTEXT_REQUIRED'
+    });
+  }
+
+  try {
+    const intentCheck = await serviceQuery(`
+      SELECT ppi.id, ppi.job_id, ppi.portal_id, ppi.status, ppi.amount_cents
+      FROM cc_paid_publication_intents ppi
+      WHERE ppi.id = $1 AND ppi.portal_id = $2
+    `, [intentId, ctx.portal_id]);
+
+    if (intentCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'INTENT_NOT_FOUND'
+      });
+    }
+
+    const intent = intentCheck.rows[0];
+
+    if (intent.status === 'paid') {
+      return res.status(400).json({
+        ok: false,
+        error: 'ALREADY_PAID',
+        message: 'This payment intent has already been marked as paid'
+      });
+    }
+
+    if (intent.status === 'refunded' || intent.status === 'cancelled') {
+      return res.status(400).json({
+        ok: false,
+        error: 'INVALID_STATE',
+        message: `Cannot mark ${intent.status} intent as paid`
+      });
+    }
+
+    await serviceQuery(`
+      UPDATE cc_paid_publication_intents SET
+        status = 'paid',
+        psp_provider = COALESCE($3, psp_provider),
+        psp_reference = COALESCE($4, psp_reference),
+        paid_at = now(),
+        updated_at = now()
+      WHERE id = $1
+    `, [intentId, ctx.portal_id, pspProvider || null, pspReference || null]);
+
+    await serviceQuery(`
+      UPDATE cc_job_postings SET
+        publish_state = 'published',
+        published_at = now(),
+        is_hidden = false,
+        updated_at = now()
+      WHERE job_id = $1 AND portal_id = $2
+    `, [intent.job_id, intent.portal_id]);
+
+    res.json({
+      ok: true,
+      intentId,
+      jobId: intent.job_id,
+      portalId: intent.portal_id,
+      message: 'Payment confirmed and job posting published'
+    });
+
+  } catch (error: any) {
+    console.error('Mark paid error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to mark payment as paid'
+    });
+  }
+});
+
+router.get('/paid-publications/pending', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+
+  if (!ctx?.portal_id) {
+    return res.status(400).json({
+      ok: false,
+      error: 'PORTAL_CONTEXT_REQUIRED'
+    });
+  }
+
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const result = await serviceQuery(`
+      SELECT 
+        ppi.id as intent_id,
+        ppi.job_id,
+        ppi.portal_id,
+        ppi.amount_cents,
+        ppi.currency,
+        ppi.status,
+        ppi.created_at,
+        j.title as job_title,
+        j.brand_name_snapshot,
+        t.name as tenant_name
+      FROM cc_paid_publication_intents ppi
+      JOIN cc_jobs j ON j.id = ppi.job_id
+      LEFT JOIN cc_tenants t ON t.id = j.tenant_id
+      WHERE ppi.portal_id = $1
+        AND ppi.status IN ('requires_action', 'pending_payment')
+      ORDER BY ppi.created_at ASC
+      LIMIT $2 OFFSET $3
+    `, [ctx.portal_id, limit, offset]);
+
+    const countResult = await serviceQuery(`
+      SELECT COUNT(*) as total
+      FROM cc_paid_publication_intents
+      WHERE portal_id = $1 AND status IN ('requires_action', 'pending_payment')
+    `, [ctx.portal_id]);
+
+    res.json({
+      ok: true,
+      intents: result.rows,
+      pagination: {
+        total: parseInt(countResult.rows[0]?.total || '0'),
+        limit,
+        offset
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Pending payments list error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch pending payments'
+    });
+  }
+});
+
 export default router;
