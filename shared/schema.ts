@@ -1022,6 +1022,11 @@ export const cc_reservation_allocations = pgTable('cc_reservation_allocations', 
   holdType: varchar('hold_type', { length: 10 }).notNull(),
   holdExpiresAt: timestamp('hold_expires_at', { withTimezone: true }),
   
+  // B1.2: Time window for availability
+  startsAt: timestamp('starts_at', { withTimezone: true }),
+  endsAt: timestamp('ends_at', { withTimezone: true }),
+  unitId: uuid('unit_id'),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -2395,6 +2400,16 @@ export const ccUnits = pgTable('cc_units', {
   sortOrder: integer('sort_order').default(0),
   featured: boolean('featured').default(false),
   
+  // B1.1: Spatial/plan rendering fields
+  layoutRef: text('layout_ref'),
+  layoutX: numeric('layout_x'),
+  layoutY: numeric('layout_y'),
+  layoutRotation: numeric('layout_rotation'),
+  layoutShape: jsonb('layout_shape'),
+  layoutBounds: jsonb('layout_bounds'),
+  isPublicSearchable: boolean('is_public_searchable').notNull().default(false),
+  metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -2404,6 +2419,52 @@ export const insertUnitSchema = createInsertSchema(ccUnits).omit({
 });
 export type Unit = typeof ccUnits.$inferSelect;
 export type InsertUnit = z.infer<typeof insertUnitSchema>;
+
+// ============ B1.3 UNIT DETAIL TABLES ============
+
+export const ccParkingUnitDetails = pgTable("cc_parking_unit_details", {
+  unitId: uuid("unit_id").primaryKey(),
+  zoneCode: text("zone_code"),
+  sizeClass: text("size_class"),
+  powerAvailable: boolean("power_available").notNull().default(false),
+  covered: boolean("covered").notNull().default(false),
+  accessible: boolean("accessible").notNull().default(false),
+  evCharging: boolean("ev_charging").notNull().default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ccMarinaUnitDetails = pgTable("cc_marina_unit_details", {
+  unitId: uuid("unit_id").primaryKey(),
+  dockCode: text("dock_code"),
+  dockSide: text("dock_side"),
+  minLengthFt: numeric("min_length_ft"),
+  maxLengthFt: numeric("max_length_ft"),
+  maxBeamFt: numeric("max_beam_ft"),
+  maxDraftFt: numeric("max_draft_ft"),
+  powerService: text("power_service"),
+  hasWater: boolean("has_water").notNull().default(true),
+  hasPumpOut: boolean("has_pump_out").notNull().default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ccBedUnitDetails = pgTable("cc_bed_unit_details", {
+  unitId: uuid("unit_id").primaryKey(),
+  bedType: text("bed_type"),
+  privacyLevel: text("privacy_level"),
+  linensProvided: boolean("linens_provided").notNull().default(true),
+  accessible: boolean("accessible").notNull().default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type ParkingUnitDetails = typeof ccParkingUnitDetails.$inferSelect;
+export type MarinaUnitDetails = typeof ccMarinaUnitDetails.$inferSelect;
+export type BedUnitDetails = typeof ccBedUnitDetails.$inferSelect;
 
 // ============ PMS RESERVATIONS ============
 export const ccPmsReservations = pgTable('cc_pms_reservations', {
