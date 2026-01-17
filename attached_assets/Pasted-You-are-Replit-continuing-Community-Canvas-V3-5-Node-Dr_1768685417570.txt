@@ -1,0 +1,262 @@
+You are Replit continuing Community Canvas V3.5 (Node + Drizzle + Postgres/Neon).
+
+MISSION
+Implement “Bench Depth + Panic Mode + Housing Tiering” as additive enhancements ONLY.
+NO refactors. No breaking changes. Everything must integrate with:
+- Campaign Apply bundles
+- Concierge queue + application events
+- Housing waitlist v1
+- Portal sovereignty + tenant isolation
+This must support the real-world “8am replacement panic” workflow.
+
+HARD RULES
+- Never use banned terminology (“book”, “booking”, “booked”, “bookings”, “booker”) anywhere.
+- Preserve API envelope { ok, error?, ...data }.
+- Additive migrations only.
+- RLS must be correct for all new objects.
+- Keep portal-scoped bench; do NOT create global cross-portal candidate pools.
+- Avoid heavy AI or matching systems here; this is operational readiness and routing.
+
+================================================================================
+STEP 0 — HARD CHECKS (PRINT EVIDENCE FIRST)
+================================================================================
+A) Show schemas:
+- cc_job_applications (fields available for status, applicant_individual_id, portal_id)
+- cc_job_application_events
+- cc_job_application_bundles + bundle_items
+- cc_portal_housing_waitlist_entries (from v1) and cc_portal_housing_offers (if created)
+B) Identify current UI routes:
+- Concierge queue: /app/mod/applications
+- Hiring pulse: /app/mod/hiring-pulse
+- Housing waitlist: /app/mod/housing (if created) else where
+C) Confirm portal staff auth middleware for mod routes (requirePortalStaff).
+D) Confirm there is a People/Individuals canonical table name (cc_individuals or cc_individual). Use the existing one.
+
+If any item differs, adapt naming, do NOT invent duplicates.
+
+================================================================================
+PART 1 — BENCH DEPTH (READINESS LAYERS)
+================================================================================
+GOAL
+Introduce a portal-scoped “candidate bench” readiness model that is:
+- independent of a single job posting
+- driven by coordinator actions and events
+- queryable instantly during emergencies
+
+DATA MODEL (Additive) — Migration 151_candidate_bench.sql
+Add new table: cc_portal_candidate_bench
+
+Columns:
+- id uuid PK default random
+- portal_id uuid NOT NULL references cc_portals(id) ON DELETE CASCADE
+- individual_id uuid NOT NULL references cc_individuals(id) ON DELETE CASCADE  (use correct table)
+- readiness_state text NOT NULL DEFAULT 'prospect'
+  CHECK in ('prospect','cleared','ready','on_site','placed','inactive')
+- available_from_date date NULL
+- available_to_date date NULL
+- location_note text NULL  (e.g., “Surrey now”, “Bamfield”, “arriving Feb 10”)
+- housing_needed boolean NOT NULL DEFAULT false
+- housing_tier_preference text NULL CHECK in ('premium','standard','temporary','emergency')  (nullable)
+- last_activity_at timestamp NOT NULL DEFAULT now()
+- created_at timestamp NOT NULL DEFAULT now()
+- updated_at timestamp NOT NULL DEFAULT now()
+Unique constraint:
+- UNIQUE(portal_id, individual_id)
+
+RLS:
+- Portal staff: full read/write for their portal_id
+- Tenant users: NO access (bench is portal-controlled)
+- Service mode bypass allowed
+
+AUTOFILL HOOKS (Additive; do not break apply flows)
+1) On campaign apply submission:
+- Upsert into cc_portal_candidate_bench for applicant individual_id + portal_id:
+  - readiness_state='prospect' (if new)
+  - housing_needed from bundle
+  - last_activity_at=now()
+2) On standard job application submission:
+- Upsert similarly for portal_id (from posting/portal context)
+3) On any coordinator action (status change, reply sent):
+- Update last_activity_at
+
+ENDPOINTS (Portal staff)
+GET  /api/p2/app/mod/portals/:portalId/bench?state=&q=&available=now|7d
+PATCH /api/p2/app/mod/bench/:id
+Payload allows:
+- readiness_state
+- available_from_date / available_to_date
+- location_note
+- housing_needed
+- housing_tier_preference
+
+Also add:
+GET /api/p2/app/mod/bench/:id/timeline
+- returns linked applications + application events + housing waitlist entries for this individual in this portal
+
+UI (Portal staff)
+Add new page: /app/mod/bench
+- Portal selector (if needed) or portalId in query
+- Filters: readiness_state, available window, housing_needed, housing tier preference
+- Candidate cards: name/email, readiness badge, availability, last activity, quick actions
+- “Open timeline” drawer shows:
+  - applications list (from bundles + direct)
+  - events
+  - housing waitlist status
+
+TESTS
+- campaign apply creates/updates bench record
+- portal staff can read/update bench; tenant cannot
+- unique constraint prevents duplicates; upsert behavior verified
+
+================================================================================
+PART 2 — HOUSING TIERING (HIERARCHY + TEMP STAGING)
+================================================================================
+GOAL
+Extend housing waitlist to represent housing as a tiered scarce resource:
+premium > standard > temporary > emergency
+Also support temporary staging (hostel / campground / overflow parking/meadow).
+
+DATA MODEL (Additive) — Migration 152_housing_tiering.sql
+Add columns to cc_portal_housing_waitlist_entries:
+- housing_tier_assigned text NULL CHECK in ('premium','standard','temporary','emergency')
+- staging_location_note text NULL   (e.g., “hostel”, “campground”, “overflow lot”, “parking/meadow”)
+- staging_start_date date NULL
+- staging_end_date date NULL
+- matched_housing_offer_id uuid NULL references cc_portal_housing_offers(id) ON DELETE SET NULL
+- priority_score integer NOT NULL DEFAULT 0  (coordinator-controlled; no AI)
+
+Add optional columns to cc_portal_housing_offers (if exists) to support tier:
+- housing_tier text NOT NULL DEFAULT 'standard' CHECK in ('premium','standard','temporary','emergency')
+
+RLS unchanged (portal staff controls waitlist, tenants control their offers).
+
+ENDPOINTS
+Portal staff:
+PATCH /api/p2/app/mod/housing-waitlist/:id
+Allow setting:
+- housing_tier_assigned
+- staging_* fields
+- matched_housing_offer_id
+- priority_score
+Tenant:
+PUT /api/p2/app/portals/:portalId/housing-offer
+Allow setting housing_tier and capacities.
+
+UI UPDATES
+A) /app/mod/housing
+- Add columns:
+  - tier assigned
+  - staging location
+  - priority
+  - matched offer (dropdown)
+- Add filter:
+  - “Needs staging” (temporary/emergency tiers)
+- Add quick action:
+  - “Assign temporary staging” (modal)
+
+B) /app/portals/:portalId/housing (tenant)
+- Add housing tier selector
+- Keep simple; don’t overbuild
+
+TESTS
+- waitlist entry can be updated with tier + staging fields
+- matched offer must belong to same portal_id
+- tenant can update their offer tier; cannot see waitlist entries
+
+================================================================================
+PART 3 — PANIC MODE (EMERGENCY REPLACEMENT WORKFLOW)
+================================================================================
+GOAL
+A portal staff “Emergency Replacement” workflow that finds ready/on-site bench candidates
+and routes them to a specific job quickly, with minimal clicks.
+This is the 8am “replace housekeeper now” moment.
+
+DATA MODEL (Additive; minimal)
+Add table: cc_emergency_replacement_requests (Migration 153_panic_mode.sql)
+
+Columns:
+- id uuid PK default random
+- portal_id uuid NOT NULL references cc_portals(id) ON DELETE CASCADE
+- tenant_id uuid NULL  (requesting employer tenant)
+- job_id uuid NULL
+- job_posting_id uuid NULL
+- role_title_snapshot text NOT NULL
+- urgency text NOT NULL DEFAULT 'today' CHECK in ('now','today','this_week')
+- start_date date NULL
+- notes text NULL
+- status text NOT NULL DEFAULT 'open' CHECK in ('open','triaging','filled','cancelled')
+- created_by_identity_id uuid NULL
+- created_at timestamp default now()
+- updated_at timestamp default now()
+
+RLS:
+- Portal staff: full access for their portal
+- Tenant: can CREATE for their own tenant_id and READ their own requests (optional; if too much, restrict to portal staff only)
+- Service bypass allowed
+
+ENDPOINTS
+Portal staff:
+POST /api/p2/app/mod/portals/:portalId/emergency-replacements
+GET  /api/p2/app/mod/portals/:portalId/emergency-replacements?status=
+PATCH /api/p2/app/mod/emergency-replacements/:id
+GET  /api/p2/app/mod/emergency-replacements/:id/candidates
+- returns ranked candidates from bench:
+  - readiness_state in ('ready','on_site')
+  - availability window overlaps
+  - if housing needed, prefer those with staging assigned or housing offer match
+Ranking is deterministic:
+  1) on_site first
+  2) ready next
+  3) lower “time since last activity” (more recently active)
+  4) higher priority_score (from housing waitlist if present)
+
+Action endpoint:
+POST /api/p2/app/mod/emergency-replacements/:id/route
+Payload:
+- bench_id
+- application_id optional (if already exists)
+- action: 'notify'|'advance_status'|'mark_filled'
+Behavior:
+- Create cc_job_application_event entry “emergency_routed”
+- Optionally update application status to 'interview' or 'offered' depending on action
+- Update request status accordingly
+
+UI
+Add: /app/mod/emergency
+- Create request form:
+  - select portal
+  - select tenant (optional)
+  - select job posting (optional)
+  - role title (required)
+  - urgency (now/today/this_week)
+  - notes
+- After creation:
+  - candidate list panel (ranked)
+  - quick actions:
+    - “Notify” (template reply using existing templates; if messaging exists)
+    - “Advance to interview”
+    - “Mark filled”
+- Show link to candidate timeline + housing waitlist status
+
+INTEGRATIONS
+- Add a button in employer pipeline page:
+  “Need an emergency replacement”
+  -> opens emergency request create with job pre-selected (if allowed by tenant permissions)
+
+TESTS
+- create request (portal staff)
+- candidates endpoint returns only ready/on_site
+- ranking deterministic
+- route action writes application event and updates request status
+- tenant isolation + portal scoping
+
+================================================================================
+OUTPUT REQUIRED
+================================================================================
+At completion, print:
+- migrations created (151, 152, 153) summaries
+- endpoints added
+- UI routes added
+- tests added + commands and passing output
+- confirm forbidden terms scan passes
+STOP.
