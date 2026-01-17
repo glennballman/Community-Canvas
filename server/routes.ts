@@ -346,6 +346,20 @@ export async function registerRoutes(
   
   // Embed widget API (embed key auth, CORS enabled)
   app.use('/api/embed', embedsRouter);
+  // Alias: /api/p2/embeds/* for tenant embed surface management
+  app.use('/api/p2/embeds', embedsRouter);
+  
+  // Static serving for embed widget JavaScript
+  const embedPath = path.resolve(import.meta.dirname || '.', '../public/embed');
+  app.use('/embed', express.static(embedPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+      }
+    }
+  }));
   // Alias: /api/p2/public/embed/:embedKey/jobs -> rewrite to /api/embed/feed/:embedKey
   app.get('/api/p2/public/embed/:embedKey/jobs', (req, res) => {
     req.url = `/feed/${req.params.embedKey}`;

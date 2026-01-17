@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Briefcase, Plus, MapPin, Clock, Users, MoreHorizontal,
-  Eye, Edit, Send, ChevronRight
+  Eye, Edit, Send, ChevronRight, Code
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,10 +71,16 @@ export default function JobsIndexPage() {
           <Briefcase className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">Jobs</h1>
         </div>
-        <Button onClick={() => navigate('/app/jobs/new')} data-testid="button-new-job">
-          <Plus className="h-4 w-4 mr-2" />
-          New Job
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/app/jobs/embeds')} data-testid="button-embed-config">
+            <Code className="h-4 w-4 mr-2" />
+            Embeds
+          </Button>
+          <Button onClick={() => navigate('/app/jobs/new')} data-testid="button-new-job">
+            <Plus className="h-4 w-4 mr-2" />
+            New Job
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2">

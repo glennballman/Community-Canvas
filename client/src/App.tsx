@@ -88,6 +88,7 @@ import JobsIndexPage from './pages/app/jobs/JobsIndexPage';
 import JobEditorPage from './pages/app/jobs/JobEditorPage';
 import JobDestinationsPage from './pages/app/jobs/JobDestinationsPage';
 import PendingPaymentsPage from './pages/app/jobs/PendingPaymentsPage';
+import EmbedConfiguratorPage from './pages/app/jobs/EmbedConfiguratorPage';
 import JobsModerationPage from './pages/app/mod/JobsModerationPage';
 import PaidPublicationsModerationPage from './pages/app/mod/PaidPublicationsModerationPage';
 
@@ -255,6 +256,7 @@ export default function App() {
                 <Route path="jobs/:id/edit" element={<JobEditorPage />} />
                 <Route path="jobs/:id/destinations" element={<JobDestinationsPage />} />
                 <Route path="jobs/payments/pending" element={<PendingPaymentsPage />} />
+                <Route path="jobs/embeds" element={<EmbedConfiguratorPage />} />
                 
                 {/* V3.5 Jobs Moderation */}
                 <Route path="mod/jobs" element={<JobsModerationPage />} />

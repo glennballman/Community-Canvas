@@ -373,6 +373,46 @@ router.patch('/surfaces/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.delete('/surfaces/:id', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { id } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: 'TENANT_REQUIRED'
+    });
+  }
+
+  try {
+    const result = await serviceQuery(`
+      DELETE FROM cc_embed_surfaces
+      WHERE id = $1 AND tenant_id = $2
+      RETURNING id
+    `, [id, ctx.tenant_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'SURFACE_NOT_FOUND'
+      });
+    }
+
+    res.json({
+      ok: true,
+      message: 'Embed surface deleted'
+    });
+
+  } catch (error: any) {
+    console.error('Delete embed surface error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to delete embed surface'
+    });
+  }
+});
+
 router.post('/surfaces/:id/publish-jobs', async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   const ctx = tenantReq.ctx;
