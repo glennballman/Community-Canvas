@@ -1,0 +1,58 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Create a deterministic Golden Path QA seed + assertion script for:
+- bench depth layers
+- housing waitlist tiering + staging
+- emergency replacement ranking + dedupe
+No refactors. Additive only. No production dependencies.
+
+HARD RULES
+- Never use banned terminology (“book”, “booking”, etc.) in any strings.
+- Script must be safe to run in dev repeatedly (idempotent via client_request_id or cleanup).
+- Use __SERVICE__ mode DB access patterns if available, otherwise a dedicated dev-only script.
+- Output clear PASS/FAIL lines.
+
+IMPLEMENT
+Create: scripts/qa-bench-emergency-golden-path.ts
+
+SCENARIO TO SEED (portal: Bamfield)
+1) Create/ensure a portal exists (use existing portal if present).
+2) Create 6 individuals:
+   - 2 with readiness_state='on_site' (one with staging_location_note='hostel', one with 'campground')
+   - 3 with readiness_state='ready'
+   - 1 with readiness_state='cleared'
+3) Upsert them into cc_portal_candidate_bench with:
+   - different last_activity_at timestamps (staggered)
+   - housing_needed mixed
+4) Create housing waitlist entries for the 2 on_site candidates:
+   - assign housing_tier_assigned='temporary' and 'emergency'
+   - set priority_score (one higher)
+5) Create an emergency replacement request:
+   - urgency='today'
+   - role_title_snapshot='Housekeeper (Emergency Replacement)'
+6) Call the candidates endpoint logic (or directly invoke the service function if present)
+   - Assert ordering:
+     - on_site candidates appear before ready
+     - within on_site, more recent activity comes first unless priority_score overrides (match your documented rule)
+7) Route a candidate twice:
+   - First route should succeed and create one application event of type 'emergency_routed' (or your actual event type)
+   - Second identical route should be rejected or no-op (idempotent) and must not create a duplicate event.
+
+ASSERTIONS (must print PASS/FAIL)
+- PASS: bench upsert created exactly 6 records for portal
+- PASS: waitlist entries created exactly 2 for portal with tier + staging
+- PASS: candidates list sorted as expected (print ordered IDs)
+- PASS: routing created exactly 1 event for (request_id, candidate)
+- PASS: second routing does not create a second event
+
+Add npm script:
+- "qa:bench-emergency": "tsx scripts/qa-bench-emergency-golden-path.ts"
+
+DOC
+Create docs/QA_BENCH_EMERGENCY_GOLDEN_PATH.md with:
+- what it seeds
+- how to run
+- expected output example
+
+STOP after implementing the script + docs.
