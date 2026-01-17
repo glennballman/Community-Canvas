@@ -1,6 +1,12 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { serviceQuery } from '../db/tenantDb';
 import { TenantRequest } from '../middleware/tenantContext';
+
+const markPaidSchema = z.object({
+  pspProvider: z.string().max(50).optional(),
+  pspReference: z.string().max(255).optional()
+});
 
 const router = express.Router();
 
@@ -423,7 +429,6 @@ router.post('/paid-publications/:intentId/mark-paid', async (req: Request, res: 
   const tenantReq = req as TenantRequest;
   const ctx = tenantReq.ctx;
   const { intentId } = req.params;
-  const { pspProvider, pspReference } = req.body;
 
   if (!ctx?.portal_id) {
     return res.status(400).json({
@@ -431,6 +436,17 @@ router.post('/paid-publications/:intentId/mark-paid', async (req: Request, res: 
       error: 'PORTAL_CONTEXT_REQUIRED'
     });
   }
+
+  const parseResult = markPaidSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return res.status(400).json({
+      ok: false,
+      error: 'VALIDATION_ERROR',
+      details: parseResult.error.flatten()
+    });
+  }
+
+  const { pspProvider, pspReference } = parseResult.data;
 
   try {
     const intentCheck = await serviceQuery(`
@@ -471,7 +487,7 @@ router.post('/paid-publications/:intentId/mark-paid', async (req: Request, res: 
         psp_reference = COALESCE($4, psp_reference),
         paid_at = now(),
         updated_at = now()
-      WHERE id = $1
+      WHERE id = $1 AND portal_id = $2
     `, [intentId, ctx.portal_id, pspProvider || null, pspReference || null]);
 
     await serviceQuery(`
