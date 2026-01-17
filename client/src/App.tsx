@@ -96,6 +96,7 @@ import PaidPublicationsModerationPage from './pages/app/mod/PaidPublicationsMode
 import PortalJobsPage from './pages/public/PortalJobsPage';
 import PortalJobDetailPage from './pages/public/PortalJobDetailPage';
 import PortalJobApplyPage from './pages/public/PortalJobApplyPage';
+import PortalCampaignApplyPage from './pages/public/PortalCampaignApplyPage';
 import PortalEmployerPage from './pages/public/PortalEmployerPage';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
@@ -223,6 +224,7 @@ export default function App() {
               <Route path="/b/:portalSlug/jobs" element={<PortalJobsPage />} />
               <Route path="/b/:portalSlug/jobs/:postingId" element={<PortalJobDetailPage />} />
               <Route path="/b/:portalSlug/jobs/:postingId/apply" element={<PortalJobApplyPage />} />
+              <Route path="/b/:portalSlug/apply/:campaignKey" element={<PortalCampaignApplyPage />} />
               <Route path="/b/:portalSlug/employers/:employerId" element={<PortalEmployerPage />} />
 
               {/* ========================================== */}

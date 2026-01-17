@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { 
   Search, MapPin, DollarSign, Clock, Briefcase, Building2, Home,
-  ChevronLeft, Filter, X, Calendar, ArrowUpDown, ExternalLink
+  ChevronLeft, Filter, X, Calendar, ArrowUpDown, ExternalLink, Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -363,6 +363,18 @@ export default function PortalJobsPage() {
     },
     enabled: !!portalSlug,
   });
+
+  const { data: campaignsData } = useQuery({
+    queryKey: ['/api/p2/public/jobs/campaigns', portalSlug],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/public/b/${portalSlug}/jobs/campaigns`);
+      if (!res.ok) return { ok: false, campaigns: [] };
+      return res.json();
+    },
+    enabled: !!portalSlug,
+  });
+
+  const availableCampaigns = (campaignsData as any)?.campaigns || [];
 
   const allJobs = data?.jobs || [];
 
@@ -732,6 +744,31 @@ export default function PortalJobsPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        {availableCampaigns.length > 0 && (
+          <Card className="mb-6 bg-primary/5 border-primary/20">
+            <CardContent className="py-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Apply to Multiple Jobs at Once</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Send one application to {availableCampaigns[0]?.jobCount || 'all'} employers
+                    </p>
+                  </div>
+                </div>
+                <Button asChild data-testid="button-campaign-apply-cta">
+                  <Link to={`/b/${portalSlug}/apply/${availableCampaigns[0]?.key || 'all_roles'}`}>
+                    Quick Apply to All
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="mb-4 text-sm text-muted-foreground">
           {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found
         </div>

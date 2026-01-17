@@ -733,4 +733,372 @@ router.post('/jobs/attach', async (req: Request, res: Response) => {
   }
 });
 
+// Campaign definitions - v1 supported campaigns
+const CAMPAIGN_DEFINITIONS: Record<string, {
+  name: string;
+  description: string;
+  roleCategories: string[];
+}> = {
+  hospitality_all: {
+    name: 'All Hospitality Roles',
+    description: 'Apply to all hospitality positions including servers, bartenders, and hotel staff',
+    roleCategories: ['hospitality', 'food_service', 'accommodation']
+  },
+  trades_all: {
+    name: 'All Trades Roles',
+    description: 'Apply to all trades positions including construction, maintenance, and skilled labor',
+    roleCategories: ['trades', 'construction', 'maintenance', 'skilled_labor']
+  },
+  crew_all: {
+    name: 'All Crew Roles',
+    description: 'Apply to all crew and general labor positions',
+    roleCategories: ['crew', 'general_labor', 'outdoor', 'marine']
+  },
+  all_roles: {
+    name: 'All Available Roles',
+    description: 'Apply to all currently available positions',
+    roleCategories: []
+  }
+};
+
+router.get('/jobs/campaigns', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+
+  if (!ctx?.portal_id) {
+    return res.status(404).json({
+      ok: false,
+      error: 'PORTAL_NOT_FOUND'
+    });
+  }
+
+  try {
+    const portalResult = await serviceQuery(`
+      SELECT id, slug, name, settings
+      FROM cc_portals
+      WHERE id = $1
+    `, [ctx.portal_id]);
+
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'PORTAL_NOT_FOUND'
+      });
+    }
+
+    const portal = portalResult.rows[0];
+    const portalSettings = portal.settings || {};
+    const enabledCampaigns = portalSettings.enabled_campaigns || ['hospitality_all', 'trades_all', 'crew_all', 'all_roles'];
+
+    const jobCountsResult = await serviceQuery(`
+      SELECT j.role_category, COUNT(*)::int as count
+      FROM cc_job_postings jp
+      JOIN cc_jobs j ON j.id = jp.job_id
+      WHERE jp.portal_id = $1
+        AND jp.publish_state = 'published'
+        AND jp.is_hidden = false
+      GROUP BY j.role_category
+    `, [ctx.portal_id]);
+
+    const categoryCounts: Record<string, number> = {};
+    let totalJobs = 0;
+    for (const row of jobCountsResult.rows) {
+      categoryCounts[row.role_category] = row.count;
+      totalJobs += row.count;
+    }
+
+    const campaigns = enabledCampaigns
+      .filter((key: string) => CAMPAIGN_DEFINITIONS[key])
+      .map((key: string) => {
+        const def = CAMPAIGN_DEFINITIONS[key];
+        let jobCount = 0;
+        if (def.roleCategories.length === 0) {
+          jobCount = totalJobs;
+        } else {
+          for (const cat of def.roleCategories) {
+            jobCount += categoryCounts[cat] || 0;
+          }
+        }
+        return {
+          key,
+          name: def.name,
+          description: def.description,
+          jobCount
+        };
+      })
+      .filter((c: any) => c.jobCount > 0);
+
+    res.json({
+      ok: true,
+      campaigns,
+      portalName: portal.name,
+      portalSlug: portal.slug
+    });
+
+  } catch (error: any) {
+    console.error('Get campaigns error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to get campaigns'
+    });
+  }
+});
+
+router.post('/jobs/campaign-apply', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const {
+    campaignKey,
+    applicantName,
+    applicantEmail,
+    applicantPhone,
+    applicantLocation,
+    housingNeeded,
+    workPermitQuestion,
+    message,
+    selectedJobPostingIds,
+    uploadSessionToken,
+    consentGiven
+  } = req.body;
+
+  if (!ctx?.portal_id) {
+    return res.status(404).json({
+      ok: false,
+      error: 'PORTAL_NOT_FOUND'
+    });
+  }
+
+  if (!campaignKey || !applicantName || !applicantEmail) {
+    return res.status(400).json({
+      ok: false,
+      error: 'VALIDATION_ERROR',
+      message: 'campaignKey, applicantName, and applicantEmail are required'
+    });
+  }
+
+  if (!consentGiven) {
+    return res.status(400).json({
+      ok: false,
+      error: 'CONSENT_REQUIRED',
+      message: 'You must consent to sending your application to multiple employers'
+    });
+  }
+
+  const campaignDef = CAMPAIGN_DEFINITIONS[campaignKey];
+  if (!campaignDef) {
+    return res.status(400).json({
+      ok: false,
+      error: 'INVALID_CAMPAIGN',
+      message: `Unknown campaign: ${campaignKey}`
+    });
+  }
+
+  try {
+    let jobPostingsToApply: any[] = [];
+
+    if (selectedJobPostingIds && selectedJobPostingIds.length > 0) {
+      const selectedResult = await serviceQuery(`
+        SELECT jp.id as posting_id, jp.job_id, j.tenant_id, j.title
+        FROM cc_job_postings jp
+        JOIN cc_jobs j ON j.id = jp.job_id
+        WHERE jp.id = ANY($1)
+          AND jp.portal_id = $2
+          AND jp.publish_state = 'published'
+          AND jp.is_hidden = false
+      `, [selectedJobPostingIds, ctx.portal_id]);
+      jobPostingsToApply = selectedResult.rows;
+    } else {
+      const categoryFilter = campaignDef.roleCategories.length > 0
+        ? `AND j.role_category = ANY($2)`
+        : '';
+      const params = campaignDef.roleCategories.length > 0
+        ? [ctx.portal_id, campaignDef.roleCategories]
+        : [ctx.portal_id];
+      
+      const jobsResult = await serviceQuery(`
+        SELECT jp.id as posting_id, jp.job_id, j.tenant_id, j.title
+        FROM cc_job_postings jp
+        JOIN cc_jobs j ON j.id = jp.job_id
+        WHERE jp.portal_id = $1
+          AND jp.publish_state = 'published'
+          AND jp.is_hidden = false
+          ${categoryFilter}
+        ORDER BY jp.published_at DESC
+        LIMIT 50
+      `, params);
+      jobPostingsToApply = jobsResult.rows;
+    }
+
+    if (jobPostingsToApply.length === 0) {
+      return res.status(400).json({
+        ok: false,
+        error: 'NO_JOBS_AVAILABLE',
+        message: 'No jobs available for this campaign'
+      });
+    }
+
+    const bundleResult = await serviceQuery(`
+      INSERT INTO cc_job_application_bundles (
+        portal_id, campaign_key, applicant_name, applicant_email, applicant_phone,
+        applicant_location, housing_needed, work_permit_question, message,
+        consent_given, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'submitted')
+      RETURNING id
+    `, [
+      ctx.portal_id, campaignKey, applicantName, applicantEmail, applicantPhone || null,
+      applicantLocation || null, housingNeeded || false, workPermitQuestion || null, message || null,
+      true
+    ]);
+
+    const bundleId = bundleResult.rows[0].id;
+
+    let individualId: string;
+    const existingIndividual = await serviceQuery(`
+      SELECT id FROM cc_individuals WHERE email = $1
+    `, [applicantEmail.toLowerCase()]);
+
+    if (existingIndividual.rows.length > 0) {
+      individualId = existingIndividual.rows[0].id;
+    } else {
+      const newIndividual = await serviceQuery(`
+        INSERT INTO cc_individuals (full_name, email, telephone)
+        VALUES ($1, $2, $3)
+        RETURNING id
+      `, [applicantName, applicantEmail.toLowerCase(), applicantPhone || '']);
+      individualId = newIndividual.rows[0].id;
+    }
+
+    const applicationIds: string[] = [];
+    const appliedJobs: { jobId: string; title: string; tenantId: string }[] = [];
+
+    for (const posting of jobPostingsToApply) {
+      try {
+        const existingApp = await serviceQuery(`
+          SELECT id FROM cc_job_applications
+          WHERE job_posting_id = $1 AND applicant_individual_id = $2
+        `, [posting.posting_id, individualId]);
+
+        let applicationId: string;
+
+        if (existingApp.rows.length > 0) {
+          applicationId = existingApp.rows[0].id;
+        } else {
+          const appNumberResult = await serviceQuery(`
+            SELECT 'APP-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || 
+                   LPAD(COALESCE(
+                     (SELECT COUNT(*) + 1 FROM cc_job_applications 
+                      WHERE tenant_id = $1 
+                      AND created_at::date = CURRENT_DATE), 1
+                   )::text, 4, '0') as app_number
+          `, [posting.tenant_id]);
+
+          const appResult = await serviceQuery(`
+            INSERT INTO cc_job_applications (
+              tenant_id, job_id, job_posting_id, applicant_individual_id,
+              application_number, status, source_channel,
+              needs_accommodation, accommodation_notes,
+              submitted_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, 'submitted', 'campaign_apply',
+              $6, $7, now()
+            ) RETURNING id
+          `, [
+            posting.tenant_id, posting.job_id, posting.posting_id, individualId,
+            appNumberResult.rows[0].app_number,
+            housingNeeded || false, message || null
+          ]);
+          applicationId = appResult.rows[0].id;
+
+          await serviceQuery(`
+            UPDATE cc_jobs SET application_count = application_count + 1 WHERE id = $1
+          `, [posting.job_id]);
+        }
+
+        await serviceQuery(`
+          INSERT INTO cc_job_application_bundle_items (
+            bundle_id, job_posting_id, job_id, tenant_id, application_id
+          ) VALUES ($1, $2, $3, $4, $5)
+        `, [bundleId, posting.posting_id, posting.job_id, posting.tenant_id, applicationId]);
+
+        applicationIds.push(applicationId);
+        appliedJobs.push({
+          jobId: posting.job_id,
+          title: posting.title,
+          tenantId: posting.tenant_id
+        });
+
+      } catch (appError: any) {
+        console.error(`Failed to create application for job ${posting.job_id}:`, appError);
+      }
+    }
+
+    if (uploadSessionToken) {
+      const sessionTokenHash = crypto.createHash('sha256').update(uploadSessionToken).digest('hex');
+      await serviceQuery(`
+        UPDATE cc_public_upload_sessions SET used_at = now() WHERE session_token_hash = $1
+      `, [sessionTokenHash]);
+    }
+
+    res.json({
+      ok: true,
+      bundleId,
+      applicationIds,
+      appliedCount: appliedJobs.length,
+      appliedJobs: appliedJobs.map(j => ({ jobId: j.jobId, title: j.title }))
+    });
+
+  } catch (error: any) {
+    console.error('Campaign apply error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to submit campaign application'
+    });
+  }
+});
+
+router.post('/jobs/campaign-apply/start-session', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { campaignKey } = req.body;
+
+  if (!ctx?.portal_id) {
+    return res.status(404).json({
+      ok: false,
+      error: 'PORTAL_NOT_FOUND'
+    });
+  }
+
+  if (!campaignKey) {
+    return res.status(400).json({
+      ok: false,
+      error: 'CAMPAIGN_KEY_REQUIRED'
+    });
+  }
+
+  try {
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    await serviceQuery(`
+      INSERT INTO cc_public_upload_sessions 
+        (session_token_hash, purpose, portal_id, expires_at)
+      VALUES ($1, 'campaign_apply', $2, $3)
+    `, [sessionTokenHash, ctx.portal_id, expiresAt]);
+
+    res.json({
+      ok: true,
+      sessionToken,
+      expiresAt: expiresAt.toISOString()
+    });
+
+  } catch (error: any) {
+    console.error('Start campaign session error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to start session'
+    });
+  }
+});
+
 export default router;

@@ -1,0 +1,91 @@
+You are Replit continuing Community Canvas V3.5.
+
+MISSION
+Implement portal-level “Campaign Apply” so a candidate can apply once to:
+- a set of jobs (e.g., “All hospitality roles in Bamfield”)
+without needing an account.
+This must be portal-scoped, consent-based, and compatible with existing cc_job_applications.
+
+HARD RULES
+- Never use banned terms.
+- Additive changes only.
+- Preserve portal sovereignty (no cross-portal leakage).
+- Anonymous apply + upload session rules remain enforced.
+
+STEP 0 — HARD CHECK (print first)
+1) Show cc_job_applications schema (especially applicant identity fields and status).
+2) Show existing public apply endpoints and how they create cc_job_applications.
+3) Confirm how portal_id is bound to apply sessions.
+
+STEP 1 — DB additive (migration 145)
+Implement application bundles:
+Option A (preferred): new tables
+- cc_job_application_bundles:
+  id uuid PK
+  portal_id uuid NOT NULL
+  applicant_name text
+  applicant_email text
+  applicant_phone text NULL
+  applicant_location text NULL
+  housing_needed boolean NOT NULL DEFAULT false
+  work_permit_question text NULL
+  message text NULL
+  created_at timestamp
+  status text NOT NULL DEFAULT 'submitted' CHECK in ('draft','submitted','withdrawn')
+- cc_job_application_bundle_items:
+  id uuid PK
+  bundle_id uuid NOT NULL FK cascade
+  job_posting_id uuid NOT NULL
+  job_id uuid NOT NULL
+  application_id uuid NULL (filled after creation)
+  created_at timestamp
+
+RLS:
+- Public cannot read bundles.
+- Tenant can read bundle items for jobs they own (join via job_id tenant_id).
+- Portal staff can read bundles for their portal.
+Service mode bypass.
+
+STEP 2 — Public endpoints (portal-scoped)
+Add:
+GET /api/p2/public/jobs/campaigns
+- Returns available campaigns for current portal (hardcode config in portal settings for now if needed).
+
+POST /api/p2/public/jobs/campaign-apply
+Payload:
+{ portalId, campaignKey, applicant fields..., selectedJobPostingIds?, uploadSessionToken? }
+Behavior:
+- Validate portal binding
+- Create bundle + bundle items
+- For each selected job posting, create a cc_job_applications row using existing apply creation logic
+- Store application_id back into bundle_items
+Return:
+{ ok:true, bundleId, applicationIds:[...] }
+
+Campaigns to support v1:
+- hospitality_all
+- trades_all
+- crew_all
+- other (custom by portal admin later)
+
+STEP 3 — Portal UI
+Add:
+Route: /b/:portalSlug/apply/:campaignKey
+- A single apply form (name/email/phone/location)
+- Housing needed checkbox
+- Work permit question field (optional)
+- Upload resume/reference/photo/video (reuse existing public upload session)
+- Consent checkbox:
+  “Send my application to multiple employers in this campaign”
+- Submit -> calls campaign-apply endpoint
+- Confirmation page:
+  “Application sent to X employers” + list them + “view other roles”
+
+Also add a small CTA on PortalJobsPage:
+“Apply to all hospitality roles” (only when portal supports that campaign)
+
+STEP 4 — Tests
+- campaign-apply creates bundle + items + multiple cc_job_applications
+- portal scoping enforced
+- tenant isolation: tenant can see bundle items only for their own jobs
+STOP after report.
