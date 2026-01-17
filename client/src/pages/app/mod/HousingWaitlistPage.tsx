@@ -40,6 +40,12 @@ interface WaitlistEntry {
   status: 'new' | 'contacted' | 'matched' | 'waitlisted' | 'closed';
   assignedToIdentityId: string | null;
   notes: string | null;
+  housingTierAssigned: 'premium' | 'standard' | 'temporary' | 'emergency' | null;
+  stagingLocationNote: string | null;
+  stagingStartDate: string | null;
+  stagingEndDate: string | null;
+  matchedHousingOfferId: string | null;
+  priorityScore: number | null;
   createdAt: string;
   updatedAt: string;
   hoursSinceCreated: number;
@@ -59,6 +65,13 @@ const STATUS_OPTIONS = [
   { value: 'matched', label: 'Matched', color: 'bg-green-500' },
   { value: 'waitlisted', label: 'Waitlisted', color: 'bg-purple-500' },
   { value: 'closed', label: 'Closed', color: 'bg-gray-500' }
+];
+
+const TIER_OPTIONS = [
+  { value: 'premium', label: 'Premium', color: 'bg-amber-500' },
+  { value: 'standard', label: 'Standard', color: 'bg-blue-400' },
+  { value: 'temporary', label: 'Temporary', color: 'bg-orange-400' },
+  { value: 'emergency', label: 'Emergency', color: 'bg-red-400' }
 ];
 
 function AgeBadge({ hours }: { hours: number }) {
@@ -108,6 +121,21 @@ function WaitlistRow({
               <Badge variant="outline" className="text-xs" data-testid={`badge-source-${entry.id}`}>
                 {entry.bundleId ? 'Campaign' : 'Direct'}
               </Badge>
+              {entry.housingTierAssigned && (
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs"
+                  data-testid={`badge-tier-${entry.id}`}
+                >
+                  <Home className="h-3 w-3 mr-1" />
+                  {TIER_OPTIONS.find(t => t.value === entry.housingTierAssigned)?.label}
+                </Badge>
+              )}
+              {entry.priorityScore !== null && entry.priorityScore > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  P{entry.priorityScore}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">

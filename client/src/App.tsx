@@ -95,6 +95,8 @@ import ApplicationsQueuePage from './pages/app/mod/ApplicationsQueuePage';
 import HiringPulsePage from './pages/app/mod/HiringPulsePage';
 import PortalGrowthPage from './pages/app/mod/PortalGrowthPage';
 import HousingWaitlistPage from './pages/app/mod/HousingWaitlistPage';
+import BenchPage from './pages/app/mod/BenchPage';
+import EmergencyPage from './pages/app/mod/EmergencyPage';
 import TenantHousingOfferPage from './pages/app/TenantHousingOfferPage';
 import JobApplicationsPage from './pages/app/jobs/JobApplicationsPage';
 
@@ -277,6 +279,8 @@ export default function App() {
                 <Route path="mod/portals/:portalId/growth" element={<PortalGrowthPage />} />
                 <Route path="mod/portals/:portalId/housing-waitlist" element={<HousingWaitlistPage />} />
                 <Route path="mod/housing" element={<HousingWaitlistPage />} />
+                <Route path="mod/portals/:portalId/bench" element={<BenchPage />} />
+                <Route path="mod/portals/:portalId/emergency" element={<EmergencyPage />} />
                 
                 {/* Tenant Portal Routes */}
                 <Route path="portals/:portalId/housing" element={<TenantHousingOfferPage />} />
