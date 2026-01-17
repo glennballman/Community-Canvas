@@ -98,6 +98,7 @@ import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
 import embedsRouter from "./routes/embeds";
 import jobIngestionRouter from "./routes/job-ingestion";
+import adminPortalsRouter from "./routes/admin-portals";
 import documentTemplatesRouter from "./routes/document-templates";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
@@ -372,6 +373,9 @@ export async function registerRoutes(
   
   // Job ingestion API (tenant auth required)
   app.use('/api/p2/app/jobs', jobIngestionRouter);
+  
+  // Admin portals API (tenant auth required)
+  app.use('/api/p2/admin/portals', adminPortalsRouter);
   
   // Document templates API (tenant auth required)
   app.use('/api/p2/app/document-templates', documentTemplatesRouter);

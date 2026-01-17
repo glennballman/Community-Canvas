@@ -1,0 +1,159 @@
+You are Replit continuing Community Canvas V3.5.
+
+STATE
+- Jobs backend + moderation + paid portal intents (AdrenalineCanada) is complete.
+- Embed Configurator (/app/jobs/embeds) + /embed/jobs-widget.js is complete.
+Now implement the remaining PUBLIC PORTAL JOBS UX + “looks native” portal shell + employer pages + tenant destinations/publish UI. No refactors. Additive only.
+
+HARD RULES
+- Do NOT refactor backend tables/routes.
+- Do NOT use the words "book" or "booking" anywhere (copy, code identifiers, routes).
+- Use existing design system + routing patterns.
+- Respect API envelope { ok, error?, ...data }.
+- The portal public job list must only show publish_state='published' and must be portal-scoped.
+
+STEP 0 — HARD CHECK (print results first, then proceed)
+1) Confirm existing public portal routing:
+   - /b/:portalSlug resolution (domain/path).
+   - Any existing /b/:portalSlug/jobs routes or pages.
+2) Confirm which endpoint is canonical for portal-scoped public jobs:
+   - /api/public/jobs OR /api/p2/public/jobs (route aliases may exist).
+3) Confirm existing portal settings storage:
+   - Do we have any table/JSON config for portal branding (logo/colors/nav)?
+   - If none exists, propose the smallest additive approach (portal.settings jsonb OR new table cc_portal_ui_settings).
+Print findings and your chosen minimal plan.
+
+STEP 1 — Portal Public Jobs: Indeed-style list + detail + filters
+Implement under /b/:portalSlug:
+
+A) List + Detail (Desktop 2-column)
+Route: /b/:portalSlug/jobs
+- Left: results list (cards)
+- Right: detail panel for selected job
+- Deep link: clicking a card updates URL with jobPostingId (query param or nested route) and preserves selection on refresh.
+- Mobile: list -> taps to detail page.
+
+Filters (minimum viable):
+- Location (text)
+- Job type (multi select)
+- Pay range (min/max)
+- Date posted (last 24h / 7d / 30d / any)
+- Employer (brand) (dropdown derived from results)
+Sort:
+- relevance (default), date, pay high→low, pay low→high
+
+Data:
+- Use portal-scoped public jobs endpoint.
+- Implement client-side filtering/sorting first if the endpoint doesn’t support query params yet; BUT structure the UI so we can later add server-side query params without redesign.
+
+B) Canonical detail page (shareable)
+Route: /b/:portalSlug/jobs/:jobPostingId
+- Full description
+- Media gallery (photos/videos if present)
+- “Apply” CTA (anonymous apply flow)
+- “More jobs from {Employer}” section (portal-scoped).
+
+C) Anonymous Apply (internal apply)
+- Use existing anonymous apply endpoints + upload session flow.
+- Must support: resumeDocument, referenceDocument, photo, videoIntroduction.
+- Must work without an account.
+- Show a simple confirmation screen with “We received your application” + optional “apply to more jobs” link back.
+
+STEP 2 — Employer/Brand “Company Page” (Indeed pattern)
+Implement:
+Route: /b/:portalSlug/employers/:employerIdOrSlug
+
+Behavior:
+- Shows employer profile card:
+  - Logo (if available)
+  - Display name (tenant-facing brand)
+  - Website link (if present in party/org record)
+  - Short “About” paragraph (if present; otherwise omit cleanly)
+- Lists “Open jobs from this employer” (portal-scoped).
+- Add link in job detail: “More jobs from {Employer}” -> employer page.
+NOTE: This is NOT the employer’s real website; it’s the portal’s employer page.
+
+STEP 3 — “Looks Native” Micro-Portal Shell (top nav vs left nav + merged links)
+We need a minimal portal UI settings system so partners (Kelowna Yacht Club / Harbourside / Flora’s / Hacas / Pachena / Upnit) can feel like it’s part of their site.
+
+Goal:
+- A portal can render with:
+  - Logo
+  - Primary color
+  - Nav mode: top nav OR left nav
+  - “Nav merge”: external links (Home/About/Contact etc)
+  - Portal links: Jobs, Calendar, Leads
+  - Clear “Back to {external site}” link
+  - Tiny footer disclosure: “Powered by Community Canvas”
+
+Implementation constraints:
+- If portal settings storage exists, extend it.
+- If none exists, implement the smallest additive store:
+  Option A: add jsonb column `ui_settings` to cc_portals
+  Option B: new table cc_portal_ui_settings (portal_id PK, ui_settings jsonb, updated_at)
+Choose whichever is less risky given repo patterns.
+
+Create an admin UI page:
+Route: /app/portals/:portalId/appearance (or nearest existing portals settings area)
+- Upload/select logo (use existing media pattern)
+- Set primary color (hex)
+- Choose nav mode (top/left)
+- Configure up to 5 nav links:
+e.g.
+  - External: Home, About, Contact (URLs)
+  - Portal: Jobs (/jobs), Calendar (/calendar), Leads (/leads)
+- Toggle: show “Powered by” footer disclosure (default ON).
+
+Apply shell to:
+- /b/:portalSlug/*
+At minimum for:
+- /b/:portalSlug/jobs
+- /b/:portalSlug/jobs/:id
+- /b/:portalSlug/employers/:id
+
+STEP 4 — Tenant Destinations UI (paid portal flow)
+Ensure the tenant can see where a job can be published and what it costs.
+
+Route: /app/jobs/:id/destinations
+- Must call GET /api/p2/app/jobs/:id/destinations
+Render destination rows with:
+- destination name
+- price (if any)
+- moderation requirement (if any)
+- state (not published / pending review / published / rejected / paused / archived)
+- payment intent status for paid (none/pending/paid)
+
+Actions:
+- Publish/Submit button -> POST /api/p2/app/jobs/:id/publish
+Paid placement UX:
+- If paid, show a “Checkout required” modal:
+  - shows price (29 CAD)
+  - “Continue” creates/uses intent and routes to /app/jobs/payments/pending
+- DO NOT implement real payment provider.
+- DO NOT expose “mark paid” in tenant UI.
+
+STEP 5 — Moderation: Paid intents + approvals
+Implement staff-only pages if missing:
+- /app/mod/jobs (queue)
+- /app/mod/paid-publications (pending intents)
+Use:
+GET /api/p2/app/mod/paid-publications/pending
+POST /api/p2/app/mod/paid-publications/:intentId/mark-paid
+
+STEP 6 — QA Deliverables
+Add docs/PORTAL_JOBS_UI_VERIFICATION.md with:
+- Routes to test
+- Expected outcomes for:
+  1) CanadaDirect submit => pending_review => not visible publicly
+  2) Approve => visible on CanadaDirect portal
+  3) AdrenalineCanada publish => intent pending
+  4) Mark paid => visible on AdrenalineCanada portal
+  5) Employer page shows only employer’s portal-scoped jobs
+- Include curl commands if helpful, but focus on click-path verification.
+
+OUTPUT
+- After implementation, print:
+  - list of new routes/pages
+  - any new table/column added for portal ui settings (if needed)
+  - any new components created
+  - a short “UI affordance report” stating what’s now possible (Indeed-style, employer page, looks-native shell).

@@ -88,6 +88,53 @@ function toSchemaOrgJobPosting(job: any, posting: any): any {
   return schema;
 }
 
+router.get('/portal-settings', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+
+  if (!ctx?.portal_id) {
+    return res.status(404).json({
+      ok: false,
+      error: 'PORTAL_NOT_FOUND'
+    });
+  }
+
+  try {
+    const result = await serviceQuery(`
+      SELECT id, slug, name, settings
+      FROM cc_portals
+      WHERE id = $1
+    `, [ctx.portal_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'PORTAL_NOT_FOUND'
+      });
+    }
+
+    const portal = result.rows[0];
+    const settings = portal.settings || {};
+
+    res.json({
+      ok: true,
+      portal: {
+        id: portal.id,
+        slug: portal.slug,
+        name: portal.name,
+        ui_settings: settings.ui || {}
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Portal settings fetch error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch portal settings'
+    });
+  }
+});
+
 router.get('/jobs', async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   const ctx = tenantReq.ctx;
@@ -138,6 +185,7 @@ router.get('/jobs', async (req: Request, res: Response) => {
         j.disclosed_pay_min, j.disclosed_pay_max, j.show_pay,
         j.noc_code, j.soc_code, j.occupational_category, j.taxonomy,
         j.brand_name_snapshot, j.legal_name_snapshot, j.legal_trade_name_snapshot,
+        j.tenant_id as employer_id,
         j.status, j.view_count, j.application_count,
         j.created_at,
         jp.id as posting_id, jp.custom_title, jp.custom_description,
@@ -234,6 +282,80 @@ router.get('/jobs/:id', async (req: Request, res: Response) => {
     res.status(500).json({
       ok: false,
       error: 'Failed to fetch job'
+    });
+  }
+});
+
+router.get('/employers/:employerId', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { employerId } = req.params;
+
+  if (!ctx?.portal_id) {
+    return res.status(404).json({
+      ok: false,
+      error: 'PORTAL_NOT_FOUND'
+    });
+  }
+
+  try {
+    const tenantResult = await serviceQuery(`
+      SELECT 
+        t.id, t.name, t.legal_dba_name, t.contact_email,
+        t.settings
+      FROM tenants t
+      WHERE t.id = $1
+    `, [employerId]);
+
+    if (tenantResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'EMPLOYER_NOT_FOUND'
+      });
+    }
+
+    const tenant = tenantResult.rows[0];
+    const settings = tenant.settings || {};
+
+    const jobsResult = await serviceQuery(`
+      SELECT 
+        j.id, j.title, j.slug, j.role_category, j.employment_type,
+        j.location_text, j.description,
+        j.pay_type, j.pay_min, j.pay_max, j.currency,
+        j.housing_provided,
+        j.brand_name_snapshot, j.legal_name_snapshot,
+        j.tenant_id as employer_id,
+        jp.id as posting_id,
+        jp.posted_at, jp.published_at
+      FROM cc_job_postings jp
+      JOIN cc_jobs j ON j.id = jp.job_id
+      WHERE jp.portal_id = $1
+        AND j.tenant_id = $2
+        AND jp.publish_state = 'published'
+        AND jp.is_hidden = false
+        AND (jp.expires_at IS NULL OR jp.expires_at > now())
+        AND j.status = 'open'
+      ORDER BY jp.posted_at DESC
+    `, [ctx.portal_id, employerId]);
+
+    res.json({
+      ok: true,
+      employer: {
+        id: tenant.id,
+        name: tenant.name,
+        legal_name: tenant.legal_dba_name,
+        description: settings.about || settings.description || null,
+        website: settings.website || null,
+        logo_url: settings.logo_url || null
+      },
+      jobs: jobsResult.rows
+    });
+
+  } catch (error: any) {
+    console.error('Employer page fetch error:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch employer'
     });
   }
 });

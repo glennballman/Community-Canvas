@@ -96,6 +96,7 @@ import PaidPublicationsModerationPage from './pages/app/mod/PaidPublicationsMode
 import PortalJobsPage from './pages/public/PortalJobsPage';
 import PortalJobDetailPage from './pages/public/PortalJobDetailPage';
 import PortalJobApplyPage from './pages/public/PortalJobApplyPage';
+import PortalEmployerPage from './pages/public/PortalEmployerPage';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
 import CertificationsPage from './pages/app/admin/CertificationsPage';
@@ -112,6 +113,7 @@ import OperatorDisputePage from './pages/app/operator/OperatorDisputePage';
 import OperatorAuthorityIndexPage from './pages/app/operator/OperatorAuthorityIndexPage';
 import OperatorAuthorityGrantPage from './pages/app/operator/OperatorAuthorityGrantPage';
 import PortalsPage from './pages/app/admin/PortalsPage';
+import PortalAppearancePage from './pages/app/admin/PortalAppearancePage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
 // Pages - Admin
@@ -221,6 +223,7 @@ export default function App() {
               <Route path="/b/:portalSlug/jobs" element={<PortalJobsPage />} />
               <Route path="/b/:portalSlug/jobs/:postingId" element={<PortalJobDetailPage />} />
               <Route path="/b/:portalSlug/jobs/:postingId/apply" element={<PortalJobApplyPage />} />
+              <Route path="/b/:portalSlug/employers/:employerId" element={<PortalEmployerPage />} />
 
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}
@@ -288,6 +291,7 @@ export default function App() {
                 <Route path="admin/usage" element={<UsageSummaryPage />} />
                 <Route path="admin/certifications" element={<CertificationsPage />} />
                 <Route path="admin/portals" element={<PortalsPage />} />
+                <Route path="admin/portals/:portalId/appearance" element={<PortalAppearancePage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />
                 
                 {/* Community tenant routes */}
