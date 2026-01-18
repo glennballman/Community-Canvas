@@ -89,6 +89,10 @@ import MarinaPlanPage from './pages/app/MarinaPlanPage';
 import HospitalityPage from './pages/app/HospitalityPage';
 import EnforcementPage from './pages/app/EnforcementPage';
 
+// Pages - N3 Service Run Monitor (Patent CC-01)
+import ServiceRunAttentionPage from './pages/n3/ServiceRunAttentionPage';
+import ServiceRunMonitorPage from './pages/n3/ServiceRunMonitorPage';
+
 // Pages - Jobs (V3.5)
 import JobsIndexPage from './pages/app/jobs/JobsIndexPage';
 import JobEditorPage from './pages/app/jobs/JobEditorPage';
@@ -314,6 +318,10 @@ export default function App() {
                 
                 {/* V3 Compliance */}
                 <Route path="enforcement" element={<EnforcementPage />} />
+                
+                {/* N3 Service Run Monitor (Patent CC-01) */}
+                <Route path="n3/attention" element={<ServiceRunAttentionPage />} />
+                <Route path="n3/monitor/:runId" element={<ServiceRunMonitorPage />} />
                 
                 {/* V3 Admin */}
                 <Route path="admin" element={<AdminHomePage />} />
