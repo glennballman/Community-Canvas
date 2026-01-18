@@ -30,6 +30,7 @@ import { PublicPortalLayout } from './layouts/PublicPortalLayout';
 // Pages - App
 import { TenantPicker } from './pages/app/TenantPicker';
 import { Dashboard } from './pages/app/Dashboard';
+import DashboardPage from './pages/app/DashboardPage';
 
 // Pages - App Community
 import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
@@ -253,7 +254,7 @@ export default function App() {
               {/* ========================================== */}
               <Route path="/app" element={<TenantAppLayout />}>
                 <Route index element={<TenantPicker />} />
-                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="dashboard" element={<DashboardPage />} />
                 
                 {/* V3 Operations */}
                 <Route path="ops" element={<OpsBoardPage />} />

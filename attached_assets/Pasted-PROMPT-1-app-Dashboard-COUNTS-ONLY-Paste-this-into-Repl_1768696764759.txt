@@ -1,0 +1,736 @@
+PROMPT 1 — /app Dashboard (COUNTS-ONLY)
+Paste this into Replit:
+## UI PROMPT 1 — Tenant App Dashboard
+
+### CONTEXT
+- B1 Spatial Patch COMPLETE
+- Public Reservation Routes COMPLETE
+- Schema location: shared/schema.ts
+- This is the FIRST UI implementation
+
+### GOAL
+Implement the V3.5 Dashboard page at route `/app`
+
+### NON-NEGOTIABLE RULES
+- **NO currency** — counts only, no `$`, no "revenue"
+- **NO paywalls** — no upsell CTAs, no upgrade language
+- **NO "booking"** — use "reservation" only
+- Use P2 API envelope: `{ ok, error?, ...data }`
+- Must show: loading state, empty state, error state
+- Do not leak cross-tenant data
+
+---
+
+## 1. PAGE PURPOSE
+
+A **role-aware operational overview** showing "what needs attention" across:
+- Reservations
+- Service Runs
+- Jobs
+- Messages
+- Alerts
+
+This is the landing page when staff logs in. It should feel like a "command center" — quick glances, not deep data.
+
+---
+
+## 2. FILE STRUCTURE
+
+Create these files:
+client/src/pages/app/DashboardPage.tsx
+client/src/components/dashboard/SummaryTile.tsx
+client/src/components/dashboard/ActivityPanel.tsx
+client/src/components/dashboard/AttentionPanel.tsx
+client/src/hooks/useDashboardData.ts
+
+---
+
+## 3. COMPONENT SPECIFICATIONS
+
+### 3.1 DashboardPage.tsx
+```typescript
+// client/src/pages/app/DashboardPage.tsx
+
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { SummaryTile } from "@/components/dashboard/SummaryTile";
+import { ActivityPanel } from "@/components/dashboard/ActivityPanel";
+import { AttentionPanel } from "@/components/dashboard/AttentionPanel";
+
+export default function DashboardPage() {
+  const { data, isLoading, error, refetch } = useDashboardData();
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-red-800 font-medium">Unable to load dashboard</h3>
+          <p className="text-red-600 text-sm mt-1">{error.message}</p>
+          <button 
+            onClick={refetch}
+            className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {data?.tenantName || "Operations Overview"}
+          </p>
+        </div>
+        {data?.roleBadge && (
+          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+            {data.roleBadge}
+          </span>
+        )}
+      </div>
+
+      {/* Summary Tiles */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryTile
+          title="Reservations"
+          count={data?.reservations?.total ?? 0}
+          subtitle={`${data?.reservations?.activeToday ?? 0} active today`}
+          href="/app/reservations"
+          isLoading={isLoading}
+          icon="calendar"
+        />
+        <SummaryTile
+          title="Service Runs"
+          count={data?.serviceRuns?.upcoming ?? 0}
+          subtitle="Next 7 days"
+          href="/app/services/calendar"
+          isLoading={isLoading}
+          icon="truck"
+        />
+        <SummaryTile
+          title="Jobs"
+          count={data?.jobs?.openPostings ?? 0}
+          subtitle="Open postings"
+          href="/app/jobs"
+          isLoading={isLoading}
+          icon="briefcase"
+        />
+        <SummaryTile
+          title="Messages"
+          count={data?.messages?.unread ?? 0}
+          subtitle="Unread"
+          href="/app/messages"
+          isLoading={isLoading}
+          icon="mail"
+        />
+      </div>
+
+      {/* Activity Panels */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ActivityPanel
+          title="Today & Next 48 Hours"
+          items={data?.upcomingActivity || []}
+          isLoading={isLoading}
+          emptyMessage="No upcoming reservations"
+        />
+        <AttentionPanel
+          title="Needs Attention"
+          items={data?.attentionItems || []}
+          isLoading={isLoading}
+          emptyMessage="No items need attention"
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+### 3.2 SummaryTile.tsx
+```typescript
+// client/src/components/dashboard/SummaryTile.tsx
+
+import { Link } from "wouter";
+import { 
+  Calendar, Truck, Briefcase, Mail, AlertCircle 
+} from "lucide-react";
+
+interface SummaryTileProps {
+  title: string;
+  count: number;
+  subtitle: string;
+  href: string;
+  isLoading?: boolean;
+  icon?: "calendar" | "truck" | "briefcase" | "mail" | "alert";
+}
+
+const iconMap = {
+  calendar: Calendar,
+  truck: Truck,
+  briefcase: Briefcase,
+  mail: Mail,
+  alert: AlertCircle,
+};
+
+export function SummaryTile({ 
+  title, 
+  count, 
+  subtitle, 
+  href, 
+  isLoading,
+  icon = "calendar" 
+}: SummaryTileProps) {
+  const Icon = iconMap[icon];
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-5 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-4 bg-gray-200 rounded w-24"></div>
+          <div className="h-8 w-8 bg-gray-200 rounded"></div>
+        </div>
+        <div className="mt-3">
+          <div className="h-8 bg-gray-200 rounded w-16"></div>
+          <div className="h-3 bg-gray-200 rounded w-20 mt-2"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Link href={href}>
+      <div className="bg-white rounded-lg border border-gray-200 p-5 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-600">{title}</span>
+          <Icon className="h-5 w-5 text-gray-400" />
+        </div>
+        <div className="mt-3">
+          <span className="text-3xl font-semibold text-gray-900">{count}</span>
+          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+```
+
+### 3.3 ActivityPanel.tsx
+```typescript
+// client/src/components/dashboard/ActivityPanel.tsx
+
+import { Link } from "wouter";
+import { formatDistanceToNow } from "date-fns";
+
+interface ActivityItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  date: string;
+  status: string;
+  href: string;
+}
+
+interface ActivityPanelProps {
+  title: string;
+  items: ActivityItem[];
+  isLoading?: boolean;
+  emptyMessage: string;
+}
+
+const statusColors: Record<string, string> = {
+  confirmed: "bg-green-100 text-green-800",
+  pending: "bg-yellow-100 text-yellow-800",
+  cancelled: "bg-red-100 text-red-800",
+  active: "bg-blue-100 text-blue-800",
+  default: "bg-gray-100 text-gray-800",
+};
+
+export function ActivityPanel({ 
+  title, 
+  items, 
+  isLoading, 
+  emptyMessage 
+}: ActivityPanelProps) {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <h3 className="text-sm font-medium text-gray-900 mb-4">{title}</h3>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse flex items-center gap-3">
+              <div className="h-10 w-10 bg-gray-200 rounded"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2 mt-1"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-5">
+      <h3 className="text-sm font-medium text-gray-900 mb-4">{title}</h3>
+      
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-500 py-4 text-center">{emptyMessage}</p>
+      ) : (
+        <div className="space-y-3">
+          {items.slice(0, 5).map((item) => (
+            <Link key={item.id} href={item.href}>
+              <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {item.subtitle || formatDistanceToNow(new Date(item.date), { addSuffix: true })}
+                  </p>
+                </div>
+                <span className={`ml-3 px-2 py-1 text-xs font-medium rounded ${
+                  statusColors[item.status] || statusColors.default
+                }`}>
+                  {item.status}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### 3.4 AttentionPanel.tsx
+```typescript
+// client/src/components/dashboard/AttentionPanel.tsx
+
+import { Link } from "wouter";
+import { AlertTriangle, Clock, CheckCircle } from "lucide-react";
+
+interface AttentionItem {
+  id: string;
+  type: "arrival" | "departure" | "overdue" | "alert" | "action";
+  title: string;
+  description?: string;
+  href: string;
+  priority: "high" | "medium" | "low";
+}
+
+interface AttentionPanelProps {
+  title: string;
+  items: AttentionItem[];
+  isLoading?: boolean;
+  emptyMessage: string;
+}
+
+const priorityIcons = {
+  high: AlertTriangle,
+  medium: Clock,
+  low: CheckCircle,
+};
+
+const priorityColors = {
+  high: "text-red-500",
+  medium: "text-yellow-500",
+  low: "text-blue-500",
+};
+
+export function AttentionPanel({ 
+  title, 
+  items, 
+  isLoading, 
+  emptyMessage 
+}: AttentionPanelProps) {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <h3 className="text-sm font-medium text-gray-900 mb-4">{title}</h3>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse flex items-center gap-3">
+              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2 mt-1"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-5">
+      <h3 className="text-sm font-medium text-gray-900 mb-4">{title}</h3>
+      
+      {items.length === 0 ? (
+        <div className="text-center py-6">
+          <CheckCircle className="h-8 w-8 text-green-400 mx-auto mb-2" />
+          <p className="text-sm text-gray-500">{emptyMessage}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.slice(0, 5).map((item) => {
+            const Icon = priorityIcons[item.priority];
+            return (
+              <Link key={item.id} href={item.href}>
+                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <Icon className={`h-5 w-5 mt-0.5 ${priorityColors[item.priority]}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                    {item.description && (
+                      <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### 3.5 useDashboardData.ts (Data Hook)
+```typescript
+// client/src/hooks/useDashboardData.ts
+
+import { useQuery } from "@tanstack/react-query";
+
+interface DashboardData {
+  tenantName: string;
+  roleBadge: string | null;
+  reservations: {
+    total: number;
+    activeToday: number;
+  };
+  serviceRuns: {
+    upcoming: number;
+  };
+  jobs: {
+    openPostings: number;
+  };
+  messages: {
+    unread: number;
+  };
+  upcomingActivity: Array<{
+    id: string;
+    title: string;
+    subtitle?: string;
+    date: string;
+    status: string;
+    href: string;
+  }>;
+  attentionItems: Array<{
+    id: string;
+    type: "arrival" | "departure" | "overdue" | "alert" | "action";
+    title: string;
+    description?: string;
+    href: string;
+    priority: "high" | "medium" | "low";
+  }>;
+}
+
+async function fetchDashboardData(): Promise<DashboardData> {
+  // Fetch counts from multiple endpoints and compose dashboard data
+  // Using parallel requests for performance
+  
+  const [reservationsRes, serviceRunsRes, jobsRes, messagesRes] = await Promise.allSettled([
+    fetch("/api/p2/reservations/summary").then(r => r.json()),
+    fetch("/api/p2/service-runs/summary").then(r => r.json()),
+    fetch("/api/p2/jobs/summary").then(r => r.json()),
+    fetch("/api/p2/messages/unread-count").then(r => r.json()),
+  ]);
+
+  // Extract data with fallbacks
+  const reservations = reservationsRes.status === "fulfilled" && reservationsRes.value.ok
+    ? reservationsRes.value
+    : { total: 0, activeToday: 0 };
+    
+  const serviceRuns = serviceRunsRes.status === "fulfilled" && serviceRunsRes.value.ok
+    ? serviceRunsRes.value
+    : { upcoming: 0 };
+    
+  const jobs = jobsRes.status === "fulfilled" && jobsRes.value.ok
+    ? jobsRes.value
+    : { openPostings: 0 };
+    
+  const messages = messagesRes.status === "fulfilled" && messagesRes.value.ok
+    ? messagesRes.value
+    : { unread: 0 };
+
+  // Fetch upcoming activity (reservations in next 48 hours)
+  const activityRes = await fetch("/api/p2/reservations?upcoming=48h&limit=5").then(r => r.json()).catch(() => ({ ok: false }));
+  
+  const upcomingActivity = activityRes.ok && activityRes.reservations
+    ? activityRes.reservations.map((r: any) => ({
+        id: r.id,
+        title: r.guest_name || r.title || "Reservation",
+        subtitle: r.unit_name || r.asset_name,
+        date: r.check_in_date || r.start_at,
+        status: r.status,
+        href: `/app/reservations/${r.id}`,
+      }))
+    : [];
+
+  // Fetch attention items (arrivals, departures, overdue)
+  const attentionRes = await fetch("/api/p2/dashboard/attention").then(r => r.json()).catch(() => ({ ok: false }));
+  
+  const attentionItems = attentionRes.ok && attentionRes.items
+    ? attentionRes.items
+    : [];
+
+  return {
+    tenantName: "", // Will be set from context
+    roleBadge: null, // Will be set from auth context
+    reservations: {
+      total: reservations.total || 0,
+      activeToday: reservations.activeToday || 0,
+    },
+    serviceRuns: {
+      upcoming: serviceRuns.upcoming || 0,
+    },
+    jobs: {
+      openPostings: jobs.openPostings || 0,
+    },
+    messages: {
+      unread: messages.unread || 0,
+    },
+    upcomingActivity,
+    attentionItems,
+  };
+}
+
+export function useDashboardData() {
+  return useQuery({
+    queryKey: ["dashboard"],
+    queryFn: fetchDashboardData,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchInterval: 60 * 1000, // Refresh every minute
+  });
+}
+```
+
+---
+
+## 4. BACKEND ENDPOINTS NEEDED
+
+The dashboard needs these summary endpoints. If they don't exist, create minimal versions:
+
+### server/routes/dashboard.ts
+```typescript
+import { Router } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+
+export const dashboardRouter = Router();
+
+// GET /api/p2/reservations/summary
+dashboardRouter.get("/reservations/summary", async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    
+    const result = await db.execute(sql`
+      SELECT 
+        count(*)::int as total,
+        count(*) FILTER (WHERE check_in_date::date = ${today}::date OR check_out_date::date = ${today}::date)::int as active_today
+      FROM cc_pms_reservations
+      WHERE status NOT IN ('cancelled', 'completed')
+    `);
+    
+    const row = result.rows[0] || { total: 0, active_today: 0 };
+    res.json({ ok: true, total: row.total, activeToday: row.active_today });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// GET /api/p2/service-runs/summary
+dashboardRouter.get("/service-runs/summary", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT count(*)::int as upcoming
+      FROM cc_service_runs
+      WHERE scheduled_date >= CURRENT_DATE
+        AND scheduled_date <= CURRENT_DATE + interval '7 days'
+        AND status NOT IN ('cancelled', 'completed')
+    `);
+    
+    res.json({ ok: true, upcoming: result.rows[0]?.upcoming || 0 });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// GET /api/p2/jobs/summary
+dashboardRouter.get("/jobs/summary", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT count(*)::int as open_postings
+      FROM cc_job_postings
+      WHERE status = 'open'
+    `);
+    
+    res.json({ ok: true, openPostings: result.rows[0]?.open_postings || 0 });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// GET /api/p2/messages/unread-count
+dashboardRouter.get("/messages/unread-count", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT count(*)::int as unread
+      FROM cc_messages
+      WHERE read_at IS NULL
+    `);
+    
+    res.json({ ok: true, unread: result.rows[0]?.unread || 0 });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// GET /api/p2/dashboard/attention
+dashboardRouter.get("/dashboard/attention", async (req, res) => {
+  try {
+    const items: any[] = [];
+    
+    // Arrivals today
+    const arrivals = await db.execute(sql`
+      SELECT id, guest_name, unit_id
+      FROM cc_pms_reservations
+      WHERE check_in_date::date = CURRENT_DATE
+        AND status = 'confirmed'
+      LIMIT 3
+    `);
+    
+    arrivals.rows.forEach((r: any) => {
+      items.push({
+        id: `arrival-${r.id}`,
+        type: "arrival",
+        title: `Arrival: ${r.guest_name || "Guest"}`,
+        href: `/app/reservations/${r.id}`,
+        priority: "medium",
+      });
+    });
+    
+    // Departures today
+    const departures = await db.execute(sql`
+      SELECT id, guest_name, unit_id
+      FROM cc_pms_reservations
+      WHERE check_out_date::date = CURRENT_DATE
+        AND status = 'confirmed'
+      LIMIT 3
+    `);
+    
+    departures.rows.forEach((r: any) => {
+      items.push({
+        id: `departure-${r.id}`,
+        type: "departure",
+        title: `Departure: ${r.guest_name || "Guest"}`,
+        href: `/app/reservations/${r.id}`,
+        priority: "medium",
+      });
+    });
+    
+    res.json({ ok: true, items });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+```
+
+Mount in your server:
+```typescript
+import { dashboardRouter } from "./routes/dashboard";
+app.use("/api/p2", dashboardRouter);
+```
+
+---
+
+## 5. ROUTE REGISTRATION
+
+Ensure `/app` route points to DashboardPage:
+```typescript
+// In your router configuration (e.g., client/src/App.tsx or routes file)
+import DashboardPage from "@/pages/app/DashboardPage";
+
+// Add route
+<Route path="/app" component={DashboardPage} />
+```
+
+---
+
+## 6. DEPENDENCIES
+
+Ensure these packages are installed:
+```bash
+npm install date-fns lucide-react
+```
+
+If using React Query, ensure it's configured:
+```typescript
+// client/src/main.tsx or App.tsx
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
+
+// Wrap app with provider
+<QueryClientProvider client={queryClient}>
+  <App />
+</QueryClientProvider>
+```
+
+---
+
+## 7. QA ACCEPTANCE CHECKS
+
+After implementation, verify:
+
+- [ ] `/app` renders without console errors
+- [ ] All 4 summary tiles display counts (or 0)
+- [ ] Clicking "Reservations" tile navigates to `/app/reservations`
+- [ ] Clicking "Service Runs" tile navigates to `/app/services/calendar`
+- [ ] Clicking "Jobs" tile navigates to `/app/jobs`
+- [ ] Clicking "Messages" tile navigates to `/app/messages`
+- [ ] Loading skeletons appear while fetching
+- [ ] Empty states appear when counts are 0
+- [ ] Error state appears with retry button if API fails
+- [ ] **NO currency symbols anywhere**
+- [ ] **NO "booking" terminology**
+
+---
+
+## 8. EXPECTED OUTCOME
+
+After this prompt:
+- Dashboard page at `/app` with 4 summary tiles
+- Activity panel showing upcoming reservations
+- Attention panel showing arrivals/departures
+- Responsive grid layout
+- Loading, empty, and error states
+- Backend summary endpoints
+
+---
+
+## 9. OUTPUT REQUIRED
+
+Respond with:
+1. Files created (paths)
+2. Any adjustments made to existing code
+3. How to verify locally
+4. Screenshots if possible
+
+**STOP after completing this one screen. Do not start the next screen.**
