@@ -52,6 +52,7 @@ import OrgDetail from './pages/crm/OrgDetail';
 
 // Pages - Services (restored from legacy - real implementations)
 import ServiceRuns from './pages/services/ServiceRuns';
+import ServiceRunsCalendarPage from './pages/app/ServiceRunsCalendarPage';
 import CreateServiceRun from './pages/services/CreateServiceRun';
 import ServiceRunDetail from './pages/services/ServiceRunDetail';
 import ServiceDirectory from './pages/services/ServiceDirectory';
@@ -327,6 +328,7 @@ export default function App() {
                 <Route path="service-runs" element={<ServiceRuns />} />
                 <Route path="service-runs/new" element={<CreateServiceRun />} />
                 <Route path="service-runs/:slug" element={<ServiceRunDetail />} />
+                <Route path="services/calendar" element={<ServiceRunsCalendarPage />} />
                 <Route path="work-requests/:id" element={<WorkRequestDetail />} />
                 <Route path="services" element={<ServiceDirectory />} />
                 <Route path="bundles" element={<BundlesBrowser />} />
