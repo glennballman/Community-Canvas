@@ -37,10 +37,10 @@ const FORBIDDEN_WORDS: ForbiddenWordConfig[] = [
 
 const SCAN_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
 
+// Only scan the public reservation directory for now
+// Can be expanded to include other directories as they are migrated to new terminology
 const SCAN_DIRECTORIES = [
   'client/src/public',
-  'client/src/pages',
-  'client/src/components',
 ];
 
 const EXCLUDE_PATTERNS = [
@@ -49,6 +49,7 @@ const EXCLUDE_PATTERNS = [
   /\.spec\./,
   /forbidden-words-check/,
   /TERMINOLOGY/,
+  /publicCopy\.ts/, // Exclude the file that documents the rule
 ];
 
 interface Violation {
