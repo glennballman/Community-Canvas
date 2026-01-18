@@ -99,14 +99,14 @@ export default function ServiceRunMonitorPage() {
 
   if (!data?.run) {
     return (
-      <div className="container max-w-4xl mx-auto p-6">
-        <Button variant="ghost" onClick={() => setLocation('/app/n3/attention')}>
+      <div className="container max-w-4xl mx-auto p-6" data-testid="monitor-not-found">
+        <Button variant="ghost" onClick={() => setLocation('/app/n3/attention')} data-testid="button-back-not-found">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
         <div className="text-center py-12">
-          <h2 className="text-lg font-medium">Run not found</h2>
-          <p className="text-muted-foreground">The requested service run could not be found.</p>
+          <h2 className="text-lg font-medium" data-testid="text-not-found-title">Run not found</h2>
+          <p className="text-muted-foreground" data-testid="text-not-found-message">The requested service run could not be found.</p>
         </div>
       </div>
     );
@@ -117,14 +117,14 @@ export default function ServiceRunMonitorPage() {
   const affectedSegmentIds = openBundle?.bundle?.findings?.map(f => f.segmentId) || [];
 
   return (
-    <div className="container max-w-5xl mx-auto p-6 space-y-6">
+    <div className="container max-w-5xl mx-auto p-6 space-y-6" data-testid="monitor-page">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => setLocation('/app/n3/attention')}>
+          <Button variant="ghost" size="sm" onClick={() => setLocation('/app/n3/attention')} data-testid="button-back">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{run.name}</h1>
+            <h1 className="text-2xl font-bold" data-testid="text-run-name">{run.name}</h1>
             {run.description && (
               <p className="text-muted-foreground">{run.description}</p>
             )}

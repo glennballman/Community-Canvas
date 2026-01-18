@@ -39,7 +39,7 @@ n3Router.get('/attention', async (req, res) => {
       return res.status(400).json({ error: 'Missing tenant ID' });
     }
 
-    const openBundles = await db
+    const allBundles = await db
       .select({
         bundleId: ccReplanBundles.id,
         runId: ccReplanBundles.runId,
@@ -53,16 +53,11 @@ n3Router.get('/attention', async (req, res) => {
       })
       .from(ccReplanBundles)
       .innerJoin(ccN3Runs, eq(ccReplanBundles.runId, ccN3Runs.id))
-      .where(
-        and(
-          eq(ccReplanBundles.tenantId, tenantId),
-          eq(ccReplanBundles.status, 'open')
-        )
-      )
+      .where(eq(ccReplanBundles.tenantId, tenantId))
       .orderBy(desc(ccReplanBundles.createdAt))
-      .limit(50);
+      .limit(100);
 
-    res.json({ bundles: openBundles });
+    res.json({ bundles: allBundles });
   } catch (err) {
     console.error('[N3 API] Error fetching attention queue:', err);
     res.status(500).json({ error: 'Internal server error' });
