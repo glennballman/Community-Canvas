@@ -83,7 +83,7 @@ router.get("/", async (req: Request, res: Response) => {
       notes: row.reservation_notes,
     }));
 
-    res.json({ ok: true, serviceRuns });
+    res.json({ ok: true, data: { serviceRuns } });
   } catch (e: any) {
     console.error("[p2-service-runs] list error:", e.message);
     res.status(500).json({
@@ -103,8 +103,10 @@ router.get("/filters", async (req: Request, res: Response) => {
 
     res.json({
       ok: true,
-      serviceTypes: serviceTypesResult.rows.map(r => r.service_type),
-      statuses: statusesResult.rows.map(r => r.status),
+      data: {
+        serviceTypes: serviceTypesResult.rows.map(r => r.service_type),
+        statuses: statusesResult.rows.map(r => r.status),
+      },
     });
   } catch (e: any) {
     console.error("[p2-service-runs] filters error:", e.message);
@@ -160,7 +162,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       updated_at: row.updated_at,
     };
 
-    res.json({ ok: true, serviceRun });
+    res.json({ ok: true, data: { serviceRun } });
   } catch (e: any) {
     console.error("[p2-service-runs] detail error:", e.message);
     res.status(500).json({

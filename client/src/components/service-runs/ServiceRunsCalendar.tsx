@@ -72,7 +72,7 @@ export function ServiceRunsCalendar({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-          <h2 className="text-lg font-semibold" data-testid="calendar-month-label">
+          <h2 className="text-lg font-semibold" data-testid="text-calendar-title">
             {format(currentMonth, "MMMM yyyy")}
           </h2>
         </div>

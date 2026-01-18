@@ -22,14 +22,13 @@ export interface ServiceRun {
 
 interface ServiceRunsResponse {
   ok: boolean;
-  serviceRuns: ServiceRun[];
+  data?: { serviceRuns: ServiceRun[] };
   error?: { code: string; message: string };
 }
 
 interface FiltersResponse {
   ok: boolean;
-  serviceTypes: string[];
-  statuses: string[];
+  data?: { serviceTypes: string[]; statuses: string[] };
   error?: { code: string; message: string };
 }
 
@@ -61,7 +60,7 @@ export function useServiceRuns(options: UseServiceRunsOptions = {}) {
   });
 
   return {
-    serviceRuns: query.data?.serviceRuns || [],
+    serviceRuns: query.data?.data?.serviceRuns || [],
     isLoading: query.isLoading,
     isError: query.isError || query.data?.ok === false,
     error: query.data?.error,
@@ -80,8 +79,8 @@ export function useServiceRunFilters() {
   });
 
   return {
-    serviceTypes: query.data?.serviceTypes || [],
-    statuses: query.data?.statuses || [],
+    serviceTypes: query.data?.data?.serviceTypes || [],
+    statuses: query.data?.data?.statuses || [],
     isLoading: query.isLoading,
   };
 }
