@@ -106,6 +106,7 @@ import benchEmergencyRouter from "./routes/bench-emergency";
 import { publicRouter as p2PublicReservationRouter } from "./api/p2/public/publicRouter";
 import { p2DashboardRouter } from "./routes/p2-dashboard";
 import { p2ReservationsRouter } from "./routes/p2-reservations";
+import { p2ServiceRunsRouter } from "./routes/p2-service-runs";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -304,6 +305,9 @@ export async function registerRoutes(
   
   // P2 Reservations list and actions
   app.use('/api/p2/reservations', p2ReservationsRouter);
+  
+  // P2 service runs API
+  app.use('/api/p2/service-runs', p2ServiceRunsRouter);
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);

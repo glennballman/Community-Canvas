@@ -1,0 +1,202 @@
+✅ UI PROMPT 6 — Service Runs Calendar
+
+Paste this entire block into Replit
+
+CONTEXT
+
+PROMPT 1 Dashboard ✅
+
+PROMPT 2 Reservations Index ✅
+
+PROMPT 3 Reservation Detail ✅
+
+Backend confirmed:
+
+cc_service_runs table exists
+
+Service Runs backend is RUNNING
+
+No spatial or public reservation dependencies required
+
+GOAL
+
+Implement Service Runs calendar view at:
+
+/app/services/calendar
+
+This is an operations planning surface, not a booking UI.
+
+NON-NEGOTIABLE RULES
+
+Use “service run” terminology only.
+
+No currency, no pricing, no upsell.
+
+Read-only by default (editing comes later).
+
+Must show: loading, empty, error states.
+
+P2 envelope { ok, error?, ...data }.
+
+Stable selectors for QA.
+
+1) PAGE PURPOSE
+
+Allow staff and coordinators to:
+
+See upcoming service runs
+
+Understand workload density
+
+Click into a run for details (read-only)
+
+Filter by service type, status, crew
+
+This page supports cold-start planning and seasonality awareness.
+
+2) FILES TO CREATE
+Frontend
+
+Create:
+
+client/src/pages/app/ServiceRunsCalendarPage.tsx
+
+client/src/components/service-runs/ServiceRunsCalendar.tsx
+
+client/src/components/service-runs/ServiceRunCard.tsx
+
+client/src/components/service-runs/ServiceRunsFilters.tsx
+
+client/src/hooks/useServiceRuns.ts
+
+Backend (ONLY if missing)
+
+GET /api/p2/service-runs
+
+GET /api/p2/service-runs/:id (optional; read-only detail)
+
+If detail endpoint doesn’t exist, clicking a run opens a side panel with the data already loaded.
+
+3) DATA CONTRACT
+GET /api/p2/service-runs
+
+Query params:
+
+startDate
+
+endDate
+
+status
+
+serviceType
+
+crewId
+
+Response:
+
+{
+  ok: true,
+  serviceRuns: Array<{
+    id: string,
+    title: string,
+    service_type: string,
+    scheduled_date: string,
+    start_time?: string,
+    end_time?: string,
+    status: string,
+    crew_name?: string,
+    notes?: string
+  }>
+}
+
+4) UI LAYOUT
+Header
+
+Title: Service Runs
+
+Subtitle: “52-week operational calendar”
+
+Filters button (opens filter panel)
+
+Main Calendar
+
+Default view: Month
+Optional toggle: Week
+
+Each day cell:
+
+Shows count of service runs
+
+Clicking expands day view
+
+Each ServiceRunCard shows:
+
+Title
+
+Service type badge
+
+Status badge
+
+Time range (if present)
+
+Crew (if present)
+
+5) FILTERS
+
+ServiceRunsFilters:
+
+Service type (multi-select)
+
+Status (multi-select)
+
+Crew (optional)
+
+Date range
+
+Filters must:
+
+Update URL query params
+
+Trigger refetch
+
+Persist on reload
+
+6) EMPTY + ERROR STATES
+
+Empty: “No service runs scheduled for this period.”
+
+Error: inline panel with retry button
+
+7) QA REQUIREMENTS
+
+/app/services/calendar loads without errors
+
+Calendar renders with zero or many runs
+
+Filters work and persist
+
+Clicking a run shows detail (inline or panel)
+
+No currency anywhere
+
+Stable selectors:
+
+data-testid="service-runs-calendar"
+
+data-testid="service-run-card"
+
+STOP CONDITION
+
+After PROMPT 6:
+
+STOP
+
+Report:
+
+Files created
+
+Endpoint used/created
+
+Screenshot of calendar month view
+
+Any schema mismatches
