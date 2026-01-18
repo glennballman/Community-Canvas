@@ -53,10 +53,9 @@ router.get('/units', async (req: Request, res: Response) => {
         COALESCE(d.accessible, false) as accessible,
         COALESCE(d.ev_charging, false) as ev_charging
       FROM cc_units u
-      LEFT JOIN cc_parking_unit_details d ON d.unit_id = u.id
+      JOIN cc_parking_unit_details d ON d.unit_id = u.id
       JOIN cc_properties p ON u.property_id = p.id
       WHERE u.property_id = $1::uuid
-        AND u.unit_type = 'parking_stall'
         AND p.tenant_id = $2
         AND ($3::text IS NULL OR d.zone_code = $3)
       ORDER BY d.zone_code NULLS LAST, u.code
@@ -116,31 +115,29 @@ router.get('/availability', async (req: Request, res: Response) => {
     const unitsResult = await serviceQuery(`
       SELECT u.id, u.code, u.status
       FROM cc_units u
+      JOIN cc_parking_unit_details d ON d.unit_id = u.id
       JOIN cc_properties p ON u.property_id = p.id
       WHERE u.property_id = $1::uuid
-        AND u.unit_type = 'parking_stall'
         AND p.tenant_id = $2
     `, [propertyId, tenantId]);
 
     const allocResult = await serviceQuery(`
       SELECT
         a.id as allocation_id,
-        COALESCE(a.unit_id, iu.unit_id) as unit_id,
+        a.unit_id,
         a.starts_at,
         a.ends_at,
         a.hold_type,
         ci.id as cart_item_id,
-        c.primary_guest_name as guest_name,
-        ci.vehicle_plate
+        c.primary_guest_name as guest_name
       FROM cc_reservation_allocations a
-      LEFT JOIN cc_inventory_units iu ON a.inventory_unit_id = iu.id
       LEFT JOIN cc_reservation_cart_items ci ON a.reservation_item_id = ci.id
       LEFT JOIN cc_reservation_carts c ON ci.cart_id = c.id
-      WHERE COALESCE(a.unit_id, iu.unit_id) IN (
+      WHERE a.unit_id IN (
         SELECT u.id FROM cc_units u
+        JOIN cc_parking_unit_details d ON d.unit_id = u.id
         JOIN cc_properties p ON u.property_id = p.id
         WHERE u.property_id = $1::uuid 
-          AND u.unit_type = 'parking_stall'
           AND p.tenant_id = $2
       )
       AND a.starts_at < ($3::date + interval '1 day')
@@ -178,7 +175,6 @@ router.get('/availability', async (req: Request, res: Response) => {
         status,
         allocation_id: alloc?.allocation_id || null,
         guest_name: alloc?.guest_name || null,
-        vehicle_plate: alloc?.vehicle_plate || null,
         starts_at: alloc?.starts_at || null,
         ends_at: alloc?.ends_at || null,
         reservation_id: alloc?.cart_item_id || null
@@ -217,8 +213,8 @@ router.get('/properties', async (req: Request, res: Response) => {
       SELECT DISTINCT p.id, p.name
       FROM cc_properties p
       JOIN cc_units u ON u.property_id = p.id
+      JOIN cc_parking_unit_details d ON d.unit_id = u.id
       WHERE p.tenant_id = $1
-        AND u.unit_type = 'parking_stall'
       ORDER BY p.name
     `, [tenantId]);
 

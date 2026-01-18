@@ -17,7 +17,6 @@ interface Props {
     currentStatus: string;
     allocation: {
       guest_name: string | null;
-      vehicle_plate: string | null;
       starts_at: string | null;
       ends_at: string | null;
       reservation_id: string | null;
@@ -120,13 +119,6 @@ export function ParkingDetailPanel({ unit, onClose }: Props) {
             <div className="flex justify-between gap-2 text-sm">
               <span className="text-muted-foreground" data-testid="label-guest">Guest</span>
               <span className="font-medium" data-testid="text-guest">{unit.allocation.guest_name}</span>
-            </div>
-          )}
-
-          {unit.allocation.vehicle_plate && (
-            <div className="flex justify-between gap-2 text-sm">
-              <span className="text-muted-foreground" data-testid="label-plate">Plate</span>
-              <span className="font-mono font-medium" data-testid="text-plate">{unit.allocation.vehicle_plate}</span>
             </div>
           )}
 

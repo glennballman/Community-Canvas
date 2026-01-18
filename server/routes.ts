@@ -62,6 +62,7 @@ import crmRouter from "./routes/crm";
 import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
 import qaSeedRouter from "./routes/qa-seed";
+import devSeedParkingRouter from "./routes/dev-seed-parking";
 import systemExplorerRouter from "./routes/system-explorer";
 import sitemapRouter from "./routes/sitemap";
 import mediaRouter from "./routes/media";
@@ -344,6 +345,7 @@ export async function registerRoutes(
   // Register QA seed/test routes (dev only)
   if (process.env.NODE_ENV === 'development') {
     app.use('/api', qaSeedRouter);
+    app.use('/api/dev/seed', devSeedParkingRouter);
   }
 
   // Register operator routes (for community operators)

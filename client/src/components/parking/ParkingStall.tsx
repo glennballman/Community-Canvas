@@ -28,7 +28,7 @@ export function ParkingStall({ unit, isSelected, onClick }: Props) {
     <Button
       variant={variant}
       onClick={onClick}
-      data-testid={`parking-stall-${unit.id}`}
+      data-testid={`parking-stall-${unit.code}`}
       className={`
         ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}
       `}
