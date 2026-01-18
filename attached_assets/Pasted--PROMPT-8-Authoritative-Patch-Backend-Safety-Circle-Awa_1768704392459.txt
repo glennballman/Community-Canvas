@@ -1,0 +1,188 @@
+✅ PROMPT 8 — Authoritative Patch (Backend Safety + Circle Awareness)
+KEEP your UI file list + layout + hooks exactly as written.
+Replace the “Backend endpoints (if missing)” block with this SAFE version:
+Required scoping rule (same standard as PROMPT 2)
+
+All queries must be tenant-scoped via one of:
+
+portal_id → cc_portals.tenant_id
+
+OR an existing server-side tenant context (session / RLS / GUC) you already use
+
+Also, if conversations are circle-scoped:
+
+Only return conversations where circle_id is either:
+
+the active circle context, or
+
+null (tenant-wide)
+
+✅ GET /api/p2/conversations (SAFE)
+
+Returns conversations only for this tenant
+
+Optional query param: circleId
+
+// GET /api/p2/conversations?circleId=...
+conversationsRouter.get("/", async (req, res) => {
+  try {
+    const circleId = String(req.query.circleId || "").trim() || null;
+
+    // TODO: obtain tenantId from your existing auth/session context
+    const tenantId = req.tenantId; // or req.session.tenantId, etc.
+    if (!tenantId) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Missing tenant context" } });
+
+    const result = await db.execute(sql`
+      SELECT 
+        c.id,
+        c.title,
+        c.circle_id,
+        ci.name as circle_name,
+        c.updated_at as last_message_at,
+        (
+          SELECT m.content
+          FROM cc_messages m 
+          WHERE m.conversation_id = c.id
+          ORDER BY m.created_at DESC
+          LIMIT 1
+        ) as last_message_preview,
+        (
+          SELECT count(*)::int
+          FROM cc_messages m
+          WHERE m.conversation_id = c.id
+            AND m.read_at IS NULL
+            -- IMPORTANT: if you have per-user read state, use it here instead of read_at
+        ) as unread_count
+      FROM cc_conversations c
+      LEFT JOIN cc_circles ci ON c.circle_id = ci.id
+      WHERE c.tenant_id = ${tenantId}::uuid
+        AND (${circleId}::uuid IS NULL OR c.circle_id = ${circleId}::uuid)
+      ORDER BY c.updated_at DESC
+      LIMIT 200
+    `);
+
+    res.json({ ok: true, conversations: result.rows });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+
+If cc_conversations does not have tenant_id, you must scope via your existing join path (portal/circle ownership). Do not ship an unscoped list endpoint.
+
+✅ GET /api/p2/conversations/:id (SAFE)
+
+Validates the conversation belongs to the tenant (and circle if applicable)
+
+Returns messages ordered ASC (oldest→newest)
+
+conversationsRouter.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const tenantId = req.tenantId;
+    if (!tenantId) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Missing tenant context" } });
+
+    const convResult = await db.execute(sql`
+      SELECT c.*, ci.name as circle_name
+      FROM cc_conversations c
+      LEFT JOIN cc_circles ci ON c.circle_id = ci.id
+      WHERE c.id = ${id}::uuid
+        AND c.tenant_id = ${tenantId}::uuid
+      LIMIT 1
+    `);
+
+    if (!convResult.rows.length) {
+      return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Conversation not found" } });
+    }
+
+    const messagesResult = await db.execute(sql`
+      SELECT 
+        m.id,
+        m.content,
+        m.sender_id,
+        m.created_at,
+        m.read_at
+      FROM cc_messages m
+      WHERE m.conversation_id = ${id}::uuid
+      ORDER BY m.created_at ASC
+      LIMIT 500
+    `);
+
+    res.json({
+      ok: true,
+      conversation: convResult.rows[0],
+      messages: messagesResult.rows,
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+✅ POST /api/p2/conversations/:id/messages (SAFE)
+
+Validates tenant scope
+
+Requires sender context (even if minimal)
+
+Updates conversation updated_at
+
+conversationsRouter.post("/:id/messages", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const content = String(req.body?.content || "").trim();
+
+    const tenantId = req.tenantId;
+    const senderId = req.userId; // use your existing auth actor id
+    if (!tenantId || !senderId) {
+      return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Missing actor context" } });
+    }
+    if (!content) {
+      return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "Content required" } });
+    }
+
+    // Ensure conversation is in-tenant
+    const conv = await db.execute(sql`
+      SELECT id
+      FROM cc_conversations
+      WHERE id = ${id}::uuid
+        AND tenant_id = ${tenantId}::uuid
+      LIMIT 1
+    `);
+    if (!conv.rows.length) {
+      return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Conversation not found" } });
+    }
+
+    const result = await db.execute(sql`
+      INSERT INTO cc_messages (conversation_id, sender_id, content, created_at)
+      VALUES (${id}::uuid, ${senderId}::uuid, ${content}, now())
+      RETURNING id, content, created_at
+    `);
+
+    await db.execute(sql`
+      UPDATE cc_conversations
+      SET updated_at = now()
+      WHERE id = ${id}::uuid
+    `);
+
+    res.json({ ok: true, message: result.rows[0] });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+🚫 Mark-as-read endpoint (do NOT implement naïvely)
+
+Your draft included:
+
+UPDATE cc_messages SET read_at = now() WHERE conversation_id = ...
+
+
+That is not safe unless read_at is per-user (it usually isn’t).
+So:
+
+If you already have a per-user read-state table → use it.
+
+If not → omit mark-as-read for now and keep unread_count as “best effort”.
+
+UI can still work without it.

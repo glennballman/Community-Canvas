@@ -107,6 +107,7 @@ import { publicRouter as p2PublicReservationRouter } from "./api/p2/public/publi
 import { p2DashboardRouter } from "./routes/p2-dashboard";
 import { p2ReservationsRouter } from "./routes/p2-reservations";
 import { p2ServiceRunsRouter } from "./routes/p2-service-runs";
+import p2ConversationsRouter from "./routes/p2-conversations";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -308,6 +309,9 @@ export async function registerRoutes(
   
   // P2 service runs API
   app.use('/api/p2/service-runs', p2ServiceRunsRouter);
+  
+  // P2 conversations API (tenant-scoped unified inbox)
+  app.use('/api/p2/conversations', p2ConversationsRouter);
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);
