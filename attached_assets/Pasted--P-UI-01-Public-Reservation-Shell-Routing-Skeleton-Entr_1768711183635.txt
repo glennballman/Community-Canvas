@@ -1,0 +1,173 @@
+✅ P-UI-01 — Public Reservation Shell + Routing Skeleton (Entry-point aware)
+
+Paste this into Replit.
+
+CONTEXT
+
+Backend reservations engine: DONE
+
+Tenant Ops UI: DONE
+
+Public reservation UI spec (V3.5) exists and is authoritative
+
+Language rule: use “reserve / reservation” only (never “book/booking”)
+
+GOAL
+
+Implement the public reservation route skeleton and shared shell, without building every step yet.
+
+Routes (public):
+
+/reserve/:portalSlug/:offerSlug → OfferLandingPage (entry-point aware)
+
+/reserve/:portalSlug/:offerSlug/start → ReserveShell (step router)
+
+/reserve/resume → ResumePage
+
+/reserve/status/:token → ReservationStatusPage
+
+/reserve/confirmation/:token → ConfirmationPage
+
+NON-NEGOTIABLE RULES
+
+Centralize all public copy in client/src/public/publicCopy.ts
+
+CI fails on forbidden words (book/booking) — add/update script now
+
+Token lifecycle rules must be scaffolded (store + overwrite + invalidation hooks)
+
+No backend invention: call existing endpoints only; if missing, stub UI with “Not available” state
+
+Must show loading/empty/error states
+
+1) FILES TO CREATE
+Frontend (public)
+
+client/src/public/publicCopy.ts ✅ centralized strings
+
+client/src/public/routes/PublicReserveRoutes.tsx
+
+client/src/public/pages/OfferLandingPage.tsx
+
+client/src/public/pages/ReserveShell.tsx
+
+client/src/public/pages/ResumePage.tsx
+
+client/src/public/pages/ReservationStatusPage.tsx
+
+client/src/public/pages/ConfirmationPage.tsx
+
+client/src/public/state/publicTokenStore.ts (sessionStorage token state)
+
+client/src/public/components/PublicLayout.tsx
+
+client/src/public/components/PublicErrorState.tsx
+
+client/src/public/components/PublicLoadingState.tsx
+
+CI / lint
+
+scripts/forbidden-words-check.ts (or extend existing)
+
+Ensure CI runs it (same pattern you already used for guardrails)
+
+2) PUBLIC COPY (STRICT)
+
+Create publicCopy.ts and export publicCopy object. All text must come from here.
+
+Must include at minimum:
+
+titles: “Reserve”, “Reservation”, “Resume reservation”
+
+empty/error copy used by skeleton pages
+
+disclaimers for request-only flows
+
+3) TOKEN STORE (SCAFFOLD)
+
+publicTokenStore.ts:
+
+stores current reservationToken in sessionStorage
+
+exposes:
+
+getToken()
+
+setToken(token) (overwrite only)
+
+clearToken()
+
+NOTE: token rotation will be enforced later, but scaffolding must exist now.
+
+4) ROUTE REGISTRATION
+
+Add public routes into client/src/App.tsx (or your routing layer) without affecting /app/*.
+
+Public routes must not require auth.
+
+5) PAGE SKELETON REQUIREMENTS
+OfferLandingPage
+
+Shows “Reserve” header
+
+Shows offer title/summary placeholder
+
+CTA button “Start reservation” → routes to /start
+
+If portal/offer not found: show PublicErrorState
+
+ReserveShell
+
+Step router placeholder (no steps implemented yet)
+
+Shows left “step area” + right “cart panel placeholder”
+
+Add a “Back” control that is safe (no history traps)
+
+ResumePage
+
+Looks for token in URL or sessionStorage
+
+If none: show “No active reservation found”
+
+If found: CTA → ReservationStatusPage
+
+ReservationStatusPage
+
+Token in URL
+
+Shows loading + placeholder status UI (Mode A/B later)
+
+ConfirmationPage
+
+Token in URL
+
+Shows confirmation placeholder (“Reservation confirmed”)
+
+6) QA REQUIREMENTS
+
+No forbidden words anywhere
+
+All public text comes from publicCopy.ts
+
+Routes render without console errors
+
+sessionStorage token store works (manual test)
+
+Public pages do not import /app/* components
+
+STOP CONDITION
+
+After P-UI-01:
+
+STOP
+
+Report:
+
+Files created
+
+Routes registered
+
+Screenshot of OfferLandingPage + ReserveShell shell
+
+Confirm forbidden word check is in CI

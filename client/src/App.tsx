@@ -113,6 +113,9 @@ import PortalJobDetailPage from './pages/public/PortalJobDetailPage';
 import PortalJobApplyPage from './pages/public/PortalJobApplyPage';
 import PortalCampaignApplyPage from './pages/public/PortalCampaignApplyPage';
 import PortalEmployerPage from './pages/public/PortalEmployerPage';
+
+// Pages - Public Reservation Routes
+import { PublicReserveRoutes } from './public/routes/PublicReserveRoutes';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
 import CertificationsPage from './pages/app/admin/CertificationsPage';
@@ -241,6 +244,11 @@ export default function App() {
               <Route path="/b/:portalSlug/jobs/:postingId/apply" element={<PortalJobApplyPage />} />
               <Route path="/b/:portalSlug/apply/:campaignKey" element={<PortalCampaignApplyPage />} />
               <Route path="/b/:portalSlug/employers/:employerId" element={<PortalEmployerPage />} />
+
+              {/* ========================================== */}
+              {/* PUBLIC RESERVATION - /reserve/*           */}
+              {/* ========================================== */}
+              <Route path="/reserve/*" element={<PublicReserveRoutes />} />
 
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}
