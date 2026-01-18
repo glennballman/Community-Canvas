@@ -6528,8 +6528,8 @@ export type InsertJobIngestionTask = z.infer<typeof insertJobIngestionTaskSchema
 // PATENT CC-01 INVENTOR GLENN BALLMAN
 // ============================================================================
 
-// Service Runs
-export const ccServiceRuns = pgTable("cc_service_runs", {
+// N3 Service Runs (Monitor/Replan)
+export const ccN3Runs = pgTable("cc_n3_runs", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
@@ -6541,20 +6541,20 @@ export const ccServiceRuns = pgTable("cc_service_runs", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
-  tenantIdx: index("idx_service_runs_tenant").on(table.tenantId),
-  statusIdx: index("idx_service_runs_status").on(table.status),
-  startsIdx: index("idx_service_runs_starts").on(table.startsAt),
+  tenantIdx: index("idx_n3_runs_tenant").on(table.tenantId),
+  statusIdx: index("idx_n3_runs_status").on(table.status),
+  startsIdx: index("idx_n3_runs_starts").on(table.startsAt),
 }));
 
-export const insertServiceRunSchema = createInsertSchema(ccServiceRuns).omit({ id: true, createdAt: true, updatedAt: true });
-export type ServiceRun = typeof ccServiceRuns.$inferSelect;
-export type InsertServiceRun = z.infer<typeof insertServiceRunSchema>;
+export const insertN3RunSchema = createInsertSchema(ccN3Runs).omit({ id: true, createdAt: true, updatedAt: true });
+export type N3Run = typeof ccN3Runs.$inferSelect;
+export type InsertN3Run = z.infer<typeof insertN3RunSchema>;
 
-// Segment kinds: move | ride | work | stay | wait | load
-export const ccSegments = pgTable("cc_segments", {
+// N3 Segment kinds: move | ride | work | stay | wait | load
+export const ccN3Segments = pgTable("cc_n3_segments", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
-  serviceRunId: uuid("service_run_id").notNull().references(() => ccServiceRuns.id, { onDelete: "cascade" }),
+  runId: uuid("run_id").notNull().references(() => ccN3Runs.id, { onDelete: "cascade" }),
   segmentKind: text("segment_kind").notNull(),
   startsAt: timestamp("starts_at", { withTimezone: true }),
   endsAt: timestamp("ends_at", { withTimezone: true }),
@@ -6565,13 +6565,13 @@ export const ccSegments = pgTable("cc_segments", {
   constraints: jsonb("constraints"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
-  serviceRunIdx: index("idx_segments_service_run").on(table.serviceRunId),
-  kindIdx: index("idx_segments_kind").on(table.segmentKind),
+  runIdx: index("idx_n3_segments_run").on(table.runId),
+  kindIdx: index("idx_n3_segments_kind").on(table.segmentKind),
 }));
 
-export const insertSegmentSchema = createInsertSchema(ccSegments).omit({ id: true, createdAt: true });
-export type Segment = typeof ccSegments.$inferSelect;
-export type InsertSegment = z.infer<typeof insertSegmentSchema>;
+export const insertN3SegmentSchema = createInsertSchema(ccN3Segments).omit({ id: true, createdAt: true });
+export type N3Segment = typeof ccN3Segments.$inferSelect;
+export type InsertN3Segment = z.infer<typeof insertN3SegmentSchema>;
 
 // Tide Predictions (deterministic signal)
 export const ccTidePredictions = pgTable("cc_tide_predictions", {
@@ -6624,7 +6624,7 @@ export type InsertMonitorPolicy = z.infer<typeof insertMonitorPolicySchema>;
 export const ccMonitorState = pgTable("cc_monitor_state", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
-  serviceRunId: uuid("service_run_id").notNull().unique().references(() => ccServiceRuns.id, { onDelete: "cascade" }),
+  runId: uuid("run_id").notNull().unique().references(() => ccN3Runs.id, { onDelete: "cascade" }),
   policyId: uuid("policy_id").notNull().references(() => ccMonitorPolicies.id),
   lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
   nextCheckAt: timestamp("next_check_at", { withTimezone: true }),
@@ -6644,7 +6644,7 @@ export type InsertMonitorState = z.infer<typeof insertMonitorStateSchema>;
 export const ccReplanBundles = pgTable("cc_replan_bundles", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
-  serviceRunId: uuid("service_run_id").notNull().references(() => ccServiceRuns.id, { onDelete: "cascade" }),
+  runId: uuid("run_id").notNull().references(() => ccN3Runs.id, { onDelete: "cascade" }),
   status: text("status").notNull().default("open"),
   reasonCodes: text("reason_codes").array().notNull().default([]),
   summary: text("summary").notNull(),
@@ -6653,7 +6653,7 @@ export const ccReplanBundles = pgTable("cc_replan_bundles", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   tenantIdx: index("idx_replan_bundles_tenant").on(table.tenantId),
-  serviceRunIdx: index("idx_replan_bundles_service_run").on(table.serviceRunId),
+  runIdx: index("idx_replan_bundles_run").on(table.runId),
   statusIdx: index("idx_replan_bundles_status").on(table.status),
 }));
 
