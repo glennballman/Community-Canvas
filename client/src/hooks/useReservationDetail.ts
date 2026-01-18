@@ -90,7 +90,15 @@ export function useReservationDetail(id: string | undefined) {
   const queryClient = useQueryClient();
 
   const query = useQuery<ReservationDetailResponse>({
-    queryKey: ["/api/p2/reservations", id],
+    queryKey: ["/api/p2/reservations/detail", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/reservations/${id}`, { credentials: "include" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        return { ok: false, error: data.error || { code: "ERROR", message: "Failed to load" } };
+      }
+      return res.json();
+    },
     enabled: !!id,
   });
 
@@ -100,7 +108,7 @@ export function useReservationDetail(id: string | undefined) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations/detail", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations"] });
     },
   });
@@ -111,38 +119,71 @@ export function useReservationDetail(id: string | undefined) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations/detail", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations"] });
     },
   });
 
   const addNoteMutation = useMutation({
     mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", `/api/p2/reservations/${id}/notes`, { message });
-      return res.json();
+      const res = await fetch(`/api/p2/reservations/${id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) {
+        return { ok: false, error: data.error || { code: "ERROR", message: "Failed to add note" } };
+      }
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations", id] });
+    onSuccess: (data) => {
+      if (data?.ok !== false) {
+        queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations/detail", id] });
+      }
     },
   });
 
   const requestChangeMutation = useMutation({
     mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", `/api/p2/reservations/${id}/change-request`, { message });
-      return res.json();
+      const res = await fetch(`/api/p2/reservations/${id}/change-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) {
+        return { ok: false, error: data.error || { code: "ERROR", message: "Failed to submit request" } };
+      }
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations", id] });
+    onSuccess: (data) => {
+      if (data?.ok !== false) {
+        queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations/detail", id] });
+      }
     },
   });
 
   const requestCancelMutation = useMutation({
     mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", `/api/p2/reservations/${id}/cancel-request`, { message });
-      return res.json();
+      const res = await fetch(`/api/p2/reservations/${id}/cancel-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.ok === false) {
+        return { ok: false, error: data.error || { code: "ERROR", message: "Failed to submit request" } };
+      }
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations", id] });
+    onSuccess: (data) => {
+      if (data?.ok !== false) {
+        queryClient.invalidateQueries({ queryKey: ["/api/p2/reservations/detail", id] });
+      }
     },
   });
 
