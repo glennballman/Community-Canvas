@@ -1,0 +1,198 @@
+✅ UI PROMPT 7 — Jobs Board (/app/jobs)
+
+Paste this entire block into Replit
+
+CONTEXT
+
+Tenant App foundation is stable (Prompts 1,2,3,6 done)
+
+Jobs backend is RUNNING
+
+Must remain portal-sovereign (no cross-portal leakage)
+
+No paywalls, no upgrade language in /app/**
+
+GOAL
+
+Implement a Jobs management interface at:
+
+/app/jobs
+
+Staff can:
+
+See job postings list
+
+Filter by status + portal distribution
+
+See application counts per posting
+
+Click into a posting detail page (read-only detail for now is OK)
+
+Perform safe actions: Close posting (if endpoint exists), otherwise disable
+
+NON-NEGOTIABLE RULES
+
+Use “job posting” terminology (not “listing” if your spec prefers “posting”).
+
+No currency on this page.
+
+P2 envelope everywhere.
+
+Must show: loading, empty, error states.
+
+No cross-tenant and no cross-portal data leakage.
+
+Stable selectors for QA.
+
+1) FILES TO CREATE
+Frontend
+
+Create:
+
+client/src/pages/app/JobsIndexPage.tsx
+
+client/src/components/jobs/JobsTable.tsx
+
+client/src/components/jobs/JobStatusBadge.tsx
+
+client/src/components/jobs/JobFilters.tsx
+
+client/src/hooks/useJobsIndex.ts
+
+Optional (recommended if easy):
+
+client/src/pages/app/JobDetailPage.tsx at /app/jobs/:id (read-only)
+
+Backend (ONLY IF MISSING)
+
+GET /api/p2/jobs (list)
+
+GET /api/p2/jobs/:id (detail)
+
+POST /api/p2/jobs/:id/close (optional; if not available, UI disables “Close”)
+
+If you already have different existing endpoints, reuse them and only add thin adapters.
+
+2) JOBS INDEX UI SPEC
+Table columns
+
+Status badge
+
+Title
+
+Portal distribution (chips): e.g. CanadaDirect / Bamfield / AdrenalineCanada
+
+Applications count
+
+Created date
+
+Actions: View, Close (Close only if allowed)
+
+Filters (top bar)
+
+Search: title / role
+
+Status: Draft / Open / Closed / Archived (use your actual status values)
+
+Portal: dropdown or multi-select (portal-scoped visibility)
+
+Empty state
+
+“No job postings match your filters.”
+
+Button: “Clear filters”
+
+3) DATA CONTRACT
+
+GET /api/p2/jobs query params:
+
+q
+
+status
+
+portalId (or portal filter mechanism)
+
+page, pageSize
+
+Response:
+
+{
+  ok: true,
+  jobs: Array<{
+    id: string,
+    title: string,
+    status: string,
+    created_at?: string,
+    portals?: Array<{ id: string, name: string, slug?: string }>,
+    application_count?: number
+  }>,
+  total?: number
+}
+
+
+Portal distribution must be derived from your existing distribution model (do not invent).
+
+4) SAFE ACTIONS
+View
+
+Always enabled
+
+Routes to /app/jobs/:id (or opens side sheet if you don’t want detail route yet)
+
+Close posting
+
+Only enabled if:
+
+status is “open”
+
+and endpoint exists
+
+Calls POST /api/p2/jobs/:id/close
+
+On success: toast + refetch
+
+If endpoint not implemented: disabled + tooltip “Not available”
+
+5) QA REQUIREMENTS
+
+/app/jobs renders without console errors
+
+Loading skeleton works
+
+Empty state works
+
+Filters work
+
+Application counts render as integers (or 0)
+
+No currency and no forbidden words
+
+Stable selectors:
+
+data-testid="jobs-index"
+
+data-testid="job-row"
+
+data-testid="job-status"
+
+STOP CONDITION
+
+After PROMPT 7:
+
+STOP
+
+Report:
+
+Files created/modified
+
+Endpoints used/created
+
+Screenshot of Jobs list
+
+Portal distribution field source (which table/join)
+
+After PROMPT 7
+
+Next will be:
+
+PROMPT 8 — Messaging (/app/messages)

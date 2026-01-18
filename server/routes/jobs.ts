@@ -29,6 +29,8 @@ router.get('/', async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const offset = parseInt(req.query.offset as string) || 0;
     const status = req.query.status as string;
+    const q = req.query.q as string;
+    const portalId = req.query.portalId as string;
 
     let whereClause = `WHERE j.tenant_id = $1`;
     const params: any[] = [ctx.tenant_id];
@@ -37,6 +39,16 @@ router.get('/', async (req: Request, res: Response) => {
       params.push(status);
       whereClause += ` AND j.status = $${params.length}`;
     }
+    
+    if (q) {
+      params.push(`%${q}%`);
+      whereClause += ` AND (j.title ILIKE $${params.length} OR j.role_category ILIKE $${params.length})`;
+    }
+    
+    if (portalId) {
+      params.push(portalId);
+      whereClause += ` AND EXISTS (SELECT 1 FROM cc_job_postings jp WHERE jp.job_id = j.id AND jp.portal_id = $${params.length})`;
+    }
 
     params.push(limit, offset);
 
@@ -44,7 +56,15 @@ router.get('/', async (req: Request, res: Response) => {
       SELECT 
         j.*,
         (SELECT COUNT(*) FROM cc_job_applications WHERE job_id = j.id) as total_applications,
-        (SELECT COUNT(*) FROM cc_job_postings WHERE job_id = j.id AND publish_state = 'published') as active_postings
+        (SELECT COUNT(*) FROM cc_job_postings WHERE job_id = j.id AND publish_state = 'published') as active_postings,
+        (SELECT json_agg(json_build_object(
+          'id', p.id,
+          'name', p.name,
+          'slug', p.slug
+        )) FROM cc_job_postings jp 
+          JOIN cc_portals p ON jp.portal_id = p.id 
+          WHERE jp.job_id = j.id
+        ) as portals
       FROM cc_jobs j
       ${whereClause}
       ORDER BY j.created_at DESC
@@ -57,8 +77,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({
       ok: true,
-      jobs: result.rows,
-      pagination: {
+      data: {
+        jobs: result.rows,
         total: parseInt(countResult.rows[0]?.total || '0'),
         limit,
         offset
@@ -104,7 +124,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json({
       ok: true,
-      job: result.rows[0]
+      data: { job: result.rows[0] }
     });
 
   } catch (error: any) {
@@ -326,6 +346,58 @@ router.patch('/:id', async (req: Request, res: Response) => {
     res.status(500).json({
       ok: false,
       error: 'Failed to update job'
+    });
+  }
+});
+
+router.post('/:id/close', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { id } = req.params;
+
+  if (!ctx?.tenant_id) {
+    return res.status(401).json({
+      ok: false,
+      error: { code: 'TENANT_REQUIRED', message: 'Tenant context required' }
+    });
+  }
+
+  try {
+    const existsResult = await serviceQuery(`
+      SELECT id, status FROM cc_jobs WHERE id = $1 AND tenant_id = $2
+    `, [id, ctx.tenant_id]);
+
+    if (existsResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: { code: 'JOB_NOT_FOUND', message: 'Job posting not found' }
+      });
+    }
+
+    const job = existsResult.rows[0];
+    if (job.status === 'closed') {
+      return res.status(400).json({
+        ok: false,
+        error: { code: 'ALREADY_CLOSED', message: 'Job posting is already closed' }
+      });
+    }
+
+    await serviceQuery(`
+      UPDATE cc_jobs 
+      SET status = 'closed', updated_at = now() 
+      WHERE id = $1 AND tenant_id = $2
+    `, [id, ctx.tenant_id]);
+
+    res.json({
+      ok: true,
+      data: { message: 'Job posting closed successfully' }
+    });
+
+  } catch (error: any) {
+    console.error('Close job error:', error);
+    res.status(500).json({
+      ok: false,
+      error: { code: 'INTERNAL', message: 'Failed to close job posting' }
     });
   }
 });
