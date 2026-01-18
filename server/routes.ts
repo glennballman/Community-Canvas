@@ -96,6 +96,8 @@ import qaRouter from "./routes/qa";
 import monetizationRouter from "./routes/monetization";
 import scmRouter from "./routes/scm";
 import drillsRouter from "./routes/drills";
+import { n3Router } from "./routes/n3";
+import devSeedN3Router from "./routes/dev-seed-n3";
 import publicJobsRouter from "./routes/public-jobs";
 import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
@@ -459,6 +461,14 @@ export async function registerRoutes(
 
   // Register P2.17 Emergency Drill Mode routes
   app.use('/api/drills', drillsRouter);
+
+  // N3 Service Run Monitor + Replan Engine (Patent CC-01)
+  app.use('/api/n3', n3Router);
+
+  // Dev seed for N3 testing (development only)
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/api/dev/seed', devSeedN3Router);
+  }
 
   // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
   app.get('/api/admin/presentations', (req, res) => res.redirect('/api/admin/cc_articles'));
