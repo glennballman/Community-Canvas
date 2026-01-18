@@ -1,0 +1,305 @@
+P-UI-05 — Review Step (Availability-Confirmed, Zero Personal Data)
+
+Paste this entire prompt directly into Replit.
+This is an implementation contract, not guidance.
+
+CONTEXT
+
+P-UI-01 through P-UI-04 ✅ complete
+
+Availability Search (P-UI-04) is the authoritative feasibility engine
+
+Cart items are only added from confirmed availability results
+
+Cart may include:
+
+Lodging
+
+Parking
+
+Marina
+
+Equipment
+
+Activities
+
+Cart status machine exists (publicReservationMachine.ts)
+
+NO personal data has been collected yet
+
+This is intentional and must remain true
+
+GOAL
+
+Implement the Review step at:
+
+/reserve/:portalSlug/:offerSlug/start/review
+
+
+This step allows users to:
+
+Review everything that is available for their selected dates
+
+Confirm scope, dates, quantities, constraints, and pricing
+
+See exact, concrete specifics for each item
+
+Decide whether they are ready to proceed to reservation
+
+Go back and adjust availability without penalty or data loss
+
+⚠️ This step must NOT request, infer, or store any personal information.
+
+NON-NEGOTIABLE RULES (READ CAREFULLY)
+1. Availability-First Invariant (ABSOLUTE)
+
+Availability must already be resolved
+
+This step does not run availability queries
+
+This step does not soft-hold anything
+
+This step does not block date changes
+
+This step does not collect identity, contact, or payment info
+
+2. Zero Personal Data
+
+❌ No name
+
+❌ No email
+
+❌ No phone
+
+❌ No login
+
+❌ No “continue to reserve” deception
+
+❌ No guest details
+
+❌ No account creation
+
+This is not checkout.
+This is trip confirmation.
+
+3. Language Rules
+
+Use “reserve / reservation” only
+
+Never use “book / booking / booked”
+
+Prices are allowed only because availability is confirmed
+
+No urgency, no countdowns, no dark patterns
+
+4. Cart Lock Awareness
+
+If cart status is submitted | completed | expired:
+
+Review is read-only
+
+Clear banner explaining why
+
+No mutation actions allowed
+
+PAGE PURPOSE (MENTAL MODEL)
+
+“Here is exactly what will be reserved if you choose to proceed.”
+
+Not:
+
+“Please give us your details.”
+
+PAGE LAYOUT
+┌────────────────────────────────────────────────────────────┐
+│ Review Your Reservation                                    │
+│ Everything below is available for your selected dates      │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  ┌────────────────────────────┐  ┌─────────────────────┐ │
+│  │ Reservation Items           │  │ Summary             │ │
+│  │                              │  │                     │ │
+│  │ [Item Card]                  │  │ Dates               │ │
+│  │ Lodging: Inlet View Cabin    │  │ Jan 15 → Jan 18     │ │
+│  │ Guests: 2                    │  │                     │ │
+│  │                              │  │ Items               │ │
+│  │ [Item Card]                  │  │ 3 total             │ │
+│  │ Marina: Slip A-03             │  │                     │ │
+│  │ Max Length: 40ft             │  │ Subtotal            │ │
+│  │ Power: 30A                   │  │ $1,240.00           │ │
+│  │                              │  │                     │ │
+│  │ [Item Card]                  │  │ Taxes / Fees        │ │
+│  │ Parking: Stall B-07           │  │ $148.80             │ │
+│  │ Covered                       │  │                     │ │
+│  └────────────────────────────┘  └─────────────────────┘ │
+│                                                            │
+│  ← Change Dates / Availability        Continue →            │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+
+FILES TO CREATE
+Frontend
+client/src/public/pages/steps/ReviewStep.tsx
+client/src/public/components/ReviewItemCard.tsx
+client/src/public/components/ReviewSummary.tsx
+client/src/public/components/ReviewLockedBanner.tsx
+
+DATA SOURCES (READ-ONLY)
+Cart
+
+usePublicCart()
+
+cart
+
+items
+
+status
+
+Pricing
+
+Use values already present on cart items
+
+Do not re-price
+
+Do not recompute availability
+
+COMPONENT SPECIFICATIONS
+ReviewStep.tsx
+
+Responsibilities:
+
+Load cart via usePublicCart
+
+Handle loading / error / locked states
+
+Render:
+
+List of ReviewItemCard
+
+ReviewSummary
+
+Provide navigation:
+
+Back to /start/search
+
+Forward to /start/confirm (P-UI-06)
+
+data-testid="review-step"
+
+ReviewItemCard.tsx
+
+Displays exact availability-confirmed facts:
+
+Per item:
+
+Type (lodging / parking / marina / equipment / activity)
+
+Asset name / code
+
+Date range
+
+Capacity constraints (guests, length, size, qty)
+
+Any required features (power, water, accessibility)
+
+Price breakdown (allowed here)
+
+❌ No edits
+❌ No forms
+❌ No identity fields
+
+data-testid="review-item-card"
+
+ReviewSummary.tsx
+
+Displays:
+
+Date range
+
+Number of items
+
+Subtotal
+
+Taxes / fees
+
+Total
+
+⚠️ Copy must clearly say:
+
+“These totals reflect currently available inventory.”
+
+data-testid="review-summary"
+
+ReviewLockedBanner.tsx
+
+Shown when cart is locked.
+
+Text (exact intent, wording flexible):
+
+“This reservation is no longer editable. Availability and pricing are shown for reference only.”
+
+data-testid="review-locked-banner"
+
+ALLOWED ACTIONS
+
+✅ Navigate back to availability search
+✅ Review confirmed items
+✅ Proceed to next step (P-UI-06)
+
+FORBIDDEN ACTIONS
+
+❌ Asking for email
+❌ Asking for name
+❌ Asking for guest details
+❌ Asking for payment
+❌ Soft-holding inventory
+❌ Re-running availability
+❌ Changing prices
+❌ Friction before review
+
+QA REQUIREMENTS
+
+ Review renders with populated cart
+
+ No personal data fields exist
+
+ Back navigation returns to availability search
+
+ Locked carts are read-only
+
+ Prices visible only here and later
+
+ Terminology enforcement passes
+
+ No availability queries executed
+
+ Stable selectors present
+
+STOP CONDITION
+
+After P-UI-05:
+
+STOP
+
+Report:
+
+Files created
+
+Screenshots of Review step
+
+Confirmation: no personal data collected
+
+Confirmation: availability is treated as authoritative
+
+NEXT PROMPT (DO NOT IMPLEMENT YET)
+
+P-UI-06 — Confirmation + Identity Capture (Only After Explicit User Intent)
+This is the first point where personal data may be requested.
+
+✅ This prompt now fully encodes your philosophy:
+
+Availability before identity
+
+Feasibility before commitment
+
+Planning before transaction
