@@ -8,6 +8,7 @@ import { PublicLoadingState } from "../components/PublicLoadingState";
 import { PublicErrorState } from "../components/PublicErrorState";
 import { ReserveStepHeader } from "../components/ReserveStepHeader";
 import { CartPanel } from "../components/CartPanel";
+import { CrossSellRail } from "../components/CrossSellRail";
 import { publicCopy } from "../publicCopy";
 import { publicApi } from "../api/publicApi";
 import { usePublicCart } from "../state/usePublicCart";
@@ -250,7 +251,7 @@ export default function ReserveShell() {
             </Card>
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-4">
             <CartPanel
               items={items}
               status={status}
@@ -259,6 +260,15 @@ export default function ReserveShell() {
               onRemoveItem={handleRemoveItem}
               onAddAnother={isLocked(status) ? undefined : handleAddAnother}
             />
+            {auth && hasItems && (
+              <CrossSellRail
+                portalId={auth.portalId}
+                cartId={auth.cartId}
+                offerId={offerSlug}
+                cartItems={items}
+                locked={isLocked(status)}
+              />
+            )}
           </div>
         </div>
       </div>

@@ -20,6 +20,7 @@ import {
 } from "../state/publicCarryForward";
 import { PublicAuth } from "../state/publicTokenStore";
 import { PublicCartStatus, isLocked } from "../state/publicReservationMachine";
+import { PrefillSearchIntent } from "../state/publicPrefillSearch";
 
 interface AvailabilitySearchContext {
   auth: PublicAuth | null;
@@ -29,11 +30,12 @@ interface AvailabilitySearchContext {
   refetch: () => Promise<void>;
 }
 
-interface AvailabilitySearchProps {
+export interface AvailabilitySearchProps {
   portalSlug?: string;
   offerSlug?: string;
   offerId?: string;
   offerMetadata?: any;
+  initialPrefill?: PrefillSearchIntent | null;
 }
 
 export function AvailabilitySearch({
@@ -41,6 +43,7 @@ export function AvailabilitySearch({
   offerSlug,
   offerId,
   offerMetadata,
+  initialPrefill,
 }: AvailabilitySearchProps) {
   const navigate = useNavigate();
   const context = useOutletContext<AvailabilitySearchContext>();

@@ -1,0 +1,335 @@
+P-UI-07 — CrossSellRail (Deterministic Ordering + Suggested Windows + Add Another Item)
+
+Paste this entire prompt directly into Replit.
+This is an implementation contract.
+
+CONTEXT
+
+P-UI-01..06 ✅ complete
+
+AvailabilitySearch (P-UI-04) stores carry-forward candidates in sessionStorage via publicCarryForward
+
+You enhanced candidates: facilityId, itemType, suggestedWindow, displayName, thumbnail, whyShown
+
+The system is availability-first, not checkout-first
+
+Cross-sell must feel like trip feasibility completion, not upsell
+
+GOAL
+
+Implement a CrossSellRail that appears in ReserveShell (right side) and helps users complete the trip by suggesting compatible items in a deterministic order, based on:
+
+Entry-point type (lodging / parking / marina / activity / equipment)
+
+Current cart contents
+
+Carry-forward candidates (sessionStorage)
+
+Suggested windows (date range alignment)
+
+Users can:
+
+See suggested add-ons
+
+Click “Check availability” (routes back to Search with prefilled type + dates)
+
+Add additional items using the existing AvailabilitySearch flow
+
+No personal data collection. No payment prompts. No dark patterns.
+
+NON-NEGOTIABLE RULES
+
+No “upsell” language. This is “Complete your trip”.
+
+Deterministic ordering must be enforced (same inputs → same ordering).
+
+Never suggest items already in the cart.
+
+CrossSellRail never adds items directly. It only routes to Search with prefilled filters.
+
+Must respect lock state:
+
+If cart is locked → CrossSellRail becomes read-only and shows banner “This reservation can’t be changed.”
+
+“reserve / reservation” only.
+
+Must show loading/empty states (even if suggestions list is empty).
+
+WHERE IT APPEARS
+
+In ReserveShell right rail:
+
+When cart has 0 items: show CartPanel only (no CrossSellRail)
+
+When cart has ≥ 1 item AND not locked: show CartPanel + CrossSellRail beneath it
+
+When locked: CrossSellRail shows disabled state
+
+FILES TO CREATE
+Frontend
+client/src/public/components/CrossSellRail.tsx
+client/src/public/components/CrossSellCard.tsx
+client/src/public/state/publicCrossSellOrdering.ts
+client/src/public/state/publicPrefillSearch.ts
+
+Modify
+client/src/public/pages/ReserveShell.tsx
+client/src/public/pages/steps/SearchStep.tsx
+client/src/public/publicCopy.ts
+
+DATA INPUTS
+
+CrossSellRail uses:
+
+usePublicCart() → cart + items + status
+
+publicCarryForward.getCarryForwardCandidates(portalId, offerId) (or offerSlug)
+
+entry point type (derive from:
+
+the first cart item type OR
+
+offer metadata if available OR
+
+stored entry point type from P-UI-04)
+
+DETERMINISTIC ORDERING RULES
+
+Create publicCrossSellOrdering.ts:
+
+Category priority by entry point type
+
+If primary is lodging:
+
+parking
+
+marina
+
+activity
+
+equipment
+
+If primary is parking:
+
+lodging
+
+marina
+
+activity
+
+equipment
+
+If primary is marina:
+
+lodging
+
+parking
+
+equipment
+
+activity
+
+If primary is activity:
+
+lodging
+
+parking
+
+equipment
+
+marina
+
+If primary is equipment:
+
+lodging
+
+activity
+
+parking
+
+marina
+
+Tie-breakers (must be stable)
+
+Within same category:
+
+Candidates with suggestedWindow that matches cart window exactly
+
+Candidates with same facilityId as current cart items
+
+Alphabetical by displayName
+
+Stable fallback: by itemType string then offerId/offerSlug
+
+Exclusions
+
+Exclude any candidate whose itemType already exists in cart when it’s inherently single-instance (configure below)
+
+Always exclude exact same offerId if present
+
+Single-instance categories (default):
+
+lodging (usually single primary)
+
+marina (often single slip)
+But do not hard-code assumptions that prevent adding multiple equipment items.
+
+Implement with a configurable map:
+
+const SINGLE_INSTANCE: Record<string, boolean> = {
+  lodging: true,
+  marina: true,
+  parking: false,
+  activity: false,
+  equipment: false,
+};
+
+
+If already in cart and SINGLE_INSTANCE true → do not suggest.
+
+PREFILL SEARCH (ROUTING, NOT MUTATION)
+
+Create publicPrefillSearch.ts to store a “prefill intent” in sessionStorage:
+
+export type PrefillSearchIntent = {
+  itemType: string;
+  suggestedWindow?: { start: string; end: string };
+  facilityId?: string;
+  displayName?: string;
+  whyShown?: string;
+};
+
+export function setPrefillIntent(portalId: string, cartId: string, intent: PrefillSearchIntent) { ... }
+export function getPrefillIntent(portalId: string, cartId: string): PrefillSearchIntent | null { ... }
+export function clearPrefillIntent(portalId: string, cartId: string) { ... }
+
+Flow
+
+CrossSellCard “Check availability”:
+
+setPrefillIntent(portalId, cartId, intent)
+
+Navigate to /reserve/:portalSlug/:offerSlug/start/search
+
+SearchStep / AvailabilitySearch on load:
+
+read prefill intent
+
+pre-select type + dates (suggestedWindow)
+
+show a small banner:
+
+“Showing availability for: {displayName}”
+
+clear intent after first render
+
+Important: we are not inventing new backend queries. This just pre-fills the existing AvailabilitySearch inputs.
+
+UI SPEC
+CrossSellRail.tsx
+
+Title: “Complete your trip”
+
+Subtext: “Check availability for items that commonly pair with your plan.”
+
+List of up to 4 suggestions (top 4 after ordering)
+
+Empty state:
+
+“No additional suggestions right now.”
+
+Locked state banner:
+
+“This reservation can’t be changed.”
+
+Selectors:
+
+data-testid="cross-sell-rail"
+
+CrossSellCard.tsx
+
+Shows:
+
+thumbnail (optional)
+
+displayName
+
+whyShown (small “trust label”, e.g. “Pairs well with lodging dates”)
+
+suggestedWindow (formatted range) if present
+
+button: “Check availability”
+
+Selectors:
+
+data-testid="cross-sell-card"
+
+data-testid="cross-sell-action"
+
+MODIFY ReserveShell.tsx
+
+Under CartPanel, render:
+
+{items.length > 0 && (
+  <CrossSellRail
+    portalId={auth.portalId}
+    cartId={auth.cartId}
+    offerId={offerIdOrSlug}
+    cartItems={items}
+    locked={isLocked(status)}
+  />
+)}
+
+MODIFY SearchStep / AvailabilitySearch PREFILL
+
+In SearchStep (or AvailabilitySearch), add:
+
+read prefill intent and apply to:
+
+entry point type selection (if your inputs expose it)
+
+suggested window (start/end)
+
+show banner data-testid="prefill-banner"
+
+If your AvailabilityInputs currently doesn’t let user change itemType directly, add a simple selector:
+
+Item type dropdown when “Add another item” mode is active
+
+Default to the entry point type unless prefill says otherwise
+
+QA REQUIREMENTS
+
+ CrossSellRail appears when cart has ≥ 1 item
+
+ Deterministic ordering is stable across refresh
+
+ Suggestions exclude items already in cart (and single-instance rules apply)
+
+ “Check availability” sets prefill and routes to Search
+
+ Search reads prefill and applies suggested dates/type
+
+ Locked cart disables CrossSellRail actions and shows banner
+
+ No direct add to cart from CrossSellRail
+
+ No forbidden terminology; CI passes
+
+STOP CONDITION
+
+After P-UI-07:
+
+STOP
+
+Report:
+
+Files created/modified
+
+Screenshot of CrossSellRail
+
+Proof ordering is deterministic (list the final ordered candidates)
+
+Proof prefill works (banner + dates prefilled)
+
+Locked state behavior confirmed

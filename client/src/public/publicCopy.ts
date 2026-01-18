@@ -143,6 +143,14 @@ export const publicCopy = {
     cannotChange: "This reservation can't be changed.",
   },
 
+  crossSell: {
+    title: "Complete your trip",
+    subtitle: "Check availability for items that commonly pair with your plan.",
+    empty: "No additional suggestions right now.",
+    checkAvailability: "Check availability",
+    showingFor: (name: string) => `Showing availability for: ${name}`,
+  },
+
   availability: {
     searchButton: "Search Availability",
     checkIn: "Check-in",
