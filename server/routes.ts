@@ -108,6 +108,7 @@ import { p2DashboardRouter } from "./routes/p2-dashboard";
 import { p2ReservationsRouter } from "./routes/p2-reservations";
 import { p2ServiceRunsRouter } from "./routes/p2-service-runs";
 import p2ConversationsRouter from "./routes/p2-conversations";
+import p2ParkingRouter from "./routes/p2-parking";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -312,6 +313,9 @@ export async function registerRoutes(
   
   // P2 conversations API (tenant-scoped unified inbox)
   app.use('/api/p2/conversations', p2ConversationsRouter);
+  
+  // P2 parking API (plan view, availability)
+  app.use('/api/p2/parking', p2ParkingRouter);
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);

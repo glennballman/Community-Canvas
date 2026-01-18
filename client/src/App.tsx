@@ -83,6 +83,7 @@ import SystemExplorerPage from './pages/app/SystemExplorerPage';
 // Pages - V3 Placeholders
 import OpsBoardPage from './pages/app/OpsBoardPage';
 import ParkingPage from './pages/app/ParkingPage';
+import ParkingPlanPage from './pages/app/ParkingPlanPage';
 import MarinaPage from './pages/app/MarinaPage';
 import HospitalityPage from './pages/app/HospitalityPage';
 import EnforcementPage from './pages/app/EnforcementPage';
@@ -265,6 +266,7 @@ export default function App() {
                 
                 {/* V3 Reservations */}
                 <Route path="parking" element={<ParkingPage />} />
+                <Route path="parking/plan" element={<ParkingPlanPage />} />
                 <Route path="marina" element={<MarinaPage />} />
                 <Route path="hospitality" element={<HospitalityPage />} />
                 
