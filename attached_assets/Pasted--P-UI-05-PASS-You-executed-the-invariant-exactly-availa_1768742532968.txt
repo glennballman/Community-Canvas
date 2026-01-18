@@ -1,0 +1,339 @@
+✅ P-UI-05 = PASS.
+You executed the invariant exactly: availability-first, zero personal data, cart-only truth.
+
+Now we do the first moment where anything personal is allowed — but only after the user explicitly chooses to proceed.
+
+Below is the finalized, Replit-ready contract prompt:
+
+P-UI-06 — Confirm Intent + Minimal Identity + Submit (Token Rotation + Old Token Invalidation)
+
+Paste this entire prompt directly into Replit.
+This is an implementation contract.
+
+CONTEXT
+
+P-UI-01..05 ✅ complete
+
+Review step shows availability-confirmed items + pricing
+
+No personal data collected so far (by design)
+
+ReserveShell owns auth context and cart loading via usePublicCart()
+
+Cart status machine exists (active | submitted | completed | expired)
+
+Forbidden words CI exists and must continue to pass
+
+GOAL
+
+Implement the Confirm step at:
+
+/reserve/:portalSlug/:offerSlug/start/confirm
+
+
+This step is the first and only place where we request minimal personal details, and only because the user has explicitly chosen to proceed.
+
+It must:
+
+Ask for the minimum info needed to finalize the reservation
+
+Submit the cart
+
+Handle token rotation correctly
+
+Invalidate old token / auth context on success
+
+Route to Confirmation page
+
+NON-NEGOTIABLE RULES
+1) Explicit Intent Gate (ABSOLUTE)
+
+User sees the Review step first.
+The Confirm step must open with:
+
+“You’re about to place a reservation for the items shown.”
+
+No personal data is requested until this point.
+
+2) Minimal Data Only
+
+Collect only:
+
+Email (required)
+
+Full name (optional unless backend requires)
+
+Phone (optional unless backend requires)
+
+Also allow:
+
+Optional notes (single textarea) only if it already exists in backend
+Otherwise omit notes entirely (no UI-only persistence at this stage).
+
+No account creation. No login. No marketing consent prompts.
+
+3) Submit Must Rotate Token and Overwrite Stored Auth
+
+On success:
+
+Backend returns new access token (and/or new cart token)
+
+UI must:
+
+overwrite auth context in publicTokenStore (setAuthContext())
+
+ensure the old token is no longer used
+
+redirect to confirmation route using the new token where applicable
+
+4) Old Token Invalidation Handling
+
+After submit:
+
+Any attempt to use old token should show a safe error:
+
+“This reservation link is no longer active. Use your most recent confirmation link.”
+
+5) Lock Awareness
+
+If cart is submitted | completed | expired, Confirm is read-only:
+
+Show locked banner
+
+Disable submit
+
+Offer navigation to status page if token exists
+
+6) Language + Pricing
+
+“reserve / reservation” only
+
+Prices may appear in confirm summary as “Finance context”
+
+No currency anywhere else
+
+FILES TO CREATE
+Frontend
+client/src/public/pages/steps/ConfirmStep.tsx
+client/src/public/components/ConfirmForm.tsx
+client/src/public/components/SubmitConfirmPanel.tsx
+client/src/public/components/ConfirmFinanceSummary.tsx
+client/src/public/state/usePublicSubmitReservation.ts
+
+Modify
+client/src/public/routes/PublicReserveRoutes.tsx  (add /start/confirm)
+client/src/public/publicCopy.ts                 (confirm copy + errors)
+client/src/public/pages/ReserveShell.tsx         (ensure confirm step appears in step nav)
+client/src/public/api/publicApi.ts               (ensure submit endpoint method exists)
+client/src/public/state/publicTokenStore.ts      (ensure overwrite-only auth set + clear)
+
+ROUTES
+
+Add:
+
+/start/confirm → ConfirmStep
+Update step nav order:
+
+Search → Details (if still exists) → Review → Confirm
+
+⚠️ If you currently have DetailsStep but it is not used for personal data, it can remain optional. Confirm is the only identity capture.
+
+API CONTRACT (NO INVENTION)
+
+Use existing endpoint (one of these likely exists already):
+
+publicApi.submitCart(...)
+or
+
+publicApi.submitConfirm(...)
+or
+
+publicApi.confirm(...)
+
+Do not create new backend endpoints unless missing.
+
+Submit request must include:
+
+portalId
+
+cartId
+
+accessToken
+
+email
+
+optional: fullName, phone, notes
+
+Submit response must return:
+
+ok: true
+
+a rotated token (new access token OR new reservation token)
+
+a status indicating submitted/completed
+
+a reference usable for Confirmation route
+
+If response does not contain a new token, treat as failure (do not clear old auth).
+
+IMPLEMENTATION DETAILS
+1) ConfirmStep.tsx
+
+Loads cart via usePublicCart
+
+Derives status via deriveCartStatus
+
+If missing auth → error state + resume/start over
+
+If locked → render locked banner + disable submit
+
+Layout:
+
+Left: ConfirmForm + SubmitConfirmPanel
+
+Right: ConfirmFinanceSummary (totals only)
+
+Selectors:
+
+data-testid="confirm-step"
+
+2) ConfirmForm.tsx
+
+Fields:
+
+Email (required)
+
+Full name (optional)
+
+Phone (optional)
+
+Validation:
+
+email required + basic regex
+
+optional fields: validate if present
+
+No marketing checkboxes.
+
+Selectors:
+
+data-testid="confirm-email"
+
+data-testid="confirm-name"
+
+data-testid="confirm-phone"
+
+3) SubmitConfirmPanel.tsx
+
+Primary button:
+
+“Place reservation”
+
+On click:
+
+call submit mutation
+
+show loading state
+
+handle envelope errors (inline + toast ok)
+
+On success:
+
+overwrite auth context with new token
+
+refetch cart
+
+route to:
+
+/reserve/confirmation/:token (if token is returned)
+
+otherwise /reserve/status/:token
+
+otherwise show a “Submitted” state with link to Resume
+
+Selectors:
+
+data-testid="confirm-submit"
+
+4) Token Rotation / Overwrite Rules (CRITICAL)
+
+Implement in usePublicSubmitReservation.ts:
+
+Pseudo:
+
+const res = await publicApi.submitCart(payload)
+if (!res.ok) return res
+
+if (!res.accessToken && !res.token) {
+  return { ok:false, error:{ code:"INVALID_RESPONSE", message:"Missing token" } }
+}
+
+// overwrite-only
+publicTokenStore.setAuthContext({
+  ...existingAuth,
+  accessToken: res.accessToken ?? existingAuth.accessToken,
+  cartId: res.cartId ?? existingAuth.cartId,
+  portalId: existingAuth.portalId
+})
+
+// Optional: store lastConfirmationToken for deep link
+sessionStorage.setItem("public:lastConfirmationToken", res.token ?? res.accessToken)
+
+return res
+
+
+Also add:
+
+publicTokenStore.clearAuthContext() helper for “Start over”
+
+CONFIRMATION PAGE UPDATE (MINIMAL)
+
+Update ConfirmationPage.tsx and/or ReservationStatusPage.tsx to:
+
+Detect token invalidation errors and show a “use most recent link” message
+
+Provide:
+
+“Resume reservation” button
+
+“Start a new reservation” button
+
+No personal data shown on confirmation unless backend provides it safely.
+
+QA REQUIREMENTS
+
+ Confirm route renders: /reserve/:portalSlug/:offerSlug/start/confirm
+
+ No personal data requested before Confirm step
+
+ Email required validation works
+
+ Submit calls correct public API endpoint
+
+ Success overwrites auth token (rotation)
+
+ Old token no longer used (verify by forcing status fetch using old token)
+
+ Redirect to Confirmation works
+
+ Locked cart disables submit and shows banner
+
+ Forbidden words check passes
+
+STOP CONDITION
+
+After P-UI-06:
+
+STOP
+
+Report:
+
+Files created/modified
+
+Which submit endpoint was used
+
+Evidence token rotation works (what changed in storage)
+
+Screenshot confirm + confirmation page
+
+Confirm old token invalid UX is safe

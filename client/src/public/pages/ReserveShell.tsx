@@ -24,8 +24,9 @@ import {
 } from "../state/publicReservationMachine";
 
 function deriveCurrentStep(pathname: string): ReservationStep {
-  if (pathname.includes("/details")) return "details";
+  if (pathname.includes("/confirm")) return "confirm";
   if (pathname.includes("/review")) return "review";
+  if (pathname.includes("/details")) return "details";
   return "search";
 }
 

@@ -116,9 +116,9 @@ export function formatExpirationTime(seconds: number | null): string {
 /**
  * Reservation flow steps
  */
-export type ReservationStep = "search" | "details" | "review";
+export type ReservationStep = "search" | "details" | "review" | "confirm";
 
-export const RESERVATION_STEPS: ReservationStep[] = ["search", "details", "review"];
+export const RESERVATION_STEPS: ReservationStep[] = ["search", "details", "review", "confirm"];
 
 /**
  * Get step index
@@ -148,6 +148,11 @@ export function canNavigateToStep(
   
   // Review requires at least one item
   if (targetStep === "review" && !hasItems) {
+    return false;
+  }
+  
+  // Confirm requires at least one item
+  if (targetStep === "confirm" && !hasItems) {
     return false;
   }
   

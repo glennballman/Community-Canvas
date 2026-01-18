@@ -7,6 +7,7 @@ import ConfirmationPage from "../pages/ConfirmationPage";
 import SearchStep from "../pages/steps/SearchStep";
 import DetailsStep from "../pages/steps/DetailsStep";
 import ReviewStep from "../pages/steps/ReviewStep";
+import ConfirmStep from "../pages/steps/ConfirmStep";
 
 /**
  * Public reservation routes - no authentication required.
@@ -14,9 +15,10 @@ import ReviewStep from "../pages/steps/ReviewStep";
  * Routes:
  * - /reserve/:portalSlug/:offerSlug → OfferLandingPage (entry-point)
  * - /reserve/:portalSlug/:offerSlug/start → ReserveShell (step router)
- *   - /start/search → SearchStep (placeholder)
- *   - /start/details → DetailsStep (placeholder)
- *   - /start/review → ReviewStep (placeholder)
+ *   - /start/search → SearchStep
+ *   - /start/details → DetailsStep
+ *   - /start/review → ReviewStep
+ *   - /start/confirm → ConfirmStep (identity capture + submit)
  * - /reserve/resume → ResumePage
  * - /reserve/status/:token → ReservationStatusPage
  * - /reserve/confirmation/:token → ConfirmationPage
@@ -33,6 +35,7 @@ export function PublicReserveRoutes() {
         <Route path="search" element={<SearchStep />} />
         <Route path="details" element={<DetailsStep />} />
         <Route path="review" element={<ReviewStep />} />
+        <Route path="confirm" element={<ConfirmStep />} />
       </Route>
     </Routes>
   );

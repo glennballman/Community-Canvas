@@ -87,6 +87,18 @@ export const publicCopy = {
     contactInfo: "If you have questions, please contact the operator.",
   },
 
+  confirm: {
+    title: "Confirm Your Reservation",
+    subtitle: "You're about to place a reservation for the items shown.",
+    contactInfo: "Contact Information",
+    minimalDataNotice: "We only collect the minimum information needed to confirm your reservation. No account will be created.",
+    placeReservation: "Place Reservation",
+    submitting: "Submitting...",
+    termsNotice: "By placing this reservation, you agree to the operator's terms and conditions.",
+    submitSuccess: "Your reservation has been submitted successfully.",
+    invalidTokenMessage: "This reservation link is no longer active. Use your most recent confirmation link.",
+  },
+
   cart: {
     yourReservation: "Your Reservation",
     summary: "Summary",
@@ -113,6 +125,7 @@ export const publicCopy = {
     search: "Search",
     details: "Details",
     review: "Review",
+    confirm: "Confirm",
   },
 
   lock: {

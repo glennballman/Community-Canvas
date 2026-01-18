@@ -89,7 +89,7 @@ export const publicApi = {
     ),
 
   submitCart: (body: any) =>
-    publicFetch<{ cartId: string; status: string; accessToken: string }>(
+    publicFetch<{ cartId: string; status: string; accessToken: string; token?: string; reservationId?: string }>(
       "/api/p2/public/cart/submit",
       { method: "POST", body }
     ),
