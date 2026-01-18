@@ -56,8 +56,8 @@ export function AvailabilitySearch({
   const locked = status ? isLocked(status) : false;
 
   const handleSearch = useCallback(async (query: AvailabilityQuery) => {
-    if (!auth) {
-      setSearchError("No authentication context available.");
+    if (!portalSlug) {
+      setSearchError("Portal not found.");
       return;
     }
 
@@ -66,32 +66,16 @@ export function AvailabilitySearch({
     setResults([]);
 
     try {
-      const apiQuery: Record<string, any> = {
-        portalId: auth.portalId,
-        offerId: offerId || offerSlug,
+      // Build availability query matching backend contract
+      const apiQuery = {
+        portalSlug,
+        startAt: query.startDate ? format(query.startDate, "yyyy-MM-dd") : "",
+        endAt: query.endDate ? format(query.endDate, "yyyy-MM-dd") : "",
+        assetType: entryPointType === "lodging" ? "unit" : 
+                   entryPointType === "parking" ? "parking_stall" :
+                   entryPointType === "marina" ? "marina_slip" : undefined,
+        assetId: offerId,
       };
-
-      if (query.startDate) {
-        apiQuery.startAt = format(query.startDate, "yyyy-MM-dd");
-      }
-      if (query.endDate) {
-        apiQuery.endAt = format(query.endDate, "yyyy-MM-dd");
-      }
-      if (query.guests) {
-        apiQuery.guests = query.guests;
-      }
-      if (query.quantity) {
-        apiQuery.quantity = query.quantity;
-      }
-      if (query.vehicleLength) {
-        apiQuery.vehicleLength = query.vehicleLength;
-      }
-      if (query.vesselLength) {
-        apiQuery.vesselLength = query.vesselLength;
-      }
-      if (query.power && query.power !== "none") {
-        apiQuery.power = query.power;
-      }
 
       const result = await publicApi.availability(apiQuery);
 
@@ -118,7 +102,7 @@ export function AvailabilitySearch({
       setIsSearching(false);
       setHasSearched(true);
     }
-  }, [auth, offerId, offerSlug]);
+  }, [portalSlug, offerId, entryPointType]);
 
   const handleAddToCart = useCallback(async (result: AvailabilityResult) => {
     if (!auth || locked) return;

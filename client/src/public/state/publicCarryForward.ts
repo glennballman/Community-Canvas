@@ -11,7 +11,13 @@ export interface CarryForwardCandidate {
   entryPointType: EntryPointType;
   offerId?: string;
   offerSlug?: string;
+  facilityId?: string;
+  itemType?: string;
+  suggestedWindow?: { start: string; end: string };
+  displayName?: string;
+  thumbnail?: string;
   hint: string;
+  whyShown?: string;
 }
 
 const STORAGE_KEY_PREFIX = "cc_carry_forward_";

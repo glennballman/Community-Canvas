@@ -94,8 +94,16 @@ export const publicApi = {
       { method: "POST", body }
     ),
 
-  availability: (q: any) =>
-    publicFetch<any>("/api/p2/public/availability", { method: "GET", query: q }),
+  availability: (q: { portalSlug: string; startAt: string; endAt: string; assetType?: string; assetId?: string }) =>
+    publicFetch<any>(`/api/public/cc_portals/${q.portalSlug}/availability`, { 
+      method: "GET", 
+      query: { 
+        start: q.startAt, 
+        end: q.endAt,
+        asset_type: q.assetType,
+        asset_id: q.assetId,
+      } 
+    }),
 
   confirm: (body: any) =>
     publicFetch<any>("/api/p2/public/reservations/confirm", {
