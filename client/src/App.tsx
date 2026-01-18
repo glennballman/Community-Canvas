@@ -31,6 +31,7 @@ import { PublicPortalLayout } from './layouts/PublicPortalLayout';
 import { TenantPicker } from './pages/app/TenantPicker';
 import { Dashboard } from './pages/app/Dashboard';
 import DashboardPage from './pages/app/DashboardPage';
+import ReservationsIndexPage from './pages/app/ReservationsIndexPage';
 
 // Pages - App Community
 import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
@@ -351,7 +352,7 @@ export default function App() {
                 {/* Business tenant routes - new schema-aligned paths */}
                 <Route path="assets" element={<InventoryPage />} />
                 <Route path="assets/:id" element={<InventoryItemDetail />} />
-                <Route path="reservations" element={<ReservationsPage />} />
+                <Route path="reservations" element={<ReservationsIndexPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 
                 {/* Redirects from old paths */}

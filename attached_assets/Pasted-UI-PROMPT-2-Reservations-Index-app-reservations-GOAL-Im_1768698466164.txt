@@ -1,0 +1,218 @@
+UI PROMPT 2 — Reservations Index (/app/reservations)
+GOAL
+
+Implement /app/reservations list view for staff ops:
+
+Filterable table
+
+Status badges
+
+Date range
+
+Guest name
+
+Unit / asset assigned
+
+Quick actions: View, Check-in, Check-out (actions can be disabled if endpoint not available)
+
+NON-NEGOTIABLE RULES
+
+Use “reservation” terminology only.
+
+No paywalls, no upgrade language.
+
+No currency unless you are explicitly in a finance context (we are not here).
+
+Must show: loading, empty, error state.
+
+Respect P2 envelope { ok, error?, ...data }.
+
+Append-only artifacts are read-only in UI.
+
+1) FILES TO CREATE / UPDATE
+Frontend
+
+client/src/pages/app/ReservationsIndexPage.tsx
+
+client/src/components/reservations/ReservationsTable.tsx
+
+client/src/components/reservations/ReservationStatusBadge.tsx
+
+client/src/components/reservations/ReservationFilters.tsx
+
+client/src/hooks/useReservationsIndex.ts
+
+Backend (ONLY IF MISSING)
+
+If these endpoints do not already exist, add minimal read endpoints:
+
+GET /api/p2/reservations (list + filters)
+
+POST /api/p2/reservations/:id/check-in (optional; can stub as not implemented)
+
+POST /api/p2/reservations/:id/check-out (optional; can stub as not implemented)
+
+If the action endpoints are not available, the UI must show the buttons disabled with tooltip “Not available”.
+
+2) RESERVATIONS INDEX UI SPEC
+Columns (table)
+
+Status (badge)
+
+Dates (check-in → check-out)
+
+Guest
+
+Unit / Asset
+
+Confirmation # (if present)
+
+Actions: View / Check-in / Check-out
+
+Filters (top bar)
+
+Search (guest name / confirmation #)
+
+Status dropdown: all / confirmed / pending / cancelled / completed
+
+Date range: start / end (optional)
+
+“Upcoming only” toggle (default ON)
+
+Empty states
+
+“No reservations match your filters.”
+
+Provide “Clear filters” button.
+
+3) FRONTEND IMPLEMENTATION (COMPONENT CONTRACTS)
+useReservationsIndex.ts
+
+Inputs: { q, status, startDate, endDate, upcomingOnly, page, pageSize }
+
+Calls: GET /api/p2/reservations?...
+
+Returns:
+
+reservations[]
+
+total
+
+page, pageSize
+
+isLoading, error
+
+refetch()
+
+Data shape (tolerant)
+
+UI must tolerate either PMS-style or generic fields by mapping:
+
+For each row, map:
+
+id
+
+status
+
+guestName from guest_name || primary_guest_name || guest?.name || "Guest"
+
+checkIn from check_in_date || start_at
+
+checkOut from check_out_date || end_at
+
+unitName from unit_name || unit?.name || asset_name || "—"
+
+confirmationNumber from confirmation_number || confirmationNumber || null
+
+4) BACKEND LIST ENDPOINT (ONLY IF MISSING)
+GET /api/p2/reservations
+
+Must:
+
+Return { ok: true, reservations: [], total, page, pageSize }
+
+Apply tenant scoping using existing session/GUC logic (same as dashboard)
+
+Filters:
+
+q search (guest name / confirmation)
+
+status
+
+startDate, endDate
+
+upcomingOnly (default true)
+
+Minimal SQL approach (example table: cc_pms_reservations):
+
+Filter out cancelled/completed if upcomingOnly
+
+Sort by check_in_date ascending
+
+Paginate
+
+If your schema differs, implement with the closest equivalent table already used by Dashboard.
+
+5) QUICK ACTIONS (UI BEHAVIOR)
+View
+
+Always enabled
+
+Navigates to /app/reservations/:id
+
+Check-in / Check-out
+
+Enabled only when:
+
+status is appropriate (ex: confirmed → allow check-in, checked-in → allow check-out)
+
+AND endpoint exists
+
+If endpoint missing: disabled + tooltip
+
+Action call contract (if implemented):
+
+POST /api/p2/reservations/:id/check-in
+
+POST /api/p2/reservations/:id/check-out
+Return envelope { ok: true } or { ok: false, error }
+
+6) ROUTE REGISTRATION
+
+Ensure route exists:
+
+/app/reservations → ReservationsIndexPage
+
+7) QA ACCEPTANCE
+
+ /app/reservations renders with no console errors
+
+ Loading skeleton shows during fetch
+
+ Empty state is deterministic
+
+ Filters update the list
+
+ Clicking “View” goes to detail route
+
+ No currency on the page
+
+ No forbidden words (“book”, “booking”) anywhere
+
+8) STOP CONDITION
+
+After implementing PROMPT 2:
+
+STOP.
+
+Do not implement PROMPT 3 until PROMPT 2 is verified.
+
+What I want back from Replit after PROMPT 2
+
+Files created/modified
+
+Endpoint used for list (existing vs newly added)
+
+Screenshot of /app/reservations
+
+Any schema mismatches discovered

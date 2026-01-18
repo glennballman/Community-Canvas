@@ -105,6 +105,7 @@ import tenantHousingRouter from "./routes/tenant-housing";
 import benchEmergencyRouter from "./routes/bench-emergency";
 import { publicRouter as p2PublicReservationRouter } from "./api/p2/public/publicRouter";
 import { p2DashboardRouter } from "./routes/p2-dashboard";
+import { p2ReservationsRouter } from "./routes/p2-reservations";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -300,6 +301,9 @@ export async function registerRoutes(
   
   // P2 Dashboard summary endpoints
   app.use('/api/p2/dashboard', p2DashboardRouter);
+  
+  // P2 Reservations list and actions
+  app.use('/api/p2/reservations', p2ReservationsRouter);
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);
