@@ -103,6 +103,7 @@ import adminPortalsRouter from "./routes/admin-portals";
 import documentTemplatesRouter from "./routes/document-templates";
 import tenantHousingRouter from "./routes/tenant-housing";
 import benchEmergencyRouter from "./routes/bench-emergency";
+import { publicRouter as p2PublicReservationRouter } from "./api/p2/public/publicRouter";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -339,6 +340,9 @@ export async function registerRoutes(
   app.use('/b/:portalSlug/api/public', publicJobsRouter);
   // Alias: /api/p2/public/jobs/*
   app.use('/api/p2/public', publicJobsRouter);
+  
+  // P2 Public Reservation API (availability, cart, confirm)
+  app.use('/api/p2/public', p2PublicReservationRouter);
   
   // Tenant/employer job management API (tenant auth required)
   app.use('/api/p2/app/jobs', jobsRouter);

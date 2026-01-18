@@ -1,0 +1,1060 @@
+STEP 3: PUBLIC RESERVATION ROUTES — COMPLETE PROMPT
+Paste this entire block into Replit:
+## PUBLIC RESERVATION ROUTES — Full Implementation
+
+### CONTEXT
+- B1 Spatial Patch COMPLETE (migration 0162)
+- Schema location: shared/schema.ts
+- Tables exist: cc_reservation_carts, cc_reservation_cart_items, cc_reservation_allocations, cc_pms_reservations, cc_offers, cc_inventory_units, cc_units
+
+### GOAL
+Create all public P2 endpoints under /api/p2/public/*
+
+### NON-NEGOTIABLE RULES
+- Use "reservation" terminology only (no blocked words)
+- Do NOT change DB schema
+- Use { ok, error?, ...data } response envelope
+- Token rotates on submit and confirm
+- Cancel/change are request-only (no auto-mutations)
+
+---
+
+## FILE STRUCTURE TO CREATE
+src/server/api/p2/
+├── p2Envelope.ts
+└── public/
+├── publicToken.ts
+├── publicHelpers.ts
+├── publicCartAuth.ts
+├── publicRouter.ts
+└── handlers/
+├── publicCart.get.ts
+├── publicCartItems.post.ts
+├── publicCartItem.delete.ts
+├── publicCartRefresh.post.ts
+├── publicCartSubmit.post.ts
+├── publicAvailability.get.ts
+├── publicAvailabilityBatch.post.ts
+├── publicConfirm.post.ts
+├── publicSubmitConfirm.post.ts
+├── publicReservationStatus.get.ts
+├── publicResume.get.ts
+├── publicCancelRequest.post.ts
+├── publicReservationChangeRequest.post.ts
+├── publicAllocationCancelRequest.post.ts
+└── publicAllocationChangeRequest.post.ts
+
+---
+
+## 1. SHARED UTILITIES
+
+### src/server/api/p2/p2Envelope.ts
+```typescript
+export function p2Ok(data: Record<string, any> = {}) {
+  return { ok: true, ...data };
+}
+
+export function p2Err(code: string, message: string, details?: any) {
+  return { ok: false, error: { code, message, details } };
+}
+```
+
+### src/server/api/p2/public/publicToken.ts
+```typescript
+export function base64urlEncode(input: string) {
+  return Buffer.from(input, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+export function base64urlDecode(input: string) {
+  const pad = input.length % 4 === 0 ? "" : "=".repeat(4 - (input.length % 4));
+  const b64 = input.replace(/-/g, "+").replace(/_/g, "/") + pad;
+  return Buffer.from(b64, "base64").toString("utf8");
+}
+
+export function makeResumeToken(payload: { v: 1; cartId: string; accessToken: string }) {
+  return base64urlEncode(JSON.stringify(payload));
+}
+
+export function parseResumeToken(token: string): { v: number; cartId: string; accessToken: string } | null {
+  try {
+    const raw = base64urlDecode(token);
+    const obj = JSON.parse(raw);
+    if (!obj || obj.v !== 1 || !obj.cartId || !obj.accessToken) return null;
+    return obj;
+  } catch {
+    return null;
+  }
+}
+```
+
+### src/server/api/p2/public/publicHelpers.ts
+```typescript
+import { p2Err } from "../p2Envelope";
+
+export function requirePortalId(q: any): string {
+  const portalId = String(q?.portalId || "").trim();
+  if (!portalId) throw Object.assign(p2Err("BAD_REQUEST", "portalId is required"), { __http: 400 });
+  return portalId;
+}
+
+export function parseIsoDate(v: any): Date | null {
+  if (!v) return null;
+  const d = new Date(String(v));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export async function assertOfferDisclosedToPortal(args: {
+  portalId: string;
+  offerTenantId: string;
+  facilityId: string | null;
+}) {
+  // TODO: Wire to existing disclosure check if available
+  return;
+}
+```
+
+### src/server/api/p2/public/publicCartAuth.ts
+```typescript
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err } from "../p2Envelope";
+
+export async function loadCartOrThrow(args: {
+  portalId: string;
+  cartId: string;
+  accessToken: string;
+  lock?: boolean;
+}) {
+  const { portalId, cartId, accessToken, lock } = args;
+
+  const q = sql`
+    SELECT id, portal_id, access_token, status, expires_at
+    FROM cc_reservation_carts
+    WHERE id = ${String(cartId)}::uuid
+    LIMIT 1
+    ${lock ? sql`FOR UPDATE` : sql``}
+  `;
+  const cartRes = await db.execute(q);
+  const cart = (cartRes.rows || [])[0];
+
+  if (!cart) throw Object.assign(p2Err("NOT_FOUND", "Cart not found"), { __http: 404 });
+  if (String(cart.portal_id) !== String(portalId)) throw Object.assign(p2Err("UNAUTHORIZED", "Portal mismatch"), { __http: 403 });
+  if (String(cart.access_token) !== String(accessToken)) throw Object.assign(p2Err("UNAUTHORIZED", "Invalid access token"), { __http: 403 });
+
+  const isExpired = cart.expires_at ? new Date(cart.expires_at).getTime() < Date.now() : false;
+  if (isExpired) throw Object.assign(p2Err("CONFLICT", "Cart is expired"), { __http: 409 });
+
+  return cart;
+}
+
+export async function assertCartActive(args: { portalId: string; cartId: string; accessToken: string; lock?: boolean }) {
+  const cart = await loadCartOrThrow(args);
+  if (String(cart.status) !== "active") throw Object.assign(p2Err("CONFLICT", "Cart is not active"), { __http: 409 });
+  return cart;
+}
+
+export async function assertCartSubmitted(args: { portalId: string; cartId: string; accessToken: string; lock?: boolean }) {
+  const cart = await loadCartOrThrow(args);
+  if (String(cart.status) !== "submitted") {
+    throw Object.assign(p2Err("CONFLICT", "Cart must be submitted before confirmation"), { __http: 409 });
+  }
+  return cart;
+}
+```
+
+---
+
+## 2. ROUTER
+
+### src/server/api/p2/public/publicRouter.ts
+```typescript
+import { Router } from "express";
+
+import { getPublicCart } from "./handlers/publicCart.get";
+import { postPublicCartItems } from "./handlers/publicCartItems.post";
+import { deletePublicCartItem } from "./handlers/publicCartItem.delete";
+import { postPublicCartRefresh } from "./handlers/publicCartRefresh.post";
+import { postPublicCartSubmit } from "./handlers/publicCartSubmit.post";
+
+import { getPublicAvailability } from "./handlers/publicAvailability.get";
+import { postPublicAvailabilityBatch } from "./handlers/publicAvailabilityBatch.post";
+
+import { postPublicConfirm } from "./handlers/publicConfirm.post";
+import { postPublicSubmitConfirm } from "./handlers/publicSubmitConfirm.post";
+
+import { getPublicReservationStatus } from "./handlers/publicReservationStatus.get";
+import { getPublicResume } from "./handlers/publicResume.get";
+
+import { postPublicCancelRequest } from "./handlers/publicCancelRequest.post";
+import { postPublicReservationChangeRequest } from "./handlers/publicReservationChangeRequest.post";
+import { postPublicAllocationCancelRequest } from "./handlers/publicAllocationCancelRequest.post";
+import { postPublicAllocationChangeRequest } from "./handlers/publicAllocationChangeRequest.post";
+
+export const publicRouter = Router();
+
+publicRouter.get("/cart", getPublicCart);
+publicRouter.post("/cart/items", postPublicCartItems);
+publicRouter.delete("/cart/items/:id", deletePublicCartItem);
+publicRouter.post("/cart/refresh", postPublicCartRefresh);
+publicRouter.post("/cart/submit", postPublicCartSubmit);
+
+publicRouter.get("/availability", getPublicAvailability);
+publicRouter.post("/availability/batch", postPublicAvailabilityBatch);
+
+publicRouter.post("/reservations/confirm", postPublicConfirm);
+publicRouter.post("/reservations/submit-confirm", postPublicSubmitConfirm);
+
+publicRouter.get("/reservations/status", getPublicReservationStatus);
+publicRouter.get("/resume", getPublicResume);
+
+publicRouter.post("/reservations/:id/cancel-request", postPublicCancelRequest);
+publicRouter.post("/reservations/:id/change-request", postPublicReservationChangeRequest);
+publicRouter.post("/allocations/:id/cancel-request", postPublicAllocationCancelRequest);
+publicRouter.post("/allocations/:id/change-request", postPublicAllocationChangeRequest);
+```
+
+---
+
+## 3. HANDLERS
+
+### src/server/api/p2/public/handlers/publicCart.get.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { requirePortalId } from "../publicHelpers";
+
+export async function getPublicCart(req: Request, res: Response) {
+  try {
+    const portalId = requirePortalId(req.query);
+    const cartId = String(req.query.cartId || "");
+    const accessToken = String(req.query.accessToken || "");
+
+    if (!cartId || !accessToken) return res.status(400).json(p2Err("BAD_REQUEST", "cartId and accessToken are required"));
+
+    const cartRes = await db.execute(sql`
+      SELECT *
+      FROM cc_reservation_carts
+      WHERE id = ${String(cartId)}::uuid
+      LIMIT 1
+    `);
+    const cart = (cartRes.rows || [])[0];
+    if (!cart) return res.status(404).json(p2Err("NOT_FOUND", "Cart not found"));
+    if (String(cart.portal_id) !== String(portalId)) return res.status(403).json(p2Err("UNAUTHORIZED", "Portal mismatch"));
+    if (String(cart.access_token) !== String(accessToken)) return res.status(403).json(p2Err("UNAUTHORIZED", "Invalid access token"));
+
+    const isExpired = cart.expires_at ? new Date(cart.expires_at).getTime() < Date.now() : false;
+
+    const itemsRes = await db.execute(sql`
+      SELECT *
+      FROM cc_reservation_cart_items
+      WHERE cart_id = ${String(cartId)}::uuid
+      ORDER BY created_at ASC
+    `);
+
+    return res.json(p2Ok({ portalId, cart, items: itemsRes.rows || [], isExpired }));
+  } catch (e: any) {
+    const http = e?.__http || 500;
+    return res.status(http).json(e?.ok === false ? e : p2Err("INTERNAL", e?.message || "Unknown error"));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicCartItems.post.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { assertCartActive } from "../publicCartAuth";
+
+export async function postPublicCartItems(req: Request, res: Response) {
+  try {
+    const { portalId, cartId, accessToken, item } = req.body || {};
+    if (!portalId || !cartId || !accessToken || !item) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "portalId, cartId, accessToken, item are required"));
+    }
+
+    await assertCartActive({ portalId, cartId, accessToken });
+
+    const insertRes = await db.execute(sql`
+      INSERT INTO cc_reservation_cart_items (
+        cart_id, schema_type, item_type, title, description, reservation_mode,
+        facility_id, offer_id, unit_id, asset_id, moment_id,
+        provider_tenant_id, portal_id,
+        external_url, external_reservation_ref,
+        provider_name, provider_email, provider_phone,
+        start_at, end_at, preferred_time, flexible_window_minutes,
+        quantity, party_size, requires_approval, approval_status,
+        rate_type, rate_amount,
+        subtotal_cents, taxes_cents, total_cents, deposit_required_cents,
+        pricing_snapshot, hold_json, intent_json, needs_json,
+        dietary_requirements, special_requests,
+        weather_json,
+        status,
+        created_at, updated_at
+      ) VALUES (
+        ${String(cartId)}::uuid,
+        ${item.schemaType || null},
+        ${item.itemType || null},
+        ${item.title || null},
+        ${item.description || null},
+        ${item.reservationMode || null},
+        ${item.facilityId ? String(item.facilityId) : null}::uuid,
+        ${item.offerId ? String(item.offerId) : null}::uuid,
+        ${item.unitId ? String(item.unitId) : null}::uuid,
+        ${item.assetId ? String(item.assetId) : null}::uuid,
+        ${item.momentId ? String(item.momentId) : null}::uuid,
+        ${item.providerTenantId ? String(item.providerTenantId) : null}::uuid,
+        ${item.portalId ? String(item.portalId) : null}::uuid,
+        ${item.externalUrl || null},
+        ${item.externalReservationRef || null},
+        ${item.providerName || null},
+        ${item.providerEmail || null},
+        ${item.providerPhone || null},
+        ${item.startAt || null}::timestamptz,
+        ${item.endAt || null}::timestamptz,
+        ${item.preferredTime || null},
+        ${item.flexibleWindowMinutes ?? null},
+        ${item.quantity ?? 1},
+        ${item.partySize ?? null},
+        ${item.requiresApproval ?? false},
+        ${item.approvalStatus || null},
+        ${item.rateType || null},
+        ${item.rateAmount || null},
+        ${item.subtotalCents ?? 0},
+        ${item.taxesCents ?? 0},
+        ${item.totalCents ?? 0},
+        ${item.depositRequiredCents ?? 0},
+        ${JSON.stringify(item.pricingSnapshot || {})}::jsonb,
+        ${JSON.stringify(item.holdJson || {})}::jsonb,
+        ${JSON.stringify(item.intentJson || {})}::jsonb,
+        ${JSON.stringify(item.needsJson || {})}::jsonb,
+        ${item.dietaryRequirements || null},
+        ${item.specialRequests || null},
+        ${JSON.stringify(item.weatherJson || {})}::jsonb,
+        'active',
+        now(),
+        now()
+      )
+      RETURNING *
+    `);
+
+    return res.json(p2Ok({ cartId, cartItem: (insertRes.rows || [])[0] }));
+  } catch (e: any) {
+    const http = e?.__http || 500;
+    return res.status(http).json(e?.ok === false ? e : p2Err("INTERNAL", e?.message || "Unknown error"));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicCartItem.delete.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { assertCartActive } from "../publicCartAuth";
+
+export async function deletePublicCartItem(req: Request, res: Response) {
+  try {
+    const cartItemId = String(req.params.id || "");
+    const { portalId, cartId, accessToken } = req.body || {};
+    if (!portalId || !cartId || !accessToken || !cartItemId) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "portalId, cartId, accessToken are required"));
+    }
+
+    await assertCartActive({ portalId, cartId, accessToken });
+
+    await db.execute(sql`
+      UPDATE cc_reservation_cart_items
+      SET status = 'removed', updated_at = now()
+      WHERE id = ${cartItemId}::uuid
+        AND cart_id = ${String(cartId)}::uuid
+    `);
+
+    return res.json(p2Ok({ cartId, removed: true, cartItemId }));
+  } catch (e: any) {
+    const http = e?.__http || 500;
+    return res.status(http).json(e?.ok === false ? e : p2Err("INTERNAL", e?.message || "Unknown error"));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicCartRefresh.post.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { assertCartActive } from "../publicCartAuth";
+
+export async function postPublicCartRefresh(req: Request, res: Response) {
+  try {
+    const { portalId, cartId, accessToken } = req.body || {};
+    if (!portalId || !cartId || !accessToken) return res.status(400).json(p2Err("BAD_REQUEST", "portalId, cartId, accessToken are required"));
+
+    await assertCartActive({ portalId, cartId, accessToken });
+
+    const refreshed = await db.execute(sql`
+      UPDATE cc_reservation_carts
+      SET expires_at = now() + interval '30 minutes',
+          updated_at = now()
+      WHERE id = ${String(cartId)}::uuid
+      RETURNING expires_at
+    `);
+
+    return res.json(p2Ok({ cartId, expiresAt: (refreshed.rows || [])[0]?.expires_at }));
+  } catch (e: any) {
+    const http = e?.__http || 500;
+    return res.status(http).json(e?.ok === false ? e : p2Err("INTERNAL", e?.message || "Unknown error"));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicCartSubmit.post.ts
+```typescript
+import type { Request, Response } from "express";
+import crypto from "crypto";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { assertCartActive } from "../publicCartAuth";
+
+function newToken() {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+export async function postPublicCartSubmit(req: Request, res: Response) {
+  try {
+    const { portalId, cartId, accessToken } = req.body;
+    await assertCartActive({ portalId, cartId, accessToken, lock: true });
+
+    const rotated = newToken();
+
+    await db.execute(sql`
+      UPDATE cc_reservation_carts
+      SET status = 'submitted',
+          submitted_at = now(),
+          access_token = ${rotated},
+          updated_at = now()
+      WHERE id = ${cartId}::uuid
+    `);
+
+    return res.json(p2Ok({ cartId, status: "submitted", accessToken: rotated }));
+
+  } catch (e: any) {
+    return res.status(e?.__http || 500).json(e?.ok === false ? e : p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicAvailability.get.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { requirePortalId, parseIsoDate, assertOfferDisclosedToPortal } from "../publicHelpers";
+
+export async function getPublicAvailability(req: Request, res: Response) {
+  try {
+    const portalId = requirePortalId(req.query);
+    const offerId = String(req.query.offerId || "");
+    const startAt = parseIsoDate(req.query.startAt);
+    const endAt = parseIsoDate(req.query.endAt);
+    const quantity = Math.max(1, Number(req.query.quantity || 1));
+
+    if (!offerId || !startAt || !endAt) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "offerId, startAt, endAt required"));
+    }
+
+    const offerRes = await db.execute(sql`
+      SELECT id, tenant_id, facility_id, applies_to_unit_types
+      FROM cc_offers
+      WHERE id = ${offerId}::uuid
+        AND is_active = true
+      LIMIT 1
+    `);
+    const offer = offerRes.rows[0];
+    if (!offer) return res.status(404).json(p2Err("NOT_FOUND", "Offer not found"));
+
+    await assertOfferDisclosedToPortal({
+      portalId,
+      offerTenantId: offer.tenant_id,
+      facilityId: offer.facility_id,
+    });
+
+    const applies = offer.applies_to_unit_types || [];
+
+    // Aggregated (parking / marina / beds)
+    if (applies.length > 0) {
+      const capRes = await db.execute(sql`
+        WITH units AS (
+          SELECT id
+          FROM cc_inventory_units
+          WHERE tenant_id = ${offer.tenant_id}::uuid
+            AND facility_id = ${offer.facility_id}::uuid
+            AND is_active = true
+            AND unit_type = ANY(${applies}::text[])
+        )
+        SELECT count(*)::int AS available
+        FROM units u
+        WHERE NOT EXISTS (
+          SELECT 1 FROM cc_reservation_allocations a
+          WHERE a.inventory_unit_id = u.id
+            AND a.starts_at < ${endAt.toISOString()}::timestamptz
+            AND a.ends_at   > ${startAt.toISOString()}::timestamptz
+        )
+      `);
+
+      const available = capRes.rows[0]?.available || 0;
+      return res.json(p2Ok({
+        available,
+        requested: quantity,
+        ok: available >= quantity
+      }));
+    }
+
+    // Unit-bound (lodging)
+    const unitId = String(req.query.unitId || "");
+    if (!unitId) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "unitId required for unit-bound offer"));
+    }
+
+    const conflict = await db.execute(sql`
+      SELECT 1
+      FROM cc_unit_calendar
+      WHERE unit_id = ${unitId}::uuid
+        AND start_at < ${endAt.toISOString()}::timestamptz
+        AND end_at   > ${startAt.toISOString()}::timestamptz
+      LIMIT 1
+    `);
+
+    return res.json(p2Ok({
+      available: conflict.rows.length === 0,
+      requested: 1,
+      ok: conflict.rows.length === 0
+    }));
+
+  } catch (e: any) {
+    return res.status(e?.__http || 500).json(e?.ok === false ? e : p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicAvailabilityBatch.post.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { requirePortalId, assertOfferDisclosedToPortal } from "../publicHelpers";
+
+export async function postPublicAvailabilityBatch(req: Request, res: Response) {
+  try {
+    const portalId = requirePortalId(req.body);
+    const items = req.body.items || [];
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "items array required"));
+    }
+
+    const results: any[] = [];
+
+    for (const item of items) {
+      const { offerId, startAt, endAt, quantity = 1, unitId } = item;
+
+      const offerRes = await db.execute(sql`
+        SELECT id, tenant_id, facility_id, applies_to_unit_types
+        FROM cc_offers
+        WHERE id = ${offerId}::uuid
+          AND is_active = true
+      `);
+      const offer = offerRes.rows[0];
+      if (!offer) {
+        results.push({ offerId, ok: false, reason: "OFFER_NOT_FOUND" });
+        continue;
+      }
+
+      await assertOfferDisclosedToPortal({
+        portalId,
+        offerTenantId: offer.tenant_id,
+        facilityId: offer.facility_id,
+      });
+
+      const applies = offer.applies_to_unit_types || [];
+
+      if (applies.length > 0) {
+        const cap = await db.execute(sql`
+          SELECT count(*)::int AS available
+          FROM cc_inventory_units u
+          WHERE u.tenant_id = ${offer.tenant_id}::uuid
+            AND u.facility_id = ${offer.facility_id}::uuid
+            AND u.unit_type = ANY(${applies}::text[])
+            AND u.is_active = true
+            AND NOT EXISTS (
+              SELECT 1 FROM cc_reservation_allocations a
+              WHERE a.inventory_unit_id = u.id
+                AND a.starts_at < ${endAt}::timestamptz
+                AND a.ends_at   > ${startAt}::timestamptz
+            )
+        `);
+
+        const available = cap.rows[0]?.available || 0;
+        results.push({ offerId, available, requested: quantity, ok: available >= quantity });
+      } else {
+        const conflict = await db.execute(sql`
+          SELECT 1 FROM cc_unit_calendar
+          WHERE unit_id = ${unitId}::uuid
+            AND start_at < ${endAt}::timestamptz
+            AND end_at   > ${startAt}::timestamptz
+          LIMIT 1
+        `);
+
+        results.push({ offerId, available: conflict.rows.length === 0, ok: conflict.rows.length === 0 });
+      }
+    }
+
+    return res.json(p2Ok({ results }));
+
+  } catch (e: any) {
+    return res.status(e?.__http || 500).json(e?.ok === false ? e : p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicConfirm.post.ts
+```typescript
+import type { Request, Response } from "express";
+import crypto from "crypto";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { assertCartSubmitted } from "../publicCartAuth";
+
+function newToken() {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+export async function postPublicConfirm(req: Request, res: Response) {
+  try {
+    const { portalId, cartId, accessToken, payment } = req.body;
+
+    await assertCartSubmitted({ portalId, cartId, accessToken, lock: true });
+
+    const itemsRes = await db.execute(sql`
+      SELECT * FROM cc_reservation_cart_items
+      WHERE cart_id = ${cartId}::uuid
+        AND status = 'active'
+    `);
+
+    const reservations: any[] = [];
+    const allocations: any[] = [];
+
+    for (const item of itemsRes.rows) {
+      if (item.unit_id) {
+        const r = await db.execute(sql`
+          INSERT INTO cc_pms_reservations (
+            portal_id, property_id, unit_id,
+            cart_id, cart_item_id,
+            guest_name, guest_email,
+            check_in_date, check_out_date,
+            total_cad, status, confirmed_at,
+            created_at, updated_at
+          )
+          SELECT
+            ${portalId}::uuid,
+            u.property_id,
+            ${item.unit_id}::uuid,
+            ${cartId}::uuid,
+            ${item.id}::uuid,
+            c.primary_guest_name,
+            c.primary_guest_email,
+            ${item.start_at}::date,
+            ${item.end_at}::date,
+            (${item.total_cents} / 100.0),
+            'confirmed',
+            now(),
+            now(),
+            now()
+          FROM cc_units u, cc_reservation_carts c
+          WHERE u.id = ${item.unit_id}::uuid
+            AND c.id = ${cartId}::uuid
+          RETURNING id
+        `);
+        reservations.push(r.rows[0]);
+      } else {
+        const alloc = await db.execute(sql`
+          INSERT INTO cc_reservation_allocations (
+            tenant_id,
+            reservation_item_id,
+            inventory_unit_id,
+            starts_at,
+            ends_at,
+            hold_type,
+            display_label,
+            created_at
+          )
+          SELECT
+            o.tenant_id,
+            ${item.id}::uuid,
+            u.id,
+            ${item.start_at}::timestamptz,
+            ${item.end_at}::timestamptz,
+            'confirmed',
+            ${item.title || 'Reservation'},
+            now()
+          FROM cc_inventory_units u
+          JOIN cc_offers o ON o.id = ${item.offer_id}::uuid
+          WHERE u.is_active = true
+            AND NOT EXISTS (
+              SELECT 1 FROM cc_reservation_allocations a
+              WHERE a.inventory_unit_id = u.id
+                AND a.starts_at < ${item.end_at}::timestamptz
+                AND a.ends_at > ${item.start_at}::timestamptz
+            )
+          LIMIT 1
+          RETURNING id
+        `);
+        allocations.push(alloc.rows[0]);
+      }
+    }
+
+    const rotated = newToken();
+    await db.execute(sql`
+      UPDATE cc_reservation_carts
+      SET status = 'completed',
+          completed_at = now(),
+          payment_json = ${JSON.stringify(payment || {})}::jsonb,
+          access_token = ${rotated},
+          updated_at = now()
+      WHERE id = ${cartId}::uuid
+    `);
+
+    return res.json(p2Ok({
+      cartId,
+      status: "completed",
+      accessToken: rotated,
+      reservations,
+      allocations
+    }));
+
+  } catch (e: any) {
+    return res.status(e?.__http || 500).json(e?.ok === false ? e : p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicSubmitConfirm.post.ts
+```typescript
+import type { Request, Response } from "express";
+import crypto from "crypto";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { assertCartActive } from "../publicCartAuth";
+import { postPublicConfirm } from "./publicConfirm.post";
+
+function newToken() {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+export async function postPublicSubmitConfirm(req: Request, res: Response) {
+  try {
+    const { portalId, cartId, accessToken, payment } = req.body;
+
+    await assertCartActive({ portalId, cartId, accessToken, lock: true });
+
+    const submitToken = newToken();
+    await db.execute(sql`
+      UPDATE cc_reservation_carts
+      SET status = 'submitted',
+          submitted_at = now(),
+          access_token = ${submitToken}
+      WHERE id = ${cartId}::uuid
+    `);
+
+    const confirmReq = { body: { portalId, cartId, accessToken: submitToken, payment } } as any;
+    return await postPublicConfirm(confirmReq, res);
+
+  } catch (e: any) {
+    return res.status(e?.__http || 500).json(e?.ok === false ? e : p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicReservationStatus.get.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+
+export async function getPublicReservationStatus(req: Request, res: Response) {
+  try {
+    const { portalId, guestEmail, confirmationNumber, cartId, accessToken } = req.query as any;
+
+    if (!portalId) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "portalId required"));
+    }
+
+    // MODE A — Email + confirmation
+    if (guestEmail && confirmationNumber) {
+      const resv = await db.execute(sql`
+        SELECT *
+        FROM cc_pms_reservations
+        WHERE portal_id = ${portalId}::uuid
+          AND guest_email = ${guestEmail}
+          AND confirmation_number = ${confirmationNumber}
+        LIMIT 1
+      `);
+
+      if (!resv.rows.length) {
+        return res.status(404).json(p2Err("NOT_FOUND", "Reservation not found"));
+      }
+
+      return res.json(p2Ok({ reservation: resv.rows[0] }));
+    }
+
+    // MODE B — Cart + token
+    if (cartId && accessToken) {
+      const cartRes = await db.execute(sql`
+        SELECT *
+        FROM cc_reservation_carts
+        WHERE id = ${cartId}::uuid
+          AND portal_id = ${portalId}::uuid
+          AND access_token = ${accessToken}
+        LIMIT 1
+      `);
+
+      if (!cartRes.rows.length) {
+        return res.status(404).json(p2Err("NOT_FOUND", "Cart not found"));
+      }
+
+      const items = await db.execute(sql`
+        SELECT *
+        FROM cc_reservation_cart_items
+        WHERE cart_id = ${cartId}::uuid
+      `);
+
+      const reservations = await db.execute(sql`
+        SELECT *
+        FROM cc_pms_reservations
+        WHERE cart_id = ${cartId}::uuid
+      `);
+
+      const allocations = await db.execute(sql`
+        SELECT *
+        FROM cc_reservation_allocations
+        WHERE reservation_item_id = ANY(
+          SELECT id FROM cc_reservation_cart_items WHERE cart_id = ${cartId}::uuid
+        )
+      `);
+
+      return res.json(p2Ok({
+        cart: cartRes.rows[0],
+        items: items.rows,
+        reservations: reservations.rows,
+        allocations: allocations.rows
+      }));
+    }
+
+    return res.status(400).json(
+      p2Err("BAD_REQUEST", "Provide either (guestEmail + confirmationNumber) or (cartId + accessToken)")
+    );
+
+  } catch (e: any) {
+    return res.status(500).json(p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicResume.get.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+import { parseResumeToken } from "../publicToken";
+
+export async function getPublicResume(req: Request, res: Response) {
+  try {
+    const { t, portalId } = req.query as any;
+    if (!t || !portalId) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "t and portalId required"));
+    }
+
+    const parsed = parseResumeToken(t);
+    if (!parsed) {
+      return res.status(400).json(p2Err("BAD_REQUEST", "Invalid resume token"));
+    }
+
+    const cartRes = await db.execute(sql`
+      SELECT id, access_token
+      FROM cc_reservation_carts
+      WHERE id = ${parsed.cartId}::uuid
+        AND portal_id = ${portalId}::uuid
+        AND access_token = ${parsed.accessToken}
+      LIMIT 1
+    `);
+
+    if (!cartRes.rows.length) {
+      return res.status(404).json(p2Err("NOT_FOUND", "Resume token invalid"));
+    }
+
+    return res.json(p2Ok({
+      cartId: parsed.cartId,
+      accessToken: parsed.accessToken
+    }));
+
+  } catch (e: any) {
+    return res.status(500).json(p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicCancelRequest.post.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+
+export async function postPublicCancelRequest(req: Request, res: Response) {
+  try {
+    const reservationId = req.params.id;
+    const { reason, message } = req.body || {};
+
+    await db.execute(sql`
+      UPDATE cc_pms_reservations
+      SET status = 'cancellation_requested',
+          internal_notes = coalesce(internal_notes, '') || E'\nCANCEL REQUEST: ' || ${message || reason || 'requested'},
+          updated_at = now()
+      WHERE id = ${reservationId}::uuid
+    `);
+
+    return res.json(p2Ok({ reservationId, request: "cancellation_requested" }));
+  } catch (e: any) {
+    return res.status(500).json(p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicReservationChangeRequest.post.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+
+export async function postPublicReservationChangeRequest(req: Request, res: Response) {
+  try {
+    const reservationId = req.params.id;
+    const { message } = req.body || {};
+
+    await db.execute(sql`
+      UPDATE cc_pms_reservations
+      SET status = 'change_requested',
+          internal_notes = coalesce(internal_notes, '') || E'\nCHANGE REQUEST: ' || ${message || 'requested'},
+          updated_at = now()
+      WHERE id = ${reservationId}::uuid
+    `);
+
+    return res.json(p2Ok({ reservationId, request: "change_requested" }));
+  } catch (e: any) {
+    return res.status(500).json(p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicAllocationCancelRequest.post.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+
+export async function postPublicAllocationCancelRequest(req: Request, res: Response) {
+  try {
+    const allocationId = req.params.id;
+    const { message } = req.body || {};
+
+    await db.execute(sql`
+      UPDATE cc_reservation_allocations
+      SET hold_type = 'cancel_requested',
+          display_label = coalesce(display_label, '') || ' (cancel requested)'
+      WHERE id = ${allocationId}::uuid
+    `);
+
+    return res.json(p2Ok({ allocationId, request: "cancel_requested" }));
+  } catch (e: any) {
+    return res.status(500).json(p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+### src/server/api/p2/public/handlers/publicAllocationChangeRequest.post.ts
+```typescript
+import type { Request, Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+import { p2Err, p2Ok } from "../../p2Envelope";
+
+export async function postPublicAllocationChangeRequest(req: Request, res: Response) {
+  try {
+    const allocationId = req.params.id;
+    const { message } = req.body || {};
+
+    await db.execute(sql`
+      UPDATE cc_reservation_allocations
+      SET hold_type = 'change_requested',
+          display_label = coalesce(display_label, '') || ' (change requested)'
+      WHERE id = ${allocationId}::uuid
+    `);
+
+    return res.json(p2Ok({ allocationId, request: "change_requested" }));
+  } catch (e: any) {
+    return res.status(500).json(p2Err("INTERNAL", e.message));
+  }
+}
+```
+
+---
+
+## 4. MOUNT THE ROUTER
+
+In your main server file (where other routers are mounted), add:
+```typescript
+import { publicRouter } from "@/server/api/p2/public/publicRouter";
+
+app.use("/api/p2/public", publicRouter);
+```
+
+---
+
+## 5. VERIFICATION
+
+After implementation, test these endpoints:
+GET  /api/p2/public/cart?portalId=X&cartId=Y&accessToken=Z
+POST /api/p2/public/cart/items
+GET  /api/p2/public/availability?portalId=X&offerId=Y&startAt=...&endAt=...
+POST /api/p2/public/cart/submit
+POST /api/p2/public/reservations/confirm
+GET  /api/p2/public/reservations/status?portalId=X&cartId=Y&accessToken=Z
+
+---
+
+## EXPECTED OUTCOME
+
+After this implementation:
+- 15 new route handlers
+- Cart lifecycle: active → submitted → completed
+- Token rotation on submit + confirm
+- Availability using starts_at/ends_at overlap
+- Request-only cancel/change (no auto-mutations)
+- P2 envelope on all responses
