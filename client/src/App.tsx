@@ -85,6 +85,7 @@ import OpsBoardPage from './pages/app/OpsBoardPage';
 import ParkingPage from './pages/app/ParkingPage';
 import ParkingPlanPage from './pages/app/ParkingPlanPage';
 import MarinaPage from './pages/app/MarinaPage';
+import MarinaPlanPage from './pages/app/MarinaPlanPage';
 import HospitalityPage from './pages/app/HospitalityPage';
 import EnforcementPage from './pages/app/EnforcementPage';
 
@@ -268,6 +269,7 @@ export default function App() {
                 <Route path="parking" element={<ParkingPage />} />
                 <Route path="parking/plan" element={<ParkingPlanPage />} />
                 <Route path="marina" element={<MarinaPage />} />
+                <Route path="marina/plan" element={<MarinaPlanPage />} />
                 <Route path="hospitality" element={<HospitalityPage />} />
                 
                 {/* V3.5 Jobs */}

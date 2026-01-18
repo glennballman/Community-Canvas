@@ -74,6 +74,8 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Operations Board**: 15-minute precision scheduling interface for all resources.
 - **System Explorer**: Platform Admin debug/discovery surface for overview, evidence, integrations, data sources, data browser, and routes audit.
 - **Evidence Rule Enforcement**: Machine-enforceable evidence gates to track and verify system artifacts.
+- **Parking Plan View**: Visual operations map showing parking stall layout, real-time occupancy, date-based availability, property/zone filtering, and status indicators. API at `/api/p2/parking/*`, UI at `/app/parking/plan`.
+- **Marina Plan View**: Visual operations map showing marina slip layout, real-time occupancy, date-based availability, dock filtering, vessel information, and amenities (power, water, pump-out). API at `/api/p2/marina/*`, UI at `/app/marina/plan`. Components: MarinaSlip, MarinaPlanView, MarinaDetailPanel, MarinaFilters, MarinaLegend. Dev seed at `/api/dev/seed/marina`.
 
 ## External Dependencies
 

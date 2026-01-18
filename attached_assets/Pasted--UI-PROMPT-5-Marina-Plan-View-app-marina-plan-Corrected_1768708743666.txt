@@ -1,0 +1,583 @@
+✅ UI PROMPT 5 — Marina Plan View (/app/marina/plan) (Corrected + Safe + Tenant-Scoped)
+
+Paste this entire prompt into Replit.
+
+CONTEXT
+
+Parking Plan (PROMPT 4) ✅ complete — reuse the same architecture/patterns
+
+B1 Spatial Patch ✅ complete:
+
+cc_units has: layout_x, layout_y, layout_rotation, layout_shape, layout_bounds, layout_ref
+
+cc_reservation_allocations has: starts_at, ends_at, unit_id, inventory_unit_id, reservation_item_id
+
+cc_marina_unit_details table exists
+
+/app/reservations/:id is live and is the canonical reservation detail route.
+
+IMPORTANT: “View Reservation” deep link must use the same reservation id that GET /api/p2/reservations/:id expects.
+
+GOAL
+
+Implement Marina Plan View at:
+
+/app/marina/plan
+
+This is an operations map for marina staff to:
+
+See visual layout of slips (grid or positioned layout)
+
+View real-time occupancy for a selected date
+
+Click a slip to see details (vessel info, power, water, pump-out)
+
+Filter by dock and status
+
+Navigate days
+
+NON-NEGOTIABLE RULES
+
+No currency display (even if rate columns exist)
+
+Use “reservation” terminology only (never “booking”)
+
+P2 envelope everywhere: { ok, error?, ...data }
+
+Must show: loading, empty, error states
+
+Graceful fallback if no layout coordinates exist (grid view)
+
+Stable selectors for QA (per-unit)
+
+Tenant scoping is required on every marina endpoint (no TODOs)
+
+1) PAGE LAYOUT
+┌─────────────────────────────────────────────────────────────┐
+│  Marina Plan                    [Date Picker] [Filters ▾]   │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────┐  ┌──────────────────┐  │
+│  │      DOCK LAYOUT                │  │  SLIP DETAILS     │  │
+│  │                                 │  │                  │  │
+│  │   DOCK A                        │  │  Slip: A-01       │  │
+│  │   [A-01] [A-02] [A-03] [A-04]   │  │  Dock: A          │  │
+│  │                                 │  │  Max Length: 40ft │  │
+│  │   DOCK B                        │  │  Power: 30A       │  │
+│  │   [B-01] [B-02] [B-03] [B-04]   │  │  Water: Yes       │  │
+│  │                                 │  │  Pump out: Yes    │  │
+│  │                                 │  │                  │  │
+│  │                                 │  │  Current Vessel:  │  │
+│  │                                 │  │  "Sea Breeze"     │  │
+│  │                                 │  │  38ft             │  │
+│  │                                 │  │  Jan 15–22        │  │
+│  │                                 │  │                  │  │
+│  │                                 │  │  [View Reservation]│ │
+│  └─────────────────────────────────┘  └──────────────────┘  │
+│                                                             │
+│  Legend: 🟢 Available  🔴 Occupied  🟡 Reserved  ⚫ Maint.   │
+└─────────────────────────────────────────────────────────────┘
+
+
+Left: Plan view
+
+Right: Detail panel
+
+Top: Date controls + filters
+
+Always render the plan grid even if no allocations exist
+
+2) FILES TO CREATE
+Frontend
+
+client/src/pages/app/MarinaPlanPage.tsx
+
+client/src/components/marina/MarinaPlanView.tsx
+
+client/src/components/marina/MarinaSlip.tsx
+
+client/src/components/marina/MarinaDetailPanel.tsx
+
+client/src/components/marina/MarinaFilters.tsx
+
+client/src/components/marina/MarinaLegend.tsx
+
+client/src/hooks/useMarinaProperties.ts
+
+client/src/hooks/useMarinaUnits.ts
+
+client/src/hooks/useMarinaAvailability.ts
+
+Backend
+
+server/routes/p2-marina.ts
+
+Register/mount in server/routes.ts (same as parking)
+
+3) DATA CONTRACTS
+GET /api/p2/marina/properties
+
+Returns only properties (in-tenant) that have marina slips.
+
+{
+  ok: true,
+  properties: Array<{
+    id: string,
+    name: string,
+    slip_count: number
+  }>
+}
+
+GET /api/p2/marina/units
+
+Query params:
+
+propertyId (required)
+
+dockCode (optional)
+
+{
+  ok: true,
+  property: { id: string, name: string },
+  units: Array<{
+    id: string,
+    code: string,
+    name: string,
+    unit_type: "marina_slip",
+
+    // Layout (B1 spatial)
+    layout_x: number | null,
+    layout_y: number | null,
+    layout_rotation: number | null,
+    layout_shape: object | null,
+    layout_ref: string | null,
+
+    // Marina-specific (from cc_marina_unit_details)
+    dock_code: string | null,
+    dock_side: string | null,
+    min_length_ft: number | null,
+    max_length_ft: number | null,
+    max_beam_ft: number | null,
+    max_draft_ft: number | null,
+    power_service: string | null,
+    has_water: boolean,
+    has_pump_out: boolean,
+
+    // status from cc_units
+    status: "available" | "maintenance" | "blocked"
+  }>
+}
+
+GET /api/p2/marina/availability
+
+Query params:
+
+propertyId (required)
+
+date (required; default today)
+
+{
+  ok: true,
+  date: string,
+  allocations: Array<{
+    unit_id: string,
+    unit_code: string,
+    status: "available" | "occupied" | "reserved" | "maintenance",
+    allocation_id: string | null,
+
+    guest_name: string | null,
+    vessel_name: string | null,
+    vessel_length_ft: number | null,
+
+    starts_at: string | null,
+    ends_at: string | null,
+
+    // MUST be the id used by /api/p2/reservations/:id
+    reservation_id: string | null
+  }>
+}
+
+4) BACKEND IMPLEMENTATION (CORRECT + SAFE)
+server/routes/p2-marina.ts
+import { Router } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@/server/db";
+
+export const marinaRouter = Router();
+
+/**
+ * REQUIRED:
+ * - tenantId must come from your existing auth/session middleware context
+ *   (same pattern you used for conversations security).
+ * Example: req.tenantId
+ */
+function requireTenant(req: any, res: any) {
+  const tenantId = req.tenantId;
+  if (!tenantId) {
+    res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Missing tenant context" } });
+    return null;
+  }
+  return tenantId;
+}
+
+/**
+ * REQUIRED:
+ * - Validate property belongs to tenant
+ * - If you already have a helper, use it. Otherwise:
+ *   - If cc_properties has tenant_id: enforce it
+ *   - Else scope via your existing portal/ownership join path
+ */
+async function assertPropertyInTenant(propertyId: string, tenantId: string) {
+  const r = await db.execute(sql`
+    SELECT id
+    FROM cc_properties
+    WHERE id = ${propertyId}::uuid
+      AND tenant_id = ${tenantId}::uuid
+    LIMIT 1
+  `);
+  return r.rows.length > 0;
+}
+
+// GET /api/p2/marina/properties
+marinaRouter.get("/properties", async (req: any, res) => {
+  try {
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const result = await db.execute(sql`
+      SELECT
+        p.id,
+        p.name,
+        count(u.id)::int as slip_count
+      FROM cc_properties p
+      JOIN cc_units u
+        ON u.property_id = p.id
+       AND u.unit_type = 'marina_slip'
+      WHERE p.tenant_id = ${tenantId}::uuid
+      GROUP BY p.id, p.name
+      HAVING count(u.id) > 0
+      ORDER BY p.name
+    `);
+
+    res.json({ ok: true, properties: result.rows });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// GET /api/p2/marina/units?propertyId=...&dockCode=...
+marinaRouter.get("/units", async (req: any, res) => {
+  try {
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const propertyId = String(req.query.propertyId || "").trim();
+    const dockCode = String(req.query.dockCode || "").trim() || null;
+
+    if (!propertyId) {
+      return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "propertyId required" } });
+    }
+
+    const ok = await assertPropertyInTenant(propertyId, tenantId);
+    if (!ok) {
+      return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "Property out of scope" } });
+    }
+
+    const unitsResult = await db.execute(sql`
+      SELECT
+        u.id,
+        u.code,
+        u.name,
+        u.unit_type,
+        u.status,
+        u.layout_x,
+        u.layout_y,
+        u.layout_rotation,
+        u.layout_shape,
+        u.layout_ref,
+        d.dock_code,
+        d.dock_side,
+        d.min_length_ft,
+        d.max_length_ft,
+        d.max_beam_ft,
+        d.max_draft_ft,
+        d.power_service,
+        COALESCE(d.has_water, false) as has_water,
+        COALESCE(d.has_pump_out, false) as has_pump_out
+      FROM cc_units u
+      LEFT JOIN cc_marina_unit_details d ON d.unit_id = u.id
+      WHERE u.property_id = ${propertyId}::uuid
+        AND u.unit_type = 'marina_slip'
+        AND (${dockCode}::text IS NULL OR d.dock_code = ${dockCode})
+      ORDER BY d.dock_code NULLS LAST, u.sort_order, u.code
+    `);
+
+    const propertyResult = await db.execute(sql`
+      SELECT id, name
+      FROM cc_properties
+      WHERE id = ${propertyId}::uuid
+        AND tenant_id = ${tenantId}::uuid
+      LIMIT 1
+    `);
+
+    res.json({ ok: true, units: unitsResult.rows, property: propertyResult.rows[0] || null });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// GET /api/p2/marina/availability?propertyId=...&date=YYYY-MM-DD
+marinaRouter.get("/availability", async (req: any, res) => {
+  try {
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return;
+
+    const propertyId = String(req.query.propertyId || "").trim();
+    const dateStr = String(req.query.date || new Date().toISOString().slice(0, 10));
+
+    if (!propertyId) {
+      return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "propertyId required" } });
+    }
+
+    const ok = await assertPropertyInTenant(propertyId, tenantId);
+    if (!ok) {
+      return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "Property out of scope" } });
+    }
+
+    // Units in property
+    const unitsResult = await db.execute(sql`
+      SELECT u.id, u.code, u.status
+      FROM cc_units u
+      WHERE u.property_id = ${propertyId}::uuid
+        AND u.unit_type = 'marina_slip'
+    `);
+
+    /**
+     * CRITICAL:
+     * - Use COALESCE(a.unit_id, iu.unit_id) so unit_id always maps to cc_units.id
+     * - Use proper overlap window (not ::date casts)
+     * - Pick confirmed allocation first when multiple overlap the day
+     *
+     * IMPORTANT:
+     * reservation_id MUST be the same id used by /api/p2/reservations/:id.
+     *
+     * You MUST JOIN to the correct reservation identifier.
+     * Replace the join below with whatever your schema uses.
+     *
+     * Common options:
+     *  - a.pms_reservation_id -> cc_pms_reservations.id
+     *  - ci.pms_reservation_id -> cc_pms_reservations.id
+     *  - ci.reservation_id -> cc_pms_reservations.id
+     */
+    const allocResult = await db.execute(sql`
+      SELECT
+        a.id as allocation_id,
+        COALESCE(a.unit_id, iu.unit_id) as unit_id,
+        a.starts_at,
+        a.ends_at,
+        a.hold_type,
+        c.primary_guest_name as guest_name,
+        ci.vessel_name,
+        ci.vessel_length_ft,
+        pr.id as reservation_id
+      FROM cc_reservation_allocations a
+      LEFT JOIN cc_inventory_units iu ON a.inventory_unit_id = iu.id
+      LEFT JOIN cc_reservation_cart_items ci ON a.reservation_item_id = ci.id
+      LEFT JOIN cc_reservation_carts c ON ci.cart_id = c.id
+
+      -- ✅ REQUIRED: map to the reservation id used by /api/p2/reservations/:id
+      LEFT JOIN cc_pms_reservations pr ON pr.id = ci.pms_reservation_id
+
+      WHERE COALESCE(a.unit_id, iu.unit_id) IN (
+        SELECT id
+        FROM cc_units
+        WHERE property_id = ${propertyId}::uuid
+          AND unit_type = 'marina_slip'
+      )
+      AND a.starts_at < (${dateStr}::date + interval '1 day')
+      AND a.ends_at   > (${dateStr}::date)
+    `);
+
+    // Group allocations by unit_id
+    const byUnit = new Map<string, any[]>();
+    for (const row of allocResult.rows as any[]) {
+      if (!row.unit_id) continue;
+      const list = byUnit.get(row.unit_id) ?? [];
+      list.push(row);
+      byUnit.set(row.unit_id, list);
+    }
+
+    function pickAllocation(list: any[] | undefined) {
+      if (!list || list.length === 0) return null;
+      const confirmed = list.find((x) => x.hold_type === "confirmed");
+      return confirmed ?? list[0];
+    }
+
+    const allocations = (unitsResult.rows as any[]).map((unit) => {
+      const alloc = pickAllocation(byUnit.get(unit.id));
+      let status: "available" | "occupied" | "reserved" | "maintenance" = "available";
+
+      if (unit.status === "maintenance") {
+        status = "maintenance";
+      } else if (alloc) {
+        status = alloc.hold_type === "confirmed" ? "occupied" : "reserved";
+      }
+
+      return {
+        unit_id: unit.id,
+        unit_code: unit.code,
+        status,
+        allocation_id: alloc?.allocation_id || null,
+        guest_name: alloc?.guest_name || null,
+        vessel_name: alloc?.vessel_name || null,
+        vessel_length_ft: alloc?.vessel_length_ft || null,
+        starts_at: alloc?.starts_at || null,
+        ends_at: alloc?.ends_at || null,
+        reservation_id: alloc?.reservation_id || null,
+      };
+    });
+
+    res.json({ ok: true, date: dateStr, allocations });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+Mount it (same pattern as parking)
+
+In server/routes.ts (or your central router file):
+
+import { marinaRouter } from "./routes/p2-marina";
+app.use("/api/p2/marina", marinaRouter);
+
+
+If cc_properties doesn’t have tenant_id, replace assertPropertyInTenant() with the correct ownership join path you already use elsewhere (portal → tenant, etc.). Do not remove the check.
+
+If ci.pms_reservation_id doesn’t exist, replace the join to cc_pms_reservations with the correct link in your schema. The only requirement is: reservation_id returned must work with /api/p2/reservations/:id.
+
+5) FRONTEND IMPLEMENTATION (COPY PARKING, MODIFY FOR MARINA)
+Route
+
+/app/marina/plan → MarinaPlanPage
+
+MarinaPlanPage.tsx
+
+Pattern identical to Parking:
+
+property selector (from /api/p2/marina/properties)
+
+date selection (today default)
+
+filters (dock + status + viewMode)
+
+fetch units + availability and merge
+
+left plan view + right detail panel
+
+Hooks
+
+useMarinaProperties() → /api/p2/marina/properties
+
+useMarinaUnits(propertyId, dockCode) → /api/p2/marina/units
+
+useMarinaAvailability(propertyId, date) → /api/p2/marina/availability
+
+Merge logic (same as parking)
+
+build allocMap keyed by unit_id (cc_units.id)
+
+assign currentStatus + allocation on each unit
+
+6) COMPONENTS (KEY DIFFERENCES)
+MarinaSlip.tsx
+
+Per-unit QA selector:
+
+data-testid={marina-slip-${unit.id}}
+
+Status color map identical to parking
+
+Optional: show slip length in tooltip only (no currency)
+
+MarinaDetailPanel.tsx
+
+Show:
+
+Dock: dock_code (+ side if present)
+
+Max length: max_length_ft (fallback to min/max if that’s your schema)
+
+Beam: max_beam_ft
+
+Draft: max_draft_ft
+
+Power: power_service (or amps string)
+
+Water: has_water
+
+Pump out: has_pump_out
+
+If allocated:
+
+vessel name + length
+
+guest name
+
+date span
+
+Button: View Reservation → /app/reservations/${reservation_id}
+(only if reservation_id is non-null)
+
+Empty state
+
+If no slips exist:
+
+show a plan frame + message:
+
+“Select a property to view marina plan”
+
+“No properties with marina slips found”
+
+7) QA REQUIREMENTS (PASS/FAIL)
+
+ /app/marina/plan renders without console errors
+
+ Properties load (or empty state is correct)
+
+ Slips render in grid layout grouped by dock (fallback)
+
+ Positioned layout works if layout_x/y exist
+
+ Status colors match: available/reserved/occupied/maintenance
+
+ Clicking slip opens detail panel
+
+ Detail panel shows marina fields (power/water/pump-out)
+
+ If allocation has reservation_id, “View Reservation” opens /app/reservations/:id successfully
+
+ No currency anywhere
+
+ Stable selectors:
+
+data-testid="marina-plan"
+
+data-testid="marina-slip-${id}"
+
+data-testid="marina-detail-panel"
+
+8) STOP CONDITION
+
+After PROMPT 5:
+
+STOP
+
+Report back:
+
+Files created/modified
+
+Endpoints created
+
+What field/join you used for reservation_id (must match /api/p2/reservations/:id)
+
+Screenshot of marina plan (empty state is acceptable if no slips seeded)

@@ -63,6 +63,7 @@ import scheduleRouter from "./routes/schedule";
 import capacityConstraintsRouter from "./routes/capacityConstraints";
 import qaSeedRouter from "./routes/qa-seed";
 import devSeedParkingRouter from "./routes/dev-seed-parking";
+import devSeedMarinaRouter from "./routes/dev-seed-marina";
 import systemExplorerRouter from "./routes/system-explorer";
 import sitemapRouter from "./routes/sitemap";
 import mediaRouter from "./routes/media";
@@ -110,6 +111,7 @@ import { p2ReservationsRouter } from "./routes/p2-reservations";
 import { p2ServiceRunsRouter } from "./routes/p2-service-runs";
 import p2ConversationsRouter from "./routes/p2-conversations";
 import p2ParkingRouter from "./routes/p2-parking";
+import p2MarinaRouter from "./routes/p2-marina";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -317,6 +319,9 @@ export async function registerRoutes(
   
   // P2 parking API (plan view, availability)
   app.use('/api/p2/parking', p2ParkingRouter);
+  
+  // P2 marina API (plan view, availability)
+  app.use('/api/p2/marina', p2MarinaRouter);
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);
@@ -346,6 +351,7 @@ export async function registerRoutes(
   if (process.env.NODE_ENV === 'development') {
     app.use('/api', qaSeedRouter);
     app.use('/api/dev/seed', devSeedParkingRouter);
+    app.use('/api/dev/seed', devSeedMarinaRouter);
   }
 
   // Register operator routes (for community operators)
