@@ -1,0 +1,250 @@
+✅ P-UI-04 — AvailabilitySearch (Entry-point aware inputs + add-to-cart)
+
+Paste this into Replit.
+
+CONTEXT
+
+P-UI-01..03 ✅ complete
+
+ReserveShell now owns auth + cart lifecycle
+
+We must implement the actual “Search” step for availability
+
+Cross-sell comes later; for now Search must support “add first item” and “add another item”
+
+GOAL
+
+Implement AvailabilitySearch as the Search step at:
+
+/reserve/:portalSlug/:offerSlug/start/search
+
+It must:
+
+Infer entry-point type (lodging / parking / marina / activity / equipment)
+
+Render correct availability inputs per type
+
+Call existing backend availability endpoint via publicApi.availability(...)
+
+Display results in a list
+
+Allow adding a selected result to the cart via publicApi.addCartItem(...)
+
+On successful add: refetch cart + navigate to Details step
+
+NON-NEGOTIABLE RULES
+
+No backend invention
+
+“reserve/reservation” only
+
+P2 envelope only
+
+Must show loading/empty/error
+
+Must respect lock state: if cart is locked → Search becomes read-only (“This reservation can’t be changed”)
+
+Deterministic input model per type
+
+Store “carry-forward candidates” for cross-sell in sessionStorage (adapter-only; no new backend)
+
+1) FILES TO CREATE / MODIFY
+Create
+
+client/src/public/components/AvailabilitySearch.tsx
+
+client/src/public/components/AvailabilityInputs.tsx
+
+client/src/public/components/AvailabilityResults.tsx
+
+client/src/public/components/AvailabilityResultCard.tsx
+
+client/src/public/state/publicEntryPoint.ts
+
+client/src/public/state/publicCarryForward.ts
+
+Modify
+
+client/src/public/pages/steps/SearchStep.tsx (replace placeholder with AvailabilitySearch)
+
+client/src/public/api/publicApi.ts (only if you need an addCartItem body type helper)
+
+client/src/public/publicCopy.ts (copy for each type + empty states)
+
+2) ENTRY POINT RESOLUTION (STRICT)
+
+Create publicEntryPoint.ts:
+
+export type EntryPointType = "lodging" | "parking" | "marina" | "activity" | "equipment";
+
+export function deriveEntryPointType(offer: any): EntryPointType {
+  // Prefer explicit offer.type if present; otherwise fallback to offerSlug heuristics
+  const t = String(offer?.offer_type || offer?.type || "").toLowerCase();
+  if (t.includes("lodging") || t.includes("room") || t.includes("stay")) return "lodging";
+  if (t.includes("parking")) return "parking";
+  if (t.includes("marina") || t.includes("slip")) return "marina";
+  if (t.includes("activity") || t.includes("tour")) return "activity";
+  return "equipment";
+}
+
+
+If your OfferLandingPage already fetches offer metadata, pass it into Search step via location state or refetch it in Search step using the existing endpoint (no invention).
+
+3) INPUT MODEL (PER TYPE)
+Lodging
+
+Date range: start/end (nights)
+
+Guests: adults + children (or total guests)
+
+Units: optional
+
+Parking
+
+Date/time range OR date range (use what backend expects)
+
+Vehicle length class (optional)
+
+Plate not collected here (that’s DetailsForm)
+
+Marina
+
+Date/time range OR date range
+
+Vessel length (required if backend supports)
+
+Power requirement (optional)
+
+Activity
+
+Date (single)
+
+Quantity (people)
+
+Equipment
+
+Date range
+
+Quantity (items)
+
+Implement this in AvailabilityInputs.tsx with a switch on entryPointType.
+
+4) AVAILABILITY QUERY CONTRACT (NO INVENTION)
+
+Use publicApi.availability(query).
+
+Your query must include:
+
+portalId
+
+offerId (or offerSlug if that’s what backend uses)
+
+startAt/endAt or date
+
+Any type-specific parameters if supported
+
+If you don’t know parameter names, inspect existing backend route contracts. Do not guess. If missing, send only portalId/offerId/start/end.
+
+5) RESULTS LIST
+
+AvailabilityResults renders cards:
+
+Each AvailabilityResultCard shows:
+
+Title (unit name / slip / stall / item)
+
+Date span
+
+Capacity (if available)
+
+Status badge “Available”
+
+Primary action button:
+
+“Add to reservation” (disabled if locked)
+
+On click “Add”:
+
+call publicApi.addCartItem({...auth, selection...})
+
+on success:
+
+save carry-forward candidates (see below)
+
+refetch() cart from usePublicCart
+
+navigate to /start/details
+
+6) CARRY-FORWARD ADAPTER (SESSIONSTORAGE ONLY)
+
+Create publicCarryForward.ts:
+
+setCarryForwardCandidates(portalId, offerId, candidates)
+
+getCarryForwardCandidates(portalId, offerId)
+
+clearCarryForwardCandidates(portalId, offerId)
+
+Candidates format:
+
+type CarryForwardCandidate = {
+  entryPointType: string;
+  offerId?: string;
+  offerSlug?: string;
+  hint: string; // e.g., "Parking", "Second night", "Marina power upgrade"
+};
+
+
+Populate candidates after first add based on entry point type:
+
+lodging → suggest parking, activity, equipment
+
+parking → suggest lodging, marina (if relevant), activity
+
+marina → suggest lodging, parking
+
+activity → suggest lodging, parking
+
+equipment → suggest activity, lodging
+
+Deterministic ordering comes later in P-UI-07 CrossSellRail; for now store the array.
+
+7) LOCKED CART BEHAVIOR
+
+If isLocked(status):
+
+Inputs are disabled
+
+“Add to reservation” buttons disabled
+
+Show banner: “This reservation can’t be changed.”
+
+8) STABLE SELECTORS
+
+data-testid="availability-search"
+
+data-testid="availability-inputs"
+
+data-testid="availability-results"
+
+data-testid="availability-result-card"
+
+data-testid="availability-add-button"
+
+9) STOP CONDITION (P-UI-04)
+
+After implementation:
+
+STOP
+
+Report:
+
+Files created/modified
+
+Which entry point types are wired (list)
+
+A screenshot of Search results
+
+Confirm add-to-cart → cart refetch → navigates to Details
+
+Confirm locked cart disables inputs/actions

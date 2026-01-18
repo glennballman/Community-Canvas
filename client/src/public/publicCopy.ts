@@ -127,6 +127,31 @@ export const publicCopy = {
     completed: "This reservation is complete. Thank you!",
     expired: "This reservation has expired. Please start a new one.",
     locked: "This reservation is locked and cannot be modified.",
+    cannotChange: "This reservation can't be changed.",
+  },
+
+  availability: {
+    searchButton: "Search Availability",
+    checkIn: "Check-in",
+    checkOut: "Check-out",
+    date: "Date",
+    selectDate: "Select a date",
+    guests: "Guests",
+    quantity: "Quantity",
+    vehicleLength: "Vehicle Size",
+    vesselLength: "Vessel Length (ft)",
+    power: "Power Requirement",
+    noResults: "No availability found for your selected dates.",
+    available: "Available",
+    capacity: "Capacity",
+    addToReservation: "Add to Reservation",
+    searchFirst: "Select your dates above to see availability.",
+    // Entry point type labels
+    lodging: "Lodging",
+    parking: "Parking",
+    marina: "Marina Slip",
+    activity: "Activity",
+    equipment: "Equipment Rental",
   },
 } as const;
 

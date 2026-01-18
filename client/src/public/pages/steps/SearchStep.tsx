@@ -1,14 +1,15 @@
-import { publicCopy } from "../../publicCopy";
+import { useParams } from "react-router-dom";
+import { AvailabilitySearch } from "../../components/AvailabilitySearch";
 
 export default function SearchStep() {
+  const { portalSlug, offerSlug } = useParams<{ portalSlug: string; offerSlug: string }>();
+
   return (
-    <div className="py-8 text-center" data-testid="step-search">
-      <h2 className="text-lg font-semibold mb-2" data-testid="text-step-title">
-        {publicCopy.stepLabels.search}
-      </h2>
-      <p className="text-muted-foreground">
-        This step will be implemented in P-UI-04 (AvailabilitySearch).
-      </p>
+    <div data-testid="step-search">
+      <AvailabilitySearch
+        portalSlug={portalSlug}
+        offerSlug={offerSlug}
+      />
     </div>
   );
 }
