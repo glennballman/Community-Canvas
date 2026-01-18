@@ -1,0 +1,201 @@
+✅ P-UI-03 — ReserveShell Step Router + Cart Panel (Load/Lock/Resume-safe)
+
+Paste this into Replit.
+
+CONTEXT
+
+P-UI-01 skeleton routes ✅
+
+P-UI-02 publicApi + token/auth context ✅
+
+Backend is done; public endpoints exist
+
+Need deterministic behavior for:
+
+cart load
+
+cart status locks (active/submitted/completed/expired)
+
+resume-safe navigation
+
+cross-sell slotting later
+
+GOAL
+
+Implement ReserveShell as the authoritative public flow container:
+
+Loads cart (and items) using auth context
+
+Shows a step router (left) and a CartPanel (right)
+
+Enforces mutation locks based on cart status (UI-only locks now)
+
+Creates consistent “missing auth” and “expired” UX
+
+Provides stable entry points for P-UI-04+ (AvailabilitySearch, DetailsForm, Review)
+
+NON-NEGOTIABLE RULES
+
+Terminology: reserve / reservation only
+
+P2 envelope everywhere
+
+No backend invention
+
+Currency only inside CartPanel (and explicitly labeled as totals/finance context) — for now you may omit currency entirely if totals aren’t ready
+
+Must show loading/empty/error states
+
+Must use your publicApi.getCart() to load cart data
+
+1) FILES TO CREATE / MODIFY
+Create
+
+client/src/public/components/CartPanel.tsx
+
+client/src/public/components/ReserveStepHeader.tsx
+
+client/src/public/components/ReserveProgress.tsx
+
+client/src/public/state/usePublicCart.ts (hook wrapper for cart load/refetch)
+
+client/src/public/state/publicReservationMachine.ts (tiny state machine enum + helpers)
+
+Modify
+
+client/src/public/pages/ReserveShell.tsx (main work)
+
+client/src/public/routes/PublicReserveRoutes.tsx (nested routes for steps)
+
+client/src/public/publicCopy.ts (add step labels + lock/expired copy)
+
+2) ROUTES (NESTED STEPS)
+
+Inside /reserve/:portalSlug/:offerSlug/start, implement nested routes:
+
+.../start/search → placeholder Step: “Search”
+
+.../start/details → placeholder Step: “Details”
+
+.../start/review → placeholder Step: “Review”
+
+Default redirect: /start/search
+
+These are placeholders now — P-UI-04 will replace Search with AvailabilitySearch.
+
+3) CART STATUS + LOCK RULES (UI ENFORCEMENT)
+
+Define a small state enum in publicReservationMachine.ts:
+
+export type PublicCartStatus = "active" | "submitted" | "completed" | "expired" | "unknown";
+
+export function deriveCartStatus(cart: any): PublicCartStatus {
+  if (!cart) return "unknown";
+  if (cart.status === "completed") return "completed";
+  if (cart.status === "submitted") return "submitted";
+  if (cart.expires_at && new Date(cart.expires_at).getTime() < Date.now()) return "expired";
+  if (cart.status === "active") return "active";
+  return "unknown";
+}
+
+export function isLocked(status: PublicCartStatus) {
+  return status === "submitted" || status === "completed" || status === "expired";
+}
+
+Behavior
+
+If locked:
+
+disable add/remove actions in CartPanel
+
+disable step navigation forward that implies mutation (Search/Details)
+
+show a lock banner at top: “This reservation is already submitted.”
+
+If expired:
+
+show expired banner and a primary CTA: “Start a new reservation” (routes to OfferLandingPage)
+
+4) AUTH CONTEXT RESOLUTION (STRICT)
+
+ReserveShell must attempt auth resolution in this order:
+
+getAuthFromToken() from publicTokenStore
+
+URL query params: portalId, cartId, accessToken
+
+If missing → show error state:
+
+“We couldn’t find an active reservation.”
+
+Button: “Resume reservation” → /reserve/resume
+
+Button: “Start over” → /reserve/:portalSlug/:offerSlug
+
+Once auth is found, call:
+
+setAuthContext(auth) to persist.
+
+5) CART LOAD HOOK
+
+usePublicCart.ts should:
+
+accept auth
+
+call publicApi.getCart(auth)
+
+expose { cart, items, status, isLoading, isError, refetch }
+
+Must refetch on:
+
+returning to tab (optional)
+
+manual “Refresh” button in CartPanel
+
+6) UI LAYOUT (ReserveShell)
+
+ReserveShell layout:
+
+Top: ReserveStepHeader (title + status banner)
+
+Left: step content (nested route outlet)
+
+Right: CartPanel
+
+CartPanel must show:
+
+items list (title, dates, quantity)
+
+remove button (disabled if locked)
+
+empty state: “Your reservation is empty.”
+
+secondary action: “Add another item” (routes back to Search step; later becomes cross-sell rail)
+
+7) STABLE SELECTORS
+
+data-testid="reserve-shell"
+
+data-testid="cart-panel"
+
+data-testid="cart-item"
+
+data-testid="reserve-status-banner"
+
+data-testid="reserve-step-nav"
+
+8) STOP CONDITION (P-UI-03)
+
+After implementation:
+
+STOP
+
+Report:
+
+Files created/modified
+
+Screenshots: ReserveShell with empty cart + with items (seed or existing)
+
+Confirm lock behavior when cart.status = submitted/completed
+
+Confirm missing-auth UX routes correctly to resume/start-over

@@ -13,6 +13,7 @@ export const publicCopy = {
     reservationStatus: "Reservation Status",
     confirmReservation: "Confirm Reservation",
     reservationConfirmed: "Reservation Confirmed",
+    reserveNow: "Reserve Now",
   },
 
   buttons: {
@@ -23,6 +24,13 @@ export const publicCopy = {
     cancel: "Cancel",
     confirm: "Confirm",
     submit: "Submit Request",
+    refresh: "Refresh",
+    startNewReservation: "Start a New Reservation",
+    addAnother: "Add Another Item",
+    resumeReservation: "Resume Reservation",
+    startOver: "Start Over",
+    next: "Next",
+    previous: "Previous",
   },
 
   loading: {
@@ -30,6 +38,7 @@ export const publicCopy = {
     checkingAvailability: "Checking availability...",
     processingReservation: "Processing your reservation...",
     loadingOffer: "Loading offer details...",
+    loadingCart: "Loading your reservation...",
   },
 
   empty: {
@@ -37,6 +46,8 @@ export const publicCopy = {
     noOfferFound: "This offer is not available",
     noPortalFound: "Portal not found",
     sessionExpired: "Your session has expired. Please start a new reservation.",
+    noAuthFound: "We couldn't find an active reservation.",
+    cartEmpty: "Your reservation is empty.",
   },
 
   errors: {
@@ -45,6 +56,7 @@ export const publicCopy = {
     unavailable: "This feature is not available at this time.",
     networkError: "Unable to connect. Please check your connection.",
     invalidToken: "Invalid or expired reservation token.",
+    cartLoadFailed: "Failed to load your reservation.",
   },
 
   disclaimers: {
@@ -60,6 +72,10 @@ export const publicCopy = {
     cancelled: "Cancelled",
     expired: "Expired",
     awaitingApproval: "Awaiting Approval",
+    active: "Active",
+    submitted: "Submitted",
+    completed: "Completed",
+    unknown: "Unknown",
   },
 
   confirmation: {
@@ -78,6 +94,7 @@ export const publicCopy = {
     addItem: "Add Item",
     removeItem: "Remove",
     empty: "Your cart is empty",
+    itemCount: (n: number) => n === 1 ? "1 item" : `${n} items`,
   },
 
   steps: {
@@ -87,6 +104,29 @@ export const publicCopy = {
     review: "Review",
     payment: "Payment",
     confirmation: "Confirmation",
+    // Step router labels
+    search: "Search",
+    details: "Details",
+  },
+
+  stepLabels: {
+    search: "Search",
+    details: "Details",
+    review: "Review",
+  },
+
+  lock: {
+    submitted: "This reservation has been submitted.",
+    completed: "This reservation is complete.",
+    expired: "This reservation has expired.",
+    locked: "This reservation cannot be modified.",
+  },
+
+  banners: {
+    submitted: "This reservation has already been submitted and cannot be modified.",
+    completed: "This reservation is complete. Thank you!",
+    expired: "This reservation has expired. Please start a new one.",
+    locked: "This reservation is locked and cannot be modified.",
   },
 } as const;
 
