@@ -1,0 +1,369 @@
+Claude’s direction is basically right, but it’s missing the hard edges we need for a clean V3.5 implementation:
+
+It leaves “folio/payment” ambiguous (that’s where people accidentally leak currency into non-finance contexts).
+
+It doesn’t lock the status machine (when buttons enable/disable) which causes bugs + refactors.
+
+It doesn’t specify which tables are read-only projections vs mutation targets.
+
+It doesn’t define what to do if notes/timeline endpoints don’t exist (must degrade safely).
+
+It doesn’t enforce stable selectors (QA requirement you already set).
+
+So: I’m taking Claude’s base and issuing the authoritative Replit-ready PROMPT 3 below, with the missing constraints filled in.
+
+✅ UI PROMPT 3 — Reservation Detail (/app/reservations/:id)
+
+Paste this entire block into Replit
+
+CONTEXT
+
+PROMPT 1 /app ✅ complete
+
+PROMPT 2 /app/reservations ✅ complete
+
+Existing endpoints:
+
+GET /api/p2/reservations (list)
+
+POST /api/p2/reservations/:id/check-in
+
+POST /api/p2/reservations/:id/check-out
+
+Tables available: cc_pms_reservations, cc_units, cc_reservation_allocations (plus any append-only note/audit tables if present)
+
+GOAL
+
+Implement Reservation detail page for staff ops at:
+
+/app/reservations/:id
+
+Must support:
+
+Read-only detail summary
+
+Check-in / check-out actions
+
+Read-only timeline/history
+
+Append-only internal note (create-only)
+
+Request change / cancellation (request-only, no automatic mutations)
+
+NON-NEGOTIABLE RULES
+
+Terminology: “reservation” only (never “book/booking”).
+
+P2 envelope: every API response is { ok, error?, ...data }.
+
+Currency: DO NOT show currency anywhere in PROMPT 3.
+(Folio is a separate, explicitly finance-scoped route later; do not add it here.)
+
+Append-only artifacts: read-only rendering; no edit/delete UI.
+
+Must show: loading, not found, error.
+
+Respect tenant scoping (same portal→tenant rule as PROMPT 2).
+
+Stable selectors for QA: data-testid="...".
+
+1) ROUTE + NAV
+
+Route: /app/reservations/:id
+
+Back link: /app/reservations labeled “All reservations”
+
+Update left nav only if missing entry (should already exist).
+
+2) FILES TO CREATE
+Frontend
+
+Create:
+
+client/src/pages/app/ReservationDetailPage.tsx
+
+client/src/hooks/useReservationDetail.ts
+
+client/src/components/reservations/detail/ReservationHeader.tsx
+
+client/src/components/reservations/detail/ReservationInfoGrid.tsx
+
+client/src/components/reservations/detail/ReservationTimeline.tsx
+
+client/src/components/reservations/detail/ReservationActionsPanel.tsx
+
+client/src/components/reservations/detail/AddInternalNoteModal.tsx
+
+client/src/components/reservations/detail/RequestChangeModal.tsx
+
+client/src/components/reservations/detail/RequestCancelModal.tsx
+
+Backend (only if missing)
+
+Add to server/routes/p2-reservations.ts (preferred) OR new file if necessary:
+
+GET /api/p2/reservations/:id (detail)
+
+GET /api/p2/reservations/:id/timeline (optional; can be included in detail)
+
+POST /api/p2/reservations/:id/notes (append-only)
+
+POST /api/p2/reservations/:id/change-request (request-only)
+
+POST /api/p2/reservations/:id/cancel-request (request-only)
+
+If any of the “notes/request” endpoints are not implemented, the UI must:
+
+render the panel
+
+show the action disabled with tooltip: “Not available”
+
+3) PAGE LAYOUT (STRICT)
+Top Header Row
+
+Title: Reservation + confirmation number (or “—”)
+
+Status badge (reuse ReservationStatusBadge)
+
+Secondary: date range + unit/asset label
+
+Right side: compact action buttons (check-in, check-out)
+
+Main Body: 2-column grid
+
+Left column
+
+ReservationInfoGrid (read-only fields)
+
+ReservationTimeline (read-only list)
+
+Right column
+
+ReservationActionsPanel:
+
+Check-in / Check-out
+
+Add internal note (opens modal)
+
+Request change (opens modal)
+
+Request cancellation (opens modal)
+
+All panels must have:
+
+loading skeleton
+
+empty state
+
+error state (where relevant)
+
+4) DETAIL DATA CONTRACT (FRONTEND)
+useReservationDetail(id)
+
+Fetch:
+
+GET /api/p2/reservations/:id
+
+Response shape (tolerant):
+
+{
+  ok: true,
+  reservation: {
+    id: string,
+    status: string,
+    confirmation_number?: string | null,
+    guest_name?: string | null,
+    guest_email?: string | null,
+    guest_phone?: string | null,
+    check_in_date?: string | null,
+    check_out_date?: string | null,
+    start_at?: string | null,
+    end_at?: string | null,
+    unit_id?: string | null,
+    unit_name?: string | null,
+    asset_name?: string | null,
+    portal_id?: string,
+    created_at?: string,
+    updated_at?: string,
+    notes_summary?: string | null,
+    party_size?: number | null,
+    vehicle_plate?: string | null,
+    vessel_name?: string | null,
+    vessel_length_ft?: number | null
+  },
+  allocations?: Array<any>,
+  timeline?: Array<{
+    id: string,
+    type: string,
+    title: string,
+    at: string,
+    detail?: string | null
+  }>
+}
+
+
+Mapping rules:
+
+Check-in/out dates come from check_in_date/check_out_date else start_at/end_at
+
+Unit label: unit_name || asset_name || "—"
+
+5) STATUS MACHINE (BUTTON ENABLE/DISABLE)
+
+Implement this exact behavior (no guessing):
+
+Check-in enabled only when:
+
+status in ["confirmed", "pending_arrival"]
+
+Check-out enabled only when:
+
+status in ["checked_in", "in_house"]
+
+If your backend uses different strings, normalize in UI with a helper:
+normalizeReservationStatus(status: string): "confirmed" | "checked_in" | ...
+
+But do NOT invent new statuses; just map known values.
+
+6) TIMELINE BEHAVIOR (READ-ONLY)
+
+Priority:
+
+If timeline returned by detail endpoint → render it.
+
+Else if /timeline endpoint exists → fetch and render it.
+
+Else render empty state: “Timeline not available yet.”
+
+Timeline entries must be sorted newest first.
+
+7) ADD INTERNAL NOTE (APPEND-ONLY)
+Modal: AddInternalNoteModal
+
+Fields:
+
+textarea (required, min length 3)
+Buttons:
+
+Cancel
+
+Save note
+
+Call:
+
+POST /api/p2/reservations/:id/notes with { message: string }
+
+Success:
+
+toast “Note added”
+
+close modal
+
+refetch detail
+
+timeline shows new entry (if supported)
+
+If endpoint missing:
+
+disable button, tooltip “Not available”
+
+8) REQUEST CHANGE / REQUEST CANCELLATION (REQUEST-ONLY)
+RequestChangeModal
+
+textarea required
+
+disclaimer: “This sends a request. It does not change the reservation automatically.”
+
+Call:
+
+POST /api/p2/reservations/:id/change-request with { message: string }
+
+RequestCancelModal
+
+textarea required
+
+checkbox required: “I understand this is a request, not an automatic cancellation.”
+
+Call:
+
+POST /api/p2/reservations/:id/cancel-request with { message: string }
+
+Success:
+
+toast
+
+optional timeline entry if backend logs it
+
+do NOT assume status changes
+
+9) BACKEND DETAIL ENDPOINT (IF MISSING)
+GET /api/p2/reservations/:id
+
+Validate tenant scope via portal_id → tenant_id (same as PROMPT 2)
+
+Join:
+
+cc_units for unit_name
+
+optionally cc_reservation_allocations for allocations summary
+
+Return P2 envelope
+
+Also implement 404 not found with { ok:false, error:{ code:"NOT_FOUND" } }
+
+Notes + request endpoints (minimal)
+
+If no tables exist for notes/requests, implement by appending to a safe text column only if it already exists (e.g., internal_notes).
+If no safe column exists, return { ok:false, error:{ code:"NOT_IMPLEMENTED" } } and the UI must stay request-only/disabled.
+
+No schema changes.
+
+10) QA REQUIREMENTS (MUST PASS)
+
+/app/reservations/:id renders without console errors
+
+Not found state is clean and deterministic
+
+Header shows confirmation # if present
+
+Status badge renders
+
+Buttons enable/disable correctly per status machine
+
+Timeline is read-only
+
+Add note works OR is disabled with tooltip
+
+Request change/cancel work OR disabled with tooltip
+
+No currency anywhere
+
+No forbidden words
+
+Stable selectors exist:
+
+data-testid="reservation-detail"
+
+data-testid="reservation-actions"
+
+data-testid="reservation-timeline"
+
+data-testid="reservation-add-note"
+
+STOP CONDITION
+
+After implementing PROMPT 3:
+
+STOP
+
+Report:
+
+files changed
+
+endpoints created/reused
+
+status strings observed in your data
+
+screenshot
+
+Do not proceed to PROMPT 6 until I accept PROMPT 3 as PASS.

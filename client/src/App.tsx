@@ -32,6 +32,7 @@ import { TenantPicker } from './pages/app/TenantPicker';
 import { Dashboard } from './pages/app/Dashboard';
 import DashboardPage from './pages/app/DashboardPage';
 import ReservationsIndexPage from './pages/app/ReservationsIndexPage';
+import ReservationDetailPage from './pages/app/ReservationDetailPage';
 
 // Pages - App Community
 import AvailabilityConsole from './pages/app/community/AvailabilityConsole';
@@ -353,6 +354,7 @@ export default function App() {
                 <Route path="assets" element={<InventoryPage />} />
                 <Route path="assets/:id" element={<InventoryItemDetail />} />
                 <Route path="reservations" element={<ReservationsIndexPage />} />
+                <Route path="reservations/:id" element={<ReservationDetailPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 
                 {/* Redirects from old paths */}

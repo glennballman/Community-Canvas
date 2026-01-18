@@ -176,6 +176,272 @@ p2ReservationsRouter.post("/:id/check-in", async (req, res) => {
   }
 });
 
+// GET /api/p2/reservations/:id - Detail view
+p2ReservationsRouter.get("/:id", async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { id } = req.params;
+
+    // Build tenant-scoped query
+    const query = tenantId
+      ? `SELECT 
+          r.id,
+          r.status,
+          r.confirmation_number,
+          r.guest_name,
+          r.guest_email,
+          r.guest_phone,
+          r.guest_count,
+          r.guest_notes,
+          r.check_in_date,
+          r.check_out_date,
+          r.expected_arrival_time,
+          r.actual_arrival_time,
+          r.expected_departure_time,
+          r.actual_departure_time,
+          r.source,
+          r.cancellation_reason,
+          r.portal_id,
+          r.unit_id,
+          r.created_at,
+          r.updated_at,
+          r.confirmed_at,
+          r.checked_in_at,
+          r.checked_out_at,
+          r.cancelled_at,
+          COALESCE(u.name, 'Unit ' || substring(r.unit_id::text, 1, 8)) as unit_name
+        FROM cc_pms_reservations r
+        LEFT JOIN cc_units u ON r.unit_id = u.id
+        WHERE r.id = $1 
+          AND EXISTS (SELECT 1 FROM cc_portals p WHERE p.id = r.portal_id AND p.tenant_id = $2)`
+      : `SELECT 
+          r.id,
+          r.status,
+          r.confirmation_number,
+          r.guest_name,
+          r.guest_email,
+          r.guest_phone,
+          r.guest_count,
+          r.guest_notes,
+          r.check_in_date,
+          r.check_out_date,
+          r.expected_arrival_time,
+          r.actual_arrival_time,
+          r.expected_departure_time,
+          r.actual_departure_time,
+          r.source,
+          r.cancellation_reason,
+          r.portal_id,
+          r.unit_id,
+          r.created_at,
+          r.updated_at,
+          r.confirmed_at,
+          r.checked_in_at,
+          r.checked_out_at,
+          r.cancelled_at,
+          COALESCE(u.name, 'Unit ' || substring(r.unit_id::text, 1, 8)) as unit_name
+        FROM cc_pms_reservations r
+        LEFT JOIN cc_units u ON r.unit_id = u.id
+        WHERE r.id = $1`;
+
+    const params = tenantId ? [id, tenantId] : [id];
+    const result = await pool.query(query, params);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Reservation not found" } });
+    }
+
+    const row = result.rows[0];
+
+    // Build timeline from status timestamps
+    const timeline: Array<{ id: string; type: string; title: string; at: string; detail?: string | null }> = [];
+    
+    if (row.created_at) {
+      timeline.push({
+        id: `created-${row.id}`,
+        type: "created",
+        title: "Reservation created",
+        at: row.created_at,
+        detail: row.source ? `Source: ${row.source}` : null,
+      });
+    }
+    
+    if (row.confirmed_at) {
+      timeline.push({
+        id: `confirmed-${row.id}`,
+        type: "confirmed",
+        title: "Reservation confirmed",
+        at: row.confirmed_at,
+      });
+    }
+    
+    if (row.checked_in_at) {
+      timeline.push({
+        id: `checkin-${row.id}`,
+        type: "checked_in",
+        title: "Guest checked in",
+        at: row.checked_in_at,
+      });
+    }
+    
+    if (row.checked_out_at) {
+      timeline.push({
+        id: `checkout-${row.id}`,
+        type: "checked_out",
+        title: "Guest checked out",
+        at: row.checked_out_at,
+      });
+    }
+    
+    if (row.cancelled_at) {
+      timeline.push({
+        id: `cancelled-${row.id}`,
+        type: "cancelled",
+        title: "Reservation cancelled",
+        at: row.cancelled_at,
+        detail: row.cancellation_reason,
+      });
+    }
+
+    res.json({
+      ok: true,
+      reservation: {
+        id: row.id,
+        status: row.status,
+        confirmation_number: row.confirmation_number,
+        guest_name: row.guest_name,
+        guest_email: row.guest_email,
+        guest_phone: row.guest_phone,
+        guest_count: row.guest_count,
+        guest_notes: row.guest_notes,
+        check_in_date: row.check_in_date,
+        check_out_date: row.check_out_date,
+        expected_arrival_time: row.expected_arrival_time,
+        actual_arrival_time: row.actual_arrival_time,
+        source: row.source,
+        cancellation_reason: row.cancellation_reason,
+        portal_id: row.portal_id,
+        unit_id: row.unit_id,
+        unit_name: row.unit_name,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      },
+      timeline,
+      allocations: [],
+    });
+  } catch (e: any) {
+    console.error("[p2-reservations] detail error:", e.message);
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// POST /api/p2/reservations/:id/notes - Add internal note (append-only)
+// NOTE: No notes table exists; returning NOT_IMPLEMENTED
+p2ReservationsRouter.post("/:id/notes", async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { id } = req.params;
+    const { message } = req.body || {};
+
+    if (!message || typeof message !== "string" || message.trim().length < 3) {
+      return res.status(400).json({ ok: false, error: { code: "INVALID_INPUT", message: "Message must be at least 3 characters" } });
+    }
+
+    // Verify reservation exists with tenant scope
+    const check = tenantId
+      ? await pool.query(
+          `SELECT r.id FROM cc_pms_reservations r
+           WHERE r.id = $1 AND EXISTS (SELECT 1 FROM cc_portals p WHERE p.id = r.portal_id AND p.tenant_id = $2)`,
+          [id, tenantId]
+        )
+      : await pool.query(`SELECT id FROM cc_pms_reservations WHERE id = $1`, [id]);
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Reservation not found" } });
+    }
+
+    // No notes table exists yet - return NOT_IMPLEMENTED
+    // In future, this would insert into cc_pms_reservation_notes or similar
+    return res.status(501).json({ 
+      ok: false, 
+      error: { code: "NOT_IMPLEMENTED", message: "Notes functionality not yet available" } 
+    });
+  } catch (e: any) {
+    console.error("[p2-reservations] notes error:", e.message);
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// POST /api/p2/reservations/:id/change-request - Request change (request-only)
+p2ReservationsRouter.post("/:id/change-request", async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { id } = req.params;
+    const { message } = req.body || {};
+
+    if (!message || typeof message !== "string" || message.trim().length < 3) {
+      return res.status(400).json({ ok: false, error: { code: "INVALID_INPUT", message: "Message must be at least 3 characters" } });
+    }
+
+    // Verify reservation exists with tenant scope
+    const check = tenantId
+      ? await pool.query(
+          `SELECT r.id FROM cc_pms_reservations r
+           WHERE r.id = $1 AND EXISTS (SELECT 1 FROM cc_portals p WHERE p.id = r.portal_id AND p.tenant_id = $2)`,
+          [id, tenantId]
+        )
+      : await pool.query(`SELECT id FROM cc_pms_reservations WHERE id = $1`, [id]);
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Reservation not found" } });
+    }
+
+    // No request tracking table exists - return NOT_IMPLEMENTED
+    return res.status(501).json({ 
+      ok: false, 
+      error: { code: "NOT_IMPLEMENTED", message: "Change request functionality not yet available" } 
+    });
+  } catch (e: any) {
+    console.error("[p2-reservations] change-request error:", e.message);
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
+// POST /api/p2/reservations/:id/cancel-request - Request cancellation (request-only)
+p2ReservationsRouter.post("/:id/cancel-request", async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { id } = req.params;
+    const { message } = req.body || {};
+
+    if (!message || typeof message !== "string" || message.trim().length < 3) {
+      return res.status(400).json({ ok: false, error: { code: "INVALID_INPUT", message: "Message must be at least 3 characters" } });
+    }
+
+    // Verify reservation exists with tenant scope
+    const check = tenantId
+      ? await pool.query(
+          `SELECT r.id FROM cc_pms_reservations r
+           WHERE r.id = $1 AND EXISTS (SELECT 1 FROM cc_portals p WHERE p.id = r.portal_id AND p.tenant_id = $2)`,
+          [id, tenantId]
+        )
+      : await pool.query(`SELECT id FROM cc_pms_reservations WHERE id = $1`, [id]);
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Reservation not found" } });
+    }
+
+    // No request tracking table exists - return NOT_IMPLEMENTED
+    return res.status(501).json({ 
+      ok: false, 
+      error: { code: "NOT_IMPLEMENTED", message: "Cancel request functionality not yet available" } 
+    });
+  } catch (e: any) {
+    console.error("[p2-reservations] cancel-request error:", e.message);
+    res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
+  }
+});
+
 // POST /api/p2/reservations/:id/check-out
 p2ReservationsRouter.post("/:id/check-out", async (req, res) => {
   try {
