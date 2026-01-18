@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Eye, LogIn, LogOut } from "lucide-react";
 import { ReservationStatusBadge } from "./ReservationStatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,6 +48,7 @@ export function ReservationsTable({
   }
 
   return (
+    <TooltipProvider>
     <div className="rounded-md border" data-testid="reservations-table">
       <Table>
         <TableHeader>
@@ -144,5 +145,6 @@ export function ReservationsTable({
         </TableBody>
       </Table>
     </div>
+    </TooltipProvider>
   );
 }

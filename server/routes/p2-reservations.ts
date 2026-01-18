@@ -8,6 +8,7 @@ function getTenantId(req: any): string | null {
 }
 
 // GET /api/p2/reservations - List reservations with filters
+// NOTE: Tenant scoping via portal relationship. cc_pms_reservations uses portal_id, not tenant_id directly.
 p2ReservationsRouter.get("/", async (req, res) => {
   try {
     const tenantId = getTenantId(req);
@@ -29,6 +30,13 @@ p2ReservationsRouter.get("/", async (req, res) => {
     const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
+
+    // Tenant scoping via portal relationship
+    if (tenantId) {
+      conditions.push(`EXISTS (SELECT 1 FROM cc_portals p WHERE p.id = r.portal_id AND p.tenant_id = $${paramIndex})`);
+      params.push(tenantId);
+      paramIndex++;
+    }
 
     // Status filter
     if (status && status !== "all") {
@@ -128,13 +136,20 @@ p2ReservationsRouter.get("/", async (req, res) => {
 // POST /api/p2/reservations/:id/check-in
 p2ReservationsRouter.post("/:id/check-in", async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const { id } = req.params;
 
-    // Verify reservation exists and is confirmed
-    const check = await pool.query(
-      `SELECT id, status FROM cc_pms_reservations WHERE id = $1`,
-      [id]
-    );
+    // Verify reservation exists and is confirmed (with tenant scoping via portal)
+    const check = tenantId
+      ? await pool.query(
+          `SELECT r.id, r.status FROM cc_pms_reservations r
+           WHERE r.id = $1 AND EXISTS (SELECT 1 FROM cc_portals p WHERE p.id = r.portal_id AND p.tenant_id = $2)`,
+          [id, tenantId]
+        )
+      : await pool.query(
+          `SELECT id, status FROM cc_pms_reservations WHERE id = $1`,
+          [id]
+        );
 
     if (check.rows.length === 0) {
       return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Reservation not found" } });
@@ -164,13 +179,20 @@ p2ReservationsRouter.post("/:id/check-in", async (req, res) => {
 // POST /api/p2/reservations/:id/check-out
 p2ReservationsRouter.post("/:id/check-out", async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const { id } = req.params;
 
-    // Verify reservation exists and is checked_in
-    const check = await pool.query(
-      `SELECT id, status FROM cc_pms_reservations WHERE id = $1`,
-      [id]
-    );
+    // Verify reservation exists and is checked_in (with tenant scoping via portal)
+    const check = tenantId
+      ? await pool.query(
+          `SELECT r.id, r.status FROM cc_pms_reservations r
+           WHERE r.id = $1 AND EXISTS (SELECT 1 FROM cc_portals p WHERE p.id = r.portal_id AND p.tenant_id = $2)`,
+          [id, tenantId]
+        )
+      : await pool.query(
+          `SELECT id, status FROM cc_pms_reservations WHERE id = $1`,
+          [id]
+        );
 
     if (check.rows.length === 0) {
       return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Reservation not found" } });
