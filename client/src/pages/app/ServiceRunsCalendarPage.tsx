@@ -147,18 +147,6 @@ export default function ServiceRunsCalendarPage() {
             </div>
           </Card>
         </div>
-      ) : serviceRuns.length === 0 && !hasActiveFilters ? (
-        <Card className="p-8" data-testid="service-runs-empty">
-          <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <Calendar className="h-12 w-12 text-muted-foreground" />
-            <div>
-              <h3 className="font-semibold text-lg">No service runs scheduled</h3>
-              <p className="text-muted-foreground mt-1">
-                No service runs scheduled for this period.
-              </p>
-            </div>
-          </div>
-        </Card>
       ) : (
         <ServiceRunsCalendar
           serviceRuns={serviceRuns}

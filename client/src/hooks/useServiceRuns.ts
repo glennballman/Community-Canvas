@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
-import { useCallback, useMemo } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 export interface ServiceRun {
   id: string;
@@ -85,84 +84,73 @@ export function useServiceRunFilters() {
   };
 }
 
+function getInitialMonth(): Date {
+  const params = new URLSearchParams(window.location.search);
+  const monthParam = params.get("month");
+  return monthParam ? new Date(monthParam + "-01") : new Date();
+}
+
+function getInitialFilters() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    status: params.get("status")?.split(",").filter(Boolean) || [],
+    serviceType: params.get("serviceType")?.split(",").filter(Boolean) || [],
+    search: params.get("search") || "",
+  };
+}
+
 export function useServiceRunsCalendarFilters() {
-  const [location, setLocation] = useLocation();
-
-  const searchParams = useMemo(() => {
-    const url = new URL(window.location.href);
-    return url.searchParams;
-  }, [location]);
-
-  const currentMonth = useMemo(() => {
-    const monthParam = searchParams.get("month");
-    return monthParam ? new Date(monthParam + "-01") : new Date();
-  }, [searchParams]);
+  const [currentMonth, setCurrentMonth] = useState<Date>(getInitialMonth);
+  const [status, setStatusState] = useState<string[]>(() => getInitialFilters().status);
+  const [serviceType, setServiceTypeState] = useState<string[]>(() => getInitialFilters().serviceType);
+  const [search, setSearchState] = useState<string>(() => getInitialFilters().search);
 
   const startDate = format(startOfMonth(currentMonth), "yyyy-MM-dd");
   const endDate = format(endOfMonth(currentMonth), "yyyy-MM-dd");
 
-  const status = useMemo(() => searchParams.get("status")?.split(",").filter(Boolean) || [], [searchParams]);
-  const serviceType = useMemo(() => searchParams.get("serviceType")?.split(",").filter(Boolean) || [], [searchParams]);
-  const search = searchParams.get("search") || "";
-
-  const updateParams = useCallback((updater: (params: URLSearchParams) => void) => {
-    const newParams = new URLSearchParams(window.location.search);
-    updater(newParams);
-    const newSearch = newParams.toString();
-    const newPath = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`;
+  const updateUrl = useCallback((month: Date, s: string[], st: string[], srch: string) => {
+    const params = new URLSearchParams();
+    params.set("month", format(month, "yyyy-MM"));
+    if (s.length > 0) params.set("status", s.join(","));
+    if (st.length > 0) params.set("serviceType", st.join(","));
+    if (srch) params.set("search", srch);
+    const newPath = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, "", newPath);
-    setLocation(newPath);
-  }, [setLocation]);
+  }, []);
+
+  useEffect(() => {
+    updateUrl(currentMonth, status, serviceType, search);
+  }, [currentMonth, status, serviceType, search, updateUrl]);
 
   const setMonth = useCallback((date: Date) => {
-    updateParams((params) => params.set("month", format(date, "yyyy-MM")));
-  }, [updateParams]);
+    setCurrentMonth(date);
+  }, []);
 
   const nextMonth = useCallback(() => {
-    setMonth(addMonths(currentMonth, 1));
-  }, [currentMonth, setMonth]);
+    setCurrentMonth(prev => addMonths(prev, 1));
+  }, []);
 
   const prevMonth = useCallback(() => {
-    setMonth(subMonths(currentMonth, 1));
-  }, [currentMonth, setMonth]);
+    setCurrentMonth(prev => subMonths(prev, 1));
+  }, []);
 
   const setStatus = useCallback((values: string[]) => {
-    updateParams((params) => {
-      if (values.length > 0) {
-        params.set("status", values.join(","));
-      } else {
-        params.delete("status");
-      }
-    });
-  }, [updateParams]);
+    setStatusState(values);
+  }, []);
 
   const setServiceType = useCallback((values: string[]) => {
-    updateParams((params) => {
-      if (values.length > 0) {
-        params.set("serviceType", values.join(","));
-      } else {
-        params.delete("serviceType");
-      }
-    });
-  }, [updateParams]);
+    setServiceTypeState(values);
+  }, []);
 
   const setSearch = useCallback((value: string) => {
-    updateParams((params) => {
-      if (value) {
-        params.set("search", value);
-      } else {
-        params.delete("search");
-      }
-    });
-  }, [updateParams]);
+    setSearchState(value);
+  }, []);
 
   const clearFilters = useCallback(() => {
-    updateParams((params) => {
-      params.delete("status");
-      params.delete("serviceType");
-      params.delete("search");
-    });
-  }, [updateParams]);
+    setStatusState([]);
+    setServiceTypeState([]);
+    setSearchState("");
+  }, []);
 
   return {
     currentMonth,
