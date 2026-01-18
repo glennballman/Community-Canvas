@@ -1,0 +1,504 @@
+✅ REPLIT PROMPT — N3 (FINAL) Service Run Monitor + Replan Engine (Segment-First)
+CONTEXT
+
+We are PAUSING all other UI work until this is installed.
+
+No refactors later. Build it right now.
+
+Canonical primitives are frozen:
+
+Segment Graph (not Trip)
+
+Signals: deterministic (tides/daylight), probabilistic (seasonal weather), volatile (policy)
+
+Continuous monitoring w/ cadence and risk delta
+
+Replan bundles w/ 1–3 pre-validated options
+
+Human authority gate: Suggest / Request / Dictate
+
+P2 envelope everywhere: { ok, error?, ...data }
+
+No forbidden “book/booking” terminology.
+
+GOAL
+
+Implement the reactor core:
+
+Store Segments for a Service Run (or reuse an existing segment/itinerary table if present)
+
+Store Signals (DB-backed tide predictions + weather normals)
+
+Run a monitor loop that:
+
+evaluates due service runs
+
+detects risk delta
+
+generates Replan Bundles with pre-validated alternatives
+
+Provide P2 API endpoints for:
+
+Attention queue
+
+Service run monitor detail
+
+Dismiss bundle
+
+Take authority action (Suggest/Request/Dictate)
+
+Provide minimal Tenant UI:
+
+/app/service-runs/attention
+
+/app/service-runs/:id/monitor
+
+0) FIRST: SCHEMA PROBE (MANDATORY)
+
+Before writing migrations, add:
+
+server/lib/schemaProbe.ts
+
+Uses db.execute(sql\...`)` to detect whether these tables exist:
+
+cc_service_runs (or closest service run table)
+
+cc_trip_itinerary_items (seen earlier in project)
+
+any existing cc_segments / itinerary tables
+
+Export probeSchema() returning a struct like:
+
+{
+  hasServiceRuns: boolean,
+  hasTripItineraryItems: boolean,
+  segmentTable: "cc_trip_itinerary_items" | "cc_segments"
+}
+
+
+Rule:
+
+If cc_trip_itinerary_items exists → reuse it as Segment store and add only missing columns.
+
+Else create cc_segments.
+
+1) MIGRATIONS (ADDITIVE ONLY)
+
+Create migration ###_n3_service_run_monitor.sql with header comment:
+-- PATENT CC-01 INVENTOR GLENN BALLMAN
+
+1.1 Segments
+If reusing cc_trip_itinerary_items:
+
+Add columns if missing:
+
+service_run_id uuid null
+
+segment_kind text not null default 'move'
+
+location_ref text null
+
+constraints jsonb null
+
+Create indexes:
+
+(service_run_id)
+
+(segment_kind)
+
+Else create cc_segments
+create table if not exists cc_segments (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  service_run_id uuid not null,
+  segment_kind text not null,
+  starts_at timestamptz null,
+  ends_at timestamptz null,
+  start_window jsonb null,
+  end_window jsonb null,
+  location_ref text null,
+  depends_on_segment_id uuid null,
+  constraints jsonb null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists cc_segments_service_run_id_idx on cc_segments(service_run_id);
+create index if not exists cc_segments_kind_idx on cc_segments(segment_kind);
+
+
+Segment kinds allowed (enforced in code v1):
+move | ride | work | stay | wait | load
+
+1.2 Tide predictions (deterministic)
+create table if not exists cc_tide_predictions (
+  id uuid primary key default gen_random_uuid(),
+  location_ref text not null,
+  ts timestamptz not null,
+  height_m numeric not null
+);
+
+create index if not exists cc_tide_predictions_loc_ts_idx
+on cc_tide_predictions(location_ref, ts);
+
+1.3 Weather normals (probabilistic)
+create table if not exists cc_weather_normals (
+  id uuid primary key default gen_random_uuid(),
+  location_ref text not null,
+  day_of_year int not null,
+  temp_low_c numeric null,
+  temp_high_c numeric null,
+  rain_prob numeric null,
+  fog_prob numeric null,
+  wind_prob numeric null,
+  unique(location_ref, day_of_year)
+);
+
+1.4 Monitor policies + state
+create table if not exists cc_monitor_policies (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  name text not null,
+  cadence_rules jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists cc_monitor_state (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  service_run_id uuid not null unique,
+  policy_id uuid not null references cc_monitor_policies(id),
+  last_checked_at timestamptz null,
+  next_check_at timestamptz null,
+  last_risk_score numeric null,
+  last_risk_fingerprint text null,
+  last_bundle_id uuid null
+);
+
+1.5 Replan bundles + options + actions
+create table if not exists cc_replan_bundles (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  service_run_id uuid not null,
+  created_at timestamptz not null default now(),
+  status text not null default 'open',
+  reason_codes text[] not null default '{}',
+  summary text not null,
+  risk_delta numeric not null default 0,
+  bundle jsonb not null
+);
+
+create table if not exists cc_replan_options (
+  id uuid primary key default gen_random_uuid(),
+  bundle_id uuid not null references cc_replan_bundles(id) on delete cascade,
+  rank int not null,
+  label text not null,
+  plan jsonb not null,
+  validation jsonb not null,
+  estimated_impact jsonb null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists cc_replan_actions (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null,
+  bundle_id uuid not null references cc_replan_bundles(id),
+  option_id uuid not null references cc_replan_options(id),
+  action_kind text not null,
+  actor_id uuid null,
+  notes text null,
+  created_at timestamptz not null default now()
+);
+
+2) ENGINE (SERVER)
+
+Create directory:
+
+server/engine/monitor/*
+
+2.1 server/engine/monitor/types.ts
+
+Define:
+
+Segment
+
+SignalFinding
+
+ReplanOption
+
+EvaluationResult
+
+2.2 server/engine/monitor/providers/tides.ts
+
+Functions:
+
+getTideRange(db, location_ref, start, end)
+
+evaluateRampByTide(location_ref, start, end)
+Return a deterministic band:
+
+ok | assist_required | vehicle_required
+And reason codes:
+
+TIDE_WINDOW_STEEP
+
+Hardcode v1 ramp rules in code for 2–3 Bamfield refs (move to DB later):
+
+bamfield-east-dock-ramp
+
+woods-end-ramp
+
+hospital-dock-ramp
+
+2.3 server/engine/monitor/providers/weatherNormals.ts
+
+getNormals(location_ref, day_of_year)
+
+evaluateWeatherRisk(start, end, location_ref)
+Return probabilistic risk findings:
+
+WEATHER_RAIN_PROB_HIGH if rain_prob > 0.45
+
+WEATHER_FOG_PROB_HIGH if fog_prob > 0.35
+
+2.4 server/engine/monitor/evaluateServiceRun.ts
+
+Inputs: tenantId, serviceRunId
+Steps:
+
+Load service run (minimal: start/end/time + name/title)
+
+Load segments for that service run (from chosen table)
+
+For each segment:
+
+run tide evaluator for any segment with constraints.requires_tide_check === true
+
+run weather normals for any segment with a location_ref
+
+Compute:
+
+riskScore (simple weighted sum)
+
+fingerprint (stable hash of ordered reason codes + severity + key windows)
+
+Generate up to 3 replan options:
+
+Option 1: shift forward +1..+7 days to reduce risk findings (same segment structure, shifted timestamps)
+
+Option 2: shift backward -1..-5 days if possible
+
+Option 3: mitigation option (keep dates but add mitigations: ["alternate_dock","side_by_side"])
+
+Validate each option:
+
+Tide findings improved or mitigations cover them
+
+If inventory availability check endpoints exist, call them; otherwise set validation.ok=false with validation.needsConfirmation=true
+
+Return:
+
+{
+  riskScore,
+  fingerprint,
+  reasonCodes,
+  summary,
+  options: [...],
+  bundleJson
+}
+
+
+Important: options must be deterministic ordering (rank 1–3) using stable tie-breakers.
+
+2.5 server/engine/monitor/scheduleNextCheck.ts
+
+Compute next cadence from policy + run start:
+
+14 days: daily
+
+14→3 days: every 6 hours
+
+<72 hours: every 30 minutes
+
+3) MONITOR LOOP (SERVER JOB)
+
+Create:
+server/jobs/serviceRunMonitor.ts
+
+Controlled by env: ENABLE_SERVICE_RUN_MONITOR=true
+
+Every minute:
+
+Fetch due monitor_state rows (tenant-scoped)
+
+Hard cap 10 evaluations/loop
+
+Evaluate
+
+If fingerprint changed and risk delta ≥ threshold (e.g. 0.15):
+
+create bundle + options
+
+update monitor_state.last_bundle_id
+
+Always update last_checked_at + next_check_at
+
+Add server startup hook (where other jobs are started).
+
+4) P2 ROUTES
+
+Create:
+server/routes/p2-service-run-monitor.ts
+
+Endpoints:
+
+GET /api/p2/service-runs/attention
+
+Returns open bundles for tenant (most recent first)
+
+GET /api/p2/service-runs/:id/monitor
+
+Returns:
+
+service run basic info
+
+monitor state
+
+latest bundle + options (if exists)
+
+POST /api/p2/replan-bundles/:id/dismiss
+
+Set status dismissed.
+
+POST /api/p2/replan-bundles/:id/action
+
+Body:
+{ optionId, actionKind: "suggest"|"request"|"dictate", notes? }
+Effect:
+
+insert action
+
+set bundle status actioned
+
+DO NOT auto-reschedule in v1.
+
+Mount in server/routes.ts:
+app.use("/api/p2", serviceRunMonitorRouter) (or similar consistent mount)
+
+Tenant scoping: must require tenant context; return 401 if missing.
+
+5) UI (TENANT APP)
+5.1 Routes
+
+Add in client/src/App.tsx:
+
+/app/service-runs/attention
+
+/app/service-runs/:id/monitor
+
+5.2 Pages & Components
+
+Create pages:
+
+client/src/pages/app/ServiceRunAttentionPage.tsx
+
+client/src/pages/app/ServiceRunMonitorPage.tsx
+
+Create components:
+
+client/src/components/serviceRuns/AttentionQueueTable.tsx
+
+client/src/components/serviceRuns/ReplanBundleCard.tsx
+
+client/src/components/serviceRuns/ReplanOptionCompare.tsx
+
+client/src/components/serviceRuns/AuthorityActionPanel.tsx
+
+client/src/components/serviceRuns/SignalBadges.tsx
+
+client/src/components/serviceRuns/SegmentList.tsx
+
+Hooks:
+
+client/src/hooks/useServiceRunAttention.ts
+
+client/src/hooks/useServiceRunMonitor.ts
+
+client/src/hooks/useReplanAction.ts
+
+UI requirements:
+
+Loading, empty, error states everywhere
+
+No currency on these pages
+
+Use shadcn components
+
+Stable selectors:
+
+data-testid="service-run-attention-page"
+
+data-testid="attention-queue-table"
+
+data-testid="service-run-monitor-page"
+
+data-testid="replan-bundle-card"
+
+data-testid="replan-option"
+
+data-testid="authority-action-panel"
+
+data-testid="action-suggest"
+
+data-testid="action-request"
+
+data-testid="action-dictate"
+
+6) DEV SEED (REQUIRED)
+
+Create:
+server/routes/dev-seed-n3.ts
+
+Seeds one tenant-visible service run ~10 days out
+
+Seeds 4–6 segments (move/ride/work/stay)
+
+Seeds tide predictions for the relevant locations over the run window
+
+Seeds weather normals for the day_of_year
+
+Seeds monitor policy + monitor state due now
+
+Optionally triggers one evaluation immediately and creates a bundle
+
+Expose under a dev-only guard:
+if (process.env.NODE_ENV !== "production")
+
+7) STOP CONDITION
+
+After N3 is implemented, STOP and report:
+
+Migrations created/ran
+
+Whether segments reused cc_trip_itinerary_items or new cc_segments
+
+Job loop toggle + proof it creates bundles
+
+Endpoint responses (sample JSON)
+
+UI screenshots:
+
+Attention page (with seeded bundle)
+
+Monitor page showing bundle + options + authority buttons
+
+Confirmation: forbidden words check passes
+
+IMPORTANT IMPLEMENTATION NOTES
+
+Keep everything deterministic: stable sorting, stable fingerprints, stable ranks.
+
+Never throw from API clients; return { ok:false, error } envelope.
+
+Keep evaluation cheap; cap loop throughput.
+
+That’s the full prompt. Paste it into Replit and have Claude implement N3 end-to-end.

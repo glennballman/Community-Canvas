@@ -6522,3 +6522,178 @@ export const ccJobIngestionTasks = pgTable("cc_job_ingestion_tasks", {
 export const insertJobIngestionTaskSchema = createInsertSchema(ccJobIngestionTasks).omit({ id: true, createdAt: true, updatedAt: true });
 export type JobIngestionTask = typeof ccJobIngestionTasks.$inferSelect;
 export type InsertJobIngestionTask = z.infer<typeof insertJobIngestionTaskSchema>;
+
+// ============================================================================
+// N3 SERVICE RUN MONITOR + REPLAN ENGINE
+// PATENT CC-01 INVENTOR GLENN BALLMAN
+// ============================================================================
+
+// Service Runs
+export const ccServiceRuns = pgTable("cc_service_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("scheduled"),
+  startsAt: timestamp("starts_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_service_runs_tenant").on(table.tenantId),
+  statusIdx: index("idx_service_runs_status").on(table.status),
+  startsIdx: index("idx_service_runs_starts").on(table.startsAt),
+}));
+
+export const insertServiceRunSchema = createInsertSchema(ccServiceRuns).omit({ id: true, createdAt: true, updatedAt: true });
+export type ServiceRun = typeof ccServiceRuns.$inferSelect;
+export type InsertServiceRun = z.infer<typeof insertServiceRunSchema>;
+
+// Segment kinds: move | ride | work | stay | wait | load
+export const ccSegments = pgTable("cc_segments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  serviceRunId: uuid("service_run_id").notNull().references(() => ccServiceRuns.id, { onDelete: "cascade" }),
+  segmentKind: text("segment_kind").notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  startWindow: jsonb("start_window"),
+  endWindow: jsonb("end_window"),
+  locationRef: text("location_ref"),
+  dependsOnSegmentId: uuid("depends_on_segment_id"),
+  constraints: jsonb("constraints"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  serviceRunIdx: index("idx_segments_service_run").on(table.serviceRunId),
+  kindIdx: index("idx_segments_kind").on(table.segmentKind),
+}));
+
+export const insertSegmentSchema = createInsertSchema(ccSegments).omit({ id: true, createdAt: true });
+export type Segment = typeof ccSegments.$inferSelect;
+export type InsertSegment = z.infer<typeof insertSegmentSchema>;
+
+// Tide Predictions (deterministic signal)
+export const ccTidePredictions = pgTable("cc_tide_predictions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  locationRef: text("location_ref").notNull(),
+  ts: timestamp("ts", { withTimezone: true }).notNull(),
+  heightM: numeric("height_m", { precision: 6, scale: 3 }).notNull(),
+}, (table) => ({
+  locTsIdx: index("idx_tide_predictions_loc_ts").on(table.locationRef, table.ts),
+}));
+
+export const insertTidePredictionSchema = createInsertSchema(ccTidePredictions).omit({ id: true });
+export type TidePrediction = typeof ccTidePredictions.$inferSelect;
+export type InsertTidePrediction = z.infer<typeof insertTidePredictionSchema>;
+
+// Weather Normals (probabilistic signal)
+export const ccWeatherNormals = pgTable("cc_weather_normals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  locationRef: text("location_ref").notNull(),
+  dayOfYear: integer("day_of_year").notNull(),
+  tempLowC: numeric("temp_low_c", { precision: 5, scale: 2 }),
+  tempHighC: numeric("temp_high_c", { precision: 5, scale: 2 }),
+  rainProb: numeric("rain_prob", { precision: 4, scale: 3 }),
+  fogProb: numeric("fog_prob", { precision: 4, scale: 3 }),
+  windProb: numeric("wind_prob", { precision: 4, scale: 3 }),
+}, (table) => ({
+  locDoyUnique: uniqueIndex("idx_weather_normals_loc_doy").on(table.locationRef, table.dayOfYear),
+}));
+
+export const insertWeatherNormalSchema = createInsertSchema(ccWeatherNormals).omit({ id: true });
+export type WeatherNormal = typeof ccWeatherNormals.$inferSelect;
+export type InsertWeatherNormal = z.infer<typeof insertWeatherNormalSchema>;
+
+// Monitor Policies
+export const ccMonitorPolicies = pgTable("cc_monitor_policies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  name: text("name").notNull(),
+  cadenceRules: jsonb("cadence_rules").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_monitor_policies_tenant").on(table.tenantId),
+}));
+
+export const insertMonitorPolicySchema = createInsertSchema(ccMonitorPolicies).omit({ id: true, createdAt: true });
+export type MonitorPolicy = typeof ccMonitorPolicies.$inferSelect;
+export type InsertMonitorPolicy = z.infer<typeof insertMonitorPolicySchema>;
+
+// Monitor State
+export const ccMonitorState = pgTable("cc_monitor_state", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  serviceRunId: uuid("service_run_id").notNull().unique().references(() => ccServiceRuns.id, { onDelete: "cascade" }),
+  policyId: uuid("policy_id").notNull().references(() => ccMonitorPolicies.id),
+  lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+  nextCheckAt: timestamp("next_check_at", { withTimezone: true }),
+  lastRiskScore: numeric("last_risk_score", { precision: 5, scale: 3 }),
+  lastRiskFingerprint: text("last_risk_fingerprint"),
+  lastBundleId: uuid("last_bundle_id"),
+}, (table) => ({
+  tenantIdx: index("idx_monitor_state_tenant").on(table.tenantId),
+  nextCheckIdx: index("idx_monitor_state_next_check").on(table.nextCheckAt),
+}));
+
+export const insertMonitorStateSchema = createInsertSchema(ccMonitorState).omit({ id: true });
+export type MonitorState = typeof ccMonitorState.$inferSelect;
+export type InsertMonitorState = z.infer<typeof insertMonitorStateSchema>;
+
+// Replan Bundle status: open | dismissed | actioned
+export const ccReplanBundles = pgTable("cc_replan_bundles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  serviceRunId: uuid("service_run_id").notNull().references(() => ccServiceRuns.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("open"),
+  reasonCodes: text("reason_codes").array().notNull().default([]),
+  summary: text("summary").notNull(),
+  riskDelta: numeric("risk_delta", { precision: 5, scale: 3 }).notNull().default("0"),
+  bundle: jsonb("bundle").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_replan_bundles_tenant").on(table.tenantId),
+  serviceRunIdx: index("idx_replan_bundles_service_run").on(table.serviceRunId),
+  statusIdx: index("idx_replan_bundles_status").on(table.status),
+}));
+
+export const insertReplanBundleSchema = createInsertSchema(ccReplanBundles).omit({ id: true, createdAt: true });
+export type ReplanBundle = typeof ccReplanBundles.$inferSelect;
+export type InsertReplanBundle = z.infer<typeof insertReplanBundleSchema>;
+
+// Replan Options
+export const ccReplanOptions = pgTable("cc_replan_options", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  bundleId: uuid("bundle_id").notNull().references(() => ccReplanBundles.id, { onDelete: "cascade" }),
+  rank: integer("rank").notNull(),
+  label: text("label").notNull(),
+  plan: jsonb("plan").notNull(),
+  validation: jsonb("validation").notNull(),
+  estimatedImpact: jsonb("estimated_impact"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  bundleIdx: index("idx_replan_options_bundle").on(table.bundleId),
+}));
+
+export const insertReplanOptionSchema = createInsertSchema(ccReplanOptions).omit({ id: true, createdAt: true });
+export type ReplanOption = typeof ccReplanOptions.$inferSelect;
+export type InsertReplanOption = z.infer<typeof insertReplanOptionSchema>;
+
+// Replan Actions - action_kind: suggest | request | dictate
+export const ccReplanActions = pgTable("cc_replan_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  bundleId: uuid("bundle_id").notNull().references(() => ccReplanBundles.id),
+  optionId: uuid("option_id").notNull().references(() => ccReplanOptions.id),
+  actionKind: text("action_kind").notNull(),
+  actorId: uuid("actor_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_replan_actions_tenant").on(table.tenantId),
+  bundleIdx: index("idx_replan_actions_bundle").on(table.bundleId),
+}));
+
+export const insertReplanActionSchema = createInsertSchema(ccReplanActions).omit({ id: true, createdAt: true });
+export type ReplanAction = typeof ccReplanActions.$inferSelect;
+export type InsertReplanAction = z.infer<typeof insertReplanActionSchema>;
