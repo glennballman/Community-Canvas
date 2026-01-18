@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -34,6 +34,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
@@ -94,6 +101,7 @@ function getInitialFilters() {
   return {
     status: params.get("status") || "",
     q: params.get("q") || "",
+    portalId: params.get("portalId") || "",
   };
 }
 
@@ -102,33 +110,51 @@ export default function JobsIndexPage() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>(() => getInitialFilters().status);
   const [searchQuery, setSearchQuery] = useState<string>(() => getInitialFilters().q);
+  const [portalFilter, setPortalFilter] = useState<string>(() => getInitialFilters().portalId);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
-  const updateUrl = useCallback((status: string, q: string) => {
+  const updateUrl = useCallback((status: string, q: string, portalId: string) => {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (q) params.set("q", q);
+    if (portalId) params.set("portalId", portalId);
     const newPath = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
     window.history.replaceState(null, "", newPath);
   }, []);
 
   useEffect(() => {
-    updateUrl(statusFilter, searchQuery);
-  }, [statusFilter, searchQuery, updateUrl]);
+    updateUrl(statusFilter, searchQuery, portalFilter);
+  }, [statusFilter, searchQuery, portalFilter, updateUrl]);
 
   const { data, isLoading, error } = useQuery<JobsResponse>({
-    queryKey: ['/api/p2/app/jobs', { status: statusFilter, q: searchQuery }],
+    queryKey: ['/api/p2/app/jobs', { status: statusFilter, q: searchQuery, portalId: portalFilter }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter) params.set('status', statusFilter);
       if (searchQuery) params.set('q', searchQuery);
+      if (portalFilter) params.set('portalId', portalFilter);
       const url = `/api/p2/app/jobs${params.toString() ? `?${params}` : ''}`;
       const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch jobs');
       return res.json();
     },
   });
+
+  const jobs = data?.data?.jobs || [];
+  const total = data?.data?.total || 0;
+
+  const allPortals = useMemo(() => {
+    const portalMap = new Map<string, Portal>();
+    jobs.forEach(job => {
+      job.portals?.forEach(portal => {
+        if (!portalMap.has(portal.id)) {
+          portalMap.set(portal.id, portal);
+        }
+      });
+    });
+    return Array.from(portalMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [jobs]);
 
   const closeJobMutation = useMutation({
     mutationFn: async (jobId: string) => {
@@ -165,13 +191,12 @@ export default function JobsIndexPage() {
     setSelectedJobId(null);
   };
 
-  const jobs = data?.data?.jobs || [];
-  const total = data?.data?.total || 0;
-  const hasActiveFilters = statusFilter !== '' || searchQuery !== '';
+  const hasActiveFilters = statusFilter !== '' || searchQuery !== '' || portalFilter !== '';
 
   const clearFilters = () => {
     setStatusFilter('');
     setSearchQuery('');
+    setPortalFilter('');
   };
 
   return (
@@ -243,6 +268,21 @@ export default function JobsIndexPage() {
             Closed
           </Button>
         </div>
+        {allPortals.length > 0 && (
+          <Select value={portalFilter || "all"} onValueChange={(v) => setPortalFilter(v === "all" ? "" : v)}>
+            <SelectTrigger className="w-[180px]" data-testid="select-portal">
+              <SelectValue placeholder="All Portals" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Portals</SelectItem>
+              {allPortals.map((portal) => (
+                <SelectItem key={portal.id} value={portal.id}>
+                  {portal.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="button-clear-filters">
             <X className="h-4 w-4 mr-1" />

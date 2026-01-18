@@ -21,7 +21,7 @@ router.get('/', async (req: Request, res: Response) => {
   if (!ctx?.tenant_id) {
     return res.status(401).json({
       ok: false,
-      error: 'TENANT_REQUIRED'
+      error: { code: 'TENANT_REQUIRED', message: 'Tenant context required' }
     });
   }
 
@@ -42,7 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
     
     if (q) {
       params.push(`%${q}%`);
-      whereClause += ` AND (j.title ILIKE $${params.length} OR j.role_category ILIKE $${params.length})`;
+      whereClause += ` AND (j.title ILIKE $${params.length} OR j.role_category::text ILIKE $${params.length})`;
     }
     
     if (portalId) {
@@ -89,7 +89,7 @@ router.get('/', async (req: Request, res: Response) => {
     console.error('Jobs list error:', error);
     res.status(500).json({
       ok: false,
-      error: 'Failed to fetch jobs'
+      error: { code: 'INTERNAL', message: 'Failed to fetch jobs' }
     });
   }
 });
