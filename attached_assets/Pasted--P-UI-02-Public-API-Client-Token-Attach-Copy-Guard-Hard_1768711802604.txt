@@ -1,0 +1,297 @@
+✅ P-UI-02 — Public API Client + Token Attach + Copy Guard Hardening
+
+Paste this into Replit.
+
+CONTEXT
+
+P-UI-01 public route skeleton is working
+
+Backend public reservation endpoints exist at /api/p2/public/*
+
+We must standardize public API calls, token attachment, and error handling before we build steps
+
+GOAL
+
+Add:
+
+A public API client wrapper with the P2 envelope contract
+
+A single token attach strategy (querystring + header safe)
+
+Harden the forbidden words scan to cover all TS/TSX in repo (with safe allowlist exceptions)
+
+NON-NEGOTIABLE RULES
+
+No backend changes unless absolutely required (prefer none)
+
+Token store remains the source of truth in public UI
+
+Handle { ok:false, error:{ code, message } } without throwing by default
+
+Forbidden words check must cover entire client (not just public folder), because regressions happen elsewhere
+
+1) FILES TO CREATE
+Frontend
+
+Create:
+
+client/src/public/api/publicApi.ts
+
+client/src/public/api/publicTypes.ts
+
+client/src/public/api/publicErrors.ts
+
+Modify:
+
+client/src/public/state/publicTokenStore.ts (minor: add getAuth() helper)
+
+All public pages to use publicApi (even if they only do placeholder calls)
+
+2) TYPES
+client/src/public/api/publicTypes.ts
+export type P2Error = { code: string; message: string; details?: any };
+
+export type P2Envelope<T> =
+  | ({ ok: true } & T)
+  | { ok: false; error: P2Error };
+
+export type PublicAuth = {
+  portalId: string;
+  cartId: string;
+  accessToken: string;
+};
+
+export type PublicCart = {
+  id: string;
+  portal_id: string;
+  status: "active" | "submitted" | "completed";
+  expires_at: string | null;
+  submitted_at?: string | null;
+  completed_at?: string | null;
+};
+
+export type PublicCartItem = {
+  id: string;
+  cart_id: string;
+  item_type: string | null;
+  title: string | null;
+  start_at: string | null;
+  end_at: string | null;
+  quantity: number | null;
+  status: string | null;
+  offer_id?: string | null;
+  unit_id?: string | null;
+};
+
+3) TOKEN STORE HARDENING
+Modify client/src/public/state/publicTokenStore.ts
+
+Add these helpers:
+
+getToken(): string | null
+
+setToken(token: string): void (overwrite only)
+
+clearToken(): void
+
+getAuthFromToken(): PublicAuth | null (only if your token encodes portalId/cartId/accessToken; otherwise return null and rely on URL params until P-UI-03)
+
+For now we’ll support two auth modes:
+
+Mode 1: token is already a JSON/base64 payload (preferred)
+
+Mode 2: token is opaque → use URL query params portalId, cartId, accessToken
+
+Don’t block on this — just implement the shape so P-UI-03 can consume it.
+
+4) PUBLIC API CLIENT
+client/src/public/api/publicErrors.ts
+export function isTokenInvalid(code?: string) {
+  return code === "UNAUTHORIZED" || code === "TOKEN_INVALID";
+}
+
+export function isExpired(code?: string) {
+  return code === "CONFLICT";
+}
+
+client/src/public/api/publicApi.ts
+import type { P2Envelope, P2Error } from "./publicTypes";
+
+type FetchOptions = {
+  method?: "GET" | "POST" | "DELETE";
+  query?: Record<string, string | number | boolean | null | undefined>;
+  body?: any;
+  headers?: Record<string, string>;
+};
+
+function buildQuery(query?: FetchOptions["query"]) {
+  const sp = new URLSearchParams();
+  if (!query) return "";
+  for (const [k, v] of Object.entries(query)) {
+    if (v === null || v === undefined || v === "") continue;
+    sp.set(k, String(v));
+  }
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
+async function parseJsonSafe(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function publicFetch<T>(
+  path: string,
+  opts: FetchOptions = {}
+): Promise<P2Envelope<T>> {
+  const q = buildQuery(opts.query);
+  const res = await fetch(`${path}${q}`, {
+    method: opts.method ?? "GET",
+    headers: {
+      "content-type": "application/json",
+      ...(opts.headers ?? {}),
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+
+  const data = await parseJsonSafe(res);
+
+  // If backend returned envelope, pass through
+  if (data && typeof data.ok === "boolean") return data as P2Envelope<T>;
+
+  // Otherwise, normalize
+  const err: P2Error = {
+    code: res.ok ? "INVALID_RESPONSE" : "HTTP_ERROR",
+    message: data?.error?.message || `Request failed (${res.status})`,
+    details: data ?? null,
+  };
+
+  return { ok: false, error: err };
+}
+
+// Convenience wrappers for public endpoints
+export const publicApi = {
+  getCart: (q: { portalId: string; cartId: string; accessToken: string }) =>
+    publicFetch<{ cart: any; items: any[]; isExpired: boolean }>(
+      "/api/p2/public/cart",
+      { method: "GET", query: q }
+    ),
+
+  addCartItem: (body: any) =>
+    publicFetch<{ cartId: string; cartItem: any }>(
+      "/api/p2/public/cart/items",
+      { method: "POST", body }
+    ),
+
+  removeCartItem: (id: string, body: any) =>
+    publicFetch<{ cartId: string; removed: boolean; cartItemId: string }>(
+      `/api/p2/public/cart/items/${id}`,
+      { method: "DELETE", body }
+    ),
+
+  refreshCart: (body: any) =>
+    publicFetch<{ cartId: string; expiresAt: string }>(
+      "/api/p2/public/cart/refresh",
+      { method: "POST", body }
+    ),
+
+  submitCart: (body: any) =>
+    publicFetch<{ cartId: string; status: string; accessToken: string }>(
+      "/api/p2/public/cart/submit",
+      { method: "POST", body }
+    ),
+
+  availability: (q: any) =>
+    publicFetch<any>("/api/p2/public/availability", { method: "GET", query: q }),
+
+  confirm: (body: any) =>
+    publicFetch<any>("/api/p2/public/reservations/confirm", {
+      method: "POST",
+      body,
+    }),
+
+  submitConfirm: (body: any) =>
+    publicFetch<any>("/api/p2/public/reservations/submit-confirm", {
+      method: "POST",
+      body,
+    }),
+
+  status: (q: any) =>
+    publicFetch<any>("/api/p2/public/reservations/status", {
+      method: "GET",
+      query: q,
+    }),
+
+  resume: (q: any) =>
+    publicFetch<any>("/api/p2/public/resume", { method: "GET", query: q }),
+};
+
+5) WIRE PUBLIC PAGES TO CLIENT (MINIMAL)
+
+Update each public page to use publicApi for at least one call or at minimum import/use publicFetch so we guarantee build integration now.
+
+Examples:
+
+ResumePage should call publicApi.resume(...) if token present
+
+ReservationStatusPage should call publicApi.status(...) (placeholder UI ok)
+
+ConfirmationPage should call publicApi.status(...) (placeholder UI ok)
+
+Important: if required params are missing, show a friendly PublicErrorState (“Missing reservation details”) rather than calling.
+
+6) FORBIDDEN WORDS SCAN — HARDEN
+
+Modify your existing scripts/forbidden-words-check.ts so it scans:
+
+client/src/**/*.ts
+
+client/src/**/*.tsx
+
+Allowlist only these paths (if needed):
+
+none by default
+If the repo has a legacy file that must contain forbidden words (rare), allowlist by exact filepath, not directory.
+
+Must fail on:
+
+/\bbook\b/i
+
+/\bbooking\b/i
+
+/booked/i
+
+/bookings/i
+
+But do NOT fail on:
+
+words containing “facebook” (edge case) — only match word boundaries.
+
+7) QA REQUIREMENTS (P-UI-02)
+
+ publicApi can call /api/p2/public/resume and handle both ok + error envelopes without throwing
+
+ publicApi normalizes non-envelope server errors into {ok:false, error}
+
+ Forbidden words scan passes across client/src/**
+
+ No console errors on any public page route
+
+ Public pages show loading/error states using the shared components
+
+STOP CONDITION
+
+After P-UI-02:
+
+STOP
+
+Report:
+
+Files created/modified
+
+Confirm forbidden words scan scope + patterns
+
+Confirm at least ResumePage + StatusPage call real endpoints successfully (even if they show placeholder UI)

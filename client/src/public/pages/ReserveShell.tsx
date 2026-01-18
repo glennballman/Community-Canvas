@@ -4,10 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicLayout } from "../components/PublicLayout";
 import { publicCopy } from "../publicCopy";
+import { publicApi } from "../api/publicApi";
 
 export default function ReserveShell() {
   const { portalSlug, offerSlug } = useParams<{ portalSlug: string; offerSlug: string }>();
   const navigate = useNavigate();
+
+  // Import publicApi to ensure build integration
+  // Actual API calls will be implemented in P-UI-03
+  const _apiRef = publicApi;
 
   const handleBack = () => {
     if (portalSlug && offerSlug) {

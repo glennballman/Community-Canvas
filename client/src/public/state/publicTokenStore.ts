@@ -113,3 +113,116 @@ export const clearReservationContext = (): void => {
 export const hasActiveReservation = (): boolean => {
   return getToken() !== null;
 };
+
+// Additional keys for cart-based auth
+const PORTAL_ID_KEY = "reservation_portal_id";
+const CART_ID_KEY = "reservation_cart_id";
+const ACCESS_TOKEN_KEY = "reservation_access_token";
+
+export interface PublicAuth {
+  portalId: string;
+  cartId: string;
+  accessToken: string;
+}
+
+/**
+ * Get the portal ID from sessionStorage
+ */
+export const getPortalId = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(PORTAL_ID_KEY);
+};
+
+/**
+ * Set the portal ID in sessionStorage
+ */
+export const setPortalId = (id: string): void => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(PORTAL_ID_KEY, id);
+};
+
+/**
+ * Get the cart ID from sessionStorage
+ */
+export const getCartId = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(CART_ID_KEY);
+};
+
+/**
+ * Set the cart ID in sessionStorage
+ */
+export const setCartId = (id: string): void => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(CART_ID_KEY, id);
+};
+
+/**
+ * Get the access token from sessionStorage
+ */
+export const getAccessToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(ACCESS_TOKEN_KEY);
+};
+
+/**
+ * Set the access token in sessionStorage
+ */
+export const setAccessToken = (token: string): void => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+};
+
+/**
+ * Try to extract auth from the stored token (if base64/JSON encoded).
+ * If token is opaque, returns null - caller should use URL params.
+ */
+export const getAuthFromToken = (): PublicAuth | null => {
+  const token = getToken();
+  if (!token) return null;
+
+  // Try to decode as base64 JSON
+  try {
+    const decoded = atob(token);
+    const parsed = JSON.parse(decoded);
+    if (parsed.portalId && parsed.cartId && parsed.accessToken) {
+      return {
+        portalId: parsed.portalId,
+        cartId: parsed.cartId,
+        accessToken: parsed.accessToken,
+      };
+    }
+  } catch {
+    // Token is opaque, not base64 JSON
+  }
+
+  // Fallback: check if we have individual values stored
+  const portalId = getPortalId();
+  const cartId = getCartId();
+  const accessToken = getAccessToken();
+
+  if (portalId && cartId && accessToken) {
+    return { portalId, cartId, accessToken };
+  }
+
+  return null;
+};
+
+/**
+ * Set full auth context (portalId, cartId, accessToken) in sessionStorage
+ */
+export const setAuthContext = (auth: PublicAuth): void => {
+  setPortalId(auth.portalId);
+  setCartId(auth.cartId);
+  setAccessToken(auth.accessToken);
+};
+
+/**
+ * Clear all auth context from sessionStorage
+ */
+export const clearAuthContext = (): void => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(PORTAL_ID_KEY);
+  sessionStorage.removeItem(CART_ID_KEY);
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+};

@@ -1,11 +1,14 @@
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicLayout } from "../components/PublicLayout";
 import { PublicLoadingState } from "../components/PublicLoadingState";
 import { PublicErrorState } from "../components/PublicErrorState";
 import { publicCopy } from "../publicCopy";
+import { publicApi } from "../api/publicApi";
+import { isTokenInvalid } from "../api/publicErrors";
+import { getAuthFromToken } from "../state/publicTokenStore";
 
 interface ConfirmationData {
   id: string;
@@ -18,17 +21,59 @@ interface ConfirmationData {
 
 export default function ConfirmationPage() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reservation, setReservation] = useState<ConfirmationData | null>(null);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["reservation-confirmation", token],
-    queryFn: async (): Promise<{ ok: boolean; reservation?: ConfirmationData; error?: { message: string } }> => {
-      const res = await fetch(`/api/public/reserve/confirmation/${token}`);
-      return res.json();
-    },
-    enabled: !!token,
-  });
+  useEffect(() => {
+    const fetchConfirmation = async () => {
+      // Build query from URL params or stored auth
+      const urlPortalId = searchParams.get("portalId");
+      const urlCartId = searchParams.get("cartId");
+      const urlAccessToken = searchParams.get("accessToken");
 
-  if (isLoading) {
+      let query: any;
+
+      if (urlPortalId && urlCartId && urlAccessToken) {
+        query = {
+          portalId: urlPortalId,
+          cartId: urlCartId,
+          accessToken: urlAccessToken,
+        };
+      } else {
+        const auth = getAuthFromToken();
+        if (auth) {
+          query = auth;
+        } else if (token) {
+          query = { token };
+        } else {
+          setError(publicCopy.errors.invalidToken);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Use status endpoint for confirmation data
+      const result = await publicApi.status(query);
+
+      if (!result.ok) {
+        if (isTokenInvalid(result.error.code)) {
+          setError(publicCopy.errors.invalidToken);
+        } else {
+          setError(result.error.message || publicCopy.errors.notFound);
+        }
+      } else if (result.reservation) {
+        setReservation(result.reservation);
+      }
+
+      setLoading(false);
+    };
+
+    fetchConfirmation();
+  }, [token, searchParams]);
+
+  if (loading) {
     return (
       <PublicLayout>
         <PublicLoadingState message={publicCopy.loading.default} />
@@ -36,19 +81,17 @@ export default function ConfirmationPage() {
     );
   }
 
-  if (error || !data?.ok) {
+  if (error) {
     return (
       <PublicLayout>
         <PublicErrorState
           title={publicCopy.errors.invalidToken}
-          message={data?.error?.message || publicCopy.errors.notFound}
+          message={error}
           showBack={false}
         />
       </PublicLayout>
     );
   }
-
-  const reservation = data.reservation;
 
   return (
     <PublicLayout>
@@ -78,7 +121,7 @@ export default function ConfirmationPage() {
               </div>
             )}
 
-            <div className="space-y-3" data-testid="confirmation-details-placeholder">
+            <div className="space-y-3" data-testid="confirmation-details">
               <h3 className="font-medium">{publicCopy.confirmation.detailsLabel}</h3>
               <div className="text-sm text-muted-foreground space-y-2">
                 {reservation?.guest_name && (

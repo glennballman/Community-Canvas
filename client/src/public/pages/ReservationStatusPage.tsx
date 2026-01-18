@@ -1,5 +1,5 @@
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,9 @@ import { PublicLayout } from "../components/PublicLayout";
 import { PublicLoadingState } from "../components/PublicLoadingState";
 import { PublicErrorState } from "../components/PublicErrorState";
 import { publicCopy } from "../publicCopy";
+import { publicApi } from "../api/publicApi";
+import { isTokenInvalid } from "../api/publicErrors";
+import { getAuthFromToken } from "../state/publicTokenStore";
 
 interface ReservationStatus {
   id: string;
@@ -32,17 +35,58 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
 
 export default function ReservationStatusPage() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reservation, setReservation] = useState<ReservationStatus | null>(null);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["reservation-status", token],
-    queryFn: async (): Promise<{ ok: boolean; reservation?: ReservationStatus; error?: { message: string } }> => {
-      const res = await fetch(`/api/public/reserve/status/${token}`);
-      return res.json();
-    },
-    enabled: !!token,
-  });
+  useEffect(() => {
+    const fetchStatus = async () => {
+      // Build query from URL params or stored auth
+      const urlPortalId = searchParams.get("portalId");
+      const urlCartId = searchParams.get("cartId");
+      const urlAccessToken = searchParams.get("accessToken");
 
-  if (isLoading) {
+      let query: any;
+
+      if (urlPortalId && urlCartId && urlAccessToken) {
+        query = {
+          portalId: urlPortalId,
+          cartId: urlCartId,
+          accessToken: urlAccessToken,
+        };
+      } else {
+        const auth = getAuthFromToken();
+        if (auth) {
+          query = auth;
+        } else if (token) {
+          query = { token };
+        } else {
+          setError(publicCopy.errors.invalidToken);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const result = await publicApi.status(query);
+
+      if (!result.ok) {
+        if (isTokenInvalid(result.error.code)) {
+          setError(publicCopy.errors.invalidToken);
+        } else {
+          setError(result.error.message || publicCopy.errors.notFound);
+        }
+      } else if (result.reservation) {
+        setReservation(result.reservation);
+      }
+
+      setLoading(false);
+    };
+
+    fetchStatus();
+  }, [token, searchParams]);
+
+  if (loading) {
     return (
       <PublicLayout>
         <PublicLoadingState message={publicCopy.loading.default} />
@@ -50,19 +94,18 @@ export default function ReservationStatusPage() {
     );
   }
 
-  if (error || !data?.ok) {
+  if (error) {
     return (
       <PublicLayout>
         <PublicErrorState
           title={publicCopy.errors.invalidToken}
-          message={data?.error?.message || publicCopy.errors.notFound}
+          message={error}
           showBack={false}
         />
       </PublicLayout>
     );
   }
 
-  const reservation = data.reservation;
   const status = reservation?.status || "pending";
   const StatusIcon = statusIcons[status] || Clock;
   const statusVariant = statusVariants[status] || "secondary";
@@ -96,9 +139,12 @@ export default function ReservationStatusPage() {
               </div>
             )}
 
-            <div className="text-center text-sm text-muted-foreground" data-testid="text-status-placeholder">
-              <p>Additional status details will be shown here.</p>
-              <p className="mt-2">Token: {token?.slice(0, 8)}...</p>
+            <div className="text-center text-sm text-muted-foreground" data-testid="text-status-info">
+              {reservation ? (
+                <p>Status retrieved successfully.</p>
+              ) : (
+                <p>Token: {token?.slice(0, 8)}...</p>
+              )}
             </div>
           </CardContent>
         </Card>

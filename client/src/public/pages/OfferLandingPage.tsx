@@ -1,5 +1,5 @@
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { PublicLayout } from "../components/PublicLayout";
 import { PublicLoadingState } from "../components/PublicLoadingState";
 import { PublicErrorState } from "../components/PublicErrorState";
 import { publicCopy } from "../publicCopy";
+import { publicFetch } from "../api/publicApi";
 import { setPortalSlug, setOfferSlug } from "../state/publicTokenStore";
 
 interface OfferData {
@@ -19,15 +20,35 @@ interface OfferData {
 export default function OfferLandingPage() {
   const { portalSlug, offerSlug } = useParams<{ portalSlug: string; offerSlug: string }>();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [offer, setOffer] = useState<OfferData | null>(null);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["public-offer", portalSlug, offerSlug],
-    queryFn: async (): Promise<{ ok: boolean; offer?: OfferData; error?: { message: string } }> => {
-      const res = await fetch(`/api/public/reserve/${portalSlug}/${offerSlug}`);
-      return res.json();
-    },
-    enabled: !!portalSlug && !!offerSlug,
-  });
+  useEffect(() => {
+    const fetchOffer = async () => {
+      if (!portalSlug || !offerSlug) {
+        setError(publicCopy.empty.noOfferFound);
+        setLoading(false);
+        return;
+      }
+
+      const result = await publicFetch<{ offer: OfferData }>(
+        `/api/public/reserve/${portalSlug}/${offerSlug}`
+      );
+
+      if (!result.ok) {
+        setError(result.error.message || publicCopy.empty.noOfferFound);
+      } else if (result.offer) {
+        setOffer(result.offer);
+      } else {
+        setError(publicCopy.empty.noOfferFound);
+      }
+
+      setLoading(false);
+    };
+
+    fetchOffer();
+  }, [portalSlug, offerSlug]);
 
   const handleStartReservation = () => {
     if (portalSlug && offerSlug) {
@@ -37,7 +58,7 @@ export default function OfferLandingPage() {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <PublicLayout>
         <PublicLoadingState message={publicCopy.loading.loadingOffer} />
@@ -45,19 +66,17 @@ export default function OfferLandingPage() {
     );
   }
 
-  if (error || !data?.ok) {
+  if (error) {
     return (
       <PublicLayout>
         <PublicErrorState
           title={publicCopy.empty.noOfferFound}
-          message={data?.error?.message || publicCopy.errors.unavailable}
+          message={error}
           showBack={false}
         />
       </PublicLayout>
     );
   }
-
-  const offer = data.offer;
 
   return (
     <PublicLayout>
