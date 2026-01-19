@@ -1,0 +1,185 @@
+{
+  "inventory_date": "2026-01-19",
+  "areas": {
+    "jobs_work": {
+      "tables": [
+        "cc_bid_breakdown_lines", "cc_bid_messages", "cc_bids",
+        "cc_job_applicants", "cc_job_application_bundle_items", "cc_job_application_bundles",
+        "cc_job_application_events", "cc_job_applications", "cc_job_channel_publications",
+        "cc_job_distribution_channels", "cc_job_embed_publications", "cc_job_ingestion_tasks",
+        "cc_job_matches", "cc_job_postings", "cc_jobs",
+        "cc_project_line_items", "cc_project_notes", "cc_project_photos",
+        "cc_project_scope_snapshots", "cc_projects",
+        "cc_resource_schedule_events", "cc_schedules",
+        "cc_work_request_measurements", "cc_work_request_media", "cc_work_request_notes", "cc_work_requests"
+      ],
+      "table_count": 26,
+      "api_routes": ["/api/jobs/*", "/api/work-requests/*", "/api/projects/*", "/api/bids/*", "/api/schedule/*"],
+      "route_files": ["jobs.ts", "work-requests.ts", "projects.ts", "bids.ts", "schedule.ts", "job-ingestion.ts", "public-jobs.ts", "moderation-jobs.ts"],
+      "api_endpoint_count": 55,
+      "ui_routes": ["/app/jobs", "/app/jobs/new", "/app/jobs/:id/edit", "/app/jobs/:id/destinations", "/app/jobs/payments/pending", "/app/jobs/embeds"],
+      "ui_page_files": ["JobsIndexPage.tsx", "JobEditorPage.tsx", "JobDestinationsPage.tsx", "PendingPaymentsPage.tsx", "EmbedConfiguratorPage.tsx", "JobApplicationsPage.tsx"],
+      "ui_page_count": 6,
+      "status": "complete"
+    },
+    "notes_records": {
+      "tables": [
+        "cc_contemporaneous_note_media", "cc_contemporaneous_notes",
+        "cc_evidence_bundle_items", "cc_evidence_bundles",
+        "cc_external_records", "cc_external_sync_records",
+        "cc_maintenance_records", "cc_project_notes",
+        "cc_record_bundle_acl", "cc_record_bundle_artifacts", "cc_record_bundles",
+        "cc_record_capture_queue", "cc_record_captures", "cc_record_sources"
+      ],
+      "table_count": 14,
+      "api_routes": ["/api/records/*", "/api/record-bundles/*", "/api/evidence/*"],
+      "route_files": ["records.ts", "record-bundles.ts", "evidence.ts"],
+      "api_endpoint_count": 36,
+      "ui_routes": ["/app/records", "/app/evidence"],
+      "ui_page_files": [],
+      "ui_page_count": 0,
+      "status": "partial",
+      "notes": "Backend complete, UI pages missing"
+    },
+    "enforcement": {
+      "tables": [
+        "cc_dispute_evidence", "cc_dispute_inputs", "cc_dispute_messages", "cc_disputes",
+        "cc_enforcement_actions", "cc_enforcement_fine_schedule",
+        "cc_violation_history"
+      ],
+      "table_count": 7,
+      "api_routes": ["/api/enforcement/*", "/api/disputes/*", "/api/citations/*"],
+      "route_files": ["enforcement.ts", "disputes.ts", "citations.ts"],
+      "api_endpoint_count": 35,
+      "ui_routes": ["/app/enforcement"],
+      "ui_page_files": ["EnforcementPage.tsx", "OperatorDisputesIndexPage.tsx", "OperatorDisputePage.tsx"],
+      "ui_page_count": 3,
+      "status": "complete"
+    },
+    "circles": {
+      "tables": [
+        "cc_circle_delegations", "cc_circle_members", "cc_circle_roles", "cc_coordination_circles",
+        "cc_federation_grants", "cc_portal_members", "cc_roles"
+      ],
+      "table_count": 7,
+      "api_routes": ["/api/circles/*", "/api/roles/*"],
+      "route_files": ["roles.ts"],
+      "api_endpoint_count": 4,
+      "ui_routes": ["/app/circles"],
+      "ui_page_files": ["CirclesPage.tsx"],
+      "ui_page_count": 1,
+      "status": "partial",
+      "notes": "Basic structure exists, limited API endpoints"
+    },
+    "messaging": {
+      "tables": [
+        "cc_conversation_participants", "cc_conversations", "cc_messages",
+        "cc_notification_deliveries", "cc_notification_digests", "cc_notification_preferences",
+        "cc_notification_templates", "cc_notifications",
+        "cc_outreach_messages", "cc_reservation_notifications"
+      ],
+      "table_count": 10,
+      "api_routes": ["/api/conversations/*", "/api/p2/conversations/*"],
+      "route_files": ["conversations.ts", "p2-conversations.ts"],
+      "api_endpoint_count": 15,
+      "ui_routes": ["/app/messages"],
+      "ui_page_files": [],
+      "ui_page_count": 0,
+      "status": "partial",
+      "notes": "Backend exists, dedicated messaging UI missing"
+    },
+    "admin": {
+      "tables": [
+        "cc_civos_config", "cc_civos_tenants",
+        "cc_portal_configs", "cc_portal_settings",
+        "cc_tenant_actor_roles", "cc_tenant_checklist_progress", "cc_tenant_individuals",
+        "cc_tenant_invitations", "cc_tenant_legal_entities", "cc_tenant_sharing_settings",
+        "cc_tenant_tools", "cc_tenant_users", "cc_tenants"
+      ],
+      "table_count": 13,
+      "api_routes": ["/api/admin/*"],
+      "route_files": ["admin-communities.ts", "admin-feature-flags.ts", "admin-impersonation.ts", "admin-inventory.ts", "admin-moderation.ts", "admin-portals.ts", "admin-scm.ts", "admin-tenants.ts"],
+      "api_endpoint_count": 41,
+      "ui_routes": ["/app/admin", "/app/admin/portals", "/app/admin/tenants", "/app/admin/usage", "/app/admin/certifications"],
+      "ui_page_files": ["AdminHomePage.tsx", "PortalsPage.tsx", "TenantsPage.tsx", "UsageSummaryPage.tsx", "CertificationsPage.tsx", "PortalAppearancePage.tsx"],
+      "ui_page_count": 6,
+      "status": "complete"
+    },
+    "platform": {
+      "tables": [
+        "cc_activity_feed_state", "cc_data_sources",
+        "cc_event_subscriptions", "cc_feature_flags",
+        "cc_monetization_usage_snapshots",
+        "cc_platform_sessions", "cc_platform_staff", "cc_platform_staff_bootstrap_tokens",
+        "cc_portal_feature_flags", "cc_subscriptions"
+      ],
+      "table_count": 10,
+      "api_routes": ["/api/monetization/*", "/api/internal/*", "/api/system-explorer/*"],
+      "route_files": ["monetization.ts", "internal.ts", "system-explorer.ts"],
+      "api_endpoint_count": 27,
+      "ui_routes": ["/app/system-explorer"],
+      "ui_page_files": ["SystemExplorerPage.tsx", "ImpersonationConsole.tsx"],
+      "ui_page_count": 2,
+      "status": "complete"
+    }
+  },
+  "v35_core": {
+    "surfaces": {
+      "tables": ["cc_surfaces", "cc_surface_units", "cc_surface_claims", "cc_surface_containers", "cc_surface_container_members", "cc_surface_tasks", "cc_surface_utility_bindings"],
+      "table_count": 7,
+      "api_routes": ["/api/p2/app/surfaces/*", "/api/p2/app/surfaces/claims/*"],
+      "api_endpoint_count": 12,
+      "ui_routes": ["/app/parking", "/app/parking/plan", "/app/marina", "/app/marina/plan"],
+      "ui_page_count": 4,
+      "status": "complete"
+    },
+    "n3": {
+      "tables": ["cc_n3_effective_capacity_evaluations", "cc_n3_runs", "cc_n3_segments", "cc_n3_surface_requirements"],
+      "table_count": 4,
+      "api_routes": ["/api/n3/*"],
+      "api_endpoint_count": 8,
+      "ui_routes": ["/app/n3"],
+      "ui_page_count": 1,
+      "status": "complete"
+    },
+    "proposals": {
+      "tables": ["cc_trips", "cc_trip_alerts", "cc_trip_analytics", "cc_trip_handoffs", "cc_trip_invitations", "cc_trip_itinerary_items", "cc_trip_participants", "cc_trip_party_profiles", "cc_trip_passengers", "cc_trip_permits", "cc_trip_reviews", "cc_trip_route_points", "cc_trip_segment_templates", "cc_trip_timepoints"],
+      "table_count": 14,
+      "api_routes": ["/api/p2/app/proposals/*"],
+      "api_endpoint_count": 10,
+      "ui_routes": ["/p/proposal/:proposalId"],
+      "ui_page_count": 2,
+      "status": "complete"
+    },
+    "folios": {
+      "tables": ["cc_folios", "cc_folio_ledger", "cc_folio_ledger_links"],
+      "table_count": 3,
+      "api_routes": ["/api/p2/app/folios/*"],
+      "api_endpoint_count": 4,
+      "ui_routes": [],
+      "ui_page_count": 0,
+      "status": "partial",
+      "notes": "API exists, dedicated folio UI pending"
+    },
+    "ops": {
+      "tables": ["cc_surface_tasks", "cc_media", "cc_media_assets", "cc_refund_incidents"],
+      "table_count": 4,
+      "api_routes": ["/api/p2/app/ops/*", "/api/media/*"],
+      "api_endpoint_count": 20,
+      "ui_routes": ["/app/ops", "/app/ops/housekeeping", "/app/ops/incidents"],
+      "ui_page_count": 3,
+      "status": "complete"
+    }
+  },
+  "summary": {
+    "total_tables": 663,
+    "total_route_files": 94,
+    "total_api_endpoints": 1174,
+    "total_ui_pages": 97,
+    "areas_complete": 5,
+    "areas_partial": 3,
+    "areas_missing": 0,
+    "v35_core_complete": 4,
+    "v35_core_partial": 1
+  }
+}

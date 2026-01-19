@@ -1,0 +1,129 @@
+REPLIT PROMPT — V3.5 Full Scope Inventory
+ROLE: Platform architect performing comprehensive inventory.
+PURPOSE: Assess current state of ALL V3.5 areas to identify gaps.
+
+Goal
+Inventory the complete V3.5 platform across all areas in the Role-to-Nav Visibility Matrix. Report what exists (tables, routes, UI) vs what's missing.
+
+A) Database Table Inventory
+Run SQL or inspect Drizzle schema to list tables for each area:
+1) Jobs / Work
+sql-- Check for tables matching these patterns:
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (
+  table_name LIKE '%job%' OR
+  table_name LIKE '%posting%' OR
+  table_name LIKE '%application%' OR
+  table_name LIKE '%work_request%' OR
+  table_name LIKE '%project%' OR
+  table_name LIKE '%quote%' OR
+  table_name LIKE '%schedule%' OR
+  table_name LIKE '%bid%'
+);
+2) Notes & Records
+sqlSELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (
+  table_name LIKE '%note%' OR
+  table_name LIKE '%record%' OR
+  table_name LIKE '%bundle%'
+);
+3) Enforcement
+sqlSELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (
+  table_name LIKE '%action%' OR
+  table_name LIKE '%fine%' OR
+  table_name LIKE '%dispute%' OR
+  table_name LIKE '%enforcement%' OR
+  table_name LIKE '%violation%'
+);
+4) Circles
+sqlSELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (
+  table_name LIKE '%circle%' OR
+  table_name LIKE '%member%' OR
+  table_name LIKE '%role%' OR
+  table_name LIKE '%delegation%' OR
+  table_name LIKE '%grant%'
+);
+5) Messaging
+sqlSELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (
+  table_name LIKE '%message%' OR
+  table_name LIKE '%conversation%' OR
+  table_name LIKE '%thread%' OR
+  table_name LIKE '%notification%'
+);
+6) Admin
+sqlSELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (
+  table_name LIKE '%tenant%' OR
+  table_name LIKE '%admin%' OR
+  table_name LIKE '%setting%' OR
+  table_name LIKE '%config%'
+);
+7) Platform
+sqlSELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (
+  table_name LIKE '%platform%' OR
+  table_name LIKE '%subscription%' OR
+  table_name LIKE '%billing%' OR
+  table_name LIKE '%usage%' OR
+  table_name LIKE '%feature%' OR
+  table_name LIKE '%migration%' OR
+  table_name LIKE '%feed%' OR
+  table_name LIKE '%data_source%'
+);
+
+B) API Route Inventory
+Scan server/routes/ directory and list all route files and their endpoints for each area:
+AreaRoute FilesEndpoints CountJobs / Work??Notes & Records??Enforcement??Circles??Messaging??Admin??Platform??
+
+C) UI Route Inventory
+Scan client/src/ for pages/routes related to each area:
+AreaPage FilesRoutesJobs / Work?/app/jobs/*, /app/work/*Notes & Records?/app/notes/*, /app/records/*Enforcement?/app/enforcement/*Circles?/app/circles/*Messaging?/app/messages/*Admin?/admin/*Platform?/platform/*
+
+D) Output Format
+Produce a JSON report:
+json{
+  "inventory_date": "2026-01-19",
+  "areas": {
+    "jobs_work": {
+      "tables": ["cc_job_postings", "cc_applications", ...],
+      "table_count": 12,
+      "api_routes": ["/api/jobs/*", "/api/work/*"],
+      "api_endpoint_count": 24,
+      "ui_routes": ["/app/jobs", "/app/work"],
+      "ui_page_count": 8,
+      "status": "complete" | "partial" | "missing"
+    },
+    "notes_records": { ... },
+    "enforcement": { ... },
+    "circles": { ... },
+    "messaging": { ... },
+    "admin": { ... },
+    "platform": { ... }
+  },
+  "summary": {
+    "total_tables": 515,
+    "areas_complete": 4,
+    "areas_partial": 2,
+    "areas_missing": 1
+  }
+}
+
+E) Also Include (for completeness)
+Already-verified V3.5 areas — confirm they're still intact:
+AreaExpected TablesExpected RoutesSurfacescc_surfaces, cc_surface_* (7+)/api/p2/app/surfaces/*N3cc_n3_* (9+)/api/n3/*Proposalscc_trips, cc_trip_*/api/p2/app/proposals/*Folioscc_folio_*/api/p2/app/folios/*Opscc_surface_tasks, cc_media_*, cc_refund_incidents/api/p2/app/ops/*
+
+Deliverables
+
+JSON inventory saved to ./proof/v3.5/full-inventory.json
+Summary table printed to console
+Status assessment per area: complete / partial / missing
