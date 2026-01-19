@@ -78,6 +78,23 @@ export interface ReplanOptionDef {
 export type ActionKind = 'suggest' | 'request' | 'dictate';
 export type BundleStatus = 'open' | 'dismissed' | 'actioned';
 
+export interface SegmentEffectiveCapacity {
+  segmentId: string;
+  effectiveCapacity: Array<{
+    surfaceId: string;
+    requirementId: string;
+    requiredSurfaceType: string;
+    effectiveUnitsNormal?: number;
+    effectiveUnitsEmergency?: number;
+    effectiveAreaSqmm?: number;
+    effectiveLinearMm?: number;
+    effectiveContinuousSafeWatts?: number;
+    riskScore: number;
+    reasons: string[];
+    mitigations: string[];
+  }>;
+}
+
 export interface EvaluationResult {
   runId: string;
   tenantId: string;
@@ -85,6 +102,7 @@ export interface EvaluationResult {
   riskLevel: RiskLevel;
   fingerprint: RiskFingerprint;
   findings: SignalFinding[];
+  effectiveCapacityBySegment?: SegmentEffectiveCapacity[];
   hasChanged: boolean;
   replanOptions: ReplanOptionDef[];
 }

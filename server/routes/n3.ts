@@ -32,6 +32,28 @@ import {
 
 export const n3Router = Router();
 
+// List all runs for a tenant
+n3Router.get('/runs', async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'] as string;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant ID' });
+    }
+
+    const runs = await db
+      .select()
+      .from(ccN3Runs)
+      .where(eq(ccN3Runs.tenantId, tenantId))
+      .orderBy(desc(ccN3Runs.startsAt))
+      .limit(50);
+
+    res.json(runs);
+  } catch (err) {
+    console.error('[N3 API] Error fetching runs:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 n3Router.get('/attention', async (req, res) => {
   try {
     const tenantId = req.headers['x-tenant-id'] as string;
@@ -219,6 +241,7 @@ n3Router.post('/runs/:runId/evaluate', async (req, res) => {
   try {
     const { runId } = req.params;
     const tenantId = req.headers['x-tenant-id'] as string;
+    const portalId = req.headers['x-portal-id'] as string;
 
     const run = await db.query.ccN3Runs.findFirst({
       where: and(
@@ -231,7 +254,7 @@ n3Router.post('/runs/:runId/evaluate', async (req, res) => {
       return res.status(404).json({ error: 'Run not found' });
     }
 
-    const result = await evaluateServiceRun(runId, run.tenantId);
+    const result = await evaluateServiceRun(runId, run.tenantId, portalId);
     const bundleId = await saveEvaluationResult(result);
 
     res.json({
@@ -241,9 +264,11 @@ n3Router.post('/runs/:runId/evaluate', async (req, res) => {
         riskLevel: result.riskLevel,
         fingerprintHash: result.fingerprint.hash,
         findingsCount: result.findings.length,
+        effectiveCapacityCount: result.effectiveCapacityBySegment?.length || 0,
         hasChanged: result.hasChanged,
         bundleId,
       },
+      effectiveCapacityBySegment: result.effectiveCapacityBySegment,
     });
   } catch (err) {
     console.error('[N3 API] Error evaluating run:', err);

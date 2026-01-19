@@ -15,13 +15,18 @@ import {
   ccN3Runs, 
   ccN3Segments, 
   ccTidePredictions, 
-  ccWeatherNormals 
+  ccWeatherNormals,
+  ccN3SurfaceRequirements,
+  ccSurfaces,
+  ccSurfaceUtilityBindings,
 } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
 import { evaluateServiceRun, saveEvaluationResult } from '../lib/n3';
 
 const router = Router();
 
 const BAMFIELD_LOCATION = 'bamfield-bc';
+const TEST_PORTAL_ID = '00000000-0000-0000-0000-000000000001';
 const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
 function generateTidePredictions(locationRef: string, startDate: Date, days: number) {
@@ -164,6 +169,130 @@ router.post('/n3', async (req, res) => {
 
     console.log(`[N3 Seed] Created ${segments.length} segments`);
 
+    // =============================================
+    // SURFACE REQUIREMENTS (for EffectiveCapacity)
+    // =============================================
+    console.log('[N3 Seed] Creating surface requirements...');
+
+    // Look up surfaces for requirements (may or may not exist)
+    const dockRampSurface = await db.query.ccSurfaces.findFirst({
+      where: eq(ccSurfaces.title, 'Dock Ramp Surface'),
+    });
+    const boardwalkSurface = await db.query.ccSurfaces.findFirst({
+      where: eq(ccSurfaces.title, 'Boardwalk Grated'),
+    });
+    const canoe1Surface = await db.query.ccSurfaces.findFirst({
+      where: sql`${ccSurfaces.title} = 'Canoe 1 Hull' AND ${ccSurfaces.portalId} = ${TEST_PORTAL_ID}`,
+    });
+    const kayak1Surface = await db.query.ccSurfaces.findFirst({
+      where: sql`${ccSurfaces.title} = 'Kayak 1 Hull' AND ${ccSurfaces.portalId} = ${TEST_PORTAL_ID}`,
+    });
+
+    // Find utility surfaces for power requirements
+    const utilitySurfaces = await db.select().from(ccSurfaces).where(
+      sql`${ccSurfaces.surfaceType} = 'utility' AND ${ccSurfaces.portalId} = ${TEST_PORTAL_ID}`
+    ).limit(3);
+
+    const surfaceRequirements = [];
+
+    // Dock ramp traversal - wheelchair accessible requirement
+    if (dockRampSurface) {
+      surfaceRequirements.push({
+        tenantId: TEST_TENANT_ID,
+        portalId: TEST_PORTAL_ID,
+        runId: run.id,
+        segmentId: segments[0].id, // Transit segment
+        surfaceId: dockRampSurface.id,
+        requiredSurfaceType: 'movement',
+        actorProfile: {
+          actor_type: 'wheelchair',
+          mass_g: 120000,
+          width_mm: 650,
+          footprint_mm2: 6500,
+          traction: 0.4,
+        },
+        requiredConstraints: {
+          no_grates: true,
+          min_clear_width_mm: 900,
+          max_slope_pct: 8,
+        },
+      });
+    }
+
+    // Boardwalk traversal - human walking
+    if (boardwalkSurface) {
+      surfaceRequirements.push({
+        tenantId: TEST_TENANT_ID,
+        portalId: TEST_PORTAL_ID,
+        runId: run.id,
+        segmentId: segments[0].id, // Transit segment
+        surfaceId: boardwalkSurface.id,
+        requiredSurfaceType: 'movement',
+        actorProfile: {
+          actor_type: 'human',
+          mass_g: 80000,
+          width_mm: 500,
+          traction: 0.6,
+        },
+        requiredConstraints: {},
+      });
+    }
+
+    // Canoe usage - sit surface with wind sensitivity
+    if (canoe1Surface) {
+      surfaceRequirements.push({
+        tenantId: TEST_TENANT_ID,
+        portalId: TEST_PORTAL_ID,
+        runId: run.id,
+        segmentId: segments[1].id, // Work segment
+        surfaceId: canoe1Surface.id,
+        requiredSurfaceType: 'sit',
+        demand: {
+          sit_units_requested: 4,
+          rowing_required: true,
+        },
+      });
+    }
+
+    // Kayak usage - sit surface with wind sensitivity
+    if (kayak1Surface) {
+      surfaceRequirements.push({
+        tenantId: TEST_TENANT_ID,
+        portalId: TEST_PORTAL_ID,
+        runId: run.id,
+        segmentId: segments[1].id, // Work segment
+        surfaceId: kayak1Surface.id,
+        requiredSurfaceType: 'sit',
+        demand: {
+          sit_units_requested: 2,
+          rowing_required: true,
+        },
+      });
+    }
+
+    // Power requirement for utility surfaces
+    for (const utilitySurface of utilitySurfaces.slice(0, 2)) {
+      surfaceRequirements.push({
+        tenantId: TEST_TENANT_ID,
+        portalId: TEST_PORTAL_ID,
+        runId: run.id,
+        segmentId: segments[1].id, // Work segment
+        surfaceId: utilitySurface.id,
+        requiredSurfaceType: 'utility',
+        demand: {
+          watts_continuous: 500,
+          hours: 4,
+        },
+      });
+    }
+
+    if (surfaceRequirements.length > 0) {
+      await db.insert(ccN3SurfaceRequirements).values(surfaceRequirements);
+      console.log(`[N3 Seed] Created ${surfaceRequirements.length} surface requirements`);
+    } else {
+      console.log('[N3 Seed] No surface requirements created (run surface seed first)');
+    }
+
     const tidePredictions = generateTidePredictions(BAMFIELD_LOCATION, runStartTime, 7);
     
     for (let i = 0; i < tidePredictions.length; i += 100) {
@@ -183,10 +312,11 @@ router.post('/n3', async (req, res) => {
     console.log(`[N3 Seed] Created ${weatherNormals.length} weather normals`);
 
     console.log('[N3 Seed] Triggering evaluation...');
-    const result = await evaluateServiceRun(run.id, run.tenantId);
+    const result = await evaluateServiceRun(run.id, run.tenantId, TEST_PORTAL_ID);
     const bundleId = await saveEvaluationResult(result);
 
     console.log(`[N3 Seed] Evaluation complete: risk=${result.riskLevel}, score=${result.riskScore.toFixed(3)}, bundle=${bundleId}`);
+    console.log(`[N3 Seed] Effective capacity segments: ${result.effectiveCapacityBySegment?.length || 0}`);
 
     res.json({
       success: true,
@@ -204,8 +334,10 @@ router.post('/n3', async (req, res) => {
           riskScore: result.riskScore,
           riskLevel: result.riskLevel,
           findingsCount: result.findings.length,
+          effectiveCapacitySegments: result.effectiveCapacityBySegment?.length || 0,
           bundleId,
         },
+        surfaceRequirementsCount: surfaceRequirements.length,
       },
     });
 

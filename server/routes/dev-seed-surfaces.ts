@@ -318,6 +318,7 @@ router.post('/surfaces', async (_req, res) => {
       surfaceType: 'sit',
       title: 'Canoe 1 Hull',
       lengthMm: 5000,
+      metadata: { watercraft_type: 'canoe' },
     }).returning();
 
     await db.insert(ccSurfaceContainerMembers).values({
@@ -384,6 +385,7 @@ router.post('/surfaces', async (_req, res) => {
       surfaceType: 'sit',
       title: 'Kayak 1 Hull',
       lengthMm: 3500,
+      metadata: { watercraft_type: 'kayak' },
     }).returning();
 
     await db.insert(ccSurfaceContainerMembers).values({
@@ -428,6 +430,68 @@ router.post('/surfaces', async (_req, res) => {
       title: 'Finger B',
       sortOrder: 2,
     }).returning();
+
+    // Create dock ramp (tide-sensitive movement surface)
+    const [dockRampContainer] = await db.insert(ccSurfaceContainers).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      parentContainerId: woodsEndDock.id,
+      containerType: 'dock_section',
+      title: 'Dock Ramp',
+      sortOrder: 0,
+    }).returning();
+
+    const [dockRampSurface] = await db.insert(ccSurfaces).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      surfaceType: 'movement',
+      title: 'Dock Ramp Surface',
+      linearMm: 5000,
+      metadata: {
+        ramp_slope_at_low_tide_pct: 18,
+        ramp_slope_at_high_tide_pct: 2,
+        low_tide_height_m: 0.5,
+        high_tide_height_m: 3.0,
+        min_clear_width_mm: 1200,
+        has_grates: false,
+      },
+    }).returning();
+
+    await db.insert(ccSurfaceContainerMembers).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: dockRampContainer.id,
+      surfaceId: dockRampSurface.id,
+    });
+
+    // Create boardwalk (grated movement surface)
+    const [boardwalkContainer] = await db.insert(ccSurfaceContainers).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      parentContainerId: woodsEndDock.id,
+      containerType: 'dock_section',
+      title: 'Boardwalk',
+      sortOrder: 0,
+    }).returning();
+
+    const [boardwalkSurface] = await db.insert(ccSurfaces).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      surfaceType: 'movement',
+      title: 'Boardwalk Grated',
+      linearMm: 8000,
+      metadata: {
+        has_grates: true,
+        min_clear_width_mm: 1500,
+      },
+    }).returning();
+
+    await db.insert(ccSurfaceContainerMembers).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: boardwalkContainer.id,
+      surfaceId: boardwalkSurface.id,
+    });
 
     // Create shared power pool
     const [dockPowerPool] = await db.insert(ccUtilityNodes).values({
@@ -611,6 +675,17 @@ router.post('/surfaces', async (_req, res) => {
         bikeCorral: bikeCorralContainer.id,
         flora: floraRestaurant.id,
         woodsEndDock: woodsEndDock.id,
+        dockRamp: dockRampContainer.id,
+        boardwalk: boardwalkContainer.id,
+      },
+      surfaces: {
+        dockRamp: dockRampSurface.id,
+        boardwalk: boardwalkSurface.id,
+        canoe1: canoe1Surface.id,
+        kayak1: kayak1Surface.id,
+      },
+      utilityNodes: {
+        dockPowerPool: dockPowerPool.id,
       },
     });
   } catch (err) {

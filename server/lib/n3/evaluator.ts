@@ -10,8 +10,19 @@
  */
 
 import { db } from '../../db';
-import { ccN3Runs, ccN3Segments, ccMonitorState, ccReplanBundles, ccReplanOptions } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { 
+  ccN3Runs, 
+  ccN3Segments, 
+  ccMonitorState, 
+  ccReplanBundles, 
+  ccReplanOptions,
+  ccN3SurfaceRequirements,
+  ccSurfaces,
+  ccSurfaceContainers,
+  ccSurfaceUtilityBindings,
+  ccUtilityNodes,
+} from '@shared/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 import { createHash } from 'crypto';
 import type {
   Segment,
@@ -21,9 +32,11 @@ import type {
   ReplanOptionDef,
   RiskLevel,
   TimeWindow,
+  SegmentEffectiveCapacity,
 } from './types';
 import { getTideRange, evaluateRampByTide, findOptimalTideWindow } from './tideProvider';
 import { getWeatherNormals, evaluateWeatherRisk } from './weatherProvider';
+import { evaluateEffectiveCapacityV1, type EffectiveCapacityResult } from './effectiveCapacity';
 
 const BAMFIELD_LOCATION = 'bamfield-bc';
 
@@ -251,9 +264,156 @@ async function generateReplanOptions(
   return options.slice(0, 3);
 }
 
+async function evaluateSurfaceRequirements(
+  runId: string,
+  portalId: string,
+  segments: Segment[]
+): Promise<{ bySegment: SegmentEffectiveCapacity[]; avgRisk: number }> {
+  const requirements = await db.query.ccN3SurfaceRequirements.findMany({
+    where: eq(ccN3SurfaceRequirements.runId, runId),
+  });
+
+  if (requirements.length === 0) {
+    return { bySegment: [], avgRisk: 0 };
+  }
+
+  const segmentIds = segments.map(s => s.id);
+  const segmentMap = new Map(segments.map(s => [s.id, s]));
+
+  const surfaceIds = requirements.map(r => r.surfaceId);
+  const surfaces = await db.query.ccSurfaces.findMany({
+    where: inArray(ccSurfaces.id, surfaceIds),
+  });
+  const surfaceMap = new Map(surfaces.map(s => [s.id, s]));
+
+  const containerIds = requirements.filter(r => r.containerId).map(r => r.containerId!);
+  const containers = containerIds.length > 0
+    ? await db.query.ccSurfaceContainers.findMany({
+        where: inArray(ccSurfaceContainers.id, containerIds),
+      })
+    : [];
+  const containerMap = new Map(containers.map(c => [c.id, c]));
+
+  const utilityBindings = await db
+    .select({
+      surfaceId: ccSurfaceUtilityBindings.surfaceId,
+      nodeId: ccUtilityNodes.id,
+      capacity: ccUtilityNodes.capacity, // JSONB: { max_watts: number }
+      nodeType: ccUtilityNodes.nodeType,
+    })
+    .from(ccSurfaceUtilityBindings)
+    .innerJoin(ccUtilityNodes, eq(ccSurfaceUtilityBindings.utilityNodeId, ccUtilityNodes.id))
+    .where(inArray(ccSurfaceUtilityBindings.surfaceId, surfaceIds));
+  const utilityMap = new Map(utilityBindings.map(b => [b.surfaceId, b]));
+
+  const resultsBySegment: Map<string, EffectiveCapacityResult[]> = new Map();
+  let totalRiskScore = 0;
+  let evalCount = 0;
+
+  for (const req of requirements) {
+    const segment = segmentMap.get(req.segmentId);
+    if (!segment) continue;
+
+    const surface = surfaceMap.get(req.surfaceId);
+    if (!surface) continue;
+
+    const container = req.containerId ? containerMap.get(req.containerId) : undefined;
+    const utilityBinding = utilityMap.get(req.surfaceId);
+
+    const startTime = segment.startsAt || segment.startWindow?.earliest;
+    const endTime = segment.endsAt || segment.endWindow?.latest;
+    if (!startTime || !endTime) continue;
+
+    const locationRef = segment.locationRef || BAMFIELD_LOCATION;
+
+    const tideRange = await getTideRange(locationRef, startTime, endTime);
+    const avgTideHeight = tideRange?.predictions?.length
+      ? tideRange.predictions.reduce((sum: number, p) => sum + parseFloat(String(p.heightM)), 0) / tideRange.predictions.length
+      : undefined;
+
+    const weather = await getWeatherNormals(locationRef, startTime);
+
+    const result = await evaluateEffectiveCapacityV1({
+      portalId,
+      timeStart: startTime,
+      timeEnd: endTime,
+      requirement: {
+        id: req.id,
+        requiredSurfaceType: req.requiredSurfaceType,
+        actorProfile: (req.actorProfile || {}) as any,
+        demand: (req.demand || {}) as any,
+        requiredConstraints: (req.requiredConstraints || {}) as any,
+        riskTolerance: parseFloat(String(req.riskTolerance)) || 0.5,
+      },
+      surface: {
+        id: surface.id,
+        surfaceType: surface.surfaceType,
+        title: surface.title || undefined,
+        widthMm: surface.widthMm || undefined,
+        lengthMm: surface.lengthMm || undefined,
+        linearMm: surface.linearMm || undefined,
+        areaSqmm: surface.areaSqmm || undefined,
+        metadata: (surface.metadata || {}) as any,
+      },
+      container: container ? {
+        id: container.id,
+        title: container.title || undefined,
+        hasSteps: container.hasSteps || false,
+        minDoorWidthMm: container.minDoorWidthMm || undefined,
+        metadata: (container.metadata || {}) as any,
+      } : undefined,
+      signals: {
+        tide: avgTideHeight !== undefined ? { height_m: avgTideHeight } : undefined,
+        weather: weather ? {
+          rain_prob: weather.rainProb ? parseFloat(String(weather.rainProb)) : undefined,
+          wind_kph: weather.windProb ? parseFloat(String(weather.windProb)) * 40 : undefined,
+          temp_c: weather.tempLowC ? parseFloat(String(weather.tempLowC)) : undefined,
+        } : undefined,
+        utilityNode: utilityBinding ? {
+          max_watts: (utilityBinding.capacity as { max_watts?: number })?.max_watts,
+          is_shared: utilityBinding.nodeType === 'shared_pool',
+        } : undefined,
+      },
+    });
+
+    if (!resultsBySegment.has(req.segmentId)) {
+      resultsBySegment.set(req.segmentId, []);
+    }
+    resultsBySegment.get(req.segmentId)!.push(result);
+    totalRiskScore += result.riskScore;
+    evalCount++;
+  }
+
+  const bySegment: SegmentEffectiveCapacity[] = [];
+  for (const [segmentId, results] of Array.from(resultsBySegment.entries())) {
+    bySegment.push({
+      segmentId,
+      effectiveCapacity: results.map((r: EffectiveCapacityResult) => ({
+        surfaceId: r.surfaceId,
+        requirementId: r.requirementId,
+        requiredSurfaceType: r.requiredSurfaceType,
+        effectiveUnitsNormal: r.effectiveUnitsNormal,
+        effectiveUnitsEmergency: r.effectiveUnitsEmergency,
+        effectiveAreaSqmm: r.effectiveAreaSqmm,
+        effectiveLinearMm: r.effectiveLinearMm,
+        effectiveContinuousSafeWatts: r.effectiveContinuousSafeWatts,
+        riskScore: r.riskScore,
+        reasons: r.reasons,
+        mitigations: r.mitigations,
+      })),
+    });
+  }
+
+  return {
+    bySegment,
+    avgRisk: evalCount > 0 ? totalRiskScore / evalCount : 0,
+  };
+}
+
 export async function evaluateServiceRun(
   runId: string,
-  tenantId: string
+  tenantId: string,
+  portalId?: string
 ): Promise<EvaluationResult> {
   const segments = await loadSegments(runId);
   
@@ -263,7 +423,19 @@ export async function evaluateServiceRun(
     allFindings.push(...segmentFindings);
   }
 
-  const riskScore = computeRiskScore(allFindings);
+  let effectiveCapacityBySegment: SegmentEffectiveCapacity[] | undefined;
+  let effectiveCapacityRiskContribution = 0;
+
+  if (portalId) {
+    const ecResult = await evaluateSurfaceRequirements(runId, portalId, segments);
+    if (ecResult.bySegment.length > 0) {
+      effectiveCapacityBySegment = ecResult.bySegment;
+      effectiveCapacityRiskContribution = ecResult.avgRisk * 0.35;
+    }
+  }
+
+  const baseRiskScore = computeRiskScore(allFindings);
+  const riskScore = Math.min(1, baseRiskScore + effectiveCapacityRiskContribution);
   const riskLevel = computeRiskLevel(riskScore);
   const fingerprint = computeFingerprint(allFindings);
 
@@ -286,6 +458,7 @@ export async function evaluateServiceRun(
     riskLevel,
     fingerprint,
     findings: allFindings,
+    effectiveCapacityBySegment,
     hasChanged,
     replanOptions,
   };
