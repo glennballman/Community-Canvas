@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Plane,
   Bell,
+  FileText,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -58,6 +59,7 @@ export const V3_NAV: NavSection[] = [
     items: [
       { icon: LayoutDashboard, label: 'Dashboard', href: '/app', testId: 'nav-dashboard' },
       { icon: Plane, label: 'My Trips', href: '/app/participant/trips', testId: 'nav-my-trips' },
+      { icon: FileText, label: 'My Applications', href: '/app/participant/applications', testId: 'nav-my-applications' },
     ],
   },
   {
