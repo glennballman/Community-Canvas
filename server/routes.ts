@@ -100,6 +100,7 @@ import { n3Router } from "./routes/n3";
 import { surfacesRouter } from "./routes/surfaces";
 import devSeedN3Router from "./routes/dev-seed-n3";
 import devSeedSurfacesRouter from "./routes/dev-seed-surfaces";
+import devSeedWeddingRouter from "./routes/dev-seed-wedding";
 import publicJobsRouter from "./routes/public-jobs";
 import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
@@ -474,6 +475,7 @@ export async function registerRoutes(
   if (process.env.NODE_ENV !== 'production') {
     app.use('/api/dev/seed', devSeedN3Router);
     app.use('/api/dev/seed', devSeedSurfacesRouter);
+    app.use('/api/dev/seed', devSeedWeddingRouter);
   }
 
   // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance

@@ -5562,25 +5562,25 @@ export type FolioLedgerEntry = typeof ccFolioLedger.$inferSelect;
 export type InsertFolioLedgerEntry = z.infer<typeof insertFolioLedgerEntrySchema>;
 
 // ============================================================================
-// INCIDENTS TABLE (Prompt 3 - Split Pay + Refunds + Incidents)
-// Tracks illness refunds, staff damage, goodwill refunds, injuries
+// REFUND INCIDENTS (Prompt 3 - Split Pay + Refunds + Incidents)
+// Tracks illness refunds, staff damage, goodwill refunds, injuries for folio adjustments
 // ============================================================================
 
-export const incidentTypeEnum = pgEnum("incident_type", [
+export const refundIncidentTypeEnum = pgEnum("refund_incident_type", [
   "illness_refund", "staff_damage", "goodwill_refund", "injury", "other"
 ]);
 
-export const incidentStatusEnum = pgEnum("incident_status", [
+export const refundIncidentStatusEnum = pgEnum("refund_incident_status", [
   "open", "resolved"
 ]);
 
-export const ccIncidents = pgTable("cc_incidents", {
+export const ccRefundIncidents = pgTable("cc_refund_incidents", {
   id: uuid("id").primaryKey().defaultRandom(),
   portalId: uuid("portal_id").notNull(),
   tenantId: uuid("tenant_id"),
   
-  incidentType: incidentTypeEnum("incident_type").notNull(),
-  status: incidentStatusEnum("status").notNull().default("open"),
+  incidentType: refundIncidentTypeEnum("incident_type").notNull(),
+  status: refundIncidentStatusEnum("status").notNull().default("open"),
   
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
   reportedByParticipantId: uuid("reported_by_participant_id"),
@@ -5593,17 +5593,17 @@ export const ccIncidents = pgTable("cc_incidents", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
-  portalTypeIdx: index("idx_incidents_portal_type").on(table.portalId, table.incidentType),
-  portalStatusIdx: index("idx_incidents_portal_status").on(table.portalId, table.status),
+  portalTypeIdx: index("idx_refund_incidents_portal_type").on(table.portalId, table.incidentType),
+  portalStatusIdx: index("idx_refund_incidents_portal_status").on(table.portalId, table.status),
 }));
 
-export const insertIncidentSchema = createInsertSchema(ccIncidents).omit({
+export const insertRefundIncidentSchema = createInsertSchema(ccRefundIncidents).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
-export type Incident = typeof ccIncidents.$inferSelect;
-export type InsertIncident = z.infer<typeof insertIncidentSchema>;
+export type RefundIncident = typeof ccRefundIncidents.$inferSelect;
+export type InsertRefundIncident = z.infer<typeof insertRefundIncidentSchema>;
 
 // ============================================================================
 // FOLIO LEDGER LINKS (Prompt 3 - Split Pay + Refunds + Incidents)
@@ -5619,7 +5619,7 @@ export const ccFolioLedgerLinks = pgTable("cc_folio_ledger_links", {
   
   surfaceClaimId: uuid("surface_claim_id").references(() => ccSurfaceClaims.id),
   surfaceUnitId: uuid("surface_unit_id").references(() => ccSurfaceUnits.id),
-  incidentId: uuid("incident_id").references(() => ccIncidents.id),
+  incidentId: uuid("incident_id").references(() => ccRefundIncidents.id),
   refFolioLedgerId: uuid("ref_folio_ledger_id").references(() => ccFolioLedger.id), // for reversals referencing originals
   
   metadata: jsonb("metadata").notNull().default({}),
