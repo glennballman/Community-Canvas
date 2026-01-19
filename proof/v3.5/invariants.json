@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "checkResults": {
+    "ledgerTableExists": {
+      "passed": true
+    },
+    "ledgerLinksExists": {
+      "passed": true
+    },
+    "surfaceUnitsExists": {
+      "passed": true
+    },
+    "surfaceClaimsExists": {
+      "passed": true
+    },
+    "refundIncidentsExists": {
+      "passed": true
+    },
+    "portalScoping": {
+      "passed": true,
+      "count": 179
+    }
+  },
+  "sqlQueries": {
+    "ledgerImmutability": "\n    SELECT COUNT(*) as count \n    FROM pg_trigger t\n    JOIN pg_class c ON t.tgrelid = c.oid\n    WHERE c.relname = 'cc_folio_ledger'\n    AND t.tgname LIKE '%update%'\n    AND t.tgenabled = 'D'\n  ",
+    "reversalLinks": "\n    SELECT COUNT(*) as count\n    FROM cc_folio_ledger l\n    WHERE l.entry_type IN ('reversal', 'credit_reversal', 'charge_reversal')\n    AND NOT EXISTS (\n      SELECT 1 FROM cc_folio_ledger_links lnk \n      WHERE lnk.ledger_id = l.id \n      AND lnk.ref_folio_ledger_id IS NOT NULL\n    )\n  ",
+    "atomicLinking": "\n    SELECT COUNT(*) as count\n    FROM cc_folio_ledger l\n    WHERE l.entry_type IN ('activity_rental', 'lodging')\n    AND l.tenant_id = 'b0000000-0000-0000-0000-000000000001'\n    AND NOT EXISTS (\n      SELECT 1 FROM cc_folio_ledger_links lnk\n      WHERE lnk.ledger_id = l.id\n      AND (lnk.surface_claim_id IS NOT NULL OR lnk.surface_unit_id IS NOT NULL)\n    )\n  ",
+    "portalScopingUnits": "\n    SELECT COUNT(*) as count\n    FROM cc_surface_units\n    WHERE portal_id IS NULL\n  ",
+    "portalScopingClaims": "\n    SELECT COUNT(*) as count\n    FROM cc_surface_claims\n    WHERE portal_id IS NULL\n  ",
+    "portalScopingLinks": "\n    SELECT COUNT(*) as count\n    FROM cc_folio_ledger_links\n    WHERE portal_id IS NULL\n  ",
+    "portalScopingIncidents": "\n    SELECT COUNT(*) as count\n    FROM cc_refund_incidents\n    WHERE portal_id IS NULL\n  "
+  },
+  "issues": [],
+  "note": "Schema-based checks. Run with live DB for full SQL validation."
+}

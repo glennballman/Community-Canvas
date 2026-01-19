@@ -1,0 +1,83 @@
+{
+  "passed": true,
+  "routesFound": [
+    "/",
+    "/app",
+    "/app/ops",
+    "/app/ops/housekeeping",
+    "/app/ops/incidents",
+    "/app/parking",
+    "/app/marina",
+    "/app/reservations"
+  ],
+  "publicRoutes": [
+    {
+      "path": "/",
+      "label": "Landing Page",
+      "required": true
+    },
+    {
+      "path": "/search",
+      "label": "Availability Search",
+      "required": false
+    },
+    {
+      "path": "/proposals/:id",
+      "label": "Public Proposal View",
+      "required": false
+    }
+  ],
+  "appRoutes": [
+    {
+      "path": "/app",
+      "label": "Dashboard",
+      "required": true
+    },
+    {
+      "path": "/app/ops",
+      "label": "Operations Board",
+      "required": true
+    },
+    {
+      "path": "/app/ops/housekeeping",
+      "label": "Housekeeping Tasks",
+      "required": true
+    },
+    {
+      "path": "/app/ops/incidents",
+      "label": "Incidents Console",
+      "required": true
+    },
+    {
+      "path": "/app/parking",
+      "label": "Parking Plan View",
+      "required": true
+    },
+    {
+      "path": "/app/marina",
+      "label": "Marina Plan View",
+      "required": true
+    },
+    {
+      "path": "/app/reservations",
+      "label": "Reservations",
+      "required": true
+    },
+    {
+      "path": "/app/hospitality",
+      "label": "Hospitality",
+      "required": false
+    },
+    {
+      "path": "/app/jobs",
+      "label": "Jobs Board",
+      "required": false
+    },
+    {
+      "path": "/app/services/runs",
+      "label": "Service Runs (N3)",
+      "required": false
+    }
+  ],
+  "issues": []
+}

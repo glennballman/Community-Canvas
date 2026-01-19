@@ -1,0 +1,206 @@
+{
+  "passed": true,
+  "endpointsFound": {
+    "surfaces": [
+      "GET /api/p2/app/surfaces/containers/:containerId",
+      "POST /api/p2/app/surfaces/claims/hold",
+      "POST /api/p2/app/surfaces/claims/confirm",
+      "POST /api/p2/app/surfaces/claims/release",
+      "GET /api/p2/app/surfaces/capacity",
+      "GET /api/p2/app/surfaces/capacity/compare",
+      "POST /api/p2/app/surfaces/capacity/batch"
+    ],
+    "proposals": [
+      "GET /api/p2/app/proposals/:proposalId",
+      "POST /api/p2/app/proposals/from-cart",
+      "POST /api/p2/app/proposals/:proposalId/release",
+      "POST /api/p2/app/proposals/:proposalId/confirm",
+      "GET /api/p2/app/proposals/:proposalId/risk",
+      "POST /api/p2/app/proposals/:proposalId/handoff"
+    ],
+    "folios": [
+      "POST /api/p2/app/proposals/folios/:folioId/pay",
+      "POST /api/p2/app/proposals/folios/:folioId/credit"
+    ],
+    "ops": [
+      "GET /api/p2/app/ops/tasks",
+      "GET /api/p2/app/ops/tasks/:taskId",
+      "POST /api/p2/app/ops/tasks",
+      "PATCH /api/p2/app/ops/tasks/:taskId",
+      "GET /api/p2/app/ops/incidents",
+      "GET /api/p2/app/ops/incidents/:incidentId",
+      "PATCH /api/p2/app/ops/incidents/:incidentId"
+    ],
+    "media": [
+      "GET /api/p2/app/ops/media",
+      "POST /api/p2/app/ops/media",
+      "DELETE /api/p2/app/ops/media/:mediaId"
+    ],
+    "n3": [
+      "GET /api/n3/attention",
+      "GET /api/n3/runs/:runId/monitor",
+      "POST /api/n3/runs/:runId/evaluate",
+      "GET /api/n3/status"
+    ]
+  },
+  "allEndpoints": {
+    "surfaces": [
+      {
+        "path": "GET /api/p2/app/surfaces/containers/:containerId",
+        "label": "Container Detail",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/surfaces/claims/hold",
+        "label": "Claims Hold",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/surfaces/claims/confirm",
+        "label": "Claims Confirm",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/surfaces/claims/release",
+        "label": "Claims Release",
+        "required": true
+      },
+      {
+        "path": "GET /api/p2/app/surfaces/capacity",
+        "label": "Capacity Lens",
+        "required": true
+      },
+      {
+        "path": "GET /api/p2/app/surfaces/capacity/compare",
+        "label": "Capacity Compare",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/surfaces/capacity/batch",
+        "label": "Capacity Batch",
+        "required": true
+      }
+    ],
+    "proposals": [
+      {
+        "path": "GET /api/p2/app/proposals/:proposalId",
+        "label": "Get Proposal",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/proposals/from-cart",
+        "label": "Create From Cart",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/proposals/:proposalId/release",
+        "label": "Release Proposal",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/proposals/:proposalId/confirm",
+        "label": "Confirm Proposal",
+        "required": true
+      },
+      {
+        "path": "GET /api/p2/app/proposals/:proposalId/risk",
+        "label": "Risk Assessment",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/proposals/:proposalId/handoff",
+        "label": "Forward to Approver",
+        "required": true
+      }
+    ],
+    "folios": [
+      {
+        "path": "POST /api/p2/app/proposals/folios/:folioId/pay",
+        "label": "Pay Your Share",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/proposals/folios/:folioId/credit",
+        "label": "Operator Credit",
+        "required": true
+      }
+    ],
+    "ops": [
+      {
+        "path": "GET /api/p2/app/ops/tasks",
+        "label": "Housekeeping Tasks List",
+        "required": true
+      },
+      {
+        "path": "GET /api/p2/app/ops/tasks/:taskId",
+        "label": "Task Detail",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/ops/tasks",
+        "label": "Create Task",
+        "required": true
+      },
+      {
+        "path": "PATCH /api/p2/app/ops/tasks/:taskId",
+        "label": "Update Task",
+        "required": true
+      },
+      {
+        "path": "GET /api/p2/app/ops/incidents",
+        "label": "Incidents List",
+        "required": true
+      },
+      {
+        "path": "GET /api/p2/app/ops/incidents/:incidentId",
+        "label": "Incident Detail",
+        "required": true
+      },
+      {
+        "path": "PATCH /api/p2/app/ops/incidents/:incidentId",
+        "label": "Update Incident",
+        "required": true
+      }
+    ],
+    "media": [
+      {
+        "path": "GET /api/p2/app/ops/media",
+        "label": "Media List",
+        "required": true
+      },
+      {
+        "path": "POST /api/p2/app/ops/media",
+        "label": "Upload Media",
+        "required": true
+      },
+      {
+        "path": "DELETE /api/p2/app/ops/media/:mediaId",
+        "label": "Delete Media",
+        "required": true
+      }
+    ],
+    "n3": [
+      {
+        "path": "GET /api/n3/attention",
+        "label": "N3 Attention Queue",
+        "required": true
+      },
+      {
+        "path": "GET /api/n3/runs/:runId/monitor",
+        "label": "N3 Monitor Detail",
+        "required": true
+      },
+      {
+        "path": "POST /api/n3/runs/:runId/evaluate",
+        "label": "N3 Evaluate Run",
+        "required": true
+      },
+      {
+        "path": "GET /api/n3/status",
+        "label": "N3 Monitor Status",
+        "required": true
+      }
+    ]
+  },
+  "issues": []
+}

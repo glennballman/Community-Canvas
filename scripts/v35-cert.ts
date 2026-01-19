@@ -206,13 +206,14 @@ function apiRouteInventory(): CheckResult {
   const issues: string[] = [];
   const endpointsFound: Record<string, string[]> = {};
   
-  const routeFiles = [
-    { file: 'server/routes/surfaces.ts', prefix: '/api/p2/app/surfaces' },
-    { file: 'server/routes/proposals.ts', prefix: '/api/p2/app/proposals' },
-    { file: 'server/routes/ops.ts', prefix: '/api/p2/app/ops' },
-    { file: 'server/routes/n3.ts', prefix: '/api/n3' },
-    { file: 'server/routes/media.ts', prefix: '/api/media' },
-  ];
+  const routeFileMap: Record<string, string[]> = {
+    surfaces: ['server/routes/surfaces.ts'],
+    proposals: ['server/routes/proposals.ts'],
+    folios: ['server/routes/proposals.ts'],
+    ops: ['server/routes/ops.ts'],
+    media: ['server/routes/ops.ts', 'server/routes/media.ts'],
+    n3: ['server/routes/n3.ts'],
+  };
   
   for (const domain of Object.keys(API_ENDPOINTS)) {
     endpointsFound[domain] = [];
@@ -221,19 +222,30 @@ function apiRouteInventory(): CheckResult {
     for (const endpoint of API_ENDPOINTS[domain]) {
       if (!endpoint.required) continue;
       
-      const [method, path] = endpoint.path.split(' ');
+      const [method, fullPath] = endpoint.path.split(' ');
       let found = false;
       
-      for (const rf of routeFiles) {
-        if (!existsSync(rf.file)) continue;
+      const filesToCheck = routeFileMap[domain] || [];
+      
+      for (const routeFile of filesToCheck) {
+        if (!existsSync(routeFile)) continue;
         
-        const content = readFileSync(rf.file, 'utf-8');
-        const pathSegment = path.replace(rf.prefix, '').replace(/:[^/]+/g, ':');
+        const content = readFileSync(routeFile, 'utf-8');
+        
+        const pathParts = fullPath.split('/').filter(Boolean);
+        const lastPart = pathParts[pathParts.length - 1];
+        const routeSegment = lastPart?.startsWith(':') ? lastPart : '/' + lastPart;
+        
+        const secondLastPart = pathParts.length > 1 ? pathParts[pathParts.length - 2] : '';
+        const twoPartSegment = secondLastPart ? 
+          (secondLastPart.startsWith(':') ? `/:${secondLastPart.slice(1)}/${lastPart}` : `/${secondLastPart}/${lastPart}`) : 
+          routeSegment;
         
         const patterns = [
-          new RegExp(`\\.${method.toLowerCase()}\\s*\\(['"\`]${pathSegment.replace(/\//g, '\\/')}`, 'i'),
-          new RegExp(`Router\\.${method.toLowerCase()}\\s*\\(['"\`]${pathSegment.replace(/\//g, '\\/')}`, 'i'),
-          new RegExp(`${method.toLowerCase()}\\(['"\`]${pathSegment.replace(/\//g, '\\/')}`, 'i'),
+          new RegExp(`\\.${method.toLowerCase()}\\s*\\(['"\`]${routeSegment.replace(/:/g, ':')}`, 'i'),
+          new RegExp(`\\.${method.toLowerCase()}\\s*\\(['"\`]${twoPartSegment.replace(/\//g, '\\/').replace(/:/g, ':')}`, 'i'),
+          new RegExp(`Router\\.${method.toLowerCase()}.*${lastPart.replace(/:/g, ':')}`, 'i'),
+          new RegExp(`${method.toLowerCase()}\\s*\\(['"\`].*${lastPart.replace(/:/g, ':')}`, 'i'),
         ];
         
         for (const pattern of patterns) {

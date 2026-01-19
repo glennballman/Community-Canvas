@@ -82,6 +82,33 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Parking Plan View**: Visual operations map showing parking stall layout, real-time occupancy, and availability.
 - **Marina Plan View**: Visual operations map showing marina slip layout, real-time occupancy, and amenities.
 
+## V3.5 Certification Suite
+
+### How to Run V3.5 Certification
+```bash
+tsx scripts/v35-cert.ts
+```
+
+### What It Checks
+1. **Terminology Scan** (HARD FAIL) - Scans for "book/booking" violations (must use "reserve/reservation" instead)
+2. **UI Route Inventory** - Verifies required app and public routes exist
+3. **API Route Inventory** - Verifies required API endpoints exist
+4. **Invariant Checks** - Validates schema definitions for ledger, surfaces, claims, and portal scoping
+5. **Proof Bundle** - Generates JSON artifacts in `./proof/v3.5/`
+
+### Proof Bundle Files
+- `routes-ui.json` - UI route inventory
+- `routes-api.json` - API endpoint inventory
+- `terminology-scan.json` - Terminology violations found
+- `invariants.json` - Schema invariant checks
+- `seed-wedding-proposal.json` - Wedding stress test seed info
+- `seed-n3-eval.json` - N3 monitor seed info
+- `seed-ops.json` - Ops seed info
+
+### Patents
+- **CC-01**: N3 Service Run Monitor + Replan Engine - Inventor Glenn Ballman
+- **CC-02**: V3.5 Surface Spine - Inventor Glenn Ballman
+
 ## External Dependencies
 
 ### Third-Party Services

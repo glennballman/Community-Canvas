@@ -1,0 +1,6 @@
+{
+  "exists": true,
+  "path": "server/routes/ops.ts",
+  "description": "Housekeeping + incident sample data",
+  "endpoint": "POST /api/p2/app/ops/dev/seed"
+}

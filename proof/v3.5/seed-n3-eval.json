@@ -1,0 +1,7 @@
+{
+  "exists": true,
+  "path": "server/routes/dev-seed-n3.ts",
+  "description": "N3 Service Run Monitor + Replan Engine test data",
+  "endpoint": "POST /api/dev/seed/n3",
+  "lineCount": 369
+}

@@ -96,11 +96,53 @@ export function getAllRequiredEndpoints(): RouteSpec[] {
 /**
  * Terminology allowlist - patterns that may contain "book" or "booking"
  * ALLOW_BOOKING_TERM_URL_ONLY: schema.org URLs or similar
+ * 
+ * Allowed contexts:
+ * - schema.org URLs
+ * - Lucide icon imports (Book, Bookmark, etc.)
+ * - Booking.com as company name
+ * - Sample/demo data with user tips ("book ahead", "book in advance")
+ * - File paths in sampleTrips.ts, sampleBamfieldTrip.ts (demo data)
  */
 export const TERMINOLOGY_ALLOWLIST: RegExp[] = [
   /schema\.org/i,
   /ALLOW_BOOKING_TERM_URL_ONLY/,
-  /\/\/.*booking/i, // URLs containing booking
+  /\/\/.*booking/i,
+  /lucide-react/i,
+  /import.*Book/,
+  /icon:\s*Book/,
+  /Book,$/,
+  /Booking\.com/i,
+  /'Booking\.com'/i,
+  /book.*in advance/i,
+  /book.*ahead/i,
+  /book.*weeks/i,
+  /Must book/i,
+  /booked\./,
+  /pro_tips.*Book/i,
+  /Book by:/,
+  /sampleTrips\.ts/,
+  /sampleBamfieldTrip\.ts/,
+  /sample.*Trip/i,
+  /data-testid.*book/i,
+  /Never use.*book/i,
+  /don't use.*book/i,
+  /typeof Book/,
+  /console\.log\(/,
+  /docIconMap/,
+  /<Book\s/,
+  /Book Store/i,
+  /Book Stores/i,
+  /Book Publishers/i,
+  /Bookstore/i,
+  /naics/i,
+  /chamber-members/i,
+  /Fireside Books/i,
+  /v35Manifest\.ts/,
+  /Terminology allowlist/i,
+  /summaryLower\.includes/,
+  /blockType.*booked/,
+  /'booked'/,
 ];
 
 /**

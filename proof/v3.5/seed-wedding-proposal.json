@@ -1,0 +1,7 @@
+{
+  "exists": true,
+  "path": "server/routes/dev-seed-wedding.ts",
+  "description": "Split pay + refunds + incidents stress test",
+  "endpoint": "POST /api/dev/seed/wedding-stress",
+  "lineCount": 758
+}
