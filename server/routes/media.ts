@@ -12,6 +12,7 @@ import {
 } from '../services/mediaService.js';
 import { requireAuth } from '../middleware/guards.js';
 import type { TenantRequest } from '../middleware/tenantContext.js';
+import { pool } from '../db.js';
 
 // Helper to get tenant ID from request context
 function getTenantId(req: Request): string | null {
@@ -21,6 +22,39 @@ function getTenantId(req: Request): string | null {
 // Helper to get actor ID from request context
 function getActorId(req: Request): string | null {
   return (req as TenantRequest).ctx?.individual_id || null;
+}
+
+// Check if user can modify media for an entity (bid-specific permission checks)
+async function canModifyEntityMedia(tenantId: string, entityType?: string, entityId?: string): Promise<{ allowed: boolean; error?: string }> {
+  if (!entityType || !entityId) {
+    return { allowed: true };
+  }
+  
+  if (entityType === 'bid') {
+    try {
+      const partyResult = await pool.query(
+        `SELECT id FROM cc_parties WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`,
+        [tenantId]
+      );
+      const partyId = partyResult.rows[0]?.id;
+      if (!partyId) {
+        return { allowed: false, error: 'No party profile found for tenant' };
+      }
+      
+      const bidResult = await pool.query(
+        `SELECT id FROM cc_bids WHERE id = $1::uuid AND party_id = $2`,
+        [entityId, partyId]
+      );
+      if (bidResult.rows.length === 0) {
+        return { allowed: false, error: 'You do not have permission to modify this bid' };
+      }
+    } catch (error) {
+      console.error('[Media] Bid permission check error:', error);
+      return { allowed: false, error: 'Failed to verify bid ownership' };
+    }
+  }
+  
+  return { allowed: true };
 }
 
 const router = Router();
@@ -85,6 +119,11 @@ router.post('/upload', requireAuth, upload.single('file'), async (req: Request, 
     
     const { entity_type, entity_id, role, alt_text, purpose } = parsed.data;
     
+    const permCheck = await canModifyEntityMedia(tenantId, entity_type, entity_id);
+    if (!permCheck.allowed) {
+      return res.status(403).json({ success: false, error: permCheck.error });
+    }
+    
     const result = await uploadMedia(
       {
         buffer: req.file.buffer,
@@ -127,6 +166,11 @@ router.post('/presign', requireAuth, async (req: Request, res: Response) => {
     }
     
     const { filename, content_type, entity_type, entity_id } = parsed.data;
+    
+    const permCheck = await canModifyEntityMedia(tenantId, entity_type, entity_id);
+    if (!permCheck.allowed) {
+      return res.status(403).json({ success: false, error: permCheck.error });
+    }
     
     const result = await getPresignedUploadUrl(
       tenantId,
@@ -222,6 +266,16 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+    
+    const media = await getMediaById(id);
+    if (!media) {
+      return res.status(404).json({ success: false, error: 'Media not found' });
+    }
+    
+    const permCheck = await canModifyEntityMedia(tenantId, media.entity_type || undefined, media.entity_id || undefined);
+    if (!permCheck.allowed) {
+      return res.status(403).json({ success: false, error: permCheck.error });
     }
     
     await deleteMedia(id, tenantId);

@@ -3,8 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, MapPin, Calendar, Clock, Building2, Award, 
-  Send, CheckCircle, AlertCircle, FileText, DollarSign, LogIn
+  Send, CheckCircle, AlertCircle, FileText, DollarSign, LogIn, Camera
 } from 'lucide-react';
+import { MediaUpload } from '@/components/media/MediaUpload';
+import { MediaGallery } from '@/components/media/MediaGallery';
+import { useEntityMedia, useDeleteEntityMedia } from '@/hooks/useEntityMedia';
 
 interface WorkRequestDetail {
   id: string;
@@ -106,6 +109,10 @@ export default function WorkRequestDetailPage() {
 
   const bidAmountNum = Number(bidAmount);
   const isValidBidAmount = Number.isFinite(bidAmountNum) && bidAmountNum > 0;
+
+  const bidId = wr?.user_bid?.id;
+  const { data: bidMedia = [], refetch: refetchBidMedia } = useEntityMedia('bid', bidId || '', 'photo');
+  const deleteBidMedia = useDeleteEntityMedia('bid', bidId || '');
 
   if (isLoading) {
     return (
@@ -290,17 +297,49 @@ export default function WorkRequestDetailPage() {
               </div>
 
               {wr.user_bid ? (
-                <div className="bg-green-500/10 border border-green-500/30 rounded-md p-4 text-center">
-                  <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
-                  <div className="font-semibold text-green-600 dark:text-green-400">Bid Submitted!</div>
-                  <div className="text-sm text-green-600 dark:text-green-500 mt-1">{wr.user_bid.bid_ref}</div>
-                  <div className="text-lg font-bold text-green-600 dark:text-green-400 mt-2">
-                    {formatCurrency(wr.user_bid.bid_amount)}
+                <>
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-md p-4 text-center">
+                    <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
+                    <div className="font-semibold text-green-600 dark:text-green-400">Bid Submitted!</div>
+                    <div className="text-sm text-green-600 dark:text-green-500 mt-1">{wr.user_bid.bid_ref}</div>
+                    <div className="text-lg font-bold text-green-600 dark:text-green-400 mt-2">
+                      {formatCurrency(wr.user_bid.bid_amount)}
+                    </div>
+                    <div className="text-sm text-green-600 dark:text-green-500 mt-1 capitalize">
+                      Status: {wr.user_bid.status}
+                    </div>
                   </div>
-                  <div className="text-sm text-green-600 dark:text-green-500 mt-1 capitalize">
-                    Status: {wr.user_bid.status}
+                  
+                  <div className="mt-4 border rounded-md p-4" data-testid="bid-photos-section">
+                    <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      Bid Photos
+                    </h4>
+                    
+                    {bidMedia.length > 0 && (
+                      <div className="mb-4">
+                        <MediaGallery
+                          assets={bidMedia}
+                          layout="grid"
+                          onDelete={(mediaId) => deleteBidMedia.mutateAsync(mediaId)}
+                        />
+                      </div>
+                    )}
+                    
+                    <MediaUpload
+                      entityType="bid"
+                      entityId={wr.user_bid.id}
+                      multiple
+                      maxFiles={10}
+                      kindTag="photo"
+                      onUploaded={() => refetchBidMedia()}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Upload photos to support your bid (equipment, past work, team)
+                    </p>
                   </div>
-                </div>
+                </>
               ) : isPastDeadline ? (
                 <div className="bg-muted border rounded-md p-4 text-center">
                   <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto mb-2" />

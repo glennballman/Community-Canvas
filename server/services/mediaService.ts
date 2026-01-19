@@ -380,6 +380,8 @@ export async function getMediaById(mediaId: string): Promise<{
   height: number | null;
   altText: string | null;
   caption: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
 } | null> {
   const result = await pool.query(`
     SELECT 
@@ -392,7 +394,9 @@ export async function getMediaById(mediaId: string): Promise<{
       width,
       height,
       alt_text as "altText",
-      caption
+      caption,
+      entity_type,
+      entity_id
     FROM cc_media
     WHERE id = $1
   `, [mediaId]);
