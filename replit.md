@@ -67,6 +67,9 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Job Publication Accounting GL Integration**: Complete financial audit trail for paid job placement intents, ensuring state machine protection and append-only audit logs.
 - **N3 Service Run Monitor + Replan Engine (Patent CC-01)**: Real-time service run monitoring with attention bundles and an evaluator for classifying run health based on deviation thresholds, considering various surface requirements and capacities.
 - **V3.5 Surface Spine (Patent CC-02)**: Atomic unit-level spatial modeling for containers, surfaces, claims, and utilities with Capacity Lenses, critical for various operational aspects.
+- **P-UI-08 Proposal API**: Itinerary + atomic allocations + folios API with 10-participant split pay support, operator credits, and incidents.
+- **P-UI-09 Proposal UI**: 8 React components for proposal/approver workflow including ProposalHeaderCard, ParticipantList, FolioSummaryCard, PayYourSharePanel, InvitePanel, AssignUnitsPanel, OperatorCreditPanel, AllocationDrilldownDrawer.
+- **P-UI-10 Availability → Proposal Handoff**: Complete flow from availability search to confirmed reservation with public API endpoints (from-cart, release, confirm, risk), N3 risk banners, hold expiration timers (30-min TTL), forward-to-approver handoff, and privacy-preserving anonymization for pre-confirm public views.
 
 ### Feature Specifications
 - **Dual-view Mode**: Sources View (data source URLs) and Data View (live monitoring).
