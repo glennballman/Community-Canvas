@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, FileText, Users, Package, Receipt } from 'lucide-react';
+import { Loader2, FileText, Users, Receipt } from 'lucide-react';
 import { getProposal, type ProposalParticipant, type ProposalAllocation } from '@/lib/api/proposals';
 import {
   ProposalHeaderCard,
@@ -15,6 +15,9 @@ import {
   InvitePanel,
   AssignUnitsPanel,
   OperatorCreditPanel,
+  RiskBanner,
+  ForwardToApproverPanel,
+  HoldExpirationBanner,
 } from '@/components/proposals';
 
 export default function ProposalDetailPage() {
@@ -77,6 +80,16 @@ export default function ProposalDetailPage() {
             isAuthenticated={true}
           />
           
+          {proposal.status === 'planning' && (
+            <div className="mt-4">
+              <HoldExpirationBanner holdCreatedAt={proposal.created_at} holdTtlMinutes={30} />
+            </div>
+          )}
+          
+          <div className="mt-4">
+            <RiskBanner proposalId={proposalId!} />
+          </div>
+          
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -127,6 +140,8 @@ export default function ProposalDetailPage() {
             </div>
             
             <div className="space-y-6">
+              <ForwardToApproverPanel proposalId={proposalId!} />
+              
               <InvitePanel 
                 proposalId={proposalId!} 
                 onInviteSent={() => refetch()}

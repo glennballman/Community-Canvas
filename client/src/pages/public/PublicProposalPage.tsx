@@ -10,6 +10,8 @@ import {
   AllocationDrilldownDrawer,
   FolioSummaryCard,
   PayYourSharePanel,
+  RiskBanner,
+  HoldExpirationBanner,
 } from '@/components/proposals';
 
 export default function PublicProposalPage() {
@@ -79,6 +81,16 @@ export default function PublicProposalPage() {
           participantCount={participants.length}
           isAuthenticated={false}
         />
+        
+        {proposal.status === 'planning' && (
+          <div className="mt-4">
+            <HoldExpirationBanner holdCreatedAt={proposal.created_at} holdTtlMinutes={30} />
+          </div>
+        )}
+        
+        <div className="mt-4">
+          <RiskBanner proposalId={proposalId!} />
+        </div>
         
         <Separator className="my-6" />
         

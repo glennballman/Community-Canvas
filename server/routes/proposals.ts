@@ -600,18 +600,20 @@ router.post('/from-cart', async (req, res) => {
     const timeStart = new Date(body.time_start);
     const timeEnd = new Date(body.time_end);
     
+    const startDateStr = timeStart.toISOString().split('T')[0];
+    const endDateStr = timeEnd.toISOString().split('T')[0];
+    
     const [trip] = await db.insert(ccTrips).values({
       portalId,
       tenantId,
       groupName: `Reservation at ${portalTitle}`,
       status: 'planning',
-      startDate: timeStart,
-      endDate: timeEnd,
+      startDate: startDateStr,
+      endDate: endDateStr,
       groupSize: body.selections.reduce((sum, s) => sum + s.requested_units, 0),
       accessCode: nanoid(8),
     }).returning();
     
-    const partyIdPlaceholder = trip.id;
     const [primaryPlanner] = await db.insert(ccTripPartyProfiles).values({
       tripId: trip.id,
       displayName: 'Primary Planner',
@@ -626,6 +628,9 @@ router.post('/from-cart', async (req, res) => {
       guestPartyId: trip.id,
       currency: 'CAD',
       status: 'open',
+      checkInDate: startDateStr,
+      checkOutDate: endDateStr,
+      nightlyRateCents: 0,
     }).returning();
     
     await db.update(ccTripPartyProfiles)
