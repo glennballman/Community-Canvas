@@ -6919,18 +6919,31 @@ export const insertSurfaceUtilityBindingSchema = createInsertSchema(ccSurfaceUti
 export type SurfaceUtilityBinding = typeof ccSurfaceUtilityBindings.$inferSelect;
 export type InsertSurfaceUtilityBinding = z.infer<typeof insertSurfaceUtilityBindingSchema>;
 
-// PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
-// Capacity Policies - Normal vs Emergency lens CAPS (limits, not overrides)
-// A lens cap is a policy limit on offerable units. Offerable = min(physical, cap).
-// Invariant: normal_units_limit <= emergency_units_limit (if both set)
+/**
+ * PATENT CC-02 V3.5 Surface Spine (Inventor: Glenn Ballman)
+ * Capacity Policies - Normal vs Emergency lens CAPS
+ * 
+ * Lens Definitions:
+ * - NORMAL: Recommended operations, standard business capacity
+ * - EMERGENCY: Shelter density + life-safety mode (may close high-risk activities)
+ * 
+ * Cap Semantics: offerable_units = min(physical_active_units, cap_if_set)
+ * Caps limit how many units can be offered; they cannot create units beyond physical.
+ * 
+ * closedInEmergency: Safety override - asset is completely unavailable in emergency
+ * (separate from capacity concept; used for high-risk activities like watercraft)
+ * 
+ * Invariant: normal_units_limit <= emergency_units_limit (if both set and not closed)
+ */
 export const ccCapacityPolicies = pgTable("cc_capacity_policies", {
   id: uuid("id").primaryKey().defaultRandom(),
   portalId: uuid("portal_id").notNull(),
   tenantId: uuid("tenant_id"),
   containerId: uuid("container_id").notNull().references(() => ccSurfaceContainers.id, { onDelete: "cascade" }),
   surfaceType: varchar("surface_type").notNull(), // 'sleep' | 'sit' | 'stand' | 'utility' | 'movement'
-  normalUnitsLimit: integer("normal_units_limit"),     // Cap for normal operations (null = no cap)
-  emergencyUnitsLimit: integer("emergency_units_limit"), // Cap for emergency operations (null = no cap)
+  normalUnitsLimit: integer("normal_units_limit"),     // Cap for normal operations (null = no cap, use physical)
+  emergencyUnitsLimit: integer("emergency_units_limit"), // Cap for emergency operations (null = no cap, use physical)
+  closedInEmergency: boolean("closed_in_emergency").notNull().default(false), // Safety override: asset unavailable in emergency
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

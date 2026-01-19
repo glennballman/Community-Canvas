@@ -695,15 +695,15 @@ router.post('/surfaces', async (_req, res) => {
     // Aviator Cottage: no caps needed (physical=19 is available in both lenses)
     // Not inserting policy - defaults to physical for both lenses
 
-    // Canoe 1: normal cap=3 (limit rentals), emergency cap=0 (grounded)
+    // Canoe 1: normal cap=3 (limit rentals), closedInEmergency=true (safety: grounded)
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: canoe1Container.id,
       surfaceType: 'sit',
-      normalUnitsLimit: 3,  // limit to 3 seats in normal
-      emergencyUnitsLimit: 0, // grounded in emergency
-      metadata: { notes: 'Normal: limit rentals. Emergency: watercraft grounded', closed_in_emergency: true },
+      normalUnitsLimit: 3,           // limit to 3 seats in normal operations
+      closedInEmergency: true,       // safety override: watercraft grounded in emergency
+      metadata: { notes: 'Normal: limit rentals. Emergency: watercraft grounded' },
     });
 
     // Canoe 2: same as Canoe 1
@@ -713,19 +713,19 @@ router.post('/surfaces', async (_req, res) => {
       containerId: canoe2Container.id,
       surfaceType: 'sit',
       normalUnitsLimit: 3,
-      emergencyUnitsLimit: 0,
-      metadata: { notes: 'Emergency: watercraft grounded', closed_in_emergency: true },
+      closedInEmergency: true,       // safety override
+      metadata: { notes: 'Emergency: watercraft grounded' },
     });
 
-    // Kayak 1: normal cap=1 (limit rentals), emergency cap=0 (grounded)
+    // Kayak 1: normal cap=1 (limit rentals), closedInEmergency=true (safety: grounded)
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: kayak1Container.id,
       surfaceType: 'sit',
-      normalUnitsLimit: 1,  // limit to 1 seat in normal
-      emergencyUnitsLimit: 0, // grounded in emergency
-      metadata: { notes: 'Emergency: watercraft grounded', closed_in_emergency: true },
+      normalUnitsLimit: 1,           // limit to 1 seat in normal operations
+      closedInEmergency: true,       // safety override: watercraft grounded in emergency
+      metadata: { notes: 'Emergency: watercraft grounded' },
     });
 
     // Bike Corral: normal cap=12 (staff reserve 4 of 16)
@@ -734,8 +734,8 @@ router.post('/surfaces', async (_req, res) => {
       tenantId: TEST_TENANT_ID,
       containerId: bikeCorralContainer.id,
       surfaceType: 'stand',
-      normalUnitsLimit: 12, // cap at 12 (16 physical - 4 staff reserve)
-      emergencyUnitsLimit: null, // no cap in emergency (use full physical)
+      normalUnitsLimit: 12,          // cap at 12 (16 physical - 4 staff reserve)
+      closedInEmergency: false,      // bikes available in emergency (full physical capacity)
       metadata: { notes: 'Normal: 4 spots reserved for staff' },
     });
 
@@ -913,6 +913,7 @@ router.get('/surfaces/capacity-proof', async (req, res) => {
             lensCap: comparison.emergency.lensCap,
             lensUnitsTotal: comparison.emergency.lensUnitsTotal,
             hasPolicy: comparison.emergency.lensCap !== null,
+            closedInEmergency: comparison.emergency.closedInEmergency,
           },
           invariantViolation: comparison.invariantViolation,
           invariantMessage: comparison.invariantMessage,

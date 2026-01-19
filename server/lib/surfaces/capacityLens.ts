@@ -33,6 +33,7 @@ export interface CapacityResult {
   physicalUnitsTotal: number;      // Count of active atomic units in subtree
   lensCap: number | null;          // Policy cap (null = no cap)
   lensUnitsTotal: number;          // min(physical, cap) or physical if no cap
+  closedInEmergency: boolean;      // Safety override: asset unavailable in emergency lens
   claimedUnitsTotal: number;       // Overlapping claims
   availableUnits: number;          // max(0, lensUnitsTotal - claimedUnitsTotal)
   feasible: boolean;               // availableUnits >= requestedUnits (for queries with requested)
@@ -81,16 +82,24 @@ export async function countPhysicalUnits(
   return parseInt(result.rows?.[0]?.count || '0');
 }
 
+export interface LensPolicy {
+  cap: number | null;            // Policy cap (null = no cap, use physical)
+  closedInEmergency: boolean;    // Safety override: completely unavailable in emergency
+}
+
 /**
- * Get the lens cap for a container/surface type/lens combination.
- * Returns null if no policy exists or no cap is set for that lens.
+ * Get the lens policy for a container/surface type/lens combination.
+ * Returns cap and closedInEmergency flag.
+ * 
+ * closedInEmergency is a safety override - if true and lens is 'emergency',
+ * the cap is forced to 0 regardless of any other setting.
  */
-export async function getLensCap(
+export async function getLensPolicy(
   portalId: string,
   containerId: string,
   unitType: string,
   lens: CapacityLens
-): Promise<number | null> {
+): Promise<LensPolicy> {
   const policies = await db
     .select()
     .from(ccCapacityPolicies)
@@ -104,13 +113,37 @@ export async function getLensCap(
     .limit(1);
 
   const policy = policies[0];
-  if (!policy) return null;
-
-  if (lens === 'emergency') {
-    return policy.emergencyUnitsLimit ?? null;
-  } else {
-    return policy.normalUnitsLimit ?? null;
+  if (!policy) {
+    return { cap: null, closedInEmergency: false };
   }
+
+  const closedInEmergency = policy.closedInEmergency ?? false;
+
+  // If closedInEmergency and this is emergency lens, force cap to 0
+  if (lens === 'emergency' && closedInEmergency) {
+    return { cap: 0, closedInEmergency: true };
+  }
+
+  const cap = lens === 'emergency' 
+    ? policy.emergencyUnitsLimit ?? null
+    : policy.normalUnitsLimit ?? null;
+
+  return { cap, closedInEmergency };
+}
+
+/**
+ * Get the lens cap for a container/surface type/lens combination.
+ * Returns null if no policy exists or no cap is set for that lens.
+ * (Legacy helper - prefer getLensPolicy for full policy info)
+ */
+export async function getLensCap(
+  portalId: string,
+  containerId: string,
+  unitType: string,
+  lens: CapacityLens
+): Promise<number | null> {
+  const policy = await getLensPolicy(portalId, containerId, unitType, lens);
+  return policy.cap;
 }
 
 /**
@@ -172,8 +205,9 @@ export async function getCapacity(options: GetCapacityOptions): Promise<Capacity
   // 1. Count physical units
   const physicalUnitsTotal = await countPhysicalUnits(portalId, containerId, surfaceType);
 
-  // 2. Get lens cap
-  const lensCap = await getLensCap(portalId, containerId, surfaceType, lens);
+  // 2. Get lens policy (includes cap + closedInEmergency flag)
+  const lensPolicy = await getLensPolicy(portalId, containerId, surfaceType, lens);
+  const { cap: lensCap, closedInEmergency } = lensPolicy;
 
   // 3. Calculate lens units (capped)
   const lensUnitsTotal = getLensUnitsTotal(physicalUnitsTotal, lensCap);
@@ -197,6 +231,7 @@ export async function getCapacity(options: GetCapacityOptions): Promise<Capacity
     physicalUnitsTotal,
     lensCap,
     lensUnitsTotal,
+    closedInEmergency,
     claimedUnitsTotal,
     availableUnits,
     feasible,
@@ -263,11 +298,13 @@ export async function compareCapacityLenses(
   });
 
   // Check invariant: normal <= emergency (when both caps set)
+  // Exception: closedInEmergency is a valid safety override that intentionally reduces emergency capacity
   let invariantViolation = false;
   let invariantMessage: string | undefined;
   
   if (normal.lensCap !== null && emergency.lensCap !== null) {
-    if (normal.lensUnitsTotal > emergency.lensUnitsTotal) {
+    if (normal.lensUnitsTotal > emergency.lensUnitsTotal && !emergency.closedInEmergency) {
+      // Only flag as violation if NOT explicitly closed in emergency
       invariantViolation = true;
       invariantMessage = `Normal cap (${normal.lensCap}) exceeds emergency cap (${emergency.lensCap})`;
     }
