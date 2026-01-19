@@ -1,0 +1,229 @@
+REPLIT PROMPT — P-UI-12 V3.5 Final Certification Pass (UI Inventory + Terminology + Invariants + Proof Bundle)
+
+ROLE: Lead architect QA engineer.
+HARD RULES:
+
+No “book/booking” anywhere (UI copy, routes, components, comments that ship).
+
+Availability-first invariant must hold.
+
+Atomic unit is cc_surface_units; anything charge/refund must link via cc_folio_ledger_links.
+
+Ledger is insert-only (reversals reference originals).
+
+Portal scoping enforced.
+
+Goal
+
+Create an automated V3.5 certification suite that outputs:
+
+a UI route inventory (public + app)
+
+an API route inventory (public + app + n3 + ops)
+
+invariant checks
+
+terminology scan (hard fail if “booking” appears)
+
+proof bundle artifact directory with JSON outputs
+
+This is not a feature; it’s a guardrail.
+
+A) Add scripts
+1) scripts/v35-cert.ts
+
+A Node script that runs in CI/dev and prints a clean report + exits non-zero on failures.
+
+It must run these checks:
+
+Terminology scan (HARD FAIL)
+
+grep for whole-word booking and book in:
+
+client/src
+
+server
+
+shared
+Allowlist:
+
+schema.org URLs or references may contain “booking” ONLY if inside a URL string or comment explicitly marked ALLOW_BOOKING_TERM_URL_ONLY.
+Everything else fails.
+
+Output:
+
+file:line:snippet for each hit.
+
+UI route inventory (PASS/FAIL)
+
+Programmatically list routes (or maintain a curated manifest file) including:
+Public:
+
+Availability search flow
+
+Proposal pages
+App:
+
+Proposal page
+
+Ops housekeeping
+
+Ops incidents
+
+N3 attention + monitor detail (if present)
+
+Parking plan view
+
+Marina plan view
+
+Jobs/Bench/Housing/Emergency (if present)
+
+Fail if any required route is missing from the manifest.
+
+API inventory (PASS/FAIL)
+
+List required endpoints:
+Surfaces:
+
+container detail
+
+claims hold/confirm/release
+
+availability by window
+
+capacity lens endpoints
+Proposals:
+
+from-cart
+
+release
+
+confirm
+
+risk
+
+handoff
+Folios:
+
+pay
+
+credit
+Ops:
+
+housekeeping tasks
+
+incidents list/detail
+Media:
+
+list/create/delete
+N3:
+
+evaluate endpoints + monitor endpoints
+
+Fail if missing.
+
+Invariant checks (HARD FAIL if violated)
+
+Run SQL checks (use existing db client) and assert:
+
+Ledger immutability:
+
+ensure cc_folio_ledger has no UPDATE triggers disabled etc. (best-effort)
+
+verify reversals reference originals via cc_folio_ledger_links.ref_folio_ledger_id for all reversal entries created by seed.
+
+Atomic linking:
+
+every activity_rental and lodging charge created by wedding-stress seed has at least one link row to either surface_claim_id or surface_unit_id.
+
+Claims overlap:
+
+ensure overlap detection rejects a known overlapping claim attempt (call API in script or run SQL).
+
+Capacity lens semantics:
+
+ensure for each container summary: lens_units_total <= physical_units_total.
+
+Portal scoping sanity:
+
+no row in cc_surface_units, cc_surface_claims, cc_folio_ledger_links, cc_refund_incidents has null portal_id.
+
+Proof bundle output
+
+Write JSON files to:
+./proof/v3.5/
+
+routes-ui.json
+
+routes-api.json
+
+terminology-scan.json
+
+invariants.json
+
+seed-wedding-proposal.json (fetch from dev endpoint)
+
+seed-n3-eval.json (fetch from n3 eval endpoint)
+
+seed-ops.json (housekeeping + incident sample)
+
+Print the folder path at end.
+
+2) Wire it up
+
+Add to package.json:
+
+"cert:v35": "tsx scripts/v35-cert.ts" (or ts-node equivalent)
+
+include in CI pnpm test or pnpm lint gate (your choice)
+
+B) Add a manifest (if needed)
+
+If route introspection is hard, create:
+
+shared/v35Manifest.ts
+that lists required routes/endpoints as arrays used by the script.
+
+C) Ensure dev seed endpoints exist and are stable
+
+The cert script expects:
+
+GET /api/dev/seed/proposals/wedding-stress/:proposalId (or a “latest” pointer)
+
+POST /api/dev/seed/wedding-stress returns proposalId
+
+POST /api/dev/seed/n3 returns runId and eval payload
+
+POST /api/dev/seed/ops returns sample ids
+
+If any differ, update script to match reality.
+
+D) Output format
+
+The script prints:
+
+✅ Passed checks count / ❌ failed checks count
+
+For each fail: clear label + file/line or SQL row ids
+
+Exit code non-zero on any fail
+
+Deliverables
+
+scripts/v35-cert.ts
+
+shared/v35Manifest.ts (if used)
+
+package.json scripts updated
+
+proof bundle folder created on run
+
+README snippet: “How to run V3.5 certification”
+
+What to paste back after running
+
+terminal output of pnpm cert:v35
+
+list of files generated under proof/v3.5/
+
+Once P-UI-12 passes, you’re effectively at V3.5 Certified: the platform is coherent, testable, and defendable for patent enablement because you can produce deterministic proof bundles on demand.
