@@ -153,6 +153,9 @@ import MyTripsPage from './pages/app/participant/MyTripsPage';
 import TripDetailPage from './pages/app/participant/TripDetailPage';
 import MyApplicationsPage from './pages/app/participant/MyApplicationsPage';
 import ApplicationDetailPage from './pages/app/participant/ApplicationDetailPage';
+
+// Pages - Dev Tools (M-2)
+import DevMediaPage from './pages/app/dev/DevMediaPage';
 import PortalAppearancePage from './pages/app/admin/PortalAppearancePage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
@@ -416,6 +419,9 @@ export default function App() {
                 <Route path="participant/trips/:tripId" element={<TripDetailPage />} />
                 <Route path="participant/applications" element={<MyApplicationsPage />} />
                 <Route path="participant/applications/:appId" element={<ApplicationDetailPage />} />
+                
+                {/* Dev Tools (M-2) */}
+                <Route path="dev/media" element={<DevMediaPage />} />
                 
                 {/* Shared routes */}
                 <Route path="messages" element={<ConversationsPage />} />
