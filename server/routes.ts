@@ -102,6 +102,7 @@ import devSeedN3Router from "./routes/dev-seed-n3";
 import devSeedSurfacesRouter from "./routes/dev-seed-surfaces";
 import devSeedWeddingRouter from "./routes/dev-seed-wedding";
 import proposalsRouter from "./routes/proposals";
+import opsRouter from "./routes/ops";
 import publicJobsRouter from "./routes/public-jobs";
 import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
@@ -426,6 +427,9 @@ export async function registerRoutes(
   
   // P-UI-10 Public proposals endpoints (from-cart, release, confirm, risk) - no auth required
   app.use('/api/p2/public/proposals', proposalsRouter);
+  
+  // P-UI-11 SurfaceOps endpoints (housekeeping, media, incidents)
+  app.use('/api/p2/app/ops', opsRouter);
 
   // Tenant housing API (tenant auth required)
   app.use('/api/p2/app', tenantHousingRouter);
