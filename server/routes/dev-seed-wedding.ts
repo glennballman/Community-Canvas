@@ -31,6 +31,8 @@ import {
   ccSurfaceClaims,
   ccSurfaceContainers,
   ccSurfaceUnits,
+  ccTrips,
+  ccTripPartyProfiles,
 } from '@shared/schema';
 import { sql, eq, inArray } from 'drizzle-orm';
 import { 
@@ -78,6 +80,8 @@ router.post('/wedding-stress', async (_req, res) => {
     await db.execute(sql`DELETE FROM cc_folio_ledger WHERE tenant_id = ${TEST_TENANT_ID}`);
     await db.execute(sql`DELETE FROM cc_folios WHERE tenant_id = ${TEST_TENANT_ID}`);
     await db.execute(sql`DELETE FROM cc_surface_claims WHERE portal_id = ${TEST_PORTAL_ID}`);
+    await db.execute(sql`DELETE FROM cc_trip_party_profiles WHERE trip_id IN (SELECT id FROM cc_trips WHERE portal_id = ${TEST_PORTAL_ID} AND group_name = 'Wedding Weekend 2026')`);
+    await db.execute(sql`DELETE FROM cc_trips WHERE portal_id = ${TEST_PORTAL_ID} AND group_name = 'Wedding Weekend 2026'`);
 
     const aviatorContainer = await db.select().from(ccSurfaceContainers)
       .where(sql`portal_id = ${TEST_PORTAL_ID} AND title = 'Aviator'`)
@@ -194,30 +198,60 @@ router.post('/wedding-stress', async (_req, res) => {
     const activityStart = new Date('2026-06-17T10:00:00Z');
     const activityEnd = new Date('2026-06-17T14:00:00Z');
 
-    const folios: Array<{ id: string; participantId: string; participantName: string; folioNumber: string }> = [];
-    const claims: Array<{ id: string; type: string; participantIndex: number }> = [];
-    const ledgerEntries: Record<number, Array<{ id: string; type: string; category: string; amount: number }>> = {};
-    
-    for (let i = 1; i <= 10; i++) {
-      const participantId = generateParticipantId(i);
-      const participantName = PARTICIPANT_NAMES[i - 1];
-      const folioNumber = generateFolioNumber(i);
+    const [trip] = await db.insert(ccTrips).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      groupName: 'Wedding Weekend 2026',
+      groupSize: 10,
+      startDate: checkInDate,
+      endDate: checkOutDate,
+      status: 'held',
+      accessCode: 'WEDDING2026',
+    }).returning();
 
+    console.log(`[Wedding Stress] Created trip proposal: ${trip.id}`);
+
+    const tripPartyProfiles: Array<{ id: string; partyId: string; displayName: string }> = [];
+    for (let i = 1; i <= 10; i++) {
+      const partyId = generateParticipantId(i);
+      const displayName = PARTICIPANT_NAMES[i - 1];
+      
       await db.execute(sql`
         INSERT INTO cc_parties (id, tenant_id, party_type, status, legal_name, primary_contact_email, party_kind, created_at, updated_at)
         VALUES (
-          ${participantId}::uuid,
+          ${partyId}::uuid,
           ${TEST_TENANT_ID}::uuid,
           'owner',
           'approved',
-          ${participantName},
-          ${participantName.toLowerCase().replace(' ', '.') + '@example.com'},
+          ${displayName},
+          ${displayName.toLowerCase().replace(' ', '.') + '@example.com'},
           'individual',
           NOW(),
           NOW()
         )
         ON CONFLICT (id) DO NOTHING
       `);
+      
+      const [profile] = await db.insert(ccTripPartyProfiles).values({
+        tripId: trip.id,
+        partyId,
+        displayName,
+        role: i === 1 ? 'primary' : 'adult',
+        email: `${displayName.toLowerCase().replace(' ', '.')}@example.com`,
+      }).returning();
+      
+      tripPartyProfiles.push({ id: profile.id, partyId, displayName });
+    }
+
+    const folios: Array<{ id: string; participantId: string; tripProfileId: string; participantName: string; folioNumber: string }> = [];
+    const claims: Array<{ id: string; type: string; participantIndex: number }> = [];
+    const ledgerEntries: Record<number, Array<{ id: string; type: string; category: string; amount: number }>> = {};
+    
+    for (let i = 1; i <= 10; i++) {
+      const tripProfile = tripPartyProfiles[i - 1];
+      const participantId = tripProfile.partyId;
+      const participantName = tripProfile.displayName;
+      const folioNumber = generateFolioNumber(i);
 
       const [folio] = await db.insert(ccFolios).values({
         tenantId: TEST_TENANT_ID,
@@ -230,7 +264,7 @@ router.post('/wedding-stress', async (_req, res) => {
         checkOutDate,
       }).returning();
 
-      folios.push({ id: folio.id, participantId, participantName, folioNumber });
+      folios.push({ id: folio.id, participantId, tripProfileId: tripProfile.id, participantName, folioNumber });
       ledgerEntries[i] = [];
     }
 
@@ -579,6 +613,7 @@ router.post('/wedding-stress', async (_req, res) => {
     res.json({
       ok: allQaPassed,
       message: allQaPassed ? 'Wedding stress test passed' : 'Some QA checks failed',
+      proposalId: trip.id,
       folioSummaries,
       adjustments,
       qaResults,
@@ -588,11 +623,130 @@ router.post('/wedding-stress', async (_req, res) => {
         incidentsCreated: incidents.length,
         ledgerLinksCreated: links.length,
         reversalLinksCreated: reversalLinks.length,
+        tripPartyProfilesCreated: tripPartyProfiles.length,
       },
     });
 
   } catch (error) {
     console.error('[Wedding Stress] Error:', error);
+    res.status(500).json({ 
+      ok: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
+/**
+ * GET /api/dev/proposals/wedding-stress/:proposalId
+ * 
+ * Returns the full proposal payload for the seeded wedding test 
+ * so UI can render immediately.
+ */
+router.get('/proposals/wedding-stress/:proposalId', async (req, res) => {
+  try {
+    const { proposalId } = req.params;
+    
+    const trip = await db.select().from(ccTrips)
+      .where(eq(ccTrips.id, proposalId))
+      .limit(1);
+    
+    if (!trip.length) {
+      return res.status(404).json({ ok: false, error: 'Proposal not found' });
+    }
+    
+    const proposal = trip[0];
+    
+    const participants = await db.select().from(ccTripPartyProfiles)
+      .where(eq(ccTripPartyProfiles.tripId, proposalId));
+    
+    const participantIds = participants.map(p => p.id);
+    
+    const claims = await db.select().from(ccSurfaceClaims)
+      .where(eq(ccSurfaceClaims.portalId, proposal.portalId!));
+    
+    const participantClaims = claims.filter(c => 
+      c.assignedParticipantId && participantIds.includes(c.assignedParticipantId)
+    );
+    
+    const participantNames = participants.map(p => p.displayName);
+    const folios = await db.select().from(ccFolios)
+      .where(eq(ccFolios.tenantId, proposal.tenantId!));
+    
+    const weddingFolios = folios.filter(f => 
+      participantNames.includes(f.guestName) && f.folioNumber.startsWith('WED-')
+    );
+    
+    const folioSummaries = await Promise.all(
+      weddingFolios.map(f => getFolioSummary(f.id, f.guestName))
+    );
+    
+    const incidents = await db.select().from(ccRefundIncidents)
+      .where(eq(ccRefundIncidents.portalId, proposal.portalId!));
+    
+    const allocations = participants.map(p => {
+      const pClaims = participantClaims.filter(c => c.assignedParticipantId === p.id);
+      return {
+        participant_id: p.id,
+        display_name: p.displayName,
+        role: p.role,
+        claims: pClaims.map(c => ({
+          claim_id: c.id,
+          unit_ids: c.unitIds,
+          time_start: c.timeStart,
+          time_end: c.timeEnd,
+          claim_status: c.claimStatus,
+        })),
+      };
+    });
+    
+    const foliosByParticipantName = weddingFolios.reduce((acc, f) => {
+      const summary = folioSummaries.find(s => s.folioId === f.id);
+      acc[f.guestName] = {
+        folio_id: f.id,
+        folio_number: f.folioNumber,
+        status: f.status,
+        summary,
+      };
+      return acc;
+    }, {} as Record<string, any>);
+    
+    res.json({
+      ok: true,
+      proposal: {
+        id: proposal.id,
+        title: proposal.groupName || 'Wedding Weekend 2026',
+        status: proposal.status || 'held',
+        time_start: proposal.startDate,
+        time_end: proposal.endDate,
+        portal_id: proposal.portalId,
+        tenant_id: proposal.tenantId,
+        group_size: proposal.groupSize,
+        access_code: proposal.accessCode,
+        created_at: proposal.createdAt,
+      },
+      participants: participants.map(p => ({
+        id: p.id,
+        display_name: p.displayName,
+        role: p.role,
+        folio: foliosByParticipantName[p.displayName] || null,
+      })),
+      allocations,
+      incidents: incidents.map(i => ({
+        id: i.id,
+        incident_type: i.incidentType,
+        affected_participant_id: i.affectedParticipantId,
+        notes: i.notes,
+        created_at: i.createdAt,
+      })),
+      stats: {
+        total_participants: participants.length,
+        total_claims: participantClaims.length,
+        total_folios: weddingFolios.length,
+        total_incidents: incidents.length,
+      },
+    });
+  } catch (error) {
+    console.error('[Wedding Stress Proof] Error:', error);
     res.status(500).json({ 
       ok: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

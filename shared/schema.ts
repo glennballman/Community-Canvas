@@ -465,6 +465,7 @@ export type InsertMomentAvailability = z.infer<typeof insertMomentAvailabilitySc
 export const ccTripPartyProfiles = pgTable('cc_trip_party_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
   tripId: uuid('trip_id').notNull().references(() => ccTrips.id, { onDelete: 'cascade' }),
+  partyId: uuid('party_id'),
   
   displayName: varchar('display_name').notNull(),
   role: varchar('role').default('guest'),

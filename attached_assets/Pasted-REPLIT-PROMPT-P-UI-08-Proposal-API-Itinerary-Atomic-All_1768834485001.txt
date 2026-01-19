@@ -1,0 +1,141 @@
+REPLIT PROMPT — P-UI-08 Proposal API (Itinerary + Atomic Allocations + Folios)
+
+ROLE: Senior engineer. Implement read/write endpoints to support the proposal/approver flow.
+HARD RULES:
+
+Never use “book/booking”
+
+Availability-first invariant remains
+
+No PII until Confirm (public) unless user is already authenticated
+
+Must support 10 participants, each paying their own folio
+
+Must support atomic drill-down to unit level
+
+Goal
+
+Create endpoints under /api/p2/app/proposals/* that compose existing tables:
+
+reservations / claims
+
+participants
+
+folios + ledger summaries
+
+surface container hierarchy for unit drill-down
+
+N3 effectiveCapacity (optional attachment)
+
+A) Data model (no new core tables unless missing)
+
+If you already have a reservation container or trip object, use it.
+If not, add one table:
+
+cc_proposals
+
+id uuid pk
+
+portal_id uuid not null
+
+tenant_id uuid null
+
+title varchar not null
+
+status varchar not null (draft,held,confirmed,canceled)
+
+time_start timestamptz not null
+
+time_end timestamptz not null
+
+hold_token varchar null
+
+created_by_user_id uuid null
+
+metadata jsonb not null default '{}'
+
+timestamps
+
+But prefer reusing existing reservation/trip records if they exist.
+
+B) Endpoint 1: GET proposal detail
+
+GET /api/p2/app/proposals/:proposalId
+
+Return:
+
+proposal summary (dates, status)
+
+participants list (id, display name if internal/auth; if public pre-confirm, anonymize “Guest A/B/C”)
+
+allocations:
+
+each participant → list of { unit_id, unit_type, container_path[], accessibility_flags, utility_notes }
+
+also include unassigned units in the proposal (for planners)
+
+folios:
+
+per participant folio id
+
+getFolioSummary() totals: charges/reversals/payments/net/outstanding
+
+line items (optional but useful):
+
+list of ledger entries grouped by category with links to units/claims via cc_folio_ledger_links
+
+n3_advisories (optional):
+
+if any segments intersect these dates/locations, attach the latest effectiveCapacity risks + mitigations
+
+C) Endpoint 2: POST invite participant
+
+POST /api/p2/app/proposals/:proposalId/invite
+Body: { contact: { email?, phone? }, role: 'participant'|'approver', note? }
+
+Behavior:
+
+Create an invitation record using your existing jobs/invite system (do not invent a second)
+
+Generate a secure token link to view the proposal + their assigned units + pay their folio
+
+No need to send email; just return the invite token for now
+
+D) Endpoint 3: POST assign units to participant
+
+POST /api/p2/app/proposals/:proposalId/assign
+Body: { participant_id, unit_ids[] }
+
+Behavior:
+
+Validate unit_ids exist and belong to proposal time window claims
+
+Update claim assigned_participant_id if needed OR add a claim-participant mapping if you keep claims immutable
+
+Return updated allocations
+
+E) Endpoint 4: POST pay folio (thin wrapper)
+
+POST /api/p2/app/folios/:folioId/pay
+Body: { amount_cents, method: 'test'|'stripe' (if integrated), note? }
+
+For now you can implement a test payment entry in cc_folio_ledger as entry_type='payment'.
+(Do not refactor Stripe; just provide a stub that the UI can hit.)
+
+F) Endpoint 5: POST issue incident credit (operator only)
+
+POST /api/p2/app/folios/:folioId/credit
+Body: { ref_ledger_id, amount_cents, incident_type, notes }
+
+Use:
+
+createIncident()
+
+postCreditReversal()
+Link to original via cc_folio_ledger_links.ref_folio_ledger_id
+
+G) Proof
+
+Add dev endpoint:
+GET /api/dev/proposals/wedding-stress/:proposalId
+that returns the full proposal payload for the seeded wedding test so UI can render immediately.

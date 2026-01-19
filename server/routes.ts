@@ -101,6 +101,7 @@ import { surfacesRouter } from "./routes/surfaces";
 import devSeedN3Router from "./routes/dev-seed-n3";
 import devSeedSurfacesRouter from "./routes/dev-seed-surfaces";
 import devSeedWeddingRouter from "./routes/dev-seed-wedding";
+import proposalsRouter from "./routes/proposals";
 import publicJobsRouter from "./routes/public-jobs";
 import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
@@ -419,6 +420,9 @@ export async function registerRoutes(
   
   // Document templates API (tenant auth required)
   app.use('/api/p2/app/document-templates', documentTemplatesRouter);
+
+  // P-UI-08 Proposal API (Itinerary + Atomic Allocations + Folios) - registered early to avoid tenant housing middleware
+  app.use('/api/p2/app/proposals', proposalsRouter);
 
   // Tenant housing API (tenant auth required)
   app.use('/api/p2/app', tenantHousingRouter);
