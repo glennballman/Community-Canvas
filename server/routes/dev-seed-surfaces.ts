@@ -18,9 +18,11 @@ import {
   ccSurfaceContainerMembers,
   ccSurfaceUnits,
   ccUtilityNodes,
-  ccSurfaceUtilityBindings
+  ccSurfaceUtilityBindings,
+  ccCapacityPolicies
 } from '@shared/schema';
 import { sql } from 'drizzle-orm';
+import { getEffectiveUnits, compareCapacityLenses } from '../lib/surfaces/capacityLens';
 
 const router = Router();
 
@@ -32,6 +34,7 @@ router.post('/surfaces', async (_req, res) => {
     console.log('[Surface Seed] Starting V3.5 Surface Spine seed...');
 
     // Clear existing data
+    await db.execute(sql`DELETE FROM cc_capacity_policies WHERE portal_id = ${TEST_PORTAL_ID}`);
     await db.execute(sql`DELETE FROM cc_surface_utility_bindings WHERE portal_id = ${TEST_PORTAL_ID}`);
     await db.execute(sql`DELETE FROM cc_utility_nodes WHERE portal_id = ${TEST_PORTAL_ID}`);
     await db.execute(sql`DELETE FROM cc_surface_units WHERE portal_id = ${TEST_PORTAL_ID}`);
@@ -605,6 +608,163 @@ router.post('/surfaces', async (_req, res) => {
     );
 
     // =============================================
+    // SEED 6: MARINA DOCK SEGMENTS (92,354mm linear moorage)
+    // Per Patent CC-02 - Inventor: Glenn Ballman
+    // =============================================
+    console.log('[Surface Seed] Creating Marina dock segments...');
+
+    const [marinaContainer] = await db.insert(ccSurfaceContainers).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerType: 'marina',
+      title: 'Woods End Marina',
+      sortOrder: 1,
+    }).returning();
+
+    // 5 Dock Segments with linear moorage dimensions
+    const dockSegmentDefs = [
+      { title: 'Dock A - North', linearMm: 24384 }, // 80 ft
+      { title: 'Dock A - South', linearMm: 24384 }, // 80 ft
+      { title: 'Dock B - Main', linearMm: 18288 },  // 60 ft
+      { title: 'Dock C - Visitor', linearMm: 15240 }, // 50 ft
+      { title: 'Dock D - Fuel Pier', linearMm: 10058 }, // 33 ft
+    ];
+
+    let totalLinearMm = 0;
+    const dockSegmentIds: string[] = [];
+
+    for (let idx = 0; idx < dockSegmentDefs.length; idx++) {
+      const def = dockSegmentDefs[idx];
+      const [segment] = await db.insert(ccSurfaceContainers).values({
+        portalId: TEST_PORTAL_ID,
+        tenantId: TEST_TENANT_ID,
+        parentContainerId: marinaContainer.id,
+        containerType: 'dock_segment',
+        title: def.title,
+        sortOrder: idx + 1,
+      }).returning();
+      
+      dockSegmentIds.push(segment.id);
+
+      const [segmentSurface] = await db.insert(ccSurfaces).values({
+        portalId: TEST_PORTAL_ID,
+        tenantId: TEST_TENANT_ID,
+        surfaceType: 'stand',
+        title: `${def.title} Moorage`,
+        linearMm: def.linearMm,
+        metadata: { segment_type: 'moorage_edge' },
+      }).returning();
+
+      await db.insert(ccSurfaceContainerMembers).values({
+        portalId: TEST_PORTAL_ID,
+        tenantId: TEST_TENANT_ID,
+        containerId: segment.id,
+        surfaceId: segmentSurface.id,
+      });
+
+      // Each segment has moorage units based on 6m slip average
+      const slipCount = Math.floor(def.linearMm / 6000);
+      await db.insert(ccSurfaceUnits).values(
+        Array.from({ length: slipCount }, (_, i) => ({
+          portalId: TEST_PORTAL_ID,
+          tenantId: TEST_TENANT_ID,
+          surfaceId: segmentSurface.id,
+          unitType: 'stand',
+          unitIndex: i + 1,
+          label: `${def.title.split(' ')[1]}-${i + 1}`,
+          unitTags: ['moorage'],
+        }))
+      );
+
+      totalLinearMm += def.linearMm;
+    }
+
+    console.log(`[Surface Seed] Marina total linear moorage: ${totalLinearMm}mm (expected: 92354mm)`);
+
+    // =============================================
+    // SEED 7: CAPACITY POLICIES (Normal vs Emergency)
+    // Per Patent CC-02 - Inventor: Glenn Ballman
+    // =============================================
+    console.log('[Surface Seed] Creating Capacity Policies...');
+
+    // Aviator Cottage: emergency +20 sleep (mattresses on floor)
+    await db.insert(ccCapacityPolicies).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: aviatorCottage.id,
+      surfaceType: 'sleep',
+      normalUnitsOverride: null, // use base count (19)
+      emergencyUnitsOverride: 39, // +20 emergency capacity
+      metadata: { notes: 'Emergency: mattresses on floor' },
+    });
+
+    // Marina: emergency +4 moorage (base 14 + 4 = 18)
+    await db.insert(ccCapacityPolicies).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: marinaContainer.id,
+      surfaceType: 'stand',
+      normalUnitsOverride: null,
+      emergencyUnitsOverride: 18, // base 14 + 4 emergency rafting
+      metadata: { notes: 'Emergency: raft-up allowed' },
+    });
+
+    // Canoe 1: emergency 0 (too risky in emergency)
+    await db.insert(ccCapacityPolicies).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: canoe1Container.id,
+      surfaceType: 'sit',
+      normalUnitsOverride: null, // use base (6)
+      emergencyUnitsOverride: 0, // no canoe rentals in emergency
+      metadata: { notes: 'Emergency: watercraft grounded' },
+    });
+
+    // Canoe 2: emergency 0 (too risky in emergency)
+    await db.insert(ccCapacityPolicies).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: canoe2Container.id,
+      surfaceType: 'sit',
+      normalUnitsOverride: null,
+      emergencyUnitsOverride: 0,
+      metadata: { notes: 'Emergency: watercraft grounded' },
+    });
+
+    // Kayak 1: emergency 0 (too risky in emergency)
+    await db.insert(ccCapacityPolicies).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: kayak1Container.id,
+      surfaceType: 'sit',
+      normalUnitsOverride: null,
+      emergencyUnitsOverride: 0,
+      metadata: { notes: 'Emergency: watercraft grounded' },
+    });
+
+    // Bike Corral: normal -4 (reserve spots for staff)
+    await db.insert(ccCapacityPolicies).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: bikeCorralContainer.id,
+      surfaceType: 'stand',
+      normalUnitsOverride: 12, // 16 - 4 reserved for staff
+      emergencyUnitsOverride: null, // full capacity in emergency
+      metadata: { notes: 'Normal: 4 spots reserved for staff' },
+    });
+
+    // Flora's Restaurant: emergency +4 (extra seating)
+    await db.insert(ccCapacityPolicies).values({
+      portalId: TEST_PORTAL_ID,
+      tenantId: TEST_TENANT_ID,
+      containerId: floraRestaurant.id,
+      surfaceType: 'sit',
+      normalUnitsOverride: null, // use base (10)
+      emergencyUnitsOverride: 14, // +4 emergency seating
+      metadata: { notes: 'Emergency: extra folding chairs' },
+    });
+
+    // =============================================
     // PROOF QUERIES
     // =============================================
     console.log('[Surface Seed] Running proof queries...');
@@ -648,20 +808,36 @@ router.post('/surfaces', async (_req, res) => {
       WHERE portal_id = ${TEST_PORTAL_ID}
     `);
 
+    const marinaMoorage = await db.execute<{ sum: string }>(sql`
+      SELECT COALESCE(SUM(linear_mm), 0) as sum
+      FROM cc_surfaces 
+      WHERE portal_id = ${TEST_PORTAL_ID}
+        AND title LIKE '%Moorage%'
+        AND metadata->>'segment_type' = 'moorage_edge'
+    `);
+
+    const capacityPolicies = await db.execute<{ count: string }>(sql`
+      SELECT COUNT(*) as count
+      FROM cc_capacity_policies
+      WHERE portal_id = ${TEST_PORTAL_ID}
+    `);
+
     const proofResults = {
       aviator_sleep_units: parseInt(aviatorSleepUnits.rows?.[0]?.count || '0'),
       flora_seats: parseInt(floraSeats.rows?.[0]?.count || '0'),
       bike_spots: parseInt(bikeSpots.rows?.[0]?.count || '0'),
       dock_slips: parseInt(dockSlips.rows?.[0]?.count || '0'),
       utility_bindings: parseInt(utilityBindings.rows?.[0]?.count || '0'),
+      marina_linear_mm: parseInt(marinaMoorage.rows?.[0]?.sum || '0'),
+      capacity_policies: parseInt(capacityPolicies.rows?.[0]?.count || '0'),
     };
 
     console.log('[Surface Seed] Proof results:', proofResults);
-    console.log('[Surface Seed] Expected: aviator=19, flora=10, bikes=16, slips=9, bindings=9');
+    console.log('[Surface Seed] Expected: aviator=19, flora=10, bikes=16, slips=9, bindings=9, marina=92354mm, policies=7');
 
     res.json({
       ok: true,
-      message: 'V3.5 Surface Spine seed completed',
+      message: 'V3.5 Surface Spine seed completed with Capacity Lenses',
       proof: proofResults,
       expected: {
         aviator_sleep_units: 19,
@@ -669,6 +845,8 @@ router.post('/surfaces', async (_req, res) => {
         bike_spots: 16,
         dock_slips: 9,
         utility_bindings: 9,
+        marina_linear_mm: 92354,
+        capacity_policies: 7,
       },
       containers: {
         aviator: aviatorCottage.id,
@@ -677,6 +855,7 @@ router.post('/surfaces', async (_req, res) => {
         woodsEndDock: woodsEndDock.id,
         dockRamp: dockRampContainer.id,
         boardwalk: boardwalkContainer.id,
+        marina: marinaContainer.id,
       },
       surfaces: {
         dockRamp: dockRampSurface.id,
@@ -690,6 +869,125 @@ router.post('/surfaces', async (_req, res) => {
     });
   } catch (err) {
     console.error('[Surface Seed] Error:', err);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+// GET /surfaces/capacity-proof - Run capacity lens proof scenarios
+router.get('/surfaces/capacity-proof', async (req, res) => {
+  try {
+    console.log('[Capacity Proof] Running capacity lens proof scenarios...');
+
+    // Get containers for testing
+    const containers = await db.execute<{
+      id: string;
+      title: string;
+      container_type: string;
+    }>(sql`
+      SELECT id, title, container_type
+      FROM cc_surface_containers
+      WHERE portal_id = ${TEST_PORTAL_ID}
+        AND parent_container_id IS NULL
+      ORDER BY title
+    `);
+
+    const proofs: Record<string, any> = {};
+
+    for (const container of containers.rows) {
+      // Get surface types for this container (using recursive CTE for descendants)
+      const surfaceTypesResult = await db.execute<{ surface_type: string }>(sql`
+        WITH RECURSIVE container_tree AS (
+          SELECT id FROM cc_surface_containers WHERE id = ${container.id}
+          UNION ALL
+          SELECT c.id 
+          FROM cc_surface_containers c
+          JOIN container_tree ct ON c.parent_container_id = ct.id
+        )
+        SELECT DISTINCT su.unit_type as surface_type
+        FROM cc_surface_units su
+        JOIN cc_surfaces s ON s.id = su.surface_id
+        JOIN cc_surface_container_members scm ON scm.surface_id = s.id
+        JOIN container_tree ct ON scm.container_id = ct.id
+      `);
+
+      for (const stRow of surfaceTypesResult.rows) {
+        const comparison = await compareCapacityLenses(
+          TEST_PORTAL_ID,
+          container.id,
+          stRow.surface_type
+        );
+
+        const key = `${container.title}_${stRow.surface_type}`;
+        proofs[key] = {
+          container: container.title,
+          containerType: container.container_type,
+          surfaceType: stRow.surface_type,
+          normal: {
+            base: comparison.normal.baseUnits,
+            effective: comparison.normal.effectiveUnits,
+            hasPolicy: comparison.normal.policyOverride !== null,
+          },
+          emergency: {
+            base: comparison.emergency.baseUnits,
+            effective: comparison.emergency.effectiveUnits,
+            hasPolicy: comparison.emergency.policyOverride !== null,
+          },
+          delta: comparison.delta,
+        };
+      }
+    }
+
+    // Expected proof results
+    const expected = {
+      'Aviator_sleep': { normal: 19, emergency: 39, delta: 20 },
+      'Bike Corral Stall_stand': { normal: 12, emergency: 16, delta: 4 },
+      "Flora's_sit": { normal: 10, emergency: 14, delta: 4 },
+      'Canoe 1_sit': { normal: 6, emergency: 0, delta: -6 },
+      'Canoe 2_sit': { normal: 6, emergency: 0, delta: -6 },
+      'Kayak 1_sit': { normal: 2, emergency: 0, delta: -2 },
+      'Woods End Marina_stand': { normal: 14, emergency: 18, delta: 4 },
+    };
+
+    // Validate proofs
+    const passed: string[] = [];
+    const failed: string[] = [];
+
+    for (const [key, exp] of Object.entries(expected)) {
+      const actual = proofs[key];
+      if (!actual) {
+        failed.push(`${key}: NOT FOUND`);
+        continue;
+      }
+
+      if (
+        actual.normal.effective === exp.normal &&
+        actual.emergency.effective === exp.emergency &&
+        actual.delta === exp.delta
+      ) {
+        passed.push(key);
+      } else {
+        failed.push(`${key}: expected normal=${exp.normal}, emergency=${exp.emergency}, delta=${exp.delta} but got normal=${actual.normal.effective}, emergency=${actual.emergency.effective}, delta=${actual.delta}`);
+      }
+    }
+
+    console.log(`[Capacity Proof] Passed: ${passed.length}/${Object.keys(expected).length}`);
+    if (failed.length > 0) {
+      console.log('[Capacity Proof] Failed:', failed);
+    }
+
+    res.json({
+      ok: failed.length === 0,
+      message: failed.length === 0 
+        ? 'All capacity lens proofs passed' 
+        : `${failed.length} proofs failed`,
+      passed: passed.length,
+      total: Object.keys(expected).length,
+      proofs,
+      expected,
+      failed,
+    });
+  } catch (err) {
+    console.error('[Capacity Proof] Error:', err);
     res.status(500).json({ ok: false, error: String(err) });
   }
 });

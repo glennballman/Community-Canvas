@@ -18,11 +18,18 @@ import {
   ccSurfaceUnits,
   ccSurfaceClaims,
   ccUtilityNodes,
-  ccSurfaceUtilityBindings
+  ccSurfaceUtilityBindings,
+  ccCapacityPolicies
 } from '@shared/schema';
 import { eq, and, sql, inArray, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
+import { 
+  getEffectiveUnits, 
+  batchGetEffectiveUnits, 
+  compareCapacityLenses,
+  type CapacityLens 
+} from '../lib/surfaces/capacityLens';
 
 export const surfacesRouter = Router();
 
@@ -326,5 +333,228 @@ surfacesRouter.get('/units/available', async (req, res) => {
   } catch (err) {
     console.error('[Surfaces API] Error fetching available units:', err);
     res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+  }
+});
+
+// =============================================
+// CAPACITY LENS ENDPOINTS
+// PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
+// =============================================
+
+// GET /capacity - Get effective capacity for a container with optional lens
+surfacesRouter.get('/capacity', async (req, res) => {
+  try {
+    const portalId = req.headers['x-portal-id'] as string || req.query.portalId as string;
+    const { containerId, surfaceType, lens = 'normal' } = req.query;
+
+    if (!portalId || !containerId || !surfaceType) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: { code: 'MISSING_PARAMS', message: 'portalId, containerId, surfaceType required' }
+      });
+    }
+
+    let timeWindow: { start: Date; end: Date } | undefined;
+    if (req.query.start && req.query.end) {
+      timeWindow = {
+        start: new Date(req.query.start as string),
+        end: new Date(req.query.end as string),
+      };
+    }
+
+    const result = await getEffectiveUnits({
+      portalId: portalId as string,
+      containerId: containerId as string,
+      surfaceType: surfaceType as string,
+      lens: lens as CapacityLens,
+      timeWindow,
+    });
+
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[Surfaces API] Capacity error:', err);
+    res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: String(err) } });
+  }
+});
+
+// GET /capacity/compare - Compare normal vs emergency capacity
+surfacesRouter.get('/capacity/compare', async (req, res) => {
+  try {
+    const portalId = req.headers['x-portal-id'] as string || req.query.portalId as string;
+    const { containerId, surfaceType } = req.query;
+
+    if (!portalId || !containerId || !surfaceType) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: { code: 'MISSING_PARAMS', message: 'portalId, containerId, surfaceType required' }
+      });
+    }
+
+    let timeWindow: { start: Date; end: Date } | undefined;
+    if (req.query.start && req.query.end) {
+      timeWindow = {
+        start: new Date(req.query.start as string),
+        end: new Date(req.query.end as string),
+      };
+    }
+
+    const result = await compareCapacityLenses(
+      portalId as string,
+      containerId as string,
+      surfaceType as string,
+      timeWindow
+    );
+
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[Surfaces API] Capacity compare error:', err);
+    res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: String(err) } });
+  }
+});
+
+// POST /capacity/batch - Batch get effective capacity for multiple containers
+surfacesRouter.post('/capacity/batch', async (req, res) => {
+  try {
+    const portalId = req.headers['x-portal-id'] as string || req.body.portalId;
+    const { containers, lens = 'normal', timeWindow } = req.body;
+
+    if (!portalId || !containers || !Array.isArray(containers)) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: { code: 'MISSING_PARAMS', message: 'portalId, containers[] required' }
+      });
+    }
+
+    let parsedTimeWindow: { start: Date; end: Date } | undefined;
+    if (timeWindow?.start && timeWindow?.end) {
+      parsedTimeWindow = {
+        start: new Date(timeWindow.start),
+        end: new Date(timeWindow.end),
+      };
+    }
+
+    const results = await batchGetEffectiveUnits(
+      portalId,
+      containers,
+      lens as CapacityLens,
+      parsedTimeWindow
+    );
+
+    res.json({ ok: true, results });
+  } catch (err) {
+    console.error('[Surfaces API] Batch capacity error:', err);
+    res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: String(err) } });
+  }
+});
+
+// GET /policies - List capacity policies for a portal
+surfacesRouter.get('/policies', async (req, res) => {
+  try {
+    const portalId = req.headers['x-portal-id'] as string || req.query.portalId as string;
+    const { containerId } = req.query;
+
+    if (!portalId) {
+      return res.status(400).json({ ok: false, error: { code: 'MISSING_PARAMS', message: 'portalId required' } });
+    }
+
+    let query = sql`
+      SELECT 
+        p.id,
+        p.portal_id,
+        p.container_id,
+        p.surface_type,
+        p.normal_units_override,
+        p.emergency_units_override,
+        p.metadata,
+        c.title as container_title,
+        c.container_type
+      FROM cc_capacity_policies p
+      JOIN cc_surface_containers c ON c.id = p.container_id
+      WHERE p.portal_id = ${portalId}
+    `;
+
+    if (containerId) {
+      query = sql`${query} AND p.container_id = ${containerId}`;
+    }
+
+    query = sql`${query} ORDER BY c.title, p.surface_type`;
+
+    const result = await db.execute(query);
+
+    res.json({ ok: true, policies: result.rows });
+  } catch (err) {
+    console.error('[Surfaces API] Policies error:', err);
+    res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: String(err) } });
+  }
+});
+
+// GET /summary - Get capacity summary for a portal with lens
+surfacesRouter.get('/summary', async (req, res) => {
+  try {
+    const portalId = req.headers['x-portal-id'] as string || req.query.portalId as string;
+    const lens = (req.query.lens as CapacityLens) || 'normal';
+
+    if (!portalId) {
+      return res.status(400).json({ ok: false, error: { code: 'MISSING_PARAMS', message: 'portalId required' } });
+    }
+
+    const containersResult = await db.execute<{
+      id: string;
+      title: string;
+      container_type: string;
+      surface_type: string;
+      unit_count: string;
+    }>(sql`
+      SELECT 
+        c.id,
+        c.title,
+        c.container_type,
+        su.unit_type as surface_type,
+        COUNT(su.id) as unit_count
+      FROM cc_surface_containers c
+      JOIN cc_surface_container_members scm ON scm.container_id = c.id
+      JOIN cc_surfaces s ON s.id = scm.surface_id
+      JOIN cc_surface_units su ON su.surface_id = s.id
+      WHERE c.portal_id = ${portalId}
+        AND c.parent_container_id IS NULL
+      GROUP BY c.id, c.title, c.container_type, su.unit_type
+      ORDER BY c.title
+    `);
+
+    const summaries = [];
+    for (const row of containersResult.rows) {
+      const effectiveCapacity = await getEffectiveUnits({
+        portalId: portalId as string,
+        containerId: row.id,
+        surfaceType: row.surface_type,
+        lens,
+      });
+
+      summaries.push({
+        containerId: row.id,
+        containerTitle: row.title,
+        containerType: row.container_type,
+        surfaceType: row.surface_type,
+        baseUnits: parseInt(row.unit_count),
+        effectiveUnits: effectiveCapacity.effectiveUnits,
+        availableUnits: effectiveCapacity.availableUnits,
+        hasPolicy: effectiveCapacity.policyOverride !== null,
+      });
+    }
+
+    res.json({
+      ok: true,
+      lens,
+      summaries,
+      totals: {
+        sleep: summaries.filter(s => s.surfaceType === 'sleep').reduce((sum, s) => sum + s.effectiveUnits, 0),
+        sit: summaries.filter(s => s.surfaceType === 'sit').reduce((sum, s) => sum + s.effectiveUnits, 0),
+        stand: summaries.filter(s => s.surfaceType === 'stand').reduce((sum, s) => sum + s.effectiveUnits, 0),
+        utility: summaries.filter(s => s.surfaceType === 'utility').reduce((sum, s) => sum + s.effectiveUnits, 0),
+      },
+    });
+  } catch (err) {
+    console.error('[Surfaces API] Summary error:', err);
+    res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: String(err) } });
   }
 });
