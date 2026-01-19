@@ -1,0 +1,52 @@
+NEXT: M-3 — Bid / Quote Photo Uploads (Contractor Media)
+
+Your audit said cc_bids has no media columns. With your M-2 design, we don’t need any. We attach media as:
+
+entity_type = "bid" (or "quote" if that’s the actual entity used)
+
+entity_id = <bidId>
+
+Replit Prompt M-3 (Additive-only)
+Community Canvas V3.5 — Additive-only.
+
+Goal: Enable photo uploads for bids/quotes using existing cc_media system and the new MediaUpload/MediaGallery components.
+
+STEP 1 — INVENTORY (evidence required)
+1) Locate bid/quote models and UI:
+- Find cc_bids table definition and confirm primary key column name.
+- Find the contractor bid submission UI page/component(s).
+- Find bid detail views (operator/owner side).
+
+2) Confirm what to use for entity_type:
+- Search existing cc_media usage to see naming conventions (e.g. "work_request", "procurement_request").
+- Choose ONE canonical string for bids: "bid" unless codebase uses "cc_bid" or similar.
+- Add a small constant if needed (no strings duplicated everywhere).
+
+STEP 2 — BACKEND (only if required)
+Because M-2 binds cc_media directly via presign/complete, you may not need new endpoints.
+However, ensure permissions:
+- Only the bid owner (contractor) can create/delete bid media.
+- View permissions follow bid visibility rules.
+
+If current /api/cc_media/presign allows any entity_type/entity_id without permission checks, add guardrails:
+- Validate caller can attach to that entity_id for entity_type="bid".
+- Validate caller can delete cc_media for that entity.
+
+Implement these checks in the cc_media route layer (additive, minimal).
+
+STEP 3 — FRONTEND (wire upload + gallery)
+In bid submission and/or bid edit screen:
+- Add "Photos (optional)" section
+- Use <MediaUpload entityType="bid" entityId={bidId} multiple accept="image/*" />
+- Show <MediaGallery assets={useEntityMedia("bid", bidId)} />
+
+In bid detail screen:
+- Show MediaGallery read-only for viewers (no delete if not owner)
+
+STEP 4 — QA
+- Verify upload shows immediately in gallery (react-query invalidation)
+- Verify delete works for owner
+- Verify non-owner cannot delete (403)
+- No terminology violations
+
+Return files changed + the chosen entity_type string.
