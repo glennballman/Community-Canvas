@@ -1,0 +1,69 @@
+NEXT: M-1B — Jobs Messaging API + UI Integration (Operator + Applicant)
+
+Below is the tight Replit prompt to wire the job-application conversations into actual workflows. It explicitly prevents scope creep and prevents job convos from polluting the general inbox unless you want that.
+
+Replit Prompt M-1B (Authoritative)
+Community Canvas V3.5 — Additive-only. No refactors.
+
+Goal: Wire the new job application conversation system into Operator and Applicant UX using existing conversation UI patterns.
+
+PRECHECK (regression guard)
+1) Search all queries that join cc_conversations on work_request_id and confirm they still behave if work_request_id is NULL.
+- Ensure job-only conversations do NOT break conversation list queries.
+- Ensure existing work-request messaging remains unchanged.
+
+PART 1 — API (P2 endpoints)
+Create endpoints under /api/p2/jobs (or extend existing /api/p2/jobs routes if present):
+
+A) Conversation bootstrap
+- GET /api/p2/jobs/:jobId/applications/:appId/conversation
+  Behavior:
+  - Validates caller role:
+    - Operator: job belongs to tenant/portal
+    - Applicant: caller matches the application’s applicant individual/party
+  - Calls getJobApplicationConversation(); if none exists, calls findOrCreateJobApplicationConversation()
+  - Returns: { ok: true, conversationId, conversationSummary, messages }
+  - Ensure message redaction rules remain in effect (reuse existing contactRedaction)
+
+B) Send message
+- POST /api/p2/jobs/:jobId/applications/:appId/conversation/messages
+  Body: { content: string, attachments?: any, structuredData?: any }
+  Behavior:
+  - Ensures user is a participant for the conversation
+  - Writes message using existing message insert helper (same as conversations.ts)
+  - Updates unread counters appropriately
+  - Returns new message
+
+C) Mark read
+- POST /api/p2/jobs/:jobId/applications/:appId/conversation/mark-read
+  Calls the existing mark-read logic (the new endpoint you added in /api/conversations/.../mark-read can be reused internally).
+
+PART 2 — UI (Operator Side)
+1) Find the Operator Job Application detail page (moderation flow).
+Add a “Messages” section/tab:
+- Uses existing ConversationView component
+- On mount: calls GET conversation bootstrap endpoint
+- Displays thread + composer
+- Auto mark-read on open (reuse ConversationView behavior)
+
+PART 3 — UI (Applicant Side)
+Determine the applicant UX that exists today:
+- If there is already an authenticated “My Applications” or application detail page:
+  - Add a “Messages” panel/tab using the same pattern.
+- If no applicant application detail exists:
+  - Create /app/participant/applications/:appId
+    - Shows application status summary (minimal)
+    - Shows Messages section powered by the same endpoints
+
+PART 4 — NAV / VISIBILITY
+- Operator: messaging is embedded inside application detail; do NOT add new global nav items unless spec requires.
+- Applicant: if new page is created, add it under participant “My Applications” or “My Work” section (use existing nav conventions).
+
+PART 5 — QA
+Add these checks:
+1) Operator can open application and see/create conversation
+2) Applicant can open their own application conversation
+3) Applicant cannot access another applicant’s conversation (hard 403)
+4) No terminology violations
+
+Return files changed + the new routes + where UI is linked.
