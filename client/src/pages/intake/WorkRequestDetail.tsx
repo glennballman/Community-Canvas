@@ -144,7 +144,7 @@ export default function WorkRequestDetail() {
 
   const reserveMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', `/api/work-requests/${id}/book`, {
+      const res = await apiRequest('POST', `/api/work-requests/${id}/reserve`, {
         project_title: projectTitle || undefined,
       });
       return res.json();

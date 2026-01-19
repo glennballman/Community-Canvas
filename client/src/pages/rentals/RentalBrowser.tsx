@@ -320,7 +320,7 @@ export default function RentalBrowser() {
     
     setReservationInProgress(true);
     try {
-      const res = await fetch(`/api/rentals/${selectedItem.id}/book`, {
+      const res = await fetch(`/api/rentals/${selectedItem.id}/reserve`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

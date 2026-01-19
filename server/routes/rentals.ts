@@ -364,8 +364,8 @@ router.post('/:id/quote', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/rentals/:id/book - Create reservation (SELF)
-router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
+// POST /api/rentals/:id/reserve - Create reservation (SELF)
+router.post('/:id/reserve', requireAuth, async (req: Request, res: Response) => {
   try {
     const idParsed = uuidSchema.safeParse(req.params.id);
     if (!idParsed.success) {
@@ -386,7 +386,7 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, error: 'Individual profile required to reserve' });
     }
     
-    // Use tenantTransaction for reservation creation - user can only book for themselves
+    // Use tenantTransaction for reservation creation - user can only reserve for themselves
     const result = await req.tenantTransaction(async (client) => {
       // Check item exists (service mode for inventory data)
       const itemCheck = await client.query(
@@ -568,6 +568,12 @@ router.post('/:id/book', requireAuth, async (req: Request, res: Response) => {
     console.error('Error creating reservation:', error);
     res.status(500).json({ success: false, error: 'Failed to create reservation' });
   }
+});
+
+// BACKWARD COMPATIBILITY: Alias for legacy clients
+router.post('/:id/book', requireAuth, (req: Request, res: Response, next: Function) => {
+  req.url = req.url.replace('/book', '/reserve');
+  next('route');
 });
 
 // GET /api/rentals/my-reservations - Get user's reservations (SELF)

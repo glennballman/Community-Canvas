@@ -255,8 +255,8 @@ router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
   }
 });
 
-// Book work request as project
-router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// Reserve work request as project
+router.post('/:id/reserve', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
@@ -334,6 +334,12 @@ router.post('/:id/book', requireAuth, requireTenant, async (req: Request, res: R
     console.error('Error reserving work request:', error);
     res.status(500).json({ error: 'Failed to reserve work request' });
   }
+});
+
+// BACKWARD COMPATIBILITY: Alias for legacy clients
+router.post('/:id/book', requireAuth, requireTenant, (req: Request, res: Response, next: Function) => {
+  req.url = req.url.replace('/book', '/reserve');
+  next('route');
 });
 
 // Drop work request (won't proceed)

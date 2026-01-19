@@ -96,7 +96,7 @@ async function calculateFare(
 async function updateSailingCapacity(
   sailingId: string,
   amounts: { passengers: number; freightLbs: number; kayaks: number },
-  action: 'book' | 'cancel'
+  action: 'reserve' | 'cancel'
 ): Promise<void> {
   const [sailing] = await db.select()
     .from(ccSailings)
@@ -106,20 +106,20 @@ async function updateSailingCapacity(
   if (!sailing) return;
   
   const capacity = (sailing.capacityJson as any) || {};
-  const multiplier = action === 'book' ? -1 : 1;
+  const multiplier = action === 'reserve' ? -1 : 1;
   
   if (capacity.passengers) {
-    capacity.passengers.reserved += amounts.passengers * (action === 'book' ? 1 : -1);
+    capacity.passengers.reserved += amounts.passengers * (action === 'reserve' ? 1 : -1);
     capacity.passengers.available += amounts.passengers * multiplier;
   }
   
   if (capacity.freight_lbs) {
-    capacity.freight_lbs.reserved += amounts.freightLbs * (action === 'book' ? 1 : -1);
+    capacity.freight_lbs.reserved += amounts.freightLbs * (action === 'reserve' ? 1 : -1);
     capacity.freight_lbs.available += amounts.freightLbs * multiplier;
   }
   
   if (capacity.kayaks) {
-    capacity.kayaks.reserved += amounts.kayaks * (action === 'book' ? 1 : -1);
+    capacity.kayaks.reserved += amounts.kayaks * (action === 'reserve' ? 1 : -1);
     capacity.kayaks.available += amounts.kayaks * multiplier;
   }
   
@@ -244,7 +244,7 @@ export async function createTransportRequest(
       passengers: req.passengerCount || 0,
       freightLbs: req.freightWeightLbs || 0,
       kayaks: req.kayakCount || 0
-    }, 'book');
+    }, 'reserve');
   }
   
   return {
@@ -317,7 +317,7 @@ export async function confirmRequest(
       passengers: request.passengerCount || 0,
       freightLbs: request.freightWeightLbs || 0,
       kayaks: request.kayakCount || 0
-    }, 'book');
+    }, 'reserve');
   }
   
   const [updated] = await db.update(ccTransportRequests)

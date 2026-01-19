@@ -95,6 +95,9 @@ function terminologyScan(): CheckResult {
           const matches = line.match(pattern);
           
           if (matches) {
+            // Skip v35Manifest.ts - it defines allowlist patterns containing "book/booking"
+            if (file.includes('v35Manifest.ts')) continue;
+            
             const isAllowed = TERMINOLOGY_ALLOWLIST.some(allowPattern => 
               allowPattern.test(line)
             );

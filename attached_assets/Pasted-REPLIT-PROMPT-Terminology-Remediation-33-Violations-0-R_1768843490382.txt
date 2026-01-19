@@ -1,0 +1,54 @@
+REPLIT PROMPT — Terminology Remediation (33 Violations → 0)
+ROLE: Platform engineer fixing terminology compliance.
+HARD RULE: Replace "book/booking" with "reserve/reservation" — mechanical rename only, no logic changes.
+Goal
+Zero out the 33 terminology violations so tsx scripts/v35-cert.ts passes with no red flags.
+
+A) Route Renames
+Old PatternNew Pattern/api/rentals/:id/book/api/rentals/:id/reserve/api/*/booking/api/*/reservation/api/*/bookings/api/*/reservations
+If backwards compatibility is needed temporarily, add route aliases but ensure primary is the new term.
+
+B) Payload Key Renames
+OldNewbookingIdreservationIdbooking_idreservation_idbooked_atreserved_atis_bookedis_reservedbooking_statusreservation_status
+
+C) UI Copy Renames
+OldNew"Book Your Stay""Reserve Your Stay""Book Now""Reserve Now""Booking""Reservation""Booking Confirmation""Reservation Confirmation""Booked""Reserved""Your Booking""Your Reservation"
+
+D) Component/File Renames (if applicable)
+OldNewBookingCard.tsxReservationCard.tsxBookingDetails.tsxReservationDetails.tsxuseBooking.tsuseReservation.tsbooking.tsreservation.ts
+Update all imports accordingly.
+
+E) Database Columns (if any exist)
+Check for columns named booking*. If found:
+sql-- Migration to rename booking columns
+ALTER TABLE table_name RENAME COLUMN booking_id TO reservation_id;
+
+F) Allowlist (schema.org URLs only)
+If the scan flags schema.org URLs containing "booking", add the allowlist marker:
+typescript// ALLOW_BOOKING_TERM_URL_ONLY
+const schemaType = "https://schema.org/LodgingReservation"; // Note: schema.org uses "Reservation" anyway
+
+G) Verification
+After all changes:
+bashtsx scripts/v35-cert.ts
+```
+
+**Expected output:**
+```
+V3.5 CERTIFICATION PASS
+=======================
+
+✅ Terminology Scan: PASSED (0 violations)
+✅ UI Route Inventory: PASSED (8/8 routes)
+✅ API Route Inventory: PASSED (30/30 endpoints)
+✅ Invariant Checks: PASSED (5/5)
+✅ Proof Bundle: Generated at ./proof/v3.5/
+
+RESULT: V3.5 CERTIFIED
+
+Deliverables
+
+Count of files changed
+Count of replacements made per category (routes, payloads, UI copy, components)
+Terminal output of tsx scripts/v35-cert.ts showing 0 violations
+Regenerated proof bundle in ./proof/v3.5/

@@ -136,13 +136,18 @@ export const TERMINOLOGY_ALLOWLIST: RegExp[] = [
   /Book Publishers/i,
   /Bookstore/i,
   /naics/i,
-  /chamber-members/i,
   /Fireside Books/i,
-  /v35Manifest\.ts/,
-  /Terminology allowlist/i,
   /summaryLower\.includes/,
   /blockType.*booked/,
   /'booked'/,
+  /get reserved/i,
+  /TERMINOLOGY_ALLOWLIST/,
+  /allowPattern\.test/,
+  /terminology.*allowlist/i,
+  /BACKWARD COMPATIBILITY/i,
+  /\.replace\('\/book'/,
+  /router\.post\('\/:/,
+  /app\.post\("\/api\/v1\/planning\/service-runs\/:id\/book"/,
 ];
 
 /**

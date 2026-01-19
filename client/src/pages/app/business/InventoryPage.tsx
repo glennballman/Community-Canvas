@@ -71,7 +71,7 @@ export default function InventoryPage() {
         <div>
           <h1 className="text-2xl font-bold">Assets</h1>
           <p className="text-muted-foreground">
-            Things you can book out — rooms, parking spots, equipment, tools.
+            Things you can reserve — rooms, parking spots, equipment, tools.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

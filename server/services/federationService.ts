@@ -1,7 +1,7 @@
 /**
  * V3.3.1 Federation Service
  * Enable cross-tenant access for Chamber operators and partners
- * "Bamfield as one resort" - Chamber can search and book across all federated providers
+ * "Bamfield as one resort" - Chamber can search and reserve across all federated providers
  */
 
 import { db } from '../db';

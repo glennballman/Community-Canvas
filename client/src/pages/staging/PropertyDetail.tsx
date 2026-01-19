@@ -540,7 +540,7 @@ export default function PropertyDetail() {
                     data-testid="button-book-now"
                     onClick={() => {
                       if (checkIn && checkOut) {
-                        setLocation(`/staging/${propertyId}/book?checkIn=${checkIn}&checkOut=${checkOut}`);
+                        setLocation(`/staging/${propertyId}/reserve?checkIn=${checkIn}&checkOut=${checkOut}`);
                       }
                     }}
                   >

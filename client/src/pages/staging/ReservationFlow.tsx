@@ -29,7 +29,7 @@ interface PricingEstimate {
 }
 
 export default function ReservationFlow() {
-  const [, params] = useRoute('/staging/:id/book');
+  const [, params] = useRoute('/staging/:id/reserve');
   const [, setLocation] = useLocation();
   const id = params?.id;
 

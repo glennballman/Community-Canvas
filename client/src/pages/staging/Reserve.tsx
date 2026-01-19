@@ -129,7 +129,7 @@ function StepIndicator({ currentStep, steps }: { currentStep: number; steps: str
 }
 
 export default function BookStaging() {
-  const [, params] = useRoute('/staging/:id/book');
+  const [, params] = useRoute('/staging/:id/reserve');
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const propertyId = params?.id ? parseInt(params.id) : null;
@@ -370,7 +370,7 @@ export default function BookStaging() {
 
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold mb-1">Book Your Stay</h1>
+            <h1 className="text-2xl font-bold mb-1">Reserve Your Stay</h1>
             <p className="text-muted-foreground">{property.name}</p>
           </div>
 

@@ -2951,8 +2951,8 @@ export async function registerRoutes(
     }
   });
 
-  // POST /api/v1/planning/service-runs/:id/book - Book slot on service run
-  app.post("/api/v1/planning/service-runs/:id/book", async (req, res) => {
+  // POST /api/v1/planning/service-runs/:id/reserve - Reserve slot on service run
+  app.post("/api/v1/planning/service-runs/:id/reserve", async (req, res) => {
     try {
       const { id } = req.params;
       const { customer_name, customer_email, customer_phone, customer_address, job_description, estimated_duration_hours, job_value, preferred_time } = req.body;
@@ -2985,6 +2985,12 @@ export async function registerRoutes(
       console.error('Error reservation slot:', error);
       res.status(500).json({ error: 'Failed to reserve slot' });
     }
+  });
+
+  // BACKWARD COMPATIBILITY: Alias for legacy clients
+  app.post("/api/v1/planning/service-runs/:id/book", (req, res, next) => {
+    req.url = req.url.replace('/book', '/reserve');
+    next('route');
   });
 
   // POST /api/v1/planning/assess/participant-trip - Assess participant skills for trip
