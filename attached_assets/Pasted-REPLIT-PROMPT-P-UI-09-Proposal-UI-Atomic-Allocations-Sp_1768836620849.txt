@@ -1,0 +1,289 @@
+REPLIT PROMPT — P-UI-09 Proposal UI (Atomic Allocations + Split Pay + Invite + Refund Hooks)
+
+ROLE: Senior frontend engineer for Community Canvas V3.5 public + internal reservation UI.
+HARD RULES:
+
+Never use the words book or booking. Use reserve / reservation.
+
+Availability-first: users see availability before entering personal data.
+
+Public unauthenticated proposal view must anonymize participants (already handled by API).
+
+Atomic unit is cc_surface_units. UI must drill down to unit level.
+
+No big refactors. Additive changes only.
+
+Goal
+
+Create the Proposal UI step(s) that render the proposal returned by:
+GET /api/p2/app/proposals/:proposalId
+and enable:
+
+Invite participants (token link)
+
+Assign units to participants (planner)
+
+Per-participant folio summary and “Pay your share”
+
+Operator credit issuance (guarded behind role)
+
+A) Routes / Pages
+
+Add routes:
+
+Public:
+
+/p/proposal/:proposalId (public view; uses anonymous mode)
+
+/p/proposal/:proposalId/pay/:token (invite token view; if token present, show payer’s allocation + folio)
+
+App (authenticated):
+
+/app/proposals/:proposalId (planner/operator view)
+
+Use existing routing structure in client/src/public and client/src/app.
+
+B) Data hooks
+
+Create a shared API client wrapper:
+
+client/src/shared/api/proposals.ts
+
+getProposal(proposalId)
+
+inviteProposalMember(proposalId, payload)
+
+assignUnits(proposalId, payload)
+
+client/src/shared/api/folios.ts
+
+payFolio(folioId, payload)
+
+creditFolio(folioId, payload) (operator only)
+
+Use React Query and match existing envelope { ok, error?, ... }.
+
+C) UI Components
+
+Create these components (or equivalents):
+
+1) ProposalHeaderCard
+
+Shows:
+
+title
+
+date range (humanized)
+
+status (draft/held/confirmed)
+
+privacy note: “Guest names hidden until confirmed”
+
+2) ParticipantList
+
+For each participant:
+
+display name (or Guest A)
+
+role badge (party_member/co_planner/etc.)
+
+assigned unit counts by type:
+
+SleepSurface: N
+
+SitSurface: N
+
+StandSurface: N
+
+UtilitySurface: N (if present)
+
+“View allocation” button
+
+3) AllocationDrilldownDrawer
+
+When opening a participant:
+
+show container path: Cottage → Room → BedObject
+
+show each atomic unit:
+
+unit label (e.g., TopBunk-1)
+
+unit_type
+
+accessibility flags (grates/steps/width/slope if included)
+
+utility notes if present
+
+placeholder photo panel (don’t implement uploads yet; show “Photos coming”)
+
+4) FolioSummaryCard
+
+Shows:
+
+total charges
+
+total credits (reversals)
+
+total payments
+
+outstanding balance
+
+line item preview grouped by category:
+
+lodging
+
+food_beverage
+
+activity_rental
+
+parking/moorage
+Each line item should show if it’s linked to a unit/claim (small “linked” icon).
+
+5) PayYourSharePanel
+
+If the viewer is:
+
+token-holder OR authenticated participant
+Show:
+
+outstanding balance
+
+amount input (default = outstanding)
+
+“Pay now (test)” button
+Calls POST /api/p2/app/folios/:folioId/pay
+
+6) InvitePanel
+
+Planner-only:
+
+invite by email/phone (simple input)
+
+role dropdown (party_member, co_planner, kid_planner, handoff_recipient, partner_invite)
+
+“Create invite”
+Show returned token + “Copy link” button.
+
+7) AssignUnitsPanel
+
+Planner-only:
+
+choose participant
+
+list unassigned units by type (sleep/sit/stand/utility)
+
+allow selecting unit_ids and assign
+Calls /assign
+
+8) OperatorCreditPanel
+
+Operator-only:
+
+select a ledger line to reverse (dropdown from folio line items)
+
+amount input
+
+incident_type dropdown (illness_refund, staff_damage, goodwill_refund, injury, other)
+
+notes
+Calls /folios/:folioId/credit
+
+D) Screen layouts
+Public Proposal Page
+
+HeaderCard
+
+ParticipantList (read-only)
+
+For each participant: FolioSummaryCard (read-only totals)
+
+Pay panel only if token view grants access
+
+App Proposal Page (planner/operator)
+
+HeaderCard
+
+InvitePanel
+
+AssignUnitsPanel
+
+ParticipantList with drilldown
+
+Click participant → Drilldown drawer + Folio summary
+
+OperatorCreditPanel on each folio if role allows
+
+E) State rules & safeguards
+
+If unauthenticated:
+
+do not show emails/phones
+
+show participant display names as API sends (Guest A etc.)
+
+Never show “reserve” actions here; proposal is post-availability.
+
+All unit assignment must be idempotent; refresh proposal after mutations.
+
+Add empty states:
+
+“No assigned units yet”
+
+“No outstanding balance”
+
+F) Copy rules
+
+Use terminology consistently:
+
+“reservation”
+
+“reserve”
+
+“hold”
+
+“allocation”
+
+“sleep spot / seat / standing spot / power endpoint”
+Avoid:
+
+book/booking
+
+bed (except as marketing label; primary term is sleep spot)
+
+G) QA checklist (must pass)
+
+Load /api/dev/seed/proposals/wedding-stress/:proposalId payload into UI with no crashes.
+
+Public page shows Guest A/B labels when not authenticated.
+
+Invite returns token link displayed + copy works.
+
+Assign units updates allocations.
+
+Pay stub posts payment and outstanding decreases.
+
+Credit reversal posts and outstanding decreases; incident recorded.
+
+Allocation drilldown shows atomic unit list + container path.
+
+Deliverables
+
+new pages and routes
+
+shared API clients
+
+UI components listed above
+
+wiring + query invalidation
+
+minimal styling consistent with existing shell (no new design system)
+
+If you run P-UI-09 and paste back a screenshot of:
+
+proposal page with 10 participants
+
+one drilldown showing unit list
+
+a folio after payment + after credit
+…I’ll give you P-UI-10 to finish: (1) availability → proposal handoff, (2) “send to boss” flow, (3) N3 risk banners embedded where they print money (and prevent disaster).
