@@ -118,6 +118,12 @@ import PortalJobApplyPage from './pages/public/PortalJobApplyPage';
 import PortalCampaignApplyPage from './pages/public/PortalCampaignApplyPage';
 import PortalEmployerPage from './pages/public/PortalEmployerPage';
 
+// Pages - Public Proposal (P-UI-09)
+import PublicProposalPage from './pages/public/PublicProposalPage';
+
+// Pages - App Proposal (P-UI-09)
+import ProposalDetailPage from './pages/app/ProposalDetailPage';
+
 // Pages - Public Reservation Routes
 import { PublicReserveRoutes } from './public/routes/PublicReserveRoutes';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
@@ -239,6 +245,12 @@ export default function App() {
               
               {/* Public Trip Portal - guest-facing trip view */}
               <Route path="/trip/:accessCode" element={<TripPortalPage />} />
+              
+              {/* ========================================== */}
+              {/* PUBLIC PROPOSAL - /p/proposal/:proposalId */}
+              {/* ========================================== */}
+              <Route path="/p/proposal/:proposalId" element={<PublicProposalPage />} />
+              <Route path="/p/proposal/:proposalId/pay/:token" element={<PublicProposalPage />} />
               
               {/* ========================================== */}
               {/* PUBLIC JOBS PORTAL - /b/:portalSlug/jobs  */}
@@ -377,6 +389,7 @@ export default function App() {
                 <Route path="assets/:id" element={<InventoryItemDetail />} />
                 <Route path="reservations" element={<ReservationsIndexPage />} />
                 <Route path="reservations/:id" element={<ReservationDetailPage />} />
+                <Route path="proposals/:proposalId" element={<ProposalDetailPage />} />
                 <Route path="customers" element={<CustomersPage />} />
                 
                 {/* Redirects from old paths */}
