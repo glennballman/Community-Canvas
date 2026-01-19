@@ -121,6 +121,7 @@ import p2ConversationsRouter from "./routes/p2-conversations";
 import p2ParkingRouter from "./routes/p2-parking";
 import p2MarinaRouter from "./routes/p2-marina";
 import { createParticipantTripsRouter } from "./routes/participant-trips";
+import participantRouter from "./routes/participant";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -487,6 +488,9 @@ export async function registerRoutes(
 
   // Participant Trips (P-UI-13A)
   app.use('/api/p2/app/participant/trips', createParticipantTripsRouter());
+
+  // Participant Applications (M-1B)
+  app.use('/api/participant', participantRouter);
 
   // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {

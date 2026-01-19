@@ -151,6 +151,8 @@ import PortalsPage from './pages/app/admin/PortalsPage';
 // Pages - Participant (P-UI-13A)
 import MyTripsPage from './pages/app/participant/MyTripsPage';
 import TripDetailPage from './pages/app/participant/TripDetailPage';
+import MyApplicationsPage from './pages/app/participant/MyApplicationsPage';
+import ApplicationDetailPage from './pages/app/participant/ApplicationDetailPage';
 import PortalAppearancePage from './pages/app/admin/PortalAppearancePage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
@@ -412,6 +414,8 @@ export default function App() {
                 {/* Participant routes (P-UI-13A) */}
                 <Route path="participant/trips" element={<MyTripsPage />} />
                 <Route path="participant/trips/:tripId" element={<TripDetailPage />} />
+                <Route path="participant/applications" element={<MyApplicationsPage />} />
+                <Route path="participant/applications/:appId" element={<ApplicationDetailPage />} />
                 
                 {/* Shared routes */}
                 <Route path="messages" element={<ConversationsPage />} />

@@ -1818,4 +1818,318 @@ router.patch('/:jobId/emergency-replacement-request/:requestId', async (req: Req
   }
 });
 
+// ============================================
+// M-1B: Job Application Conversations API
+// ============================================
+
+import { 
+  findOrCreateJobApplicationConversation, 
+  getJobApplicationConversation,
+  incrementJobConversationUnread 
+} from '../services/jobApplicationConversations';
+
+// GET conversation bootstrap - validates caller, returns/creates conversation
+router.get('/:jobId/applications/:appId/conversation', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, appId } = req.params;
+
+  if (!ctx?.tenant_id && !ctx?.individual_id) {
+    return res.status(401).json({
+      ok: false,
+      error: { code: 'AUTH_REQUIRED', message: 'Authentication required' }
+    });
+  }
+
+  try {
+    // First verify the application exists and get details
+    const appResult = await serviceQuery(`
+      SELECT 
+        a.id,
+        a.job_id,
+        a.applicant_individual_id,
+        a.tenant_id,
+        j.tenant_id as job_tenant_id,
+        (SELECT id FROM cc_parties WHERE tenant_id = j.tenant_id LIMIT 1) as operator_party_id
+      FROM cc_job_applications a
+      JOIN cc_jobs j ON j.id = a.job_id
+      WHERE a.id = $1 AND a.job_id = $2
+    `, [appId, jobId]);
+
+    if (appResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Application not found' }
+      });
+    }
+
+    const app = appResult.rows[0];
+    const isOperator = ctx.tenant_id === app.job_tenant_id;
+    const isApplicant = ctx.individual_id === app.applicant_individual_id;
+
+    if (!isOperator && !isApplicant) {
+      return res.status(403).json({
+        ok: false,
+        error: { code: 'FORBIDDEN', message: 'Access denied' }
+      });
+    }
+
+    // Find or create conversation
+    const conversation = await findOrCreateJobApplicationConversation({
+      jobId: app.job_id,
+      applicationId: app.id,
+      applicantIndividualId: app.applicant_individual_id,
+      operatorPartyId: app.operator_party_id,
+      operatorIndividualId: ctx.individual_id && isOperator ? ctx.individual_id : undefined,
+      tenantId: app.job_tenant_id,
+    });
+
+    // Fetch messages
+    const messagesResult = await serviceQuery(`
+      SELECT 
+        m.id,
+        m.content,
+        m.message_type,
+        m.created_at,
+        CASE 
+          WHEN m.from_party_id = $2 THEN 'me'
+          ELSE 'them'
+        END as sender_role,
+        COALESCE(
+          (SELECT display_name FROM cc_individuals WHERE id = m.from_individual_id),
+          (SELECT trade_name FROM cc_parties WHERE id = m.from_party_id),
+          'Unknown'
+        ) as sender_display_name,
+        CASE 
+          WHEN c.contact_unlocked = false AND m.message_type = 'contact_share' THEN true
+          ELSE false
+        END as was_redacted
+      FROM cc_messages m
+      JOIN cc_conversations c ON c.id = m.conversation_id
+      WHERE m.conversation_id = $1
+      ORDER BY m.created_at ASC
+      LIMIT 200
+    `, [conversation.id, isOperator ? app.operator_party_id : null]);
+
+    // Get conversation summary
+    const convResult = await serviceQuery(`
+      SELECT 
+        c.id,
+        c.state,
+        c.contact_unlocked,
+        c.message_count,
+        c.unread_owner,
+        c.unread_contractor,
+        c.last_message_at
+      FROM cc_conversations c
+      WHERE c.id = $1
+    `, [conversation.id]);
+
+    const myRole = isOperator ? 'operator' : 'applicant';
+
+    res.json({
+      ok: true,
+      conversationId: conversation.id,
+      conversationSummary: convResult.rows[0],
+      messages: messagesResult.rows,
+      myRole,
+      isNewConversation: conversation.created,
+    });
+
+  } catch (error: any) {
+    console.error('Job conversation bootstrap error:', error);
+    res.status(500).json({
+      ok: false,
+      error: { code: 'INTERNAL', message: 'Failed to load conversation' }
+    });
+  }
+});
+
+// POST send message
+router.post('/:jobId/applications/:appId/conversation/messages', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, appId } = req.params;
+  const { content, attachments, structuredData } = req.body;
+
+  if (!ctx?.individual_id) {
+    return res.status(401).json({
+      ok: false,
+      error: { code: 'AUTH_REQUIRED', message: 'Authentication required' }
+    });
+  }
+
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    return res.status(400).json({
+      ok: false,
+      error: { code: 'INVALID_INPUT', message: 'Message content required' }
+    });
+  }
+
+  try {
+    // Verify application and get conversation
+    const appResult = await serviceQuery(`
+      SELECT 
+        a.id,
+        a.job_id,
+        a.applicant_individual_id,
+        a.tenant_id,
+        j.tenant_id as job_tenant_id,
+        c.id as conversation_id,
+        c.contractor_party_id,
+        c.owner_party_id
+      FROM cc_job_applications a
+      JOIN cc_jobs j ON j.id = a.job_id
+      LEFT JOIN cc_conversations c ON c.job_application_id = a.id
+      WHERE a.id = $1 AND a.job_id = $2
+    `, [appId, jobId]);
+
+    if (appResult.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Application not found' }
+      });
+    }
+
+    const app = appResult.rows[0];
+    const isOperator = ctx.tenant_id === app.job_tenant_id;
+    const isApplicant = ctx.individual_id === app.applicant_individual_id;
+
+    if (!isOperator && !isApplicant) {
+      return res.status(403).json({
+        ok: false,
+        error: { code: 'FORBIDDEN', message: 'Access denied' }
+      });
+    }
+
+    if (!app.conversation_id) {
+      return res.status(400).json({
+        ok: false,
+        error: { code: 'NO_CONVERSATION', message: 'Conversation not yet started' }
+      });
+    }
+
+    const senderPartyId = isOperator ? app.owner_party_id : app.contractor_party_id;
+    const senderRole = isOperator ? 'operator' : 'applicant';
+
+    // Insert the message using service transaction
+    const messageResult = await withServiceTransaction(async (client) => {
+      const msgResult = await client.query(`
+        INSERT INTO cc_messages (
+          conversation_id,
+          from_party_id,
+          from_individual_id,
+          content,
+          message_type,
+          attachments,
+          structured_data
+        ) VALUES ($1, $2, $3, $4, 'text', $5, $6)
+        RETURNING id, content, message_type, created_at
+      `, [
+        app.conversation_id,
+        senderPartyId,
+        ctx.individual_id,
+        content.trim(),
+        attachments ? JSON.stringify(attachments) : null,
+        structuredData ? JSON.stringify(structuredData) : null
+      ]);
+
+      // Update conversation counters and timestamp
+      await client.query(`
+        UPDATE cc_conversations
+        SET 
+          last_message_at = now(),
+          updated_at = now(),
+          message_count = message_count + 1
+        WHERE id = $1
+      `, [app.conversation_id]);
+
+      return msgResult.rows[0];
+    });
+
+    // Increment unread counter for the other party
+    await incrementJobConversationUnread(app.conversation_id, senderRole);
+
+    res.json({
+      ok: true,
+      message: {
+        ...messageResult,
+        sender_role: 'me',
+        sender_display_name: ctx.individual_id ? 'You' : 'Unknown',
+        was_redacted: false
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Job conversation send error:', error);
+    res.status(500).json({
+      ok: false,
+      error: { code: 'INTERNAL', message: 'Failed to send message' }
+    });
+  }
+});
+
+// POST mark-read
+router.post('/:jobId/applications/:appId/conversation/mark-read', async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  const ctx = tenantReq.ctx;
+  const { jobId, appId } = req.params;
+
+  if (!ctx?.individual_id) {
+    return res.status(401).json({
+      ok: false,
+      error: { code: 'AUTH_REQUIRED', message: 'Authentication required' }
+    });
+  }
+
+  try {
+    // Verify access and get conversation
+    const appResult = await serviceQuery(`
+      SELECT 
+        a.applicant_individual_id,
+        j.tenant_id as job_tenant_id,
+        c.id as conversation_id
+      FROM cc_job_applications a
+      JOIN cc_jobs j ON j.id = a.job_id
+      LEFT JOIN cc_conversations c ON c.job_application_id = a.id
+      WHERE a.id = $1 AND a.job_id = $2
+    `, [appId, jobId]);
+
+    if (appResult.rows.length === 0 || !appResult.rows[0].conversation_id) {
+      return res.status(404).json({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Conversation not found' }
+      });
+    }
+
+    const app = appResult.rows[0];
+    const isOperator = ctx.tenant_id === app.job_tenant_id;
+    const isApplicant = ctx.individual_id === app.applicant_individual_id;
+
+    if (!isOperator && !isApplicant) {
+      return res.status(403).json({
+        ok: false,
+        error: { code: 'FORBIDDEN', message: 'Access denied' }
+      });
+    }
+
+    // Reset the appropriate unread counter
+    const counterField = isOperator ? 'unread_owner' : 'unread_contractor';
+    await serviceQuery(`
+      UPDATE cc_conversations
+      SET ${counterField} = 0, updated_at = now()
+      WHERE id = $1
+    `, [app.conversation_id]);
+
+    res.json({ ok: true });
+
+  } catch (error: any) {
+    console.error('Job conversation mark-read error:', error);
+    res.status(500).json({
+      ok: false,
+      error: { code: 'INTERNAL', message: 'Failed to mark read' }
+    });
+  }
+});
+
 export default router;

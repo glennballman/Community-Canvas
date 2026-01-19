@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { JobConversationPanel } from '@/components/jobs/JobConversationPanel';
 
 interface Application {
   id: string;
@@ -503,6 +504,13 @@ export default function JobApplicationsPage() {
                   </Button>
                 </div>
               </div>
+
+              <Separator />
+
+              <JobConversationPanel 
+                jobId={jobId!} 
+                applicationId={selectedApp.id} 
+              />
             </div>
           )}
 
