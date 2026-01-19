@@ -1,0 +1,140 @@
+You are auditing Community Canvas V3.5 media and messaging capabilities.
+Goal: Full inventory of Cloudflare media integration + messaging/conversations across Jobs, Housekeeping, and Contractor workflows.
+
+PART 1: CLOUDFLARE MEDIA INTEGRATION
+
+1A) DATABASE - Media Tables
+Search for ALL media-related tables:
+- Tables with "media", "photo", "video", "image", "attachment", "upload" in name
+- Any table with columns: photo_url, video_url, media_ids, cf_image_id, cf_stream_id, cloudflare_*, thumbnail_url
+- Check these specific table families:
+  - cc_job_* (job postings, applications)
+  - cc_work_* (work requests, quotes)
+  - cc_surface_tasks (housekeeping)
+  - cc_refund_incidents
+  - cc_media_assets (already known)
+
+1B) BACKEND - Cloudflare Integration
+- grep for "cloudflare", "CF_", "CLOUDFLARE", "images.cloudflare", "stream.cloudflare" in server/
+- Find upload endpoints: POST /api/*/upload, /api/media/*, /api/images/*, /api/videos/*
+- Check for Cloudflare SDK imports (cloudflare-images, @cloudflare/stream, etc.)
+- Note environment variables for Cloudflare credentials
+- Check for signed URL generation, direct creator uploads, or proxy uploads
+
+1C) FRONTEND - Media Components
+- Find photo/video upload components
+- Find Cloudflare Stream player usage
+- Find image preview/thumbnail components
+- Note which pages/features use media uploads
+
+---
+
+PART 2: JOBS MESSAGING & CONVERSATIONS
+
+2A) DATABASE
+- Check cc_conversations for job-related columns: job_id, job_application_id, job_posting_id
+- Check cc_job_applications for message/thread columns
+- Check for any cc_job_messages or cc_job_threads tables
+- Look for applicant ↔ operator communication schema
+
+2B) BACKEND
+- Find endpoints under /api/jobs/* related to messaging
+- Find endpoints under /api/applications/* related to messaging
+- Check if jobs reuse /api/conversations/* system or have separate routes
+
+2C) FRONTEND
+- Check job application detail pages for messaging UI
+- Check operator job management pages for applicant communication
+- Note if ConversationView component is reused or if jobs has separate messaging UI
+
+2D) WORKFLOW STATUS
+- Can applicants message operators about a job posting? (How?)
+- Can operators message applicants about their application? (How?)
+- Are these messages threaded or one-off?
+
+---
+
+PART 3: CONTRACTOR MESSAGING & BID PHOTOS
+
+3A) DATABASE
+- Check cc_work_requests, cc_quotes, cc_bids for:
+  - Messaging/thread columns
+  - Photo/media attachment columns
+  - Conversation linkage
+- Check if contractors have dedicated conversation tables
+
+3B) BACKEND
+- Find endpoints for contractor ↔ property owner/operator messaging
+- Find endpoints for bid/quote photo uploads
+- Check /api/work/*, /api/quotes/*, /api/bids/* for media and messaging
+
+3C) FRONTEND
+- Check work request pages for messaging between parties
+- Check quote/bid submission for photo upload capability
+- Check contractor dashboard for conversation access
+
+3D) WORKFLOW STATUS
+- Can contractors upload photos with bids/quotes? (How?)
+- Can property owners message contractors about work? (How?)
+- Can contractors message back? (How?)
+- Are work request conversations separate from general messaging?
+
+---
+
+PART 4: HOUSEKEEPING MEDIA
+
+4A) DATABASE
+- Check cc_surface_tasks for photo columns (before_photo, after_photo, issue_photo)
+- Check for housekeeping-specific media tables
+- Check cc_media_assets usage for housekeeping context
+
+4B) BACKEND
+- Find endpoints for housekeeping photo uploads
+- Check if housekeeping uses cc_media_assets or has separate storage
+
+4C) FRONTEND
+- Check housekeeping task UI for photo capture/upload
+- Check if before/after photos are supported
+
+---
+
+PART 5: OUTPUT SUMMARY
+
+Return structured report:
+
+{
+  "cloudflare": {
+    "images_enabled": bool,
+    "stream_enabled": bool,
+    "env_vars": [],
+    "upload_endpoints": [],
+    "sdk_usage": []
+  },
+  "jobs_messaging": {
+    "tables": [],
+    "endpoints": [],
+    "ui_pages": [],
+    "applicant_can_message_operator": bool,
+    "operator_can_message_applicant": bool,
+    "reuses_conversations_system": bool,
+    "status": "complete" | "partial" | "missing"
+  },
+  "contractor_messaging": {
+    "tables": [],
+    "endpoints": [],
+    "ui_pages": [],
+    "bid_photo_upload": bool,
+    "contractor_operator_messaging": bool,
+    "status": "complete" | "partial" | "missing"
+  },
+  "housekeeping_media": {
+    "tables": [],
+    "endpoints": [],
+    "photo_columns": [],
+    "before_after_supported": bool,
+    "status": "complete" | "partial" | "missing"
+  },
+  "gaps": [
+    { "area": "...", "description": "...", "priority": "high|med|low" }
+  ]
+}
