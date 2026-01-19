@@ -1,0 +1,58 @@
+NEXT: M-4 — Housekeeping Before / After / Issue Photos
+
+Your earlier audit says this is currently missing, and now you have all primitives to ship it quickly.
+
+Replit Prompt M-4 (Additive-only, matches your media patterns)
+Community Canvas V3.5 — Additive-only.
+
+Goal: Add housekeeping task photos (before/after/issue) using cc_media, MediaUpload, MediaGallery.
+
+1) INVENTORY (evidence required)
+- Locate cc_surface_tasks schema and confirm PK (task id).
+- Locate housekeeping UI (list page + any task detail/modal).
+- Identify how a user is authorized to act on a task (crew assignment, role, portal/tenant).
+
+2) ENTITY TYPE + KIND
+- Use entity_type = "surface_task" (or match existing convention if already used elsewhere).
+- Store kind using cc_media.role field via complete payload:
+  role = "before" | "after" | "issue"
+(Do not add new DB columns to cc_surface_tasks.)
+
+3) BACKEND PERMISSIONS (in server/routes/media.ts)
+Extend canModifyEntityMedia() to support entity_type='surface_task':
+- Allow upload/delete if:
+  a) Operator/Admin for the portal/tenant that owns the task, OR
+  b) Assigned crew member for that task (if assignment model exists)
+- Ensure portal scoping and reject cross-tenant ids.
+- Enforce checks on /presign, /upload (if used), and DELETE /:id.
+
+4) FRONTEND UI
+In housekeeping task detail view (or add a minimal TaskDetailDrawer if only list exists):
+Add 3 sections:
+
+A) Before Photos
+- MediaUpload entityType="surface_task" entityId={taskId} multiple maxFiles=10 kindTag="before"
+- Gallery filtered where asset.role === "before"
+
+B) After Photos
+- MediaUpload ... kindTag="after"
+- Gallery filtered where asset.role === "after"
+
+C) Issue Photos
+- MediaUpload ... kindTag="issue"
+- Gallery filtered where asset.role === "issue"
+
+Fetch assets:
+- const { assets } = useEntityMedia("surface_task", taskId)
+- split into three arrays by role
+
+5) QA
+- Verify operator can upload before/after/issue and they appear in the correct section
+- Verify unauthorized user cannot presign for arbitrary taskId
+- Verify delete permission is enforced
+- Terminology scan must remain clean
+
+Return:
+- files changed
+- chosen entity_type string
+- permission logic summary for surface_task

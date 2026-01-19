@@ -24,8 +24,24 @@ function getActorId(req: Request): string | null {
   return (req as TenantRequest).ctx?.individual_id || null;
 }
 
-// Check if user can modify media for an entity (bid-specific permission checks)
-async function canModifyEntityMedia(tenantId: string, entityType?: string, entityId?: string): Promise<{ allowed: boolean; error?: string }> {
+// Helper to get portal ID from request context
+function getPortalId(req: Request): string | null {
+  return (req as TenantRequest).ctx?.portal_id || null;
+}
+
+// Helper to get user ID from request context
+function getUserId(req: Request): string | null {
+  return (req as TenantRequest).user?.id || null;
+}
+
+// Check if user can modify media for an entity (entity-specific permission checks)
+async function canModifyEntityMedia(
+  tenantId: string, 
+  entityType?: string, 
+  entityId?: string,
+  portalId?: string | null,
+  userId?: string | null
+): Promise<{ allowed: boolean; error?: string }> {
   if (!entityType || !entityId) {
     return { allowed: true };
   }
@@ -51,6 +67,61 @@ async function canModifyEntityMedia(tenantId: string, entityType?: string, entit
     } catch (error) {
       console.error('[Media] Bid permission check error:', error);
       return { allowed: false, error: 'Failed to verify bid ownership' };
+    }
+  }
+  
+  if (entityType === 'surface_task') {
+    try {
+      const taskResult = await pool.query(
+        `SELECT id, portal_id, tenant_id, assigned_to_user_id FROM cc_surface_tasks WHERE id = $1::uuid`,
+        [entityId]
+      );
+      if (taskResult.rows.length === 0) {
+        return { allowed: false, error: 'Task not found' };
+      }
+      const task = taskResult.rows[0];
+      
+      // Task must belong to current tenant (required tenant scoping)
+      if (task.tenant_id !== tenantId) {
+        return { allowed: false, error: 'Task does not belong to your tenant' };
+      }
+      
+      // Check assigned user first (most common case for housekeeping crew)
+      const isAssignedUser = userId && task.assigned_to_user_id === userId;
+      if (isAssignedUser) {
+        return { allowed: true };
+      }
+      
+      // Check if user is a portal admin/owner for the task's portal
+      if (userId && task.portal_id) {
+        const portalMemberResult = await pool.query(
+          `SELECT role FROM cc_portal_members WHERE portal_id = $1 AND individual_id = (
+            SELECT id FROM cc_tenant_individuals WHERE user_id = $2 AND tenant_id = $3 LIMIT 1
+          ) AND is_active = true`,
+          [task.portal_id, userId, tenantId]
+        );
+        const portalRole = portalMemberResult.rows[0]?.role;
+        if (portalRole === 'owner' || portalRole === 'admin') {
+          return { allowed: true };
+        }
+      }
+      
+      // Check if user is tenant admin/owner (query cc_tenant_users)
+      if (userId) {
+        const membershipResult = await pool.query(
+          `SELECT role FROM cc_tenant_users WHERE tenant_id = $1 AND user_id = $2`,
+          [tenantId, userId]
+        );
+        const memberRole = membershipResult.rows[0]?.role;
+        if (memberRole === 'owner' || memberRole === 'admin') {
+          return { allowed: true };
+        }
+      }
+      
+      return { allowed: false, error: 'You do not have permission to modify this task' };
+    } catch (error) {
+      console.error('[Media] Surface task permission check error:', error);
+      return { allowed: false, error: 'Failed to verify task ownership' };
     }
   }
   
@@ -103,6 +174,8 @@ router.post('/upload', requireAuth, upload.single('file'), async (req: Request, 
   try {
     const tenantId = getTenantId(req);
     const actorId = getActorId(req);
+    const portalId = getPortalId(req);
+    const userId = getUserId(req);
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -119,7 +192,7 @@ router.post('/upload', requireAuth, upload.single('file'), async (req: Request, 
     
     const { entity_type, entity_id, role, alt_text, purpose } = parsed.data;
     
-    const permCheck = await canModifyEntityMedia(tenantId, entity_type, entity_id);
+    const permCheck = await canModifyEntityMedia(tenantId, entity_type, entity_id, portalId, userId);
     if (!permCheck.allowed) {
       return res.status(403).json({ success: false, error: permCheck.error });
     }
@@ -155,6 +228,8 @@ router.post('/upload', requireAuth, upload.single('file'), async (req: Request, 
 router.post('/presign', requireAuth, async (req: Request, res: Response) => {
   try {
     const tenantId = getTenantId(req);
+    const portalId = getPortalId(req);
+    const userId = getUserId(req);
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -167,7 +242,7 @@ router.post('/presign', requireAuth, async (req: Request, res: Response) => {
     
     const { filename, content_type, entity_type, entity_id } = parsed.data;
     
-    const permCheck = await canModifyEntityMedia(tenantId, entity_type, entity_id);
+    const permCheck = await canModifyEntityMedia(tenantId, entity_type, entity_id, portalId, userId);
     if (!permCheck.allowed) {
       return res.status(403).json({ success: false, error: permCheck.error });
     }
@@ -263,6 +338,8 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const tenantId = getTenantId(req);
+    const portalId = getPortalId(req);
+    const userId = getUserId(req);
     
     if (!tenantId) {
       return res.status(400).json({ success: false, error: 'Tenant context required' });
@@ -273,7 +350,7 @@ router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Media not found' });
     }
     
-    const permCheck = await canModifyEntityMedia(tenantId, media.entity_type || undefined, media.entity_id || undefined);
+    const permCheck = await canModifyEntityMedia(tenantId, media.entity_type || undefined, media.entity_id || undefined, portalId, userId);
     if (!permCheck.allowed) {
       return res.status(403).json({ success: false, error: permCheck.error });
     }

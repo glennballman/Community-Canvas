@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sparkles, ClipboardCheck, Wrench, Search, Filter, Plus, Clock, User, MapPin, Camera } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { TaskDetailDrawer } from '@/components/ops/TaskDetailDrawer';
 
 type TaskType = 'clean' | 'setup' | 'inspect' | 'repair';
 type TaskStatus = 'open' | 'in_progress' | 'done' | 'canceled';
@@ -61,11 +62,11 @@ const priorityColors: Record<number, string> = {
   5: 'bg-muted text-muted-foreground border-muted-foreground/30',
 };
 
-function TaskCard({ task, onStatusChange }: { task: HousekeepingTask; onStatusChange: (id: string, status: TaskStatus) => void }) {
+function TaskCard({ task, onStatusChange, onSelect }: { task: HousekeepingTask; onStatusChange: (id: string, status: TaskStatus) => void; onSelect: (task: HousekeepingTask) => void }) {
   const Icon = taskTypeIcons[task.task_type];
   
   return (
-    <Card className="mb-2 cursor-pointer hover-elevate" data-testid={`task-card-${task.id}`}>
+    <Card className="mb-2 cursor-pointer hover-elevate" data-testid={`task-card-${task.id}`} onClick={() => onSelect(task)}>
       <CardContent className="p-3">
         <div className="flex items-start gap-2 mb-2">
           <div className={`p-1.5 rounded ${priorityColors[task.priority] || priorityColors[5]}`}>
@@ -111,7 +112,7 @@ function TaskCard({ task, onStatusChange }: { task: HousekeepingTask; onStatusCh
                 size="sm" 
                 variant="outline" 
                 className="text-xs h-7"
-                onClick={() => onStatusChange(task.id, 'in_progress')}
+                onClick={(e) => { e.stopPropagation(); onStatusChange(task.id, 'in_progress'); }}
                 data-testid={`button-start-${task.id}`}
               >
                 Start
@@ -122,7 +123,7 @@ function TaskCard({ task, onStatusChange }: { task: HousekeepingTask; onStatusCh
                 size="sm" 
                 variant="default" 
                 className="text-xs h-7"
-                onClick={() => onStatusChange(task.id, 'done')}
+                onClick={(e) => { e.stopPropagation(); onStatusChange(task.id, 'done'); }}
                 data-testid={`button-complete-${task.id}`}
               >
                 Complete
@@ -135,11 +136,12 @@ function TaskCard({ task, onStatusChange }: { task: HousekeepingTask; onStatusCh
   );
 }
 
-function KanbanColumn({ title, tasks, status, onStatusChange }: { 
+function KanbanColumn({ title, tasks, status, onStatusChange, onSelect }: { 
   title: string; 
   tasks: HousekeepingTask[]; 
   status: TaskStatus; 
   onStatusChange: (id: string, status: TaskStatus) => void;
+  onSelect: (task: HousekeepingTask) => void;
 }) {
   const columnTasks = tasks.filter(t => t.status === status);
   
@@ -151,7 +153,7 @@ function KanbanColumn({ title, tasks, status, onStatusChange }: {
       </div>
       <div className="space-y-2">
         {columnTasks.map(task => (
-          <TaskCard key={task.id} task={task} onStatusChange={onStatusChange} />
+          <TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onSelect={onSelect} />
         ))}
         {columnTasks.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-4">No tasks</p>
@@ -169,6 +171,7 @@ export default function HousekeepingPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<HousekeepingTask | null>(null);
   
   const { data: tasksData, isLoading } = useQuery<{ ok: boolean; tasks: HousekeepingTask[] }>({
     queryKey: ['/api/p2/app/ops/tasks', { type: typeFilter !== 'all' ? typeFilter : undefined }],
@@ -270,9 +273,9 @@ export default function HousekeepingPage() {
           </div>
         ) : viewMode === 'kanban' ? (
           <div className="flex gap-4 h-full overflow-x-auto pb-4">
-            <KanbanColumn title="Open" tasks={filteredTasks} status="open" onStatusChange={handleStatusChange} />
-            <KanbanColumn title="In Progress" tasks={filteredTasks} status="in_progress" onStatusChange={handleStatusChange} />
-            <KanbanColumn title="Completed" tasks={filteredTasks} status="done" onStatusChange={handleStatusChange} />
+            <KanbanColumn title="Open" tasks={filteredTasks} status="open" onStatusChange={handleStatusChange} onSelect={setSelectedTask} />
+            <KanbanColumn title="In Progress" tasks={filteredTasks} status="in_progress" onStatusChange={handleStatusChange} onSelect={setSelectedTask} />
+            <KanbanColumn title="Completed" tasks={filteredTasks} status="done" onStatusChange={handleStatusChange} onSelect={setSelectedTask} />
           </div>
         ) : (
           <Card>
@@ -290,7 +293,7 @@ export default function HousekeepingPage() {
                 </thead>
                 <tbody>
                   {filteredTasks.map(task => (
-                    <tr key={task.id} className="border-b hover:bg-muted/30" data-testid={`row-task-${task.id}`}>
+                    <tr key={task.id} className="border-b hover:bg-muted/30 cursor-pointer" data-testid={`row-task-${task.id}`} onClick={() => setSelectedTask(task)}>
                       <td className="p-3">
                         <div className="font-medium text-sm">{task.unit_label || 'Unknown'}</div>
                         {task.container_path?.length > 0 && (
@@ -312,12 +315,12 @@ export default function HousekeepingPage() {
                       <td className="p-3">
                         <div className="flex gap-1">
                           {task.status === 'open' && (
-                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleStatusChange(task.id, 'in_progress')}>
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); handleStatusChange(task.id, 'in_progress'); }}>
                               Start
                             </Button>
                           )}
                           {task.status === 'in_progress' && (
-                            <Button size="sm" className="h-7 text-xs" onClick={() => handleStatusChange(task.id, 'done')}>
+                            <Button size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); handleStatusChange(task.id, 'done'); }}>
                               Complete
                             </Button>
                           )}
@@ -338,6 +341,13 @@ export default function HousekeepingPage() {
           </Card>
         )}
       </div>
+
+      <TaskDetailDrawer
+        task={selectedTask}
+        open={selectedTask !== null}
+        onClose={() => setSelectedTask(null)}
+        onStatusChange={handleStatusChange}
+      />
     </div>
   );
 }
