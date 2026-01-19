@@ -25,6 +25,7 @@ import {
   Sparkles,
   AlertTriangle,
   Plane,
+  Bell,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -95,6 +96,7 @@ export const V3_NAV: NavSection[] = [
     title: 'Communication',
     items: [
       { icon: MessageSquare, label: 'Messages', href: '/app/messages', testId: 'nav-messages' },
+      { icon: Bell, label: 'Notifications', href: '/app/notifications', testId: 'nav-notifications' },
     ],
   },
   {

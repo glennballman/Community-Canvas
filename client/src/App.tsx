@@ -78,6 +78,7 @@ import CustomersPage from './pages/app/business/CustomersPage';
 import ConversationsPage from './pages/ConversationsPage';
 import CirclesPage from './pages/app/CirclesPage';
 import SettingsPage from './pages/app/SettingsPage';
+import NotificationsPage from './pages/app/NotificationsPage';
 import SystemExplorerPage from './pages/app/SystemExplorerPage';
 
 // Pages - V3 Placeholders
@@ -414,6 +415,7 @@ export default function App() {
                 
                 {/* Shared routes */}
                 <Route path="messages" element={<ConversationsPage />} />
+                <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="circles" element={<CirclesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>

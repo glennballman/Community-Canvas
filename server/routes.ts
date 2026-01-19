@@ -75,6 +75,7 @@ import enforcementRouter from "./routes/enforcement";
 import citationRouter from "./routes/citations";
 import identityRouter from "./routes/identity";
 import dashboardRouter from "./routes/dashboard";
+import { notificationsRouter } from "./routes/notifications";
 import authAccountsRouter from "./routes/authAccounts";
 import rolesRouter from "./routes/roles";
 import businessOperatorsRouter from "./routes/businessOperators";
@@ -231,6 +232,7 @@ export async function registerRoutes(
 
   // Register cc_conversations/messaging routes
   app.use('/api', conversationsRouter);
+  app.use('/api/notifications', notificationsRouter);
 
   // Register defensive record bundles and contemporaneous notes (legal/CYA spine)
   app.use('/api/record-bundles', recordBundlesRouter);
