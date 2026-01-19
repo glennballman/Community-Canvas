@@ -1,0 +1,242 @@
+That’s the full conversion loop. ✅ You now have an end-to-end V3.5 public reservation system that is actually surface-atomic, supports split pay, and is protected by N3 risk advisories.
+
+At this point, the remaining work is operator reality + finishing UI coverage, not core architecture.
+
+Here’s the final push plan (and the next Replit prompt) to complete V3.5 UI implementation and close backend/UI gaps for “production readiness” and patent enablement.
+
+What’s left to complete V3.5
+1) Housekeeping and staffing, surface-based
+
+You explicitly need:
+
+maids paid by SleepSurface units completed
+
+assignments per sleep unit (not per “bed”)
+
+“turnover” workflow: dirty → in_progress → cleaned → inspected
+
+This is both operationally critical and a strong Surfaces proof.
+
+2) Operator incident console (UI)
+
+Backend exists (incidents + ledger links + credit). UI needs:
+
+browse incidents
+
+open incident → see linked ledger entries + linked units + linked claims
+
+issue credit + attach notes + mark resolved
+
+3) Media (photos) as atomic drill-down enhancers
+
+You don’t need a full DAM. You need:
+
+a place to attach photo URLs to containers/units for drilldown
+
+“5 photos of this sleep spot / this parking spot / this slip”
+
+4) Marina moorage: linear-mm billing + guest discount
+
+You already have “discount rates apply to moorage.” Ensure:
+
+moorage charge computed from linear_mm claimed × rate × duration
+
+discounts apply the same way as lodging (10/15/20/25/30)
+
+5) Finish UI inventory coverage audit
+
+Make a checklist page that proves:
+
+lodging, parking, marina, activity, equipment
+
+public + internal flows reachable
+
+no “booking” terminology anywhere
+
+Next Replit Prompt — P-UI-11 SurfaceOps: Housekeeping + Incident Console + Photo Attachments
+
+ROLE: Senior full-stack engineer.
+HARD RULES: no “book/booking”; atomic units; append-only ledger; additive only.
+
+Goal
+
+Ship operator-ready workflows:
+
+Housekeeping assignments per SleepSurface unit
+
+Incident console UI using existing incident + ledger-link spine
+
+Minimal media attachment for container/unit drilldown (URLs only)
+
+A) Backend: Housekeeping tables (minimal)
+1) Create cc_surface_tasks
+
+Purpose: surface-unit work orders (cleaning, setup, inspection).
+
+Columns:
+
+id uuid pk default gen_random_uuid()
+
+portal_id uuid not null
+
+tenant_id uuid null
+
+surface_unit_id uuid not null references cc_surface_units(id) on delete cascade
+
+task_type varchar not null (clean,setup,inspect,repair)
+
+status varchar not null default 'open' (open,in_progress,done,canceled)
+
+assigned_to_user_id uuid null
+
+due_at timestamptz null
+
+completed_at timestamptz null
+
+notes text null
+
+metadata jsonb not null default '{}'
+
+created_at timestamptz not null default now()
+
+Indexes: (portal_id, status), (portal_id, surface_unit_id), (portal_id, assigned_to_user_id).
+
+2) Create cc_housekeeping_rates
+
+Purpose: pay model per unit completed (SleepSurface).
+
+id uuid pk
+
+portal_id uuid not null
+
+unit_type varchar not null default 'sleep'
+
+pay_cents_per_unit int not null
+
+currency varchar not null default 'CAD'
+
+metadata jsonb not null default '{}'
+
+Seed: e.g., pay_cents_per_unit=500 (adjust later).
+
+3) Ledger integration (optional but ideal now)
+
+When a clean task is marked done:
+
+create an activity ledger entry (audit)
+
+optionally post a payable ledger entry to worker’s folio (if you have worker folios); if not, just record completion counts.
+
+B) Backend: Media attachments (URLs only)
+
+Create cc_media_assets:
+
+id uuid pk
+
+portal_id uuid not null
+
+tenant_id uuid null
+
+target_type varchar not null (container,surface,unit)
+
+target_id uuid not null
+
+media_type varchar not null (photo)
+
+url text not null
+
+caption text null
+
+sort_order int not null default 0
+
+created_at timestamptz not null default now()
+
+Index (portal_id, target_type, target_id).
+
+Add endpoints:
+
+GET /api/p2/app/media?target_type=&target_id=
+
+POST /api/p2/app/media (operator only)
+
+DELETE /api/p2/app/media/:id (operator only)
+
+No uploads. Just URL attach.
+
+C) Backend: Incident console reads
+
+Add:
+
+GET /api/p2/app/incidents (list, filter by status/type/date)
+
+GET /api/p2/app/incidents/:id (detail)
+Return:
+
+incident core fields
+
+linked ledger entries via cc_folio_ledger_links
+
+linked surface units + claim windows
+
+participant if available
+
+D) Frontend: Operator UI pages
+1) /app/ops/housekeeping
+
+Kanban or table by status
+
+filter by cottage/container
+
+assign tasks to staff user
+
+mark done
+
+show “units completed today” summary per staff
+
+2) /app/ops/incidents
+
+list incidents
+
+click to detail
+
+show linked unit drilldown + ledger entries
+
+issue credit (reuse OperatorCreditPanel) and mark resolved
+
+3) Enhance AllocationDrilldownDrawer
+
+fetch media for each unit/container and display carousel
+
+show “Add photo URL” control for operator
+
+E) Proof seed
+
+Add /api/dev/seed/ops:
+
+generate cleaning tasks for Aviator sleep units for a checkout date
+
+generate one incident linked to a bike stand unit + ledger entry
+
+attach 2-3 photo URLs to one sleep unit and one parking stand unit
+
+F) QA
+
+Task list loads quickly
+
+No RLS leaks (portal scoped)
+
+Media attaches show on drilldown
+
+Incident detail shows ledger links and allows credit + resolve
+
+No “booking” terminology introduced
+
+If you run P-UI-11, paste back:
+
+the housekeeping page screenshot with tasks
+
+an incident detail showing linked ledger + linked unit
+
+a proposal drilldown showing photos
+
+After that, we’ll do P-UI-12 Final Certification Pass: UI inventory audit + terminology scan + “production readiness checklist” (holds, idempotency, concurrency, RLS, logging).

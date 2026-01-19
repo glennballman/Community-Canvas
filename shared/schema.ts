@@ -6957,6 +6957,67 @@ export const insertSurfaceClaimSchema = createInsertSchema(ccSurfaceClaims).omit
 export type SurfaceClaim = typeof ccSurfaceClaims.$inferSelect;
 export type InsertSurfaceClaim = z.infer<typeof insertSurfaceClaimSchema>;
 
+// Surface Tasks - housekeeping work orders (cleaning, setup, inspection)
+export const ccSurfaceTasks = pgTable("cc_surface_tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  surfaceUnitId: uuid("surface_unit_id").notNull().references(() => ccSurfaceUnits.id, { onDelete: 'cascade' }),
+  taskType: varchar("task_type").notNull(), // clean, setup, inspect, repair
+  status: varchar("status").notNull().default('open'), // open, in_progress, done, canceled
+  assignedToUserId: uuid("assigned_to_user_id"),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  notes: text("notes"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  statusIdx: index("idx_surface_tasks_status").on(table.portalId, table.status),
+  unitIdx: index("idx_surface_tasks_unit").on(table.portalId, table.surfaceUnitId),
+  assignedIdx: index("idx_surface_tasks_assigned").on(table.portalId, table.assignedToUserId),
+}));
+
+export const insertSurfaceTaskSchema = createInsertSchema(ccSurfaceTasks).omit({ id: true, createdAt: true });
+export type SurfaceTask = typeof ccSurfaceTasks.$inferSelect;
+export type InsertSurfaceTask = z.infer<typeof insertSurfaceTaskSchema>;
+
+// Housekeeping Rates - pay model per unit completed
+export const ccHousekeepingRates = pgTable("cc_housekeeping_rates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  unitType: varchar("unit_type").notNull().default('sleep'), // sleep, parking, marina, etc.
+  payCentsPerUnit: integer("pay_cents_per_unit").notNull(),
+  currency: varchar("currency").notNull().default('CAD'),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalTypeIdx: index("idx_housekeeping_rates_portal").on(table.portalId, table.unitType),
+}));
+
+export const insertHousekeepingRateSchema = createInsertSchema(ccHousekeepingRates).omit({ id: true, createdAt: true });
+export type HousekeepingRate = typeof ccHousekeepingRates.$inferSelect;
+export type InsertHousekeepingRate = z.infer<typeof insertHousekeepingRateSchema>;
+
+// Media Assets - URL-based photo attachments for containers/surfaces/units
+export const ccMediaAssets = pgTable("cc_media_assets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  targetType: varchar("target_type").notNull(), // container, surface, unit
+  targetId: uuid("target_id").notNull(),
+  mediaType: varchar("media_type").notNull().default('photo'), // photo, document, video
+  url: text("url").notNull(),
+  caption: text("caption"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  targetIdx: index("idx_media_assets_target").on(table.portalId, table.targetType, table.targetId),
+}));
+
+export const insertMediaAssetSchema = createInsertSchema(ccMediaAssets).omit({ id: true, createdAt: true });
+export type MediaAsset = typeof ccMediaAssets.$inferSelect;
+export type InsertMediaAsset = z.infer<typeof insertMediaAssetSchema>;
+
 // Utility Nodes - shared power pools, panels, feeders
 export const ccUtilityNodes = pgTable("cc_utility_nodes", {
   id: uuid("id").primaryKey().defaultRandom(),
