@@ -21,6 +21,7 @@ import {
   useNavigate, 
   useLocation 
 } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { 
   LayoutDashboard, 
   Phone, 
@@ -122,6 +123,15 @@ export function TenantAppLayout(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Messages unread count query (global badge)
+  const { data: unreadData } = useQuery<{ ok: boolean; count: number }>({
+    queryKey: ['/api/p2/dashboard/messages/unread-count'],
+    enabled: !!user && !!currentTenant,
+    staleTime: 30 * 1000,
+    retry: 1,
+  });
+  const messagesUnreadCount = unreadData?.count || 0;
 
   // --------------------------------------------------------------------------
   // Computed values (before any hooks to avoid conditional hook calls)
@@ -304,6 +314,7 @@ export function TenantAppLayout(): React.ReactElement {
       fontSize: '14px',
       transition: 'all 0.15s ease',
       marginBottom: '4px',
+      position: 'relative',
     } as React.CSSProperties,
     
     navItemActive: {
@@ -487,20 +498,61 @@ export function TenantAppLayout(): React.ReactElement {
 
         {/* Navigation */}
         <nav style={styles.nav}>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              style={({ isActive }) => ({
-                ...styles.navItem,
-                ...(isActive ? styles.navItemActive : {}),
-              })}
-              title={sidebarCollapsed ? item.label : undefined}
-            >
-              <item.icon size={20} />
-              {!sidebarCollapsed && <span>{item.label}</span>}
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            const isMessagesItem = item.href === '/app/messages';
+            const showBadge = isMessagesItem && messagesUnreadCount > 0;
+            
+            return (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                style={({ isActive }) => ({
+                  ...styles.navItem,
+                  ...(isActive ? styles.navItemActive : {}),
+                })}
+                title={sidebarCollapsed ? item.label : undefined}
+                data-testid={isMessagesItem ? 'nav-messages' : undefined}
+              >
+                <item.icon size={20} />
+                {!sidebarCollapsed && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                    {item.label}
+                    {showBadge && (
+                      <span
+                        style={{
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          padding: '2px 6px',
+                          borderRadius: '9999px',
+                          minWidth: '18px',
+                          textAlign: 'center',
+                        }}
+                        data-testid="badge-messages-unread"
+                      >
+                        {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
+                      </span>
+                    )}
+                  </span>
+                )}
+                {sidebarCollapsed && showBadge && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: '#3b82f6',
+                      borderRadius: '50%',
+                    }}
+                    data-testid="indicator-messages-unread"
+                  />
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Bottom Section */}
