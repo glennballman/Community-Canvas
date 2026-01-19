@@ -1018,4 +1018,71 @@ router.post('/cc_conversations/:id/unlock-contact', async (req: Request, res: Re
   }
 });
 
+/**
+ * POST /api/conversations/cc_conversations/:id/mark-read
+ * 
+ * Explicitly marks a conversation as read for the authenticated participant.
+ * Resets unread counter and updates read_at on messages.
+ * 
+ * Security: Caller must be a participant (owner or contractor) in the conversation.
+ */
+router.post('/cc_conversations/:id/mark-read', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const actor = await resolveActorParty(req, 'contractor');
+    if (!actor) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      // Verify participant access
+      const convResult = await client.query(
+        `SELECT id, owner_party_id, contractor_party_id 
+         FROM cc_conversations 
+         WHERE id = $1
+           AND (owner_party_id = $2 OR contractor_party_id = $2)`,
+        [id, actor.actor_party_id]
+      );
+
+      if (convResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Conversation not found or not authorized' });
+      }
+
+      const conversation = convResult.rows[0];
+      const isOwner = conversation.owner_party_id === actor.actor_party_id;
+      const unreadField = isOwner ? 'unread_owner' : 'unread_contractor';
+
+      // Reset unread counter for this side
+      await client.query(
+        `UPDATE cc_conversations SET ${unreadField} = 0, updated_at = now() WHERE id = $1`,
+        [id]
+      );
+
+      // Mark messages from other party as read
+      const readResult = await client.query(
+        `UPDATE cc_messages SET read_at = now()
+         WHERE conversation_id = $1
+           AND sender_party_id != $2
+           AND read_at IS NULL
+         RETURNING id`,
+        [id, actor.actor_party_id]
+      );
+
+      res.json({ 
+        ok: true, 
+        marked_read: readResult.rows.length,
+        conversation_id: id
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error marking conversation read:', error);
+    res.status(500).json({ error: 'Failed to mark conversation as read' });
+  }
+});
+
 export default router;

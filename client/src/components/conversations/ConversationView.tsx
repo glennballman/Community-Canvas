@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, FormEvent } from 'react';
-import { api } from '../../lib/api';
+import { useState, useEffect, useRef, FormEvent, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Unlock, Send } from 'lucide-react';
@@ -27,31 +28,52 @@ export function ConversationView({ conversationId, myRole }: ConversationViewPro
   const [sending, setSending] = useState(false);
   const [contactUnlocked, setContactUnlocked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasMarkedRead = useRef(false);
 
-  useEffect(() => {
-    if (conversationId) {
-      fetchMessages();
-    }
-  }, [conversationId]);
+  const markReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('POST', `/api/conversations/cc_conversations/${id}/mark-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/dashboard/messages/unread-count'] });
+    },
+  });
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  async function fetchMessages() {
+  const fetchMessages = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<{ messages: Message[]; contact_unlocked: boolean }>(
-        `/conversations/${conversationId}/messages`
-      );
-      setMessages(data.messages || []);
+      const response = await fetch(`/api/conversations/cc_conversations/${conversationId}/cc_messages`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      const data = await response.json();
+      setMessages(data.cc_messages || []);
       setContactUnlocked(data.contact_unlocked);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
       setLoading(false);
     }
-  }
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (conversationId) {
+      hasMarkedRead.current = false;
+      fetchMessages();
+    }
+  }, [conversationId, fetchMessages]);
+
+  useEffect(() => {
+    if (conversationId && !loading && !hasMarkedRead.current) {
+      hasMarkedRead.current = true;
+      markReadMutation.mutate(conversationId);
+    }
+  }, [conversationId, loading]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   async function sendMessage(e: FormEvent) {
     e.preventDefault();
@@ -59,10 +81,13 @@ export function ConversationView({ conversationId, myRole }: ConversationViewPro
 
     setSending(true);
     try {
-      await api.post<{ wasRedacted: boolean }>(
-        `/conversations/${conversationId}/messages`,
-        { content: newMessage }
-      );
+      const response = await fetch(`/api/conversations/cc_conversations/${conversationId}/cc_messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content: newMessage }),
+      });
+      if (!response.ok) throw new Error('Failed to send message');
       
       setNewMessage('');
       fetchMessages();
@@ -82,10 +107,15 @@ export function ConversationView({ conversationId, myRole }: ConversationViewPro
     
     try {
       const endpoint = myRole === 'owner' 
-        ? `/conversations/${conversationId}/unlock-contact`
-        : `/conversations/${conversationId}/contractor-unlock-contact`;
+        ? `/api/conversations/cc_conversations/${conversationId}/unlock-contact`
+        : `/api/conversations/cc_conversations/${conversationId}/contractor-unlock-contact`;
       
-      const data = await api.post<{ contact_unlocked: boolean }>(endpoint);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to share contact');
+      const data = await response.json();
       
       if (data.contact_unlocked) {
         setContactUnlocked(true);
