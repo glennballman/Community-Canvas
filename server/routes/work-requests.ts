@@ -336,12 +336,6 @@ router.post('/:id/reserve', requireAuth, requireTenant, async (req: Request, res
   }
 });
 
-// BACKWARD COMPATIBILITY: Alias for legacy clients
-router.post('/:id/book', requireAuth, requireTenant, (req: Request, res: Response, next: Function) => {
-  req.url = req.url.replace('/book', '/reserve');
-  next('route');
-});
-
 // Drop work request (won't proceed)
 router.post('/:id/drop', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;

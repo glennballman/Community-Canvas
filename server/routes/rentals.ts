@@ -570,12 +570,6 @@ router.post('/:id/reserve', requireAuth, async (req: Request, res: Response) => 
   }
 });
 
-// BACKWARD COMPATIBILITY: Alias for legacy clients
-router.post('/:id/book', requireAuth, (req: Request, res: Response, next: Function) => {
-  req.url = req.url.replace('/book', '/reserve');
-  next('route');
-});
-
 // GET /api/rentals/my-reservations - Get user's reservations (SELF)
 router.get('/my-reservations', requireAuth, async (req: Request, res: Response) => {
   try {

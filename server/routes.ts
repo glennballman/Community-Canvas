@@ -2987,12 +2987,6 @@ export async function registerRoutes(
     }
   });
 
-  // BACKWARD COMPATIBILITY: Alias for legacy clients
-  app.post("/api/v1/planning/service-runs/:id/book", (req, res, next) => {
-    req.url = req.url.replace('/book', '/reserve');
-    next('route');
-  });
-
   // POST /api/v1/planning/assess/participant-trip - Assess participant skills for trip
   app.post("/api/v1/planning/assess/participant-trip", async (req, res) => {
     try {

@@ -144,10 +144,6 @@ export const TERMINOLOGY_ALLOWLIST: RegExp[] = [
   /TERMINOLOGY_ALLOWLIST/,
   /allowPattern\.test/,
   /terminology.*allowlist/i,
-  /BACKWARD COMPATIBILITY/i,
-  /\.replace\('\/book'/,
-  /router\.post\('\/:/,
-  /app\.post\("\/api\/v1\/planning\/service-runs\/:id\/book"/,
 ];
 
 /**
