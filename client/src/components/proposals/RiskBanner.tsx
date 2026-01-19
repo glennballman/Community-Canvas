@@ -14,7 +14,7 @@ export function RiskBanner({ proposalId }: RiskBannerProps) {
   const [isOpen, setIsOpen] = useState(false);
   
   const { data: riskData, isLoading } = useQuery({
-    queryKey: ['/api/p2/app/proposals', proposalId, 'risk'],
+    queryKey: ['/api/p2/public/proposals', proposalId, 'risk'],
     queryFn: () => getProposalRisk(proposalId),
     enabled: !!proposalId,
   });

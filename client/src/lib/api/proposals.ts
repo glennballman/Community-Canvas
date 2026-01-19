@@ -167,7 +167,7 @@ export interface FromCartResponse {
 }
 
 export async function createProposalFromCart(payload: FromCartPayload): Promise<FromCartResponse> {
-  const res = await apiRequest('POST', '/api/p2/app/proposals/from-cart', payload);
+  const res = await apiRequest('POST', '/api/p2/public/proposals/from-cart', payload);
   return res.json();
 }
 
@@ -183,7 +183,7 @@ export interface ReleaseResponse {
 }
 
 export async function releaseProposal(proposalId: string, payload: ReleasePayload): Promise<ReleaseResponse> {
-  const res = await apiRequest('POST', `/api/p2/app/proposals/${proposalId}/release`, payload);
+  const res = await apiRequest('POST', `/api/p2/public/proposals/${proposalId}/release`, payload);
   return res.json();
 }
 
@@ -205,7 +205,7 @@ export interface ConfirmResponse {
 }
 
 export async function confirmProposal(proposalId: string, payload: ConfirmPayload): Promise<ConfirmResponse> {
-  const res = await apiRequest('POST', `/api/p2/app/proposals/${proposalId}/confirm`, payload);
+  const res = await apiRequest('POST', `/api/p2/public/proposals/${proposalId}/confirm`, payload);
   return res.json();
 }
 
@@ -243,6 +243,6 @@ export interface RiskResponse {
 }
 
 export async function getProposalRisk(proposalId: string): Promise<RiskResponse> {
-  const res = await fetch(`/api/p2/app/proposals/${proposalId}/risk`);
+  const res = await fetch(`/api/p2/public/proposals/${proposalId}/risk`);
   return res.json();
 }

@@ -423,6 +423,9 @@ export async function registerRoutes(
 
   // P-UI-08 Proposal API (Itinerary + Atomic Allocations + Folios) - registered early to avoid tenant housing middleware
   app.use('/api/p2/app/proposals', proposalsRouter);
+  
+  // P-UI-10 Public proposals endpoints (from-cart, release, confirm, risk) - no auth required
+  app.use('/api/p2/public/proposals', proposalsRouter);
 
   // Tenant housing API (tenant auth required)
   app.use('/api/p2/app', tenantHousingRouter);
