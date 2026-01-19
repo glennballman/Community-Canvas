@@ -695,15 +695,15 @@ router.post('/surfaces', async (_req, res) => {
     // Aviator Cottage: no caps needed (physical=19 is available in both lenses)
     // Not inserting policy - defaults to physical for both lenses
 
-    // Canoe 1: normal cap=3 (limit rentals), closedInEmergency=true (safety: grounded)
+    // Canoe 1: normal cap=3 (limit rentals), emergency=full physical (all available in emergency)
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: canoe1Container.id,
       surfaceType: 'sit',
       normalUnitsLimit: 3,           // limit to 3 seats in normal operations
-      closedInEmergency: true,       // safety override: watercraft grounded in emergency
-      metadata: { notes: 'Normal: limit rentals. Emergency: watercraft grounded' },
+      closedInEmergency: false,      // emergency: full physical capacity available
+      metadata: { notes: 'Normal: limit rentals. Emergency: all seats available' },
     });
 
     // Canoe 2: same as Canoe 1
@@ -713,19 +713,19 @@ router.post('/surfaces', async (_req, res) => {
       containerId: canoe2Container.id,
       surfaceType: 'sit',
       normalUnitsLimit: 3,
-      closedInEmergency: true,       // safety override
-      metadata: { notes: 'Emergency: watercraft grounded' },
+      closedInEmergency: false,      // emergency: full physical capacity available
+      metadata: { notes: 'Normal: limit rentals. Emergency: all seats available' },
     });
 
-    // Kayak 1: normal cap=1 (limit rentals), closedInEmergency=true (safety: grounded)
+    // Kayak 1: normal cap=1 (limit rentals), emergency=full physical
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: kayak1Container.id,
       surfaceType: 'sit',
       normalUnitsLimit: 1,           // limit to 1 seat in normal operations
-      closedInEmergency: true,       // safety override: watercraft grounded in emergency
-      metadata: { notes: 'Emergency: watercraft grounded' },
+      closedInEmergency: false,      // emergency: full physical capacity available
+      metadata: { notes: 'Normal: limit rentals. Emergency: all seats available' },
     });
 
     // Bike Corral: normal cap=12 (staff reserve 4 of 16)
@@ -924,19 +924,20 @@ router.get('/surfaces/capacity-proof', async (req, res) => {
     // Expected proof results with CAP semantics:
     // physical = actual units, normal/emergency = min(physical, cap) or physical if no cap
     // Cap semantics: offerable = min(physical, cap_if_set)
+    // Emergency = full physical (everything available in real emergencies)
     const expected = {
       // Aviator: physical=19, no caps → normal=19, emergency=19
       'Aviator_sleep': { physical: 19, normal: 19, emergency: 19 },
-      // Bike Corral: physical=16, normal cap=12 → normal=12, emergency=16
+      // Bike Corral: physical=16, normal cap=12 → normal=12, emergency=16 (full in emergency)
       'Bike Corral Stall_stand': { physical: 16, normal: 12, emergency: 16 },
       // Flora's: physical=10, no caps → normal=10, emergency=10
       "Flora's_sit": { physical: 10, normal: 10, emergency: 10 },
-      // Canoe 1: physical=6, normal cap=3, emergency cap=0 → normal=3, emergency=0
-      'Canoe 1_sit': { physical: 6, normal: 3, emergency: 0 },
-      // Canoe 2: physical=6, normal cap=3, emergency cap=0 → normal=3, emergency=0
-      'Canoe 2_sit': { physical: 6, normal: 3, emergency: 0 },
-      // Kayak 1: physical=2, normal cap=1, emergency cap=0 → normal=1, emergency=0
-      'Kayak 1_sit': { physical: 2, normal: 1, emergency: 0 },
+      // Canoe 1: physical=6, normal cap=3 → normal=3, emergency=6 (full physical in emergency)
+      'Canoe 1_sit': { physical: 6, normal: 3, emergency: 6 },
+      // Canoe 2: physical=6, normal cap=3 → normal=3, emergency=6 (full physical in emergency)
+      'Canoe 2_sit': { physical: 6, normal: 3, emergency: 6 },
+      // Kayak 1: physical=2, normal cap=1 → normal=1, emergency=2 (full physical in emergency)
+      'Kayak 1_sit': { physical: 2, normal: 1, emergency: 2 },
       // Marina: physical=14, no caps → normal=14, emergency=14
       'Woods End Marina_stand': { physical: 14, normal: 14, emergency: 14 },
     };
