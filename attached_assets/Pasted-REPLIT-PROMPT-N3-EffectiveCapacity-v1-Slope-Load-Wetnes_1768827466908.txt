@@ -1,0 +1,402 @@
+REPLIT PROMPT — N3 EffectiveCapacity v1 (Slope + Load + Wetness + Wind + Utility)
+
+ROLE: Senior platform engineer.
+HARD RULES:
+
+Never use book/booking. Use reserve/reservation.
+
+Surfaces are spatial-only; time exists in claims and N3 evaluation windows.
+
+N3 must output EffectiveCapacity per bound surface requirement.
+
+Accessibility is first-class: width/grates/steps/slope must be evaluable.
+
+Minimal, correct, extensible. No refactors later.
+
+Objective
+
+Add an N3 module that, for each N3 segment and its bound surface requirements, computes:
+
+effective_units_normal, effective_units_emergency
+
+effective_area_sqmm OR effective_linear_mm OR effective_continuous_safe_watts
+
+risk_score (0..1)
+
+reason_codes[]
+
+mitigations[]
+
+Then include this in:
+
+POST /api/n3/evaluate (or your existing evaluate endpoint)
+
+monitor attention queue findings (where risk is summarized)
+
+Part A — Schema: Bind N3 segments to Surfaces + Actor Profile + Utility Demand (minimal)
+1) Migration: cc_n3_surface_requirements
+
+Create table:
+
+id uuid pk default gen_random_uuid()
+
+portal_id uuid not null
+
+tenant_id uuid null
+
+run_id uuid not null references cc_n3_runs(id) on delete cascade
+
+segment_id uuid not null references cc_n3_segments(id) on delete cascade
+
+surface_id uuid not null references cc_surfaces(id) on delete cascade
+
+container_id uuid null references cc_surface_containers(id) (optional rollup)
+
+required_surface_type varchar not null
+(movement,sleep,sit,stand,utility)
+
+actor_profile jsonb not null default '{}'
+Examples:
+
+{ "actor_type":"human", "mass_g": 90000, "width_mm": 500 }
+
+{ "actor_type":"wheelchair", "mass_g": 150000, "width_mm": 850 }
+
+{ "actor_type":"robot", "mass_g": 120000, "width_mm": 600, "traction":"rubber" }
+
+{ "actor_type":"bike", "footprint_mm2": 800000 }
+
+demand jsonb not null default '{}'
+Utility examples:
+
+{ "watts_continuous": 1200, "hours": 8, "device":"robot_charger" }
+Watercraft examples:
+
+{ "sit_units_requested": 2, "rowing_required": true }
+
+required_constraints jsonb not null default '{}'
+Examples:
+
+{ "no_grates": true, "min_clear_width_mm": 850, "max_slope_pct": 12 }
+
+risk_tolerance numeric not null default 0.5
+
+created_at timestamptz not null default now()
+
+Indexes:
+
+(portal_id, run_id)
+
+(portal_id, segment_id)
+
+(portal_id, surface_id)
+
+2) (Optional but recommended) cc_n3_effective_capacity_evaluations
+
+Store last evaluation results for audit/replay (append-only per run evaluation).
+
+id uuid pk default gen_random_uuid()
+
+portal_id uuid not null
+
+tenant_id uuid null
+
+run_id uuid not null
+
+segment_id uuid not null
+
+surface_requirement_id uuid not null references cc_n3_surface_requirements(id) on delete cascade
+
+evaluated_at timestamptz not null default now()
+
+time_start timestamptz not null
+
+time_end timestamptz not null
+
+result jsonb not null (EffectiveCapacity payload)
+
+risk_score numeric not null
+
+risk_fingerprint varchar not null (md5 of normalized result)
+Indexes: (portal_id, run_id, segment_id), (portal_id, run_id, evaluated_at)
+
+If you already have a findings table for N3, you can skip this and embed in existing replan bundle artifacts—just keep results persistable.
+
+Part B — Seed: Woods End ramp + boardwalk + dock power + canoe wind risk (minimal)
+
+Extend your N3 seed to include 4 requirements bound to existing seeded surfaces:
+
+MovementSurface: Dock Ramp (tide-sensitive)
+
+actor: wheelchair width 850mm, mass 180,000g
+
+constraints: max_slope_pct 12, no_grates true
+
+MovementSurface: Boardwalk segment (grates)
+
+actor: human mass 90,000g
+
+constraints: no_grates false (but will raise risk when wet)
+
+UtilitySurface: Slip power standard plug (shared pool)
+
+actor: robot
+
+demand: watts_continuous 1200, hours 8
+
+SitSurface: Canoe seating
+
+actor: robot + rowing_required true
+
+demand: sit_units_requested 3 (normal) and 6 (emergency) will be handled later by lens; for now evaluate risk and recommend canoe vs kayak when wind
+
+Part C — Implement EffectiveCapacity evaluator module (server)
+
+Create a new server module:
+
+server/n3/effectiveCapacity.ts
+
+Export:
+
+export type EffectiveCapacityResult = {
+  surfaceId: string;
+  requirementId: string;
+  requiredSurfaceType: string;
+  timeStart: string;
+  timeEnd: string;
+
+  effectiveAreaSqmm?: number;
+  effectiveLinearMm?: number;
+  effectiveUnitsNormal?: number;
+  effectiveUnitsEmergency?: number;
+  effectiveContinuousSafeWatts?: number;
+
+  riskScore: number; // 0..1
+  reasons: string[];
+  mitigations: string[];
+  debug?: Record<string, any>;
+};
+
+
+And main function:
+
+export async function evaluateEffectiveCapacityV1(args: {
+  portalId: string;
+  timeStart: Date;
+  timeEnd: Date;
+  requirement: any; // row from cc_n3_surface_requirements
+  surface: any;     // row from cc_surfaces
+  container?: any;  // optional
+  signals: {
+    tide?: { height_m?: number };        // deterministic
+    weather?: { rain_prob?: number; wind_kph?: number; temp_c?: number }; // probabilistic
+    utilityNode?: { max_watts?: number; is_shared?: boolean }; // from binding
+  };
+}): Promise<EffectiveCapacityResult>
+
+V1 logic (minimal but real)
+1) Condition modifiers
+
+Compute:
+
+wetness in [0..1]:
+
+wetness = clamp(rain_prob || 0, 0, 1)
+
+if temp_c <= 0 and wetness>0.2 → add ice risk
+
+wind in kph
+
+2) MovementSurface evaluation (slope + grates + width)
+
+We don’t have full geometry for slope yet; implement tide-to-slope as a deterministic function using metadata:
+
+In your seeded ramp surface metadata, add:
+
+ramp_slope_at_low_tide_pct (e.g., 18)
+
+ramp_slope_at_high_tide_pct (e.g., 2)
+
+low_tide_height_m (e.g., 0.5)
+
+high_tide_height_m (e.g., 3.0)
+
+Then interpolate:
+
+slope_pct = lerp(lowSlope, highSlope, normalize(tide.height_m between low/high))
+
+Rules:
+
+If requirement.constraints.max_slope_pct exists and slope_pct > max → risk high + mitigation
+
+If surface.has_grates and wetness>0.4 → add reason WET_GRATES
+
+If requirement.constraints.no_grates true and surface.has_grates → infeasible risk
+
+If requirement.constraints.min_clear_width_mm exists and surface.min_clear_width_mm < min → infeasible
+
+Output:
+
+effectiveUnitsNormal = 1 (movement isn’t unitized; treat as pass/fail)
+
+riskScore increases with slope and wetness and grates
+
+Mitigations:
+
+SHIFT_TO_HIGH_TIDE_WINDOW
+
+USE_ALTERNATE_DOCK
+
+ADD_ASSIST_DEVICE (quad/side-by-side)
+
+3) StandSurface evaluation (effective area reduced by wetness)
+
+If surface.area_sqmm exists:
+
+define a policy constant in code (later configurable):
+
+safety_buffer = 0.05 + wetness*0.15 (5% to 20%)
+
+effectiveArea = floor(area_sqmm * (1 - safety_buffer))
+
+If requirement.actor_profile.footprint_mm2 exists:
+
+effectiveUnitsNormal = floor(effectiveArea / footprint_mm2)
+
+emergency could be floor(effectiveArea / (footprint_mm2 * 0.7)) (denser) but cap risk.
+
+Add reason REDUCED_EFFECTIVE_AREA_WET when wetness high.
+
+4) SitSurface watercraft evaluation (wind reduces safe seats)
+
+For required_surface_type='sit':
+
+if surface.metadata.watercraft_type is kayak and wind_kph > 15 → risk high
+
+if canoe wind tolerance slightly higher but still matters
+
+if requirement.demand.rowing_required true and actor_type robot:
+
+add reason ROBOT_ROWING_UNSTABLE_IN_KAYAK
+
+mitigation USE_CANOE_NOT_KAYAK
+
+Set:
+
+effectiveUnitsNormal = 3 for canoe if no policy yet, otherwise just compute risk and keep capacity unchanged in v1.
+(We will integrate capacity lens overrides later; v1 focuses on risk + mitigations.)
+
+5) UtilitySurface evaluation (shared power pool)
+
+Load bound utility node for the utility surface:
+
+If max_watts present:
+
+continuousSafe = floor(max_watts * 0.8) (80% rule)
+
+Compare against requirement.demand.watts_continuous
+
+if demand > continuousSafe:
+
+reason UTILITY_OVER_CONTINUOUS_SAFE_LOAD
+
+mitigation STAGGER_CHARGING and USE_BUILDING_POWER_FEED
+
+increase riskScore
+
+Return:
+
+effectiveContinuousSafeWatts
+
+riskScore
+
+Part D — Wire into N3 evaluation
+
+In your existing N3 evaluation function (where you produce findings and risk score):
+
+Load all cc_n3_surface_requirements for the run (and segment).
+
+For each requirement:
+
+load surface row (cc_surfaces)
+
+load signals for the segment time window:
+
+tide prediction closest to segment time
+
+weather forecast/normals for that day (or probability stub)
+
+if surface_type is utility: load bound utility node (via cc_surface_utility_binding)
+
+Call evaluateEffectiveCapacityV1(...)
+
+Append results into the segment findings:
+
+store in replan_bundle.findings or in cc_n3_effective_capacity_evaluations
+
+Incorporate riskScore into the overall segment + run composite risk:
+
+runRisk = clamp(existingRisk + mean(effectiveCapacityRiskScores)*0.35, 0, 1)
+(Keep weights conservative; do not break existing scoring.)
+
+Ensure the attention queue and monitor detail endpoints include:
+
+effectiveCapacity results array per segment
+
+Part E — API Output Shape (must be stable)
+
+Update /api/n3/monitor/:runId (or equivalent) response to include:
+
+{
+  "segments": [
+    {
+      "segmentId": "...",
+      "effectiveCapacity": [
+        {
+          "surfaceId": "...",
+          "requiredSurfaceType": "movement",
+          "effectiveUnitsNormal": 1,
+          "riskScore": 0.82,
+          "reasons": ["SLOPE_EXCEEDS_MAX", "WET_GRATES"],
+          "mitigations": ["SHIFT_TO_HIGH_TIDE_WINDOW", "USE_ALTERNATE_DOCK"]
+        }
+      ]
+    }
+  ]
+}
+
+Part F — Proof requirements (print + UI evidence)
+
+Seed generates at least one run that triggers:
+
+low tide → steep ramp → risk increases
+
+rain_prob high → wet grates → risk increases
+
+utility demand 1200W on shared 3000W node → safe (2400W) OR exceed depending on test values
+
+Attention queue shows the run with elevated risk and includes at least one mitigation.
+
+Deliverables checklist
+
+Migration(s) added and applied
+
+Drizzle schema updated
+
+server/n3/effectiveCapacity.ts created
+
+N3 evaluation pipeline updated to call it
+
+API responses include effectiveCapacity arrays
+
+Seed updated to demonstrate slope/wetness/utility scenarios
+
+Minimal tests or console proof logs included
+
+When you run this in Replit, paste back:
+
+migration numbers
+
+any compile/test errors
+
+one sample JSON snippet from the monitor detail endpoint showing effectiveCapacity populated

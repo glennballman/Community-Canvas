@@ -11,3 +11,4 @@ export * from './weatherProvider';
 export * from './evaluator';
 export * from './scheduler';
 export * from './monitorLoop';
+export * from './effectiveCapacity';

@@ -6698,6 +6698,54 @@ export const insertReplanActionSchema = createInsertSchema(ccReplanActions).omit
 export type ReplanAction = typeof ccReplanActions.$inferSelect;
 export type InsertReplanAction = z.infer<typeof insertReplanActionSchema>;
 
+// N3 Surface Requirements - Bind segments to surfaces with actor profiles and constraints
+export const ccN3SurfaceRequirements = pgTable("cc_n3_surface_requirements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  runId: uuid("run_id").notNull().references(() => ccN3Runs.id, { onDelete: "cascade" }),
+  segmentId: uuid("segment_id").notNull().references(() => ccN3Segments.id, { onDelete: "cascade" }),
+  surfaceId: uuid("surface_id").notNull(),
+  containerId: uuid("container_id"),
+  requiredSurfaceType: varchar("required_surface_type").notNull(), // movement, sleep, sit, stand, utility
+  actorProfile: jsonb("actor_profile").notNull().default({}), // { actor_type, mass_g, width_mm, footprint_mm2, traction }
+  demand: jsonb("demand").notNull().default({}), // { watts_continuous, hours, sit_units_requested, rowing_required }
+  requiredConstraints: jsonb("required_constraints").notNull().default({}), // { no_grates, min_clear_width_mm, max_slope_pct }
+  riskTolerance: numeric("risk_tolerance", { precision: 4, scale: 3 }).notNull().default("0.5"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalRunIdx: index("idx_n3_surface_req_portal_run").on(table.portalId, table.runId),
+  portalSegmentIdx: index("idx_n3_surface_req_portal_segment").on(table.portalId, table.segmentId),
+  portalSurfaceIdx: index("idx_n3_surface_req_portal_surface").on(table.portalId, table.surfaceId),
+}));
+
+export const insertN3SurfaceRequirementSchema = createInsertSchema(ccN3SurfaceRequirements).omit({ id: true, createdAt: true });
+export type N3SurfaceRequirement = typeof ccN3SurfaceRequirements.$inferSelect;
+export type InsertN3SurfaceRequirement = z.infer<typeof insertN3SurfaceRequirementSchema>;
+
+// N3 Effective Capacity Evaluations - Audit/replay of capacity evaluations
+export const ccN3EffectiveCapacityEvaluations = pgTable("cc_n3_effective_capacity_evaluations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  runId: uuid("run_id").notNull(),
+  segmentId: uuid("segment_id").notNull(),
+  surfaceRequirementId: uuid("surface_requirement_id").notNull().references(() => ccN3SurfaceRequirements.id, { onDelete: "cascade" }),
+  evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull().defaultNow(),
+  timeStart: timestamp("time_start", { withTimezone: true }).notNull(),
+  timeEnd: timestamp("time_end", { withTimezone: true }).notNull(),
+  result: jsonb("result").notNull(), // EffectiveCapacity payload
+  riskScore: numeric("risk_score", { precision: 5, scale: 3 }).notNull(),
+  riskFingerprint: varchar("risk_fingerprint").notNull(), // md5 of normalized result
+}, (table) => ({
+  portalRunSegmentIdx: index("idx_n3_eff_cap_portal_run_segment").on(table.portalId, table.runId, table.segmentId),
+  portalRunEvaluatedIdx: index("idx_n3_eff_cap_portal_run_evaluated").on(table.portalId, table.runId, table.evaluatedAt),
+}));
+
+export const insertN3EffectiveCapacityEvaluationSchema = createInsertSchema(ccN3EffectiveCapacityEvaluations).omit({ id: true, evaluatedAt: true });
+export type N3EffectiveCapacityEvaluation = typeof ccN3EffectiveCapacityEvaluations.$inferSelect;
+export type InsertN3EffectiveCapacityEvaluation = z.infer<typeof insertN3EffectiveCapacityEvaluationSchema>;
+
 // ============================================================================
 // PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
 // V3.5 Surface Spine: Containers, Surfaces, Atomic Units, Claims, Utility
