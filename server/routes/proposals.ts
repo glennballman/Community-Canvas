@@ -557,4 +557,433 @@ router.post('/folios/:folioId/credit', async (req, res) => {
   }
 });
 
+// ============================================================================
+// P-UI-10: Availability → Proposal Handoff + Forward-to-Approver + N3 Risk
+// ============================================================================
+
+/**
+ * POST /api/p2/public/proposals/from-cart
+ * 
+ * Create a proposal from cart selections with holds on atomic units
+ * AVAILABILITY-FIRST: Creates holds, not confirmed reservations
+ * NO PII: Creates anonymized planner until Confirm step
+ */
+const fromCartSchema = z.object({
+  portal_id: z.string().uuid(),
+  time_start: z.string(),
+  time_end: z.string(),
+  selections: z.array(z.object({
+    container_id: z.string().uuid(),
+    unit_type: z.string(),
+    requested_units: z.number().positive(),
+    time_start: z.string().optional(),
+    time_end: z.string().optional(),
+  })),
+});
+
+router.post('/from-cart', async (req, res) => {
+  try {
+    const body = fromCartSchema.parse(req.body);
+    const portalId = body.portal_id;
+    
+    const portal = await db.execute(sql`
+      SELECT id, owning_tenant_id, title FROM cc_portals WHERE id = ${portalId} LIMIT 1
+    `);
+    
+    if (portal.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Portal not found' });
+    }
+    
+    const tenantId = portal.rows[0].owning_tenant_id as string;
+    const portalTitle = portal.rows[0].title as string;
+    const holdToken = `hold_${nanoid(16)}`;
+    const timeStart = new Date(body.time_start);
+    const timeEnd = new Date(body.time_end);
+    
+    const [trip] = await db.insert(ccTrips).values({
+      portalId,
+      tenantId,
+      groupName: `Reservation at ${portalTitle}`,
+      status: 'planning',
+      startDate: timeStart,
+      endDate: timeEnd,
+      groupSize: body.selections.reduce((sum, s) => sum + s.requested_units, 0),
+      accessCode: nanoid(8),
+    }).returning();
+    
+    const partyIdPlaceholder = trip.id;
+    const [primaryPlanner] = await db.insert(ccTripPartyProfiles).values({
+      tripId: trip.id,
+      displayName: 'Primary Planner',
+      role: 'organizer',
+      partyId: null,
+    }).returning();
+    
+    const [folio] = await db.insert(ccFolios).values({
+      tenantId,
+      folioNumber: `F-${nanoid(8).toUpperCase()}`,
+      guestName: 'Primary Planner',
+      guestPartyId: trip.id,
+      currency: 'CAD',
+      status: 'open',
+    }).returning();
+    
+    await db.update(ccTripPartyProfiles)
+      .set({ partyId: trip.id })
+      .where(eq(ccTripPartyProfiles.id, primaryPlanner.id));
+    
+    const createdClaims: { claimId: string; unitIds: string[]; containerId: string }[] = [];
+    
+    for (const selection of body.selections) {
+      const selectionStart = selection.time_start ? new Date(selection.time_start) : timeStart;
+      const selectionEnd = selection.time_end ? new Date(selection.time_end) : timeEnd;
+      
+      const availableUnits = await db.execute(sql`
+        SELECT su.id, su.label, su.unit_type, su.sort_order
+        FROM cc_surface_units su
+        JOIN cc_surface_container_members scm ON scm.surface_id = su.surface_id
+        WHERE scm.container_id = ${selection.container_id}
+        AND su.unit_type = ${selection.unit_type}
+        AND su.status = 'available'
+        AND su.id NOT IN (
+          SELECT unnest(unit_ids) FROM cc_surface_claims
+          WHERE portal_id = ${portalId}
+          AND claim_status IN ('hold', 'confirmed')
+          AND time_start < ${selectionEnd}
+          AND time_end > ${selectionStart}
+        )
+        ORDER BY su.sort_order ASC, su.id ASC
+        LIMIT ${selection.requested_units}
+      `);
+      
+      if (availableUnits.rows.length < selection.requested_units) {
+        await db.delete(ccTrips).where(eq(ccTrips.id, trip.id));
+        return res.status(409).json({ 
+          ok: false, 
+          error: `Insufficient availability for ${selection.unit_type} in selected container. Requested ${selection.requested_units}, available ${availableUnits.rows.length}` 
+        });
+      }
+      
+      const unitIds = availableUnits.rows.map((r: any) => r.id as string);
+      
+      const [claim] = await db.insert(ccSurfaceClaims).values({
+        portalId,
+        tenantId,
+        containerId: selection.container_id,
+        holdToken,
+        claimStatus: 'hold',
+        timeStart: selectionStart,
+        timeEnd: selectionEnd,
+        unitIds,
+        assignedParticipantId: primaryPlanner.id,
+        metadata: { createdFromCart: true, unitType: selection.unit_type },
+      }).returning();
+      
+      createdClaims.push({ claimId: claim.id, unitIds, containerId: selection.container_id });
+    }
+    
+    res.json({
+      ok: true,
+      proposalId: trip.id,
+      holdToken,
+      viewUrl: `/p/proposal/${trip.id}`,
+      claims: createdClaims,
+      folio_id: folio.id,
+    });
+  } catch (error: any) {
+    console.error('[Proposals] POST from-cart error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/public/proposals/:proposalId/release
+ * 
+ * Release held units and cancel/draft the proposal
+ */
+const releaseSchema = z.object({
+  holdToken: z.string(),
+});
+
+router.post('/:proposalId/release', async (req, res) => {
+  try {
+    const { proposalId } = req.params;
+    const body = releaseSchema.parse(req.body);
+    
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.id, proposalId),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ ok: false, error: 'Proposal not found' });
+    }
+    
+    const claims = await db
+      .select()
+      .from(ccSurfaceClaims)
+      .where(
+        and(
+          eq(ccSurfaceClaims.portalId, trip.portalId!),
+          eq(ccSurfaceClaims.holdToken, body.holdToken),
+          eq(ccSurfaceClaims.claimStatus, 'hold')
+        )
+      );
+    
+    if (claims.length === 0) {
+      return res.status(404).json({ ok: false, error: 'No holds found with this token' });
+    }
+    
+    await db
+      .update(ccSurfaceClaims)
+      .set({ claimStatus: 'released', updatedAt: new Date() })
+      .where(
+        and(
+          eq(ccSurfaceClaims.portalId, trip.portalId!),
+          eq(ccSurfaceClaims.holdToken, body.holdToken)
+        )
+      );
+    
+    await db
+      .update(ccTrips)
+      .set({ status: 'draft' })
+      .where(eq(ccTrips.id, proposalId));
+    
+    res.json({
+      ok: true,
+      released_claims: claims.length,
+      proposal_status: 'draft',
+    });
+  } catch (error: any) {
+    console.error('[Proposals] POST release error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/public/proposals/:proposalId/confirm
+ * 
+ * Confirm the proposal - now PII can be stored
+ * Converts holds to confirmed claims
+ */
+const confirmSchema = z.object({
+  holdToken: z.string(),
+  contact: z.object({
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+  }),
+  primary_name: z.string().min(1),
+});
+
+router.post('/:proposalId/confirm', async (req, res) => {
+  try {
+    const { proposalId } = req.params;
+    const body = confirmSchema.parse(req.body);
+    
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.id, proposalId),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ ok: false, error: 'Proposal not found' });
+    }
+    
+    const claims = await db
+      .select()
+      .from(ccSurfaceClaims)
+      .where(
+        and(
+          eq(ccSurfaceClaims.portalId, trip.portalId!),
+          eq(ccSurfaceClaims.holdToken, body.holdToken),
+          eq(ccSurfaceClaims.claimStatus, 'hold')
+        )
+      );
+    
+    if (claims.length === 0) {
+      return res.status(404).json({ ok: false, error: 'No holds found with this token' });
+    }
+    
+    await db
+      .update(ccSurfaceClaims)
+      .set({ claimStatus: 'confirmed', updatedAt: new Date() })
+      .where(
+        and(
+          eq(ccSurfaceClaims.portalId, trip.portalId!),
+          eq(ccSurfaceClaims.holdToken, body.holdToken)
+        )
+      );
+    
+    await db
+      .update(ccTrips)
+      .set({ status: 'confirmed' })
+      .where(eq(ccTrips.id, proposalId));
+    
+    const primaryPlanner = await db.query.ccTripPartyProfiles.findFirst({
+      where: and(
+        eq(ccTripPartyProfiles.tripId, proposalId),
+        eq(ccTripPartyProfiles.role, 'organizer')
+      ),
+    });
+    
+    if (primaryPlanner) {
+      await db
+        .update(ccTripPartyProfiles)
+        .set({ displayName: body.primary_name })
+        .where(eq(ccTripPartyProfiles.id, primaryPlanner.id));
+      
+      const folio = await db.query.ccFolios.findFirst({
+        where: eq(ccFolios.guestPartyId, trip.id),
+      });
+      
+      if (folio) {
+        await db
+          .update(ccFolios)
+          .set({ guestName: body.primary_name, guestEmail: body.contact.email })
+          .where(eq(ccFolios.id, folio.id));
+      }
+    }
+    
+    res.json({
+      ok: true,
+      confirmed_claims: claims.length,
+      proposal_status: 'confirmed',
+      view_url: `/p/proposal/${proposalId}`,
+    });
+  } catch (error: any) {
+    console.error('[Proposals] POST confirm error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/app/proposals/:proposalId/handoff
+ * 
+ * Forward proposal to approver (handoff recipient)
+ * Separate from party_member invites - this is the "send to boss" flow
+ */
+const handoffSchema = z.object({
+  role: z.literal('handoff_recipient').default('handoff_recipient'),
+  email: z.string().email(),
+  note: z.string().optional(),
+});
+
+router.post('/:proposalId/handoff', async (req, res) => {
+  try {
+    const { proposalId } = req.params;
+    const body = handoffSchema.parse(req.body);
+    
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.id, proposalId),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ ok: false, error: 'Proposal not found' });
+    }
+    
+    const token = nanoid(24);
+    
+    const [invitation] = await db
+      .insert(cc_trip_invitations)
+      .values({
+        tripId: proposalId,
+        invitationType: 'handoff_recipient',
+        token,
+        recipientEmail: body.email,
+        messageBody: body.note || 'Please review and approve this reservation proposal.',
+        status: 'pending',
+      })
+      .returning();
+    
+    const handoffUrl = `/p/proposal/${proposalId}?token=${token}`;
+    
+    res.json({
+      ok: true,
+      invitation_id: invitation.id,
+      handoffUrl,
+      token,
+      recipient_email: body.email,
+    });
+  } catch (error: any) {
+    console.error('[Proposals] POST handoff error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/p2/public/proposals/:proposalId/risk
+ * 
+ * Get N3 risk advisories for the proposal
+ * Returns top risk score and mitigations
+ */
+router.get('/:proposalId/risk', async (req, res) => {
+  try {
+    const { proposalId } = req.params;
+    
+    const trip = await db.query.ccTrips.findFirst({
+      where: eq(ccTrips.id, proposalId),
+    });
+    
+    if (!trip) {
+      return res.status(404).json({ ok: false, error: 'Proposal not found' });
+    }
+    
+    const n3Runs = await db.execute(sql`
+      SELECT r.id, r.run_date, r.risk_score, r.fingerprint, r.created_at,
+             s.id as segment_id, s.segment_kind, s.starts_at, s.ends_at, s.location_ref
+      FROM cc_n3_runs r
+      LEFT JOIN cc_n3_segments s ON s.run_id = r.id
+      WHERE r.portal_id = ${trip.portalId}
+      AND r.run_date >= ${trip.startDate}
+      AND r.run_date <= ${trip.endDate}
+      ORDER BY r.risk_score DESC
+      LIMIT 10
+    `);
+    
+    let topRiskScore = 0;
+    const advisories: { reason: string; mitigation: string; severity: string }[] = [];
+    
+    if (n3Runs.rows.length > 0) {
+      topRiskScore = Math.max(...n3Runs.rows.map((r: any) => r.risk_score || 0));
+      
+      for (const run of n3Runs.rows) {
+        const riskScore = (run as any).risk_score || 0;
+        const segmentKind = (run as any).segment_kind as string;
+        
+        if (riskScore >= 0.5 && segmentKind === 'arrival') {
+          advisories.push({
+            reason: 'Low tide during arrival window',
+            mitigation: 'Consider shifting arrival to high tide window for easier ramp access',
+            severity: riskScore >= 0.7 ? 'high' : 'medium',
+          });
+        }
+        
+        if (riskScore >= 0.4 && segmentKind === 'activity') {
+          advisories.push({
+            reason: 'Wind advisory during activity window',
+            mitigation: 'Watercraft activities may require sheltered alternatives',
+            severity: riskScore >= 0.6 ? 'high' : 'medium',
+          });
+        }
+      }
+    }
+    
+    if (advisories.length === 0 && topRiskScore < 0.25) {
+      advisories.push({
+        reason: 'No significant risk factors detected',
+        mitigation: 'Conditions look favorable for your planned dates',
+        severity: 'low',
+      });
+    }
+    
+    res.json({
+      ok: true,
+      riskScore: topRiskScore,
+      advisories,
+      evaluatedRuns: n3Runs.rows.length,
+    });
+  } catch (error: any) {
+    console.error('[Proposals] GET risk error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 export default router;

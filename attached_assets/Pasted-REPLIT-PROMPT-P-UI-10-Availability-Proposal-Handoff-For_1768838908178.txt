@@ -1,0 +1,243 @@
+REPLIT PROMPT — P-UI-10 Availability → Proposal Handoff + Forward-to-Approver + N3 Risk Banners
+
+ROLE: Senior full-stack engineer.
+HARD RULES:
+
+Never use book/booking. Use reserve/reservation/hold.
+
+Availability-first: show availability, then hold, then confirm details.
+
+No PII until Confirm step (public). Proposal can exist with anonymized participants.
+
+Holds must be time-bounded and releasable (token already exists).
+
+N3 risk must be shown as advisory + mitigation, not blocking (unless operator chooses).
+
+Goal
+
+Implement the missing glue so a user can:
+
+Search availability (already built)
+
+Add selected items to a reservation plan
+
+Create a proposal that:
+
+creates holds on atomic units
+
+creates initial participant + folio
+
+redirects to /p/proposal/:proposalId
+
+Invite / forward to “handoff recipient” (approver) with token link
+
+See N3 risk advisories when holding/confirming
+
+A) Backend: create proposal from cart (minimal)
+
+Create endpoint:
+
+1) POST /api/p2/public/proposals/from-cart
+
+Body:
+
+{
+  "portal_id": "...",
+  "time_start": "...",
+  "time_end": "...",
+  "selections": [
+    {
+      "container_id": "aviatorContainerId",
+      "unit_type": "sleep",
+      "requested_units": 6
+    },
+    {
+      "container_id": "floraTableContainerId",
+      "unit_type": "sit",
+      "requested_units": 10,
+      "time_start": "...dinnerStart...",
+      "time_end": "...dinnerEnd..."
+    }
+  ]
+}
+
+
+Behavior:
+
+Create proposal record (use existing cc_trips if you already standardized that as proposals)
+
+Create hold_token
+
+For each selection:
+
+call your availability allocator to pick specific unit_ids deterministically
+
+create cc_surface_claims with status hold, time_start/end, unit_ids, hold_token, container_id
+
+Create a “Primary Planner” party profile with anonymized display name (no PII)
+
+Create a folio for that party and link via cc_trip_party_profiles.partyId path you added
+
+Return:
+
+{ "ok": true, "proposalId": "...", "holdToken": "...", "viewUrl": "/p/proposal/..." }
+
+
+Important: allocator must be deterministic (stable ordering) to avoid “random unit churn”.
+
+2) POST /api/p2/public/proposals/:proposalId/release
+
+Body: { holdToken }
+→ release claims and mark proposal canceled/draft released.
+
+3) POST /api/p2/public/proposals/:proposalId/confirm
+
+Body:
+
+{
+  "holdToken": "...",
+  "contact": { "email": "...", "phone": "..." },
+  "primary_name": "..."
+}
+
+
+Behavior:
+
+Convert holds to confirmed claims (or create reservation_id link)
+
+Now you may store PII because this is Confirm step
+
+Return success + redirect to proposal page
+
+B) Backend: forward-to-approver (handoff recipient)
+
+Add endpoint:
+
+POST /api/p2/app/proposals/:proposalId/handoff
+
+Body:
+
+{ "role": "handoff_recipient", "email": "...", "note": "Please approve by Friday" }
+
+
+Behavior:
+
+Create invite using your existing invite system
+
+Ensure invite token grants:
+
+read proposal
+
+view allocations
+
+view folio totals
+
+optionally pay (if you allow approver to pay)
+
+Return handoffUrl and token
+
+This is separate from party_member invites; it’s explicitly the “send to boss” flow.
+
+C) N3 risk advisories at hold/confirm
+
+You already have N3 evaluation. Add a lightweight advisory endpoint:
+
+GET /api/p2/public/proposals/:proposalId/risk
+
+Returns:
+
+top risk score (0..1)
+
+reasons + mitigations (from latest N3 EffectiveCapacity evaluations) for relevant surfaces:
+
+ramp/boardwalk for arrival window
+
+watercraft wind risk for activity windows
+
+utility capacity advisory if charging was requested (optional)
+
+Mapping logic (minimal v1):
+
+For the proposal’s location/portal, select the seeded “Woods End access” N3 run template
+
+Evaluate for the proposal date window
+
+Attach advisories in response
+
+Do not block. UI shows:
+
+“Heads up: low tide makes ramp steep. Mitigation: shift arrival to high tide window.”
+
+D) Frontend: Availability Search → “Create Proposal”
+
+In existing public Availability UI:
+
+Add “Add to Reservation Plan” already exists.
+
+Add a primary CTA: “Create reservation proposal”
+
+On click:
+
+call /api/p2/public/proposals/from-cart
+
+redirect to returned viewUrl
+
+Add a “hold expires in X minutes” banner (use claim hold created_at + TTL config).
+
+E) Frontend: Proposal Page risk banner + forward action
+
+On /p/proposal/:proposalId and /app/proposals/:proposalId:
+
+call /risk endpoint
+
+show a banner if riskScore >= 0.25:
+
+brief reason list
+
+mitigations as chips
+
+On /app/proposals/:proposalId add “Forward to approver” panel:
+
+email input
+
+note
+
+create handoff invite
+
+copy link
+
+F) QA Proof
+
+Start at availability search, pick Aviator for dates, requested_units=6
+
+Click “Create reservation proposal”
+
+Lands on /p/proposal/:proposalId with:
+
+holds created
+
+allocations assigned to planner
+
+folio exists (may be empty)
+
+Risk banner appears (if your N3 seed yields any risk)
+
+Release works and frees units
+
+Confirm converts holds to confirmed and allows entering contact
+
+Deliverables
+
+backend endpoints above
+
+deterministic allocator call
+
+new UI CTA + redirect
+
+proposal risk banner
+
+forward-to-approver panel
+
+proof notes in code comments
+
+Once P-UI-10 is landed, V3.5 public reservation loop is end-to-end complete: availability → plan → proposal → invite → split pay → confirm → incident adjustments.
