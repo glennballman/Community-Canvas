@@ -1,0 +1,48 @@
+P-UI-13 (HIGH) — Participant: My Trips + Messages
+Replit Prompt P-UI-13A — Participant “My Trips” (UI + minimal API fill)
+You are implementing Community Canvas V3.5 (additive-only; no refactors).
+Goal: Complete Participant UX: “My Trips” view + trip detail.
+
+1) INVENTORY FIRST (in-repo):
+- Find existing trips-related tables + routes.
+- Identify any participant-facing endpoints already present (search for “trips”, “itinerary”, “participants”, “trip_itinerary_items”).
+- Confirm public reservation flow already writes reservationId into trip itinerary items (DB column is reservation_id; note isReserved DB column is is_booked).
+
+2) API (only if missing):
+Create/extend ONLY the minimal participant endpoints required:
+- GET /api/p2/app/participant/trips
+  Returns participant’s trips summary list (id, title, date range, status, primary location, counts).
+- GET /api/p2/app/participant/trips/:tripId
+  Returns trip details including itinerary items (and for each item: isReserved, reservationId, dayDate/time, title, description, location).
+- If needed, GET /api/p2/app/participant/trips/:tripId/reservations
+  Returns linked reservations/folios for that trip (summary only; no ledger mutation).
+
+All endpoints must:
+- Respect portal scoping and participant membership.
+- Use standard API envelope { ok, error?, ...data }.
+- Be read-only.
+
+3) UI:
+Add new participant routes under /app/participant:
+- /app/participant/trips (MyTripsPage)
+- /app/participant/trips/:tripId (TripDetailPage)
+
+UI requirements:
+- Shows upcoming vs past trips.
+- Trip card shows date range, destination, status, and “View trip”.
+- Trip detail shows itinerary grouped by day.
+- Each itinerary item shows a “Reserved” badge if linked reservation exists.
+- If reservationId exists, show “View reservation” link that navigates to existing reservation/folio UI if present; otherwise show a neutral placeholder (no dead route).
+
+4) NAV / RBAC:
+- Add “My Trips” to participant nav only.
+- Ensure operator/host nav unchanged.
+
+5) COPY GUARDRAIL:
+- Scan changes for forbidden “book/booking” tokens and ensure only “reserve/reservation”.
+
+6) QA:
+- Add a lightweight e2e dev smoke step in existing qa-smoke-test or cert script that:
+  - loads /app/participant/trips
+  - loads first trip detail page if any trips exist
+Return a short report of files changed.
