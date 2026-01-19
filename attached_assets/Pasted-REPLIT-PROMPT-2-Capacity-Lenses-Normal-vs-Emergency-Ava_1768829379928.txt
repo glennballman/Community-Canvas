@@ -1,0 +1,254 @@
+REPLIT PROMPT 2 — Capacity Lenses (Normal vs Emergency) + Availability Wiring
+ROLE: Senior platform engineer
+PATENT: CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
+HARD RULES:
+
+Never use book/booking. Use reserve/reservation.
+Lens is a policy overlay — never modifies core surface storage
+All measurements in canonical units (mm, mm², g, W) — display units are derived only
+Use existing entity woods-end-marina for marina references
+
+
+Goal
+Implement:
+
+capacity_lens = normal | emergency
+effective_units(surface, lens) without changing storage
+Return availability with lens-aware capacity for Aviator, Woods End Marina, Canoe
+
+
+A) Add Lens Policy Storage
+Create migration for table cc_capacity_policies:
+sql-- PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
+
+CREATE TABLE IF NOT EXISTS cc_capacity_policies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  portal_id uuid NOT NULL,
+  tenant_id uuid NULL,
+  container_id uuid NOT NULL REFERENCES cc_surface_containers(id) ON DELETE CASCADE,
+  surface_type varchar NOT NULL, -- 'sleep' | 'sit' | 'stand' | 'utility' | 'movement'
+  normal_units_override int NULL,
+  emergency_units_override int NULL,
+  metadata jsonb NOT NULL DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  
+  UNIQUE(portal_id, container_id, surface_type)
+);
+
+CREATE INDEX cc_capacity_policies_portal_container_idx 
+  ON cc_capacity_policies(portal_id, container_id);
+CREATE INDEX cc_capacity_policies_surface_type_idx 
+  ON cc_capacity_policies(surface_type);
+
+B) Seed Woods End Marina Segments (if not present)
+Check if marina segments exist. If not, create surface containers and surfaces for the 5 dock segments:
+sql-- Woods End Marina linear moorage segments
+-- All lengths stored in canonical millimeters
+
+-- Parent container: Woods End Marina (use existing or create)
+-- Container type: 'marina'
+
+-- Segment A: Main moorage
+-- length_mm: 15240 (50 feet)
+-- segment_purpose: 'main_moorage'
+
+-- Segment B: Tender/Emergency/Kayak launch
+-- length_mm: 4572 (15 feet)
+-- segment_purpose: 'tender_emergency'
+
+-- Segment C: Main moorage (largest)
+-- length_mm: 51816 (170 feet)
+-- segment_purpose: 'main_moorage'
+
+-- Segment D: Tender/Emergency/Kayak launch
+-- length_mm: 2438 (8 feet)
+-- segment_purpose: 'tender_emergency'
+
+-- Segment E: Main moorage
+-- length_mm: 18288 (60 feet)
+-- segment_purpose: 'main_moorage'
+
+-- Total linear moorage: 92354 mm (~303 feet)
+Each segment should be a cc_surface_containers entry with child cc_surfaces of type stand (for dock standing/mooring area).
+Include metadata on each surface:
+json{
+  "segment_purpose": "main_moorage" | "tender_emergency",
+  "allows_rafting": true,
+  "tide_sensitive": true,
+  "location_ref": "woods-end-marina"
+}
+
+C) Seed Capacity Policies
+Create policies for existing seeded containers:
+ContainerEntity RefSurface TypePhysical MaxNormal OverrideEmergency OverrideAviator Cottageaviator-cottagesleep191019Woods End Marinawoods-end-marinastand12 boats912Canoe (2-person)—sit636Canoe (4-person)—sit848Kayak (single)—sit111Bike Corral—stand161616Flora's Restaurantfloras-restaurantsit101010
+
+D) Implement Lens Evaluator
+Create server/surfaces/capacityLens.ts:
+typescript// PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
+
+export type CapacityLens = 'normal' | 'emergency';
+
+export interface EffectiveCapacityResult {
+  physicalMax: number;
+  effectiveUnits: number;
+  lens: CapacityLens;
+  source: 'policy_override' | 'physical_max';
+}
+
+/**
+ * Get effective units for a container + surface type under a given lens.
+ * 
+ * Resolution order:
+ * 1. Check cc_capacity_policies for override
+ * 2. If no override, sum max_units from all surfaces of that type in container
+ */
+export async function getEffectiveUnits(
+  db: any,
+  portalId: string,
+  containerId: string,
+  surfaceType: string,
+  lens: CapacityLens
+): Promise<EffectiveCapacityResult> {
+  // 1. Get physical max by summing surface units
+  const physicalMax = await sumSurfaceUnits(db, portalId, containerId, surfaceType);
+  
+  // 2. Look for policy override
+  const policy = await db.query.ccCapacityPolicies.findFirst({
+    where: and(
+      eq(ccCapacityPolicies.portalId, portalId),
+      eq(ccCapacityPolicies.containerId, containerId),
+      eq(ccCapacityPolicies.surfaceType, surfaceType)
+    )
+  });
+  
+  // 3. Apply lens
+  if (policy) {
+    if (lens === 'normal' && policy.normalUnitsOverride !== null) {
+      return {
+        physicalMax,
+        effectiveUnits: policy.normalUnitsOverride,
+        lens,
+        source: 'policy_override'
+      };
+    }
+    if (lens === 'emergency' && policy.emergencyUnitsOverride !== null) {
+      return {
+        physicalMax,
+        effectiveUnits: policy.emergencyUnitsOverride,
+        lens,
+        source: 'policy_override'
+      };
+    }
+  }
+  
+  // 4. Default to physical max
+  return {
+    physicalMax,
+    effectiveUnits: physicalMax,
+    lens,
+    source: 'physical_max'
+  };
+}
+
+async function sumSurfaceUnits(
+  db: any,
+  portalId: string,
+  containerId: string,
+  surfaceType: string
+): Promise<number> {
+  // Sum max_units from cc_surface_units where surface belongs to container
+  // and surface.surface_type matches
+}
+
+E) Availability Endpoint
+Create: GET /api/p2/app/availability/container/:containerId
+Query params:
+ParamTypeRequiredDefaultNotestime_startISO timestampYes—Window starttime_endISO timestampYes—Window endlensstringNonormalnormal or emergencyrequested_unitsintNo1Units neededsurface_typestringNo—Filter to specific type
+Response shape (lodging/watercraft):
+json{
+  "containerId": "uuid",
+  "containerName": "Aviator Cottage",
+  "containerType": "cottage",
+  "surfaceType": "sleep",
+  "lens": "normal",
+  "physicalMax": 19,
+  "effectiveUnits": 10,
+  "claimedUnits": 3,
+  "availableUnits": 7,
+  "requestedUnits": 4,
+  "feasible": true,
+  "utilityInfo": null
+}
+Response shape (marina with utility info):
+json{
+  "containerId": "uuid",
+  "containerName": "Woods End Marina",
+  "containerType": "marina",
+  "surfaceType": "stand",
+  "lens": "normal",
+  "physicalMax": 12,
+  "effectiveUnits": 9,
+  "claimedUnits": 2,
+  "availableUnits": 7,
+  "requestedUnits": 1,
+  "feasible": true,
+  "linearMoorageMm": 92354,
+  "segments": [
+    { "name": "Segment A", "lengthMm": 15240, "purpose": "main_moorage" },
+    { "name": "Segment B", "lengthMm": 4572, "purpose": "tender_emergency" },
+    { "name": "Segment C", "lengthMm": 51816, "purpose": "main_moorage" },
+    { "name": "Segment D", "lengthMm": 2438, "purpose": "tender_emergency" },
+    { "name": "Segment E", "lengthMm": 18288, "purpose": "main_moorage" }
+  ],
+  "utilityInfo": {
+    "powerShared": true,
+    "maxWatts": 3000,
+    "hint": "Shared standard plug power available; high draw may require staggered charging"
+  }
+}
+
+F) Claims Integration
+When calculating claimedUnits, query cc_surface_claims for overlapping time windows:
+typescript// Count claimed units in time window
+const claimedUnits = await countClaimedUnits(
+  db,
+  portalId,
+  containerId,
+  surfaceType,
+  timeStart,
+  timeEnd
+);
+
+// Available = effective - claimed
+const availableUnits = effectiveUnits - claimedUnits;
+const feasible = availableUnits >= requestedUnits;
+
+G) Proof Scenarios
+Run these tests after implementation:
+#ContainerLensRequestedExpected EffectiveExpected Result1Aviator Cottagenormal610feasible=true2Aviator Cottagenormal1210feasible=false3Aviator Cottageemergency1219feasible=true4Aviator Cottageemergency2019feasible=false5Canoe 2-personnormal33feasible=true6Canoe 2-personnormal53feasible=false7Canoe 2-personemergency56feasible=true8Woods End Marinanormal99feasible=true9Woods End Marinanormal119feasible=false10Woods End Marinaemergency1112feasible=true11Woods End Marina———utilityInfo.powerShared=true
+
+H) Verification Checklist
+After implementation, confirm:
+
+ Migration created and applied for cc_capacity_policies
+ Woods End Marina segments seeded (5 segments, 92354 mm total)
+ Capacity policies seeded (7 policies minimum)
+ getEffectiveUnits() function created and respects lens
+ Availability endpoint returns correct response shape
+ Aviator: normal=10, emergency=19 verified
+ Canoe 2-person: normal=3, emergency=6 verified
+ Woods End Marina: normal=9, emergency=12 verified
+ Marina response includes linearMoorageMm and segments[]
+ Marina response includes utilityInfo with power hint
+ All length values stored in mm (canonical units)
+
+
+Deliverables
+When complete, report back:
+
+Migration number(s) created
+Any compile/test errors
+Sample availability response for Aviator Cottage (both lenses)
+Sample availability response for Woods End Marina (with segments and utility info)
+Confirmation that all proof scenarios pass

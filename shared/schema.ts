@@ -6918,3 +6918,26 @@ export const ccSurfaceUtilityBindings = pgTable("cc_surface_utility_bindings", {
 export const insertSurfaceUtilityBindingSchema = createInsertSchema(ccSurfaceUtilityBindings).omit({ id: true, createdAt: true });
 export type SurfaceUtilityBinding = typeof ccSurfaceUtilityBindings.$inferSelect;
 export type InsertSurfaceUtilityBinding = z.infer<typeof insertSurfaceUtilityBindingSchema>;
+
+// PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
+// Capacity Policies - Normal vs Emergency lens overrides
+export const ccCapacityPolicies = pgTable("cc_capacity_policies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  containerId: uuid("container_id").notNull().references(() => ccSurfaceContainers.id, { onDelete: "cascade" }),
+  surfaceType: varchar("surface_type").notNull(), // 'sleep' | 'sit' | 'stand' | 'utility' | 'movement'
+  normalUnitsOverride: integer("normal_units_override"),
+  emergencyUnitsOverride: integer("emergency_units_override"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalContainerIdx: index("idx_capacity_policies_portal_container").on(table.portalId, table.containerId),
+  surfaceTypeIdx: index("idx_capacity_policies_surface_type").on(table.surfaceType),
+  unique: uniqueIndex("idx_capacity_policies_unique").on(table.portalId, table.containerId, table.surfaceType),
+}));
+
+export const insertCapacityPolicySchema = createInsertSchema(ccCapacityPolicies).omit({ id: true, createdAt: true, updatedAt: true });
+export type CapacityPolicy = typeof ccCapacityPolicies.$inferSelect;
+export type InsertCapacityPolicy = z.infer<typeof insertCapacityPolicySchema>;
