@@ -119,6 +119,7 @@ import { p2ServiceRunsRouter } from "./routes/p2-service-runs";
 import p2ConversationsRouter from "./routes/p2-conversations";
 import p2ParkingRouter from "./routes/p2-parking";
 import p2MarinaRouter from "./routes/p2-marina";
+import { createParticipantTripsRouter } from "./routes/participant-trips";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -481,6 +482,9 @@ export async function registerRoutes(
 
   // V3.5 Surface Spine (Patent CC-02) - Containers, Surfaces, Atomic Units, Claims
   app.use('/api/p2/app/surfaces', surfacesRouter);
+
+  // Participant Trips (P-UI-13A)
+  app.use('/api/p2/app/participant/trips', createParticipantTripsRouter());
 
   // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {

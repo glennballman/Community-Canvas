@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Sparkles,
   AlertTriangle,
+  Plane,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -52,9 +53,15 @@ export interface NavSection {
  */
 export const V3_NAV: NavSection[] = [
   {
-    title: 'Operations',
+    title: 'Personal',
     items: [
       { icon: LayoutDashboard, label: 'Dashboard', href: '/app', testId: 'nav-dashboard' },
+      { icon: Plane, label: 'My Trips', href: '/app/participant/trips', testId: 'nav-my-trips' },
+    ],
+  },
+  {
+    title: 'Operations',
+    items: [
       { icon: Calendar, label: 'Operations Board', href: '/app/ops', testId: 'nav-ops' },
       { icon: Sparkles, label: 'Housekeeping', href: '/app/ops/housekeeping', testId: 'nav-housekeeping' },
       { icon: AlertTriangle, label: 'Incidents', href: '/app/ops/incidents', testId: 'nav-incidents' },

@@ -146,6 +146,10 @@ import OperatorDisputePage from './pages/app/operator/OperatorDisputePage';
 import OperatorAuthorityIndexPage from './pages/app/operator/OperatorAuthorityIndexPage';
 import OperatorAuthorityGrantPage from './pages/app/operator/OperatorAuthorityGrantPage';
 import PortalsPage from './pages/app/admin/PortalsPage';
+
+// Pages - Participant (P-UI-13A)
+import MyTripsPage from './pages/app/participant/MyTripsPage';
+import TripDetailPage from './pages/app/participant/TripDetailPage';
 import PortalAppearancePage from './pages/app/admin/PortalAppearancePage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
@@ -403,6 +407,10 @@ export default function App() {
                 <Route path="inventory/:id" element={<InventoryRedirect />} />
                 <Route path="reservations" element={<Navigate to="/app/reservations" replace />} />
                 <Route path="conversations" element={<Navigate to="/app/messages" replace />} />
+                
+                {/* Participant routes (P-UI-13A) */}
+                <Route path="participant/trips" element={<MyTripsPage />} />
+                <Route path="participant/trips/:tripId" element={<TripDetailPage />} />
                 
                 {/* Shared routes */}
                 <Route path="messages" element={<ConversationsPage />} />
