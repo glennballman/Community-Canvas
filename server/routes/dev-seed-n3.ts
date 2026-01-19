@@ -206,7 +206,7 @@ router.post('/n3', async (req, res) => {
         requiredSurfaceType: 'movement',
         actorProfile: {
           actor_type: 'wheelchair',
-          mass_g: 120000,
+          mass_mg: 120000000, // 120 kg in milligrams
           width_mm: 650,
           footprint_mm2: 6500,
           traction: 0.4,
@@ -230,7 +230,7 @@ router.post('/n3', async (req, res) => {
         requiredSurfaceType: 'movement',
         actorProfile: {
           actor_type: 'human',
-          mass_g: 80000,
+          mass_mg: 80000000, // 80 kg in milligrams
           width_mm: 500,
           traction: 0.6,
         },

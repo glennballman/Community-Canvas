@@ -32,8 +32,8 @@ export type EffectiveCapacityResult = {
 
 export type ActorProfile = {
   actor_type?: 'human' | 'wheelchair' | 'robot' | 'bike';
-  mass_g?: number;
-  width_mm?: number;
+  mass_mg?: number;  // Canonical: milligrams (90,000,000 mg = 90 kg)
+  width_mm?: number; // Canonical: millimeters
   footprint_mm2?: number;
   traction?: string;
 };

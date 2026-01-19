@@ -1,0 +1,105 @@
+REPLIT PROMPT — Canonical Unit Contract Fix (mass_g → mass_mg)
+ROLE: Senior platform engineer
+PURPOSE: Refactor mass unit from grams to milligrams for consistency with milli-standard
+HARD RULES:
+
+All canonical units use "milli-" prefix where applicable (mm, ms, mg, mL)
+Display units are derived only — never stored
+This is a one-time refactor before more code depends on mass_g
+
+
+What to Change
+1) JSONB Fields in cc_n3_surface_requirements
+The actor_profile JSONB column contains mass_g. Update to mass_mg.
+Before:
+json{ "actor_type": "human", "mass_g": 90000, "width_mm": 500 }
+{ "actor_type": "wheelchair", "mass_g": 150000, "width_mm": 850 }
+{ "actor_type": "robot", "mass_g": 120000, "width_mm": 600 }
+After:
+json{ "actor_type": "human", "mass_mg": 90000000, "width_mm": 500 }
+{ "actor_type": "wheelchair", "mass_mg": 150000000, "width_mm": 850 }
+{ "actor_type": "robot", "mass_mg": 120000000, "width_mm": 600 }
+Migration SQL:
+sql-- Convert mass_g to mass_mg in actor_profile JSONB
+UPDATE cc_n3_surface_requirements
+SET actor_profile = actor_profile 
+  - 'mass_g' 
+  || jsonb_build_object('mass_mg', (actor_profile->>'mass_g')::numeric * 1000)
+WHERE actor_profile ? 'mass_g';
+
+2) Update EffectiveCapacity Evaluator
+File: server/n3/effectiveCapacity.ts
+Find all references to mass_g and change to mass_mg.
+Before:
+typescriptconst actorMass = requirement.actor_profile?.mass_g || 90000;
+After:
+typescriptconst actorMass = requirement.actor_profile?.mass_mg || 90000000; // 90kg in mg
+Update any comments that reference grams:
+typescript// Actor mass in milligrams (90,000,000 mg = 90 kg human)
+
+3) Update Seed Data
+File: server/routes/dev-seed-n3.ts (or wherever N3 seeds live)
+Update all actor profile seeds:
+ActorOld (g)New (mg)Human (90 kg)90,00090,000,000Wheelchair user (150 kg)150,000150,000,000Robot (120 kg)120,000120,000,000
+
+4) Update Type Definitions (if any)
+If you have TypeScript interfaces for actor profiles:
+Before:
+typescriptinterface ActorProfile {
+  actor_type: string;
+  mass_g?: number;
+  width_mm?: number;
+}
+After:
+typescriptinterface ActorProfile {
+  actor_type: string;
+  mass_mg?: number;  // Canonical: milligrams (90,000,000 mg = 90 kg)
+  width_mm?: number; // Canonical: millimeters
+}
+
+5) Add Canonical Unit Contract Comment
+Add this comment block to a central location (e.g., server/lib/constants.ts or shared/types/units.ts):
+typescript/**
+ * CANONICAL UNIT CONTRACT — PATENT CC-02 INVENTOR GLENN BALLMAN
+ * 
+ * All measurements stored in canonical units. Display units are derived.
+ * 
+ * | Measurement | Canonical | Symbol | Example                    |
+ * |-------------|-----------|--------|----------------------------|
+ * | Length      | millimeters | mm   | 15,240 mm = 50 ft          |
+ * | Area        | sq mm       | mm²  | 929,030 mm² = 1 sq ft      |
+ * | Mass        | milligrams  | mg   | 90,000,000 mg = 90 kg      |
+ * | Time        | milliseconds| ms   | 3,600,000 ms = 1 hour      |
+ * | Volume      | milliliters | mL   | 3,785 mL = 1 gallon        |
+ * | Power       | watts       | W    | 3,000 W = 3 kW             |
+ * | Temperature | Celsius     | °C   | (no conversion)            |
+ * 
+ * NEVER store feet, pounds, gallons, etc. Convert on display only.
+ */
+export const CANONICAL_UNITS = {
+  LENGTH: 'mm',
+  AREA: 'mm2', 
+  MASS: 'mg',
+  TIME: 'ms',
+  VOLUME: 'mL',
+  POWER: 'W',
+  TEMPERATURE: 'C'
+} as const;
+
+Verification Checklist
+After running:
+
+ Migration applied — no mass_g keys remain in cc_n3_surface_requirements.actor_profile
+ effectiveCapacity.ts uses mass_mg (grep confirms no mass_g)
+ Seed data uses mass_mg values
+ N3 evaluation still produces same risk scores (logic unchanged, just unit naming)
+ CANONICAL_UNITS constant added to codebase
+
+
+Deliverables
+Report back:
+
+Migration number
+Count of rows updated in cc_n3_surface_requirements
+Confirmation: grep -r "mass_g" server/ returns zero matches
+One sample actor_profile showing mass_mg
