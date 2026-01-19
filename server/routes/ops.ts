@@ -67,20 +67,43 @@ router.get('/tasks', async (req, res) => {
       filteredTasks = filteredTasks.filter(t => t.task.surfaceUnitId === unitId);
     }
     
-    const result = filteredTasks.map(({ task, unit }) => ({
-      id: task.id,
-      task_type: task.taskType,
-      status: task.status,
-      assigned_to_user_id: task.assignedToUserId,
-      due_at: task.dueAt?.toISOString() || null,
-      completed_at: task.completedAt?.toISOString() || null,
-      notes: task.notes,
-      created_at: task.createdAt.toISOString(),
-      unit: unit ? {
-        id: unit.id,
-        unit_type: unit.unitType,
-        unit_label: unit.label,
-      } : null,
+    const result = await Promise.all(filteredTasks.map(async ({ task, unit }) => {
+      let containerPath: string[] = [];
+      if (unit?.surfaceId) {
+        const member = await db.query.ccSurfaceContainerMembers.findFirst({
+          where: eq(ccSurfaceContainerMembers.surfaceId, unit.surfaceId),
+        });
+        if (member?.containerId) {
+          let nextId: string | null = member.containerId;
+          while (nextId) {
+            const containerId = nextId;
+            const foundContainer = await db.query.ccSurfaceContainers.findFirst({
+              where: eq(ccSurfaceContainers.id, containerId),
+            });
+            if (!foundContainer) break;
+            containerPath.unshift(foundContainer.title || foundContainer.containerType || 'Container');
+            nextId = foundContainer.parentContainerId;
+          }
+        }
+      }
+      
+      const metadata = task.metadata as Record<string, unknown> || {};
+      
+      return {
+        id: task.id,
+        unit_id: task.surfaceUnitId,
+        task_type: task.taskType,
+        status: task.status,
+        priority: (metadata.priority as number) || 3,
+        notes: task.notes,
+        assigned_to: task.assignedToUserId,
+        scheduled_for: task.dueAt?.toISOString() || null,
+        started_at: null,
+        completed_at: task.completedAt?.toISOString() || null,
+        created_at: task.createdAt.toISOString(),
+        unit_label: unit?.label || null,
+        container_path: containerPath,
+      };
     }));
     
     res.json({ ok: true, tasks: result });
@@ -130,23 +153,23 @@ router.get('/tasks/:taskId', async (req, res) => {
       }
     }
     
+    const metadata = task.metadata as Record<string, unknown> || {};
+    
     res.json({
       ok: true,
       task: {
         id: task.id,
+        unit_id: task.surfaceUnitId,
         task_type: task.taskType,
         status: task.status,
-        assigned_to_user_id: task.assignedToUserId,
-        due_at: task.dueAt?.toISOString() || null,
-        completed_at: task.completedAt?.toISOString() || null,
+        priority: (metadata.priority as number) || 3,
         notes: task.notes,
-        metadata: task.metadata,
+        assigned_to: task.assignedToUserId,
+        scheduled_for: task.dueAt?.toISOString() || null,
+        started_at: null,
+        completed_at: task.completedAt?.toISOString() || null,
         created_at: task.createdAt.toISOString(),
-        unit: unit ? {
-          id: unit.id,
-          unit_type: unit.unitType,
-          unit_label: unit.label,
-        } : null,
+        unit_label: unit?.label || null,
         container_path: containerPath,
       },
     });
@@ -663,6 +686,94 @@ router.get('/rates', async (req, res) => {
   } catch (error) {
     console.error('[Ops] GET /rates error:', error);
     res.status(500).json({ ok: false, error: 'Failed to fetch rates' });
+  }
+});
+
+// ============================================
+// DEV SEED ENDPOINT
+// ============================================
+
+/**
+ * POST /api/p2/app/ops/dev/seed
+ * Seed test data for ops development (dev only)
+ */
+router.post('/dev/seed', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ ok: false, error: 'Not available in production' });
+  }
+  
+  try {
+    const taskTypes: Array<'clean' | 'setup' | 'inspect' | 'repair'> = ['clean', 'setup', 'inspect', 'repair'];
+    const statuses: Array<'open' | 'in_progress' | 'done'> = ['open', 'in_progress', 'done'];
+    
+    const units = await db.query.ccSurfaceUnits.findMany({ limit: 10 });
+    
+    if (units.length === 0) {
+      return res.status(400).json({ ok: false, error: 'No units found to create tasks for. Seed surface units first.' });
+    }
+    
+    const portalId = req.headers['x-portal-id'] as string;
+    if (!portalId) {
+      return res.status(400).json({ ok: false, error: 'Portal ID required in x-portal-id header' });
+    }
+    
+    const seededTasks = [];
+    for (let i = 0; i < Math.min(units.length, 8); i++) {
+      const unit = units[i];
+      const taskType = taskTypes[i % taskTypes.length];
+      const status = statuses[i % statuses.length];
+      
+      const [task] = await db.insert(ccSurfaceTasks).values({
+        id: crypto.randomUUID(),
+        surfaceUnitId: unit.id,
+        portalId,
+        tenantId: unit.tenantId,
+        taskType,
+        status,
+        notes: `Sample ${taskType} task for development testing`,
+        dueAt: new Date(Date.now() + (i * 24 * 60 * 60 * 1000)),
+        createdAt: new Date(),
+      }).returning();
+      
+      seededTasks.push(task);
+    }
+    
+    const seededRates = [];
+    const unitTypes = ['standard_room', 'suite', 'cabin', 'campsite'];
+    
+    for (const unitType of unitTypes) {
+      const existing = await db.query.ccHousekeepingRates.findFirst({
+        where: and(
+          eq(ccHousekeepingRates.portalId, portalId),
+          eq(ccHousekeepingRates.unitType, unitType)
+        ),
+      });
+      
+      if (!existing) {
+        const [rate] = await db.insert(ccHousekeepingRates).values({
+          id: crypto.randomUUID(),
+          portalId,
+          unitType,
+          payCentsPerUnit: unitType === 'suite' ? 5000 : unitType === 'cabin' ? 3500 : 2500,
+          currency: 'CAD',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }).returning();
+        
+        seededRates.push(rate);
+      }
+    }
+    
+    res.json({
+      ok: true,
+      seeded: {
+        tasks: seededTasks.length,
+        rates: seededRates.length,
+      },
+    });
+  } catch (error) {
+    console.error('[Ops] POST /dev/seed error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to seed data' });
   }
 });
 

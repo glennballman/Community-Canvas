@@ -1,15 +1,179 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Home, DoorOpen, Bed, Armchair, UserSquare, Plug, ChevronRight, ImageOff, Accessibility } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Home, DoorOpen, Bed, Armchair, UserSquare, Plug, ChevronRight, ImageOff, Accessibility, ChevronLeft, Camera, ZoomIn, X } from 'lucide-react';
 import type { ProposalAllocation, ProposalParticipant } from '@/lib/api/proposals';
+
+interface MediaAsset {
+  id: string;
+  url: string;
+  media_type: 'photo' | 'document' | 'video';
+  caption: string | null;
+  created_at: string;
+}
 
 interface AllocationDrilldownDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   participant: ProposalParticipant | null;
   allocation: ProposalAllocation | null;
+}
+
+function MediaCarousel({ unitIds }: { unitIds: string[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  
+  const { data: mediaData, isLoading } = useQuery<{ ok: boolean; media: MediaAsset[] }>({
+    queryKey: ['/api/p2/app/ops/media', { target_type: 'unit', target_id: unitIds[0] }],
+    enabled: unitIds.length > 0,
+  });
+  
+  const photos = (mediaData?.media || []).filter(m => m.media_type === 'photo');
+  
+  if (isLoading) {
+    return (
+      <div className="p-4 rounded-lg border bg-muted/30 flex items-center justify-center h-32">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+      </div>
+    );
+  }
+  
+  if (photos.length === 0) {
+    return (
+      <div className="p-4 rounded-lg border bg-muted/30" data-testid="no-photos">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <ImageOff className="w-4 h-4" />
+          <span>Photos</span>
+        </div>
+        <p className="text-sm text-muted-foreground">No photos available</p>
+      </div>
+    );
+  }
+  
+  const currentPhoto = photos[currentIndex];
+  
+  return (
+    <div data-testid="media-carousel">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+        <Camera className="w-4 h-4" />
+        <span>Photos ({photos.length})</span>
+      </div>
+      
+      <div className="relative overflow-hidden rounded-lg border bg-muted/30">
+        <div className="aspect-video relative">
+          <img
+            src={currentPhoto.url}
+            alt={currentPhoto.caption || 'Unit photo'}
+            className="w-full h-full object-cover"
+            data-testid={`photo-${currentIndex}`}
+          />
+          
+          <Button
+            size="icon"
+            variant="ghost"
+            className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm"
+            onClick={() => setLightboxOpen(true)}
+            data-testid="button-zoom-photo"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        {photos.length > 1 && (
+          <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="bg-background/80 backdrop-blur-sm ml-2 pointer-events-auto"
+              onClick={() => setCurrentIndex(prev => prev > 0 ? prev - 1 : photos.length - 1)}
+              data-testid="button-prev-photo"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="bg-background/80 backdrop-blur-sm mr-2 pointer-events-auto"
+              onClick={() => setCurrentIndex(prev => prev < photos.length - 1 ? prev + 1 : 0)}
+              data-testid="button-next-photo"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+        
+        {photos.length > 1 && (
+          <div className="flex justify-center gap-0.5 py-2">
+            {photos.map((_, idx) => (
+              <Button
+                key={idx}
+                size="icon"
+                variant="ghost"
+                onClick={() => setCurrentIndex(idx)}
+                className="p-2"
+                data-testid={`button-dot-${idx}`}
+              >
+                <span 
+                  className={`block w-2 h-2 rounded-full transition-colors ${
+                    idx === currentIndex ? 'bg-primary' : 'bg-muted-foreground/30'
+                  }`}
+                  aria-hidden="true"
+                />
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+        <DialogContent className="max-w-4xl p-0 bg-black/95 border-none">
+          <div className="relative">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute top-4 right-4 z-10 text-white"
+              onClick={() => setLightboxOpen(false)}
+              data-testid="button-close-lightbox"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+            <img
+              src={currentPhoto.url}
+              alt={currentPhoto.caption || 'Unit photo'}
+              className="w-full max-h-[85vh] object-contain"
+            />
+            {photos.length > 1 && (
+              <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-white ml-4 pointer-events-auto"
+                  onClick={() => setCurrentIndex(prev => prev > 0 ? prev - 1 : photos.length - 1)}
+                  data-testid="button-lightbox-prev"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-white mr-4 pointer-events-auto"
+                  onClick={() => setCurrentIndex(prev => prev < photos.length - 1 ? prev + 1 : 0)}
+                  data-testid="button-lightbox-next"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
 function getUnitIcon(unitType: string) {
@@ -64,6 +228,8 @@ export function AllocationDrilldownDrawer({
   allocation 
 }: AllocationDrilldownDrawerProps) {
   const hasUnits = allocation?.claims?.some(c => c.units.length > 0);
+  
+  const unitIds = allocation?.claims?.flatMap(c => c.units.map(u => u.unit_id)) || [];
   
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -124,15 +290,7 @@ export function AllocationDrilldownDrawer({
               
               <Separator className="my-4" />
               
-              <div className="p-4 rounded-lg border bg-muted/30" data-testid="photos-placeholder">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <ImageOff className="w-4 h-4" />
-                  <span>Photos</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Photos coming soon
-                </p>
-              </div>
+              <MediaCarousel unitIds={unitIds} />
               
               <div className="p-4 rounded-lg border bg-muted/30" data-testid="accessibility-info">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">

@@ -22,6 +22,8 @@ import {
   Users,
   BarChart3,
   ShieldCheck,
+  Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -54,6 +56,8 @@ export const V3_NAV: NavSection[] = [
     items: [
       { icon: LayoutDashboard, label: 'Dashboard', href: '/app', testId: 'nav-dashboard' },
       { icon: Calendar, label: 'Operations Board', href: '/app/ops', testId: 'nav-ops' },
+      { icon: Sparkles, label: 'Housekeeping', href: '/app/ops/housekeeping', testId: 'nav-housekeeping' },
+      { icon: AlertTriangle, label: 'Incidents', href: '/app/ops/incidents', testId: 'nav-incidents' },
     ],
   },
   {
