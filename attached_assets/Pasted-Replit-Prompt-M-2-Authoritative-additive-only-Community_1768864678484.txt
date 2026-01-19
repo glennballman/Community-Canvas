@@ -1,0 +1,79 @@
+Replit Prompt M-2 (Authoritative, additive-only)
+Community Canvas V3.5 — Additive-only. No refactors.
+
+Goal: Implement a reusable frontend MediaUpload component that works with existing Cloudflare R2 (S3-compatible) media endpoints:
+POST /api/cc_media/presign
+POST /api/cc_media/:id/complete
+GET  /api/cc_media/:id
+GET  /api/cc_media/entity/:type/:id
+DELETE /api/cc_media/:id
+(plus any existing entity-bind endpoint like POST /api/procurement-requests/:id/cc_media)
+
+STEP 0 — INVENTORY (must show evidence)
+1) Open server/routes/cc_media.ts (or equivalent) and document:
+- presign request body and response shape
+- complete request body and response shape
+- how entity binding is represented (entity_type/entity_id or join table)
+- any required metadata fields (contentType, size, filename, checksum, etc.)
+
+STEP 1 — FRONTEND API HELPERS
+Create a small client helper:
+client/src/lib/mediaApi.ts
+Functions:
+- presignUpload({ filename, contentType, size, entityType?, entityId?, metadata? })
+- completeUpload({ mediaId, etag?, entityType?, entityId?, metadata? })
+- fetchEntityMedia(entityType, entityId)
+- deleteMedia(mediaId)
+
+STEP 2 — UI COMPONENTS
+Create:
+client/src/components/media/MediaUpload.tsx
+Props:
+- entityType: string
+- entityId: string
+- multiple?: boolean
+- accept?: string (default images)
+- maxFiles?: number
+- onUploaded?: (assets) => void
+- kindTag?: string (optional, e.g. before/after/issue)
+
+Behavior:
+- Choose file(s)
+- Call presign
+- Upload directly to R2 via returned URL/fields (S3 POST or PUT, depending on backend)
+- Call complete
+- Optionally bind to entity (if backend supports it here; otherwise binding done via separate endpoint)
+- Show progress + errors per file
+- Return uploaded assets (id, url, thumb, metadata)
+
+Create:
+client/src/components/media/MediaGallery.tsx
+Props:
+- assets: MediaAsset[]
+- onDelete?: (id) => void
+- layout: grid/list
+Behavior:
+- Thumbnail preview
+- Full image modal/lightbox (simple)
+- Delete if allowed
+
+STEP 3 — HOOKS
+Create:
+client/src/hooks/useEntityMedia.ts
+- useEntityMedia(entityType, entityId)
+- useUploadToEntity(entityType, entityId)
+
+STEP 4 — DEMO / VERIFICATION WIRING
+Add a dev-only verification surface (must be behind an internal guard or only accessible to admins):
+- /app/dev/media (or add to an existing internal tools page)
+It should allow choosing an entityType/entityId and uploading an image, then show it in gallery using GET /api/cc_media/entity/:type/:id
+
+STEP 5 — QA
+- Add route inventory entry for the dev page if applicable
+- Add a minimal smoke test: load dev media page, upload a small test file fixture, confirm gallery shows 1 item
+- Ensure no terminology violations
+
+Return:
+- files changed
+- the exact presign/complete shapes used
+- how entity binding is handled
