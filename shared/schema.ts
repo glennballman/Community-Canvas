@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey, char, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, uuid, pgEnum, boolean, numeric, date, time, varchar, primaryKey, char, index, uniqueIndex, bigint } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -6697,3 +6697,176 @@ export const ccReplanActions = pgTable("cc_replan_actions", {
 export const insertReplanActionSchema = createInsertSchema(ccReplanActions).omit({ id: true, createdAt: true });
 export type ReplanAction = typeof ccReplanActions.$inferSelect;
 export type InsertReplanAction = z.infer<typeof insertReplanActionSchema>;
+
+// ============================================================================
+// PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
+// V3.5 Surface Spine: Containers, Surfaces, Atomic Units, Claims, Utility
+// ============================================================================
+
+// Surface Containers - hierarchy for cottages, rooms, docks, slips, etc.
+export const ccSurfaceContainers = pgTable("cc_surface_containers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  parentContainerId: uuid("parent_container_id"),
+  containerType: varchar("container_type").notNull(),
+  title: varchar("title").notNull(),
+  isPrivate: boolean("is_private").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  minDoorWidthMm: integer("min_door_width_mm"),
+  hasSteps: boolean("has_steps").notNull().default(false),
+  notesAccessibility: text("notes_accessibility"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalTypeIdx: index("idx_surface_containers_portal_type").on(table.portalId, table.containerType),
+  parentIdx: index("idx_surface_containers_parent").on(table.parentContainerId),
+}));
+
+export const insertSurfaceContainerSchema = createInsertSchema(ccSurfaceContainers).omit({ id: true, createdAt: true, updatedAt: true });
+export type SurfaceContainer = typeof ccSurfaceContainers.$inferSelect;
+export type InsertSurfaceContainer = z.infer<typeof insertSurfaceContainerSchema>;
+
+// Surfaces - physical surface anchors (bunks, seats, dock edges, outlets)
+export const ccSurfaces = pgTable("cc_surfaces", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  surfaceType: varchar("surface_type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  lengthMm: integer("length_mm"),
+  widthMm: integer("width_mm"),
+  areaSqmm: bigint("area_sqmm", { mode: "number" }),
+  linearMm: integer("linear_mm"),
+  minClearWidthMm: integer("min_clear_width_mm"),
+  maxSlopePct: numeric("max_slope_pct"),
+  hasGrates: boolean("has_grates").notNull().default(false),
+  surfaceTags: text("surface_tags").array(),
+  utilityType: varchar("utility_type"),
+  utilityConnector: varchar("utility_connector"),
+  metadata: jsonb("metadata").notNull().default({}),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalTypeActiveIdx: index("idx_surfaces_portal_type_active").on(table.portalId, table.surfaceType, table.isActive),
+}));
+
+export const insertSurfaceSchema = createInsertSchema(ccSurfaces).omit({ id: true, createdAt: true, updatedAt: true });
+export type Surface = typeof ccSurfaces.$inferSelect;
+export type InsertSurface = z.infer<typeof insertSurfaceSchema>;
+
+// Surface Container Members - maps surfaces to containers
+export const ccSurfaceContainerMembers = pgTable("cc_surface_container_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  containerId: uuid("container_id").notNull().references(() => ccSurfaceContainers.id, { onDelete: "cascade" }),
+  surfaceId: uuid("surface_id").notNull().references(() => ccSurfaces.id, { onDelete: "cascade" }),
+  role: varchar("role"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  containerIdx: index("idx_surface_container_members_container").on(table.portalId, table.containerId),
+  surfaceIdx: index("idx_surface_container_members_surface").on(table.portalId, table.surfaceId),
+  unique: uniqueIndex("idx_surface_container_members_unique").on(table.containerId, table.surfaceId),
+}));
+
+export const insertSurfaceContainerMemberSchema = createInsertSchema(ccSurfaceContainerMembers).omit({ id: true, createdAt: true });
+export type SurfaceContainerMember = typeof ccSurfaceContainerMembers.$inferSelect;
+export type InsertSurfaceContainerMember = z.infer<typeof insertSurfaceContainerMemberSchema>;
+
+// Surface Units - ATOMIC UNITS (each individually addressable for billing, refunds, incidents)
+export const ccSurfaceUnits = pgTable("cc_surface_units", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  surfaceId: uuid("surface_id").notNull().references(() => ccSurfaces.id, { onDelete: "cascade" }),
+  unitType: varchar("unit_type").notNull(),
+  unitIndex: integer("unit_index").notNull(),
+  label: varchar("label"),
+  unitMaxLbs: integer("unit_max_lbs"),
+  unitTags: text("unit_tags").array(),
+  metadata: jsonb("metadata").notNull().default({}),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalTypeIdx: index("idx_surface_units_portal_type").on(table.portalId, table.unitType),
+  surfaceIdx: index("idx_surface_units_surface").on(table.portalId, table.surfaceId),
+  unique: uniqueIndex("idx_surface_units_unique").on(table.surfaceId, table.unitType, table.unitIndex),
+}));
+
+export const insertSurfaceUnitSchema = createInsertSchema(ccSurfaceUnits).omit({ id: true, createdAt: true, updatedAt: true });
+export type SurfaceUnit = typeof ccSurfaceUnits.$inferSelect;
+export type InsertSurfaceUnit = z.infer<typeof insertSurfaceUnitSchema>;
+
+// Surface Claims - time-bound allocation of unit_ids
+export const ccSurfaceClaims = pgTable("cc_surface_claims", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  containerId: uuid("container_id").references(() => ccSurfaceContainers.id),
+  reservationId: uuid("reservation_id"),
+  holdToken: varchar("hold_token"),
+  claimStatus: varchar("claim_status").notNull(),
+  timeStart: timestamp("time_start", { withTimezone: true }).notNull(),
+  timeEnd: timestamp("time_end", { withTimezone: true }).notNull(),
+  unitIds: uuid("unit_ids").array().notNull(),
+  assignedParticipantId: uuid("assigned_participant_id"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tokenIdx: index("idx_surface_claims_token").on(table.portalId, table.holdToken),
+  reservationIdx: index("idx_surface_claims_reservation").on(table.portalId, table.reservationId),
+  statusIdx: index("idx_surface_claims_status").on(table.portalId, table.claimStatus),
+  timeIdx: index("idx_surface_claims_time").on(table.portalId, table.timeStart, table.timeEnd),
+}));
+
+export const insertSurfaceClaimSchema = createInsertSchema(ccSurfaceClaims).omit({ id: true, createdAt: true, updatedAt: true });
+export type SurfaceClaim = typeof ccSurfaceClaims.$inferSelect;
+export type InsertSurfaceClaim = z.infer<typeof insertSurfaceClaimSchema>;
+
+// Utility Nodes - shared power pools, panels, feeders
+export const ccUtilityNodes = pgTable("cc_utility_nodes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  nodeType: varchar("node_type").notNull(),
+  utilityType: varchar("utility_type").notNull(),
+  title: varchar("title").notNull(),
+  capacity: jsonb("capacity").notNull().default({}),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalTypeIdx: index("idx_utility_nodes_portal_type").on(table.portalId, table.utilityType, table.nodeType),
+}));
+
+export const insertUtilityNodeSchema = createInsertSchema(ccUtilityNodes).omit({ id: true, createdAt: true, updatedAt: true });
+export type UtilityNode = typeof ccUtilityNodes.$inferSelect;
+export type InsertUtilityNode = z.infer<typeof insertUtilityNodeSchema>;
+
+// Surface Utility Bindings - connects surfaces to utility nodes
+export const ccSurfaceUtilityBindings = pgTable("cc_surface_utility_bindings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  surfaceId: uuid("surface_id").notNull().references(() => ccSurfaces.id, { onDelete: "cascade" }),
+  utilityNodeId: uuid("utility_node_id").notNull().references(() => ccUtilityNodes.id, { onDelete: "cascade" }),
+  priority: integer("priority").notNull().default(0),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalIdx: index("idx_surface_utility_bindings_portal").on(table.portalId),
+  nodeIdx: index("idx_surface_utility_bindings_node").on(table.utilityNodeId),
+  unique: uniqueIndex("idx_surface_utility_bindings_unique").on(table.surfaceId, table.utilityNodeId),
+}));
+
+export const insertSurfaceUtilityBindingSchema = createInsertSchema(ccSurfaceUtilityBindings).omit({ id: true, createdAt: true });
+export type SurfaceUtilityBinding = typeof ccSurfaceUtilityBindings.$inferSelect;
+export type InsertSurfaceUtilityBinding = z.infer<typeof insertSurfaceUtilityBindingSchema>;

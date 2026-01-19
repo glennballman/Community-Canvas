@@ -97,7 +97,9 @@ import monetizationRouter from "./routes/monetization";
 import scmRouter from "./routes/scm";
 import drillsRouter from "./routes/drills";
 import { n3Router } from "./routes/n3";
+import { surfacesRouter } from "./routes/surfaces";
 import devSeedN3Router from "./routes/dev-seed-n3";
+import devSeedSurfacesRouter from "./routes/dev-seed-surfaces";
 import publicJobsRouter from "./routes/public-jobs";
 import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
@@ -465,9 +467,13 @@ export async function registerRoutes(
   // N3 Service Run Monitor + Replan Engine (Patent CC-01)
   app.use('/api/n3', n3Router);
 
-  // Dev seed for N3 testing (development only)
+  // V3.5 Surface Spine (Patent CC-02) - Containers, Surfaces, Atomic Units, Claims
+  app.use('/api/p2/app/surfaces', surfacesRouter);
+
+  // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {
     app.use('/api/dev/seed', devSeedN3Router);
+    app.use('/api/dev/seed', devSeedSurfacesRouter);
   }
 
   // Admin cc_articles endpoint (platform admin only) - renamed from presentations for schema.org compliance
