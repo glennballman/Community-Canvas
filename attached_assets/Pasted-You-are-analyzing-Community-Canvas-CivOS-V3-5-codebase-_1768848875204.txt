@@ -1,0 +1,96 @@
+You are analyzing Community Canvas / CivOS V3.5 codebase.
+Objective: Produce a COMPLETE forensic inventory of EVERYTHING implemented for Messaging across ALL subsystems (Jobs portal, Coordination Circles, notifications, records, etc.).
+
+Constraints:
+- Additive-only mindset (do not refactor or change code).
+- Output must be evidence-based with file paths and identifiers.
+- Messaging work may be distributed; do NOT assume a single “messages module”.
+
+DELIVERABLE 1 — DATABASE INVENTORY (Messaging Spine)
+1) Identify ALL messaging-related tables:
+- Search for tables named like: cc_messages, cc_message_threads, cc_message_participants, cc_conversations, cc_inbox, cc_notifications, cc_notification_templates, cc_mentions, cc_reads, cc_message_attachments, cc_message_reactions, cc_message_events, cc_message_delivery, cc_message_queue, etc.
+- Also capture tables that embed messaging concepts in other subsystems (jobs, circles, portals).
+
+For each table, output:
+- table name
+- columns (highlight: portal_id, tenant_id, actor_id, thread_id, job_id, circle_id, visibility, created_at)
+- foreign keys and indices
+- RLS / policy notes if present
+- what subsystem “owns” it (Jobs / Circles / Notifications / General)
+
+2) Identify ANY functions/triggers related to messaging:
+- pg functions, triggers, queues, notification fanout, unread counters, etc.
+
+DELIVERABLE 2 — API INVENTORY (All Messaging Endpoints)
+1) Enumerate ALL API routes touching messaging:
+- Search in backend route files for: messages, message, thread, inbox, conversation, notify, notification, template, read, unread, mention, dm, chat.
+- Include REST + RPC + server actions if any.
+
+For each endpoint output:
+- method + route
+- handler file path
+- auth requirements and role constraints
+- portal scoping enforcement (how it is applied)
+- input/output schema shape (brief)
+- side effects (e.g. creates notification, updates unread, writes audit)
+
+2) Explicitly identify the endpoints used by:
+- CanadaDirect Jobs Portal messaging (job threads, applicant ↔ operator comms, match chat, etc.)
+- Coordination Circles messaging (circle threads, delegations, coordination comms)
+- Operator notifications / staff alerts / emergency routing
+
+DELIVERABLE 3 — FRONTEND INVENTORY (UI + Components)
+1) Find ALL frontend pages/routes that implement messaging or notifications:
+- /app/messages*
+- /app/jobs/* (where messaging exists inside jobs workflows)
+- /app/circles/* (where messaging exists inside circles)
+- any “inbox”, “threads”, “chat”, “comments”, “activity”, “notifications” pages.
+
+For each page output:
+- route path
+- file path
+- what it renders (Inbox list, Thread view, embedded panel, modal, etc.)
+- role gating (participant/host/operator/admin/crew/fleet)
+
+2) Find shared components/hooks:
+- components: MessageList, ThreadList, Composer, AttachmentPicker, UnreadBadge, NotificationBell, etc.
+- data hooks: useMessages, useThreads, useNotifications, react-query keys used, polling/websocket/SSE usage.
+
+DELIVERABLE 4 — PERMISSIONS / SECURITY MODEL (Portal isolation proof)
+1) Trace portal scoping for messaging end-to-end:
+- show where portal_id is checked in DB queries
+- show where actor membership is checked
+- ensure no cross-portal leakage by design
+
+2) Identify any anonymization / privacy-safe patterns used in messaging (especially for emergency workflows, staff routing, or jobs).
+
+DELIVERABLE 5 — FEATURE MATRIX (What Exists vs What’s Missing)
+Create a matrix of messaging features with status ✅/⚠️/❌, backed by evidence:
+- inbox list
+- thread view
+- send message
+- mark read / unread
+- unread counters
+- notifications (in-app)
+- email/SMS notifications (if any)
+- mentions
+- attachments/media
+- system messages (job status updates, reservation confirmations, circle delegations)
+- search
+- moderation / audit logs
+
+DELIVERABLE 6 — GAP LIST + PRIORITIZED NEXT STEPS
+Based on evidence:
+- list missing UI screens (if any)
+- list missing endpoints (if any)
+- list missing policies/guards (if any)
+- list UX gaps (e.g., no global inbox even though subsystem threads exist)
+Output a STRICT priority order for completing messaging UI to match V3.5 Role-to-Nav.
+
+OUTPUT FORMAT REQUIREMENTS
+- Use headings exactly: DB / API / UI / Security / Matrix / Gaps
+- Every claim must include a file path, table name, or route name.
+- If something is uncertain, mark it “UNCONFIRMED” and show what you searched.
+- Do NOT implement anything. Inventory only.
+
+END.
