@@ -44,8 +44,17 @@ export function useUploadToEntity(entityType: string, entityId: string) {
       });
     },
     onSuccess: () => {
+      // Invalidate all entity-media queries for this entity (including role-filtered variants)
       queryClient.invalidateQueries({
-        queryKey: ['entity-media', entityType, entityId],
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            key[0] === 'entity-media' &&
+            key[1] === entityType &&
+            key[2] === entityId
+          );
+        },
       });
     },
   });
@@ -66,8 +75,17 @@ export function useDeleteEntityMedia(entityType: string, entityId: string) {
       return result;
     },
     onSuccess: () => {
+      // Invalidate all entity-media queries for this entity (including role-filtered variants)
       queryClient.invalidateQueries({
-        queryKey: ['entity-media', entityType, entityId],
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            key[0] === 'entity-media' &&
+            key[1] === entityType &&
+            key[2] === entityId
+          );
+        },
       });
     },
   });

@@ -118,6 +118,46 @@ export async function deleteMedia(mediaId: string): Promise<{ success: boolean }
 }
 
 /**
+ * Upload a file to R2 using XMLHttpRequest for progress tracking
+ */
+async function uploadToR2WithProgress(
+  url: string,
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable && onProgress) {
+        const progress = Math.round((event.loaded / event.total) * 100);
+        onProgress(progress);
+      }
+    });
+    
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Upload failed with status ${xhr.status}`));
+      }
+    });
+    
+    xhr.addEventListener('error', () => {
+      reject(new Error('Upload failed due to network error'));
+    });
+    
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload was aborted'));
+    });
+    
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', file.type);
+    xhr.send(file);
+  });
+}
+
+/**
  * Upload a file directly to R2 using presigned URL
  * Returns the completed media asset
  */
@@ -143,18 +183,12 @@ export async function uploadFileToR2(
     throw new Error('Failed to get presigned URL');
   }
 
-  // Step 2: Upload directly to R2
-  const uploadResponse = await fetch(presignResult.upload_url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': file.type,
-    },
-    body: file,
-  });
-
-  if (!uploadResponse.ok) {
-    throw new Error('Failed to upload file to storage');
-  }
+  // Step 2: Upload directly to R2 with progress tracking
+  await uploadToR2WithProgress(
+    presignResult.upload_url,
+    file,
+    options?.onProgress
+  );
 
   // Step 3: Complete the upload
   const completeResult = await completeUpload({
