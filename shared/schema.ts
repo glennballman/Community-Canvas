@@ -5562,6 +5562,83 @@ export type FolioLedgerEntry = typeof ccFolioLedger.$inferSelect;
 export type InsertFolioLedgerEntry = z.infer<typeof insertFolioLedgerEntrySchema>;
 
 // ============================================================================
+// INCIDENTS TABLE (Prompt 3 - Split Pay + Refunds + Incidents)
+// Tracks illness refunds, staff damage, goodwill refunds, injuries
+// ============================================================================
+
+export const incidentTypeEnum = pgEnum("incident_type", [
+  "illness_refund", "staff_damage", "goodwill_refund", "injury", "other"
+]);
+
+export const incidentStatusEnum = pgEnum("incident_status", [
+  "open", "resolved"
+]);
+
+export const ccIncidents = pgTable("cc_incidents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  
+  incidentType: incidentTypeEnum("incident_type").notNull(),
+  status: incidentStatusEnum("status").notNull().default("open"),
+  
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  reportedByParticipantId: uuid("reported_by_participant_id"),
+  affectedParticipantId: uuid("affected_participant_id"),
+  
+  relatedAsset: jsonb("related_asset").notNull().default({}), // bike info, serial, photos refs
+  notes: text("notes"),
+  metadata: jsonb("metadata").notNull().default({}),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalTypeIdx: index("idx_incidents_portal_type").on(table.portalId, table.incidentType),
+  portalStatusIdx: index("idx_incidents_portal_status").on(table.portalId, table.status),
+}));
+
+export const insertIncidentSchema = createInsertSchema(ccIncidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type Incident = typeof ccIncidents.$inferSelect;
+export type InsertIncident = z.infer<typeof insertIncidentSchema>;
+
+// ============================================================================
+// FOLIO LEDGER LINKS (Prompt 3 - Split Pay + Refunds + Incidents)
+// Links ledger entries to surfaces, claims, incidents without altering immutable ledger
+// ============================================================================
+
+export const ccFolioLedgerLinks = pgTable("cc_folio_ledger_links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  
+  folioLedgerId: uuid("folio_ledger_id").notNull().references(() => ccFolioLedger.id, { onDelete: "cascade" }),
+  
+  surfaceClaimId: uuid("surface_claim_id").references(() => ccSurfaceClaims.id),
+  surfaceUnitId: uuid("surface_unit_id").references(() => ccSurfaceUnits.id),
+  incidentId: uuid("incident_id").references(() => ccIncidents.id),
+  refFolioLedgerId: uuid("ref_folio_ledger_id").references(() => ccFolioLedger.id), // for reversals referencing originals
+  
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  portalLedgerIdx: index("idx_folio_ledger_links_portal_ledger").on(table.portalId, table.folioLedgerId),
+  portalClaimIdx: index("idx_folio_ledger_links_portal_claim").on(table.portalId, table.surfaceClaimId),
+  portalIncidentIdx: index("idx_folio_ledger_links_portal_incident").on(table.portalId, table.incidentId),
+  portalRefIdx: index("idx_folio_ledger_links_portal_ref").on(table.portalId, table.refFolioLedgerId),
+}));
+
+export const insertFolioLedgerLinkSchema = createInsertSchema(ccFolioLedgerLinks).omit({
+  id: true,
+  createdAt: true,
+});
+export type FolioLedgerLink = typeof ccFolioLedgerLinks.$inferSelect;
+export type InsertFolioLedgerLink = z.infer<typeof insertFolioLedgerLinkSchema>;
+
+// ============================================================================
 // ENFORCEMENT ACTIONS (Migration 111)
 // Parking/marina violation ticketing system
 // ============================================================================

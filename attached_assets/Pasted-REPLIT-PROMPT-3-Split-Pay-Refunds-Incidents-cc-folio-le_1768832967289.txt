@@ -1,0 +1,295 @@
+REPLIT PROMPT 3 — Split Pay + Refunds + Incidents (cc_folio_ledger integration)
+
+This prompt implements your stress test:
+
+10 guys, 10 bikes, stay in Aviator
+
+10 individual bills at wedding + 10 individual bills at Flora’s
+
+5 of them rent 2 canoes + 1 kayak for 4 hours
+
+one sickness refund
+
+one staff-caused bike damage compensation
+
+one canoe fall-out goodwill refund
+
+It uses your existing accounting spine:
+
+cc_folio_ledger (append-only, charge/payment/reversal with sequence per folio)
+
+cc_ledger_entries (general ledger events)
+
+cc_activity_ledger (audit trail)
+
+No duplicate billing system.
+
+Goal
+
+Add:
+
+cc_incidents table
+
+ledger linkage to surfaces (claim + unit)
+
+standard “credit/reversal” helpers
+
+dev seed script producing the full scenario and printing 10 folio balances
+
+A) Migration
+1) cc_incidents
+
+Create:
+
+id uuid pk default gen_random_uuid()
+
+portal_id uuid not null
+
+tenant_id uuid null
+
+incident_type varchar not null
+
+allowed: illness_refund, staff_damage, goodwill_refund, injury, other
+
+status varchar not null default 'open' (open,resolved)
+
+occurred_at timestamptz not null default now()
+
+reported_by_participant_id uuid null
+
+affected_participant_id uuid null
+
+related_asset jsonb not null default '{}' (bike info, serial, photos refs)
+
+notes text null
+
+metadata jsonb not null default '{}'
+
+timestamps
+
+Indexes: (portal_id, incident_type), (portal_id, status)
+
+2) Ledger link table (preferred, avoids altering immutable schema)
+
+Create cc_folio_ledger_links:
+
+id uuid pk default gen_random_uuid()
+
+portal_id uuid not null
+
+tenant_id uuid null
+
+folio_ledger_id uuid not null references cc_folio_ledger(id) on delete cascade
+
+surface_claim_id uuid null references cc_surface_claims(id)
+
+surface_unit_id uuid null references cc_surface_units(id)
+
+incident_id uuid null references cc_incidents(id)
+
+ref_folio_ledger_id uuid null references cc_folio_ledger(id) (for reversals referencing originals)
+
+metadata jsonb not null default '{}'
+
+created_at timestamptz not null default now()
+
+Indexes:
+
+(portal_id, folio_ledger_id)
+
+(portal_id, surface_claim_id)
+
+(portal_id, incident_id)
+
+(portal_id, ref_folio_ledger_id)
+
+If you already have a generic “links” table, reuse it. Do not duplicate.
+
+B) Service utilities
+
+Create server/lib/ledger/folioLedger.ts (or extend existing):
+
+1) postCharge
+
+Inputs:
+
+portalId
+
+folioId
+
+providerTenantId
+
+amount_cents (integer)
+
+currency (e.g., CAD)
+
+category (lodging,food_bev,activity_rental,parking,utility_usage)
+
+description
+
+effective_at timestamp
+
+optional links: surface_claim_id, surface_unit_id
+
+Behavior:
+
+insert into cc_folio_ledger with entry_type='charge'
+
+assign next sequence number per folio (use your existing mechanism)
+
+insert into cc_folio_ledger_links if any link fields provided
+
+also insert summary into cc_activity_ledger (“charge posted”)
+
+2) postCreditReversal
+
+Inputs:
+
+same as above plus:
+
+ref_folio_ledger_id (the original charge being reversed/credited)
+
+incident_id (optional)
+
+reason_code (illness, staff_damage, goodwill)
+
+Behavior:
+
+insert into cc_folio_ledger as entry_type='reversal' (or your preferred credit type)
+
+negative amount or reversal semantics consistent with your ledger rules
+
+write link row with ref_folio_ledger_id and incident_id
+
+append to cc_activity_ledger
+
+Invariant: no updates to prior ledger rows.
+
+C) Minimal “folio balance” query helper
+
+Add helper getFolioBalanceCents(folioId) summing charges/payments/reversals per your rules.
+
+D) Dev Seed: “10 guys wedding stress test”
+
+Add endpoint: POST /api/dev/seed/wedding-stress
+
+Seed inputs (hardcode for now)
+
+portal_id: current dev portal
+
+Create 10 participants P1..P10 (use existing participants table; if none, create stub users)
+
+Create 10 folios F1..F10 (one per participant) using existing folio creation
+
+Allocation / claims
+
+Aviator: select 10 distinct sleep unit_ids out of the 19
+
+create 10 confirmed cc_surface_claims (one per participant) for 3 nights (pick dates)
+
+Bike corral: create 10 stand unit claims (one per bike) OR 1 claim with 10 unit_ids — your choice
+
+link bikes to participants via metadata (bike_id/serial)
+
+Flora: 10 sit unit claims for dinner window
+
+or skip claims and just ledger charges (claims optional but good)
+
+Watercraft: 5 participants:
+
+Canoe 1: 3 sit unit claims for 4 hours
+
+Canoe 2: 2 sit unit claims for 4 hours
+
+Kayak: 1 sit unit claim for 4 hours
+(Use normal lens units; emergency closed doesn’t matter here.)
+
+Charges (10 individual bills)
+
+Post charges into cc_folio_ledger:
+
+Lodging: per participant folio
+
+link each lodging charge to that participant’s sleep claim + sleep unit id
+
+Parking/bike corral: per participant folio
+
+charge small fee each OR zero; still ledger it for proof
+
+Flora: per participant folio
+
+different amounts per person (simulate individual bills)
+
+Activities: only for the 5 renters
+
+link to the activity claim(s)
+
+Incidents + refunds
+
+Illness refund: choose P4
+
+create cc_incidents row type illness_refund
+
+reverse/refund:
+
+lodging charge for the unused nights OR a goodwill partial credit (choose simple: 50% lodging refund)
+
+post reversal linked to original lodging ledger row + incident_id
+
+Staff bike damage compensation: choose P2
+
+create cc_incidents row type staff_damage
+
+post compensation credit (reversal) on P2 folio (e.g., $150)
+
+link to incident; include bike metadata
+
+(Optional later: create an internal cost ledger entry; not required for this prompt)
+
+Canoe fall-out goodwill refund: choose P9 (must be one of the 5 renters)
+
+create cc_incidents row type goodwill_refund
+
+reverse the activity rental charge partially or fully (e.g., full refund of their share)
+
+Output (must print)
+
+Return JSON:
+
+list of 10 folios with:
+
+total charges
+
+total reversals
+
+net balance
+
+ledger row ids for the three adjustments
+
+show that the ledger is append-only and links reference originals
+
+E) QA checks (must pass)
+
+ledger entries inserted only (no updates)
+
+reversal rows reference original rows via cc_folio_ledger_links.ref_folio_ledger_id
+
+incident rows exist and are linked
+
+10 folios have distinct restaurant totals
+
+only 5 folios have activity charges
+
+3 adjustments applied to correct folios
+
+Deliverables
+
+migration file(s)
+
+drizzle schema updates
+
+folioLedger.ts helpers
+
+/api/dev/seed/wedding-stress endpoint
+
+README snippet in the endpoint comment describing how to run and what to expect
