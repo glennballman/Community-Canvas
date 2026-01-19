@@ -687,82 +687,63 @@ router.post('/surfaces', async (_req, res) => {
     // =============================================
     console.log('[Surface Seed] Creating Capacity Policies...');
 
-    // Aviator Cottage: emergency +20 sleep (mattresses on floor)
-    await db.insert(ccCapacityPolicies).values({
-      portalId: TEST_PORTAL_ID,
-      tenantId: TEST_TENANT_ID,
-      containerId: aviatorCottage.id,
-      surfaceType: 'sleep',
-      normalUnitsOverride: null, // use base count (19)
-      emergencyUnitsOverride: 39, // +20 emergency capacity
-      metadata: { notes: 'Emergency: mattresses on floor' },
-    });
+    // =============================================
+    // CAPACITY POLICIES (Lens CAPS - limits, not overrides)
+    // A cap limits offerable units: lensUnitsTotal = min(physical, cap)
+    // =============================================
+    
+    // Aviator Cottage: no caps needed (physical=19 is available in both lenses)
+    // Not inserting policy - defaults to physical for both lenses
 
-    // Marina: emergency +4 moorage (base 14 + 4 = 18)
-    await db.insert(ccCapacityPolicies).values({
-      portalId: TEST_PORTAL_ID,
-      tenantId: TEST_TENANT_ID,
-      containerId: marinaContainer.id,
-      surfaceType: 'stand',
-      normalUnitsOverride: null,
-      emergencyUnitsOverride: 18, // base 14 + 4 emergency rafting
-      metadata: { notes: 'Emergency: raft-up allowed' },
-    });
-
-    // Canoe 1: emergency 0 (too risky in emergency)
+    // Canoe 1: normal cap=3 (limit rentals), emergency cap=0 (grounded)
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: canoe1Container.id,
       surfaceType: 'sit',
-      normalUnitsOverride: null, // use base (6)
-      emergencyUnitsOverride: 0, // no canoe rentals in emergency
-      metadata: { notes: 'Emergency: watercraft grounded' },
+      normalUnitsLimit: 3,  // limit to 3 seats in normal
+      emergencyUnitsLimit: 0, // grounded in emergency
+      metadata: { notes: 'Normal: limit rentals. Emergency: watercraft grounded', closed_in_emergency: true },
     });
 
-    // Canoe 2: emergency 0 (too risky in emergency)
+    // Canoe 2: same as Canoe 1
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: canoe2Container.id,
       surfaceType: 'sit',
-      normalUnitsOverride: null,
-      emergencyUnitsOverride: 0,
-      metadata: { notes: 'Emergency: watercraft grounded' },
+      normalUnitsLimit: 3,
+      emergencyUnitsLimit: 0,
+      metadata: { notes: 'Emergency: watercraft grounded', closed_in_emergency: true },
     });
 
-    // Kayak 1: emergency 0 (too risky in emergency)
+    // Kayak 1: normal cap=1 (limit rentals), emergency cap=0 (grounded)
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: kayak1Container.id,
       surfaceType: 'sit',
-      normalUnitsOverride: null,
-      emergencyUnitsOverride: 0,
-      metadata: { notes: 'Emergency: watercraft grounded' },
+      normalUnitsLimit: 1,  // limit to 1 seat in normal
+      emergencyUnitsLimit: 0, // grounded in emergency
+      metadata: { notes: 'Emergency: watercraft grounded', closed_in_emergency: true },
     });
 
-    // Bike Corral: normal -4 (reserve spots for staff)
+    // Bike Corral: normal cap=12 (staff reserve 4 of 16)
     await db.insert(ccCapacityPolicies).values({
       portalId: TEST_PORTAL_ID,
       tenantId: TEST_TENANT_ID,
       containerId: bikeCorralContainer.id,
       surfaceType: 'stand',
-      normalUnitsOverride: 12, // 16 - 4 reserved for staff
-      emergencyUnitsOverride: null, // full capacity in emergency
+      normalUnitsLimit: 12, // cap at 12 (16 physical - 4 staff reserve)
+      emergencyUnitsLimit: null, // no cap in emergency (use full physical)
       metadata: { notes: 'Normal: 4 spots reserved for staff' },
     });
 
-    // Flora's Restaurant: emergency +4 (extra seating)
-    await db.insert(ccCapacityPolicies).values({
-      portalId: TEST_PORTAL_ID,
-      tenantId: TEST_TENANT_ID,
-      containerId: floraRestaurant.id,
-      surfaceType: 'sit',
-      normalUnitsOverride: null, // use base (10)
-      emergencyUnitsOverride: 14, // +4 emergency seating
-      metadata: { notes: 'Emergency: extra folding chairs' },
-    });
+    // Flora's Restaurant: no caps needed (physical=10 available in both lenses)
+    // Not inserting policy - defaults to physical for both lenses
+
+    // Marina: no caps needed (physical=14 slips available in both lenses)
+    // Not inserting policy - defaults to physical for both lenses
 
     // =============================================
     // PROOF QUERIES
@@ -846,7 +827,7 @@ router.post('/surfaces', async (_req, res) => {
         dock_slips: 9,
         utility_bindings: 9,
         marina_linear_mm: 92354,
-        capacity_policies: 7,
+        capacity_policies: 4, // 4 policies: Canoe 1, Canoe 2, Kayak 1, Bike Corral
       },
       containers: {
         aviator: aviatorCottage.id,
@@ -922,30 +903,41 @@ router.get('/surfaces/capacity-proof', async (req, res) => {
           container: container.title,
           containerType: container.container_type,
           surfaceType: stRow.surface_type,
+          physicalUnitsTotal: comparison.physicalUnitsTotal,
           normal: {
-            base: comparison.normal.baseUnits,
-            effective: comparison.normal.effectiveUnits,
-            hasPolicy: comparison.normal.policyOverride !== null,
+            lensCap: comparison.normal.lensCap,
+            lensUnitsTotal: comparison.normal.lensUnitsTotal,
+            hasPolicy: comparison.normal.lensCap !== null,
           },
           emergency: {
-            base: comparison.emergency.baseUnits,
-            effective: comparison.emergency.effectiveUnits,
-            hasPolicy: comparison.emergency.policyOverride !== null,
+            lensCap: comparison.emergency.lensCap,
+            lensUnitsTotal: comparison.emergency.lensUnitsTotal,
+            hasPolicy: comparison.emergency.lensCap !== null,
           },
-          delta: comparison.delta,
+          invariantViolation: comparison.invariantViolation,
+          invariantMessage: comparison.invariantMessage,
         };
       }
     }
 
-    // Expected proof results
+    // Expected proof results with CAP semantics:
+    // physical = actual units, normal/emergency = min(physical, cap) or physical if no cap
+    // Cap semantics: offerable = min(physical, cap_if_set)
     const expected = {
-      'Aviator_sleep': { normal: 19, emergency: 39, delta: 20 },
-      'Bike Corral Stall_stand': { normal: 12, emergency: 16, delta: 4 },
-      "Flora's_sit": { normal: 10, emergency: 14, delta: 4 },
-      'Canoe 1_sit': { normal: 6, emergency: 0, delta: -6 },
-      'Canoe 2_sit': { normal: 6, emergency: 0, delta: -6 },
-      'Kayak 1_sit': { normal: 2, emergency: 0, delta: -2 },
-      'Woods End Marina_stand': { normal: 14, emergency: 18, delta: 4 },
+      // Aviator: physical=19, no caps → normal=19, emergency=19
+      'Aviator_sleep': { physical: 19, normal: 19, emergency: 19 },
+      // Bike Corral: physical=16, normal cap=12 → normal=12, emergency=16
+      'Bike Corral Stall_stand': { physical: 16, normal: 12, emergency: 16 },
+      // Flora's: physical=10, no caps → normal=10, emergency=10
+      "Flora's_sit": { physical: 10, normal: 10, emergency: 10 },
+      // Canoe 1: physical=6, normal cap=3, emergency cap=0 → normal=3, emergency=0
+      'Canoe 1_sit': { physical: 6, normal: 3, emergency: 0 },
+      // Canoe 2: physical=6, normal cap=3, emergency cap=0 → normal=3, emergency=0
+      'Canoe 2_sit': { physical: 6, normal: 3, emergency: 0 },
+      // Kayak 1: physical=2, normal cap=1, emergency cap=0 → normal=1, emergency=0
+      'Kayak 1_sit': { physical: 2, normal: 1, emergency: 0 },
+      // Marina: physical=14, no caps → normal=14, emergency=14
+      'Woods End Marina_stand': { physical: 14, normal: 14, emergency: 14 },
     };
 
     // Validate proofs
@@ -960,13 +952,13 @@ router.get('/surfaces/capacity-proof', async (req, res) => {
       }
 
       if (
-        actual.normal.effective === exp.normal &&
-        actual.emergency.effective === exp.emergency &&
-        actual.delta === exp.delta
+        actual.physicalUnitsTotal === exp.physical &&
+        actual.normal.lensUnitsTotal === exp.normal &&
+        actual.emergency.lensUnitsTotal === exp.emergency
       ) {
         passed.push(key);
       } else {
-        failed.push(`${key}: expected normal=${exp.normal}, emergency=${exp.emergency}, delta=${exp.delta} but got normal=${actual.normal.effective}, emergency=${actual.emergency.effective}, delta=${actual.delta}`);
+        failed.push(`${key}: expected physical=${exp.physical}, normal=${exp.normal}, emergency=${exp.emergency} but got physical=${actual.physicalUnitsTotal}, normal=${actual.normal.lensUnitsTotal}, emergency=${actual.emergency.lensUnitsTotal}`);
       }
     }
 

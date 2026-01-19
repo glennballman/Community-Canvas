@@ -1,0 +1,132 @@
+REPLIT PATCH PROMPT — Capacity Lens Semantics Fix (Caps, Not Deltas)
+
+ROLE: Platform engineer fixing capacity lens semantics.
+HARD RULES:
+
+Lenses MUST NOT change physical reality.
+
+A lens is a policy cap on offerable atomic units of a given unit_type within a container subtree.
+
+Offerable units = min(physical_active_units, lens_cap_if_set).
+
+normal should never exceed emergency (if both are set).
+
+Availability MUST remain correct even if no policies exist.
+
+Goal
+
+Fix cc_capacity_policies + evaluator + endpoints so results are always:
+
+physical_units_total = count of active atomic units in subtree for unit_type
+
+lens_units_total = cap applied (or physical if no cap)
+
+claimed_units_total = overlapping claims (units are consumed regardless of lens)
+
+available_units = max(0, lens_units_total - claimed_units_total)
+
+feasible = available_units >= requested_units
+
+A) Confirm policy table meaning
+
+Keep your cc_capacity_policies table but ensure columns are interpreted as limits, not overrides/deltas:
+
+normal_units_limit (cap)
+
+emergency_units_limit (cap)
+
+If your table currently uses *_override, rename or keep but change semantics (no additive math).
+
+Invariant enforcement in code:
+
+cap_normal = clamp(cap_normal, 0, physical)
+
+cap_emergency = clamp(cap_emergency, 0, physical)
+
+If both caps exist: cap_normal = min(cap_normal, cap_emergency)
+
+B) Fix evaluator (single source of truth)
+
+Create/modify:
+
+server/lib/surfaces/capacityLens.ts
+
+Functions:
+
+countPhysicalUnits(portalId, containerId, unitType): number
+
+Count active units (cc_surface_units.is_active=true) that belong to any surface in the container subtree.
+
+Use your recursive CTE for subtree containers.
+
+Join path: subtree containers → surface_container_members → surfaces → surface_units
+
+getLensCap(portalId, containerId, unitType, lens): number | null
+
+Read policy row for (portal_id, container_id, unit_type)
+
+Return cap for lens or null if absent
+
+getLensUnitsTotal(physical, cap): number
+
+If cap is null → physical
+
+Else → min(physical, cap)
+
+C) Fix the endpoint(s)
+
+For any endpoint returning capacity summaries (you mentioned /api/p2/app/surfaces/capacity/*), ensure it returns:
+
+physical_units_total
+
+lens_units_total
+
+claimed_units_total
+
+available_units
+
+feasible
+
+And never returns lens totals > physical.
+
+D) Fix your proof seed expectations
+
+Update the dev proof endpoint to assert:
+
+Aviator: physical=19; normal cap default (if unset) =19; emergency cap default=19
+If you want normal=10, set normal_units_limit=10, emergency_units_limit=19.
+
+Canoe: physical=6; normal cap=3; emergency cap=6
+
+Kayak: physical=2; normal cap=1; emergency cap=2
+
+Flora: physical=10; normal cap=10; emergency cap=10 (unless you explicitly allow dense seating)
+
+If any container returns emergency 0, treat it as a failing test unless there is an explicit policy cap=0 and metadata says closed=true.
+
+E) Marina note (important)
+
+Do not mix these two concepts:
+
+Stand units (parking spots, bike spots, standing spots) → countable units
+
+Moorage linear mm → a different atomic basis (linear-mm segments over time)
+
+If your marina “stand=14” is coming from linear-mm math, move that into a separate derived metric:
+
+physical_linear_mm_total
+
+lens_linear_mm_total (optional cap)
+…and keep unit_type='stand' strictly for countable stand units.
+
+(We can introduce moorage_linear_mm summaries next, but don’t contaminate unit lens counts.)
+
+Canonical mass units (mg vs g)
+
+You switched to mg and removed mass_g. That’s fine as long as you lock it as canonical and never mix. The contract I wrote earlier used grams; you can either:
+
+keep mg as canonical (mm, ms, mg) and update the contract accordingly, or
+
+revert to g now while there’s no production data.
+
+Given you’ve already updated code + seeds and there’s no data, I’d stick with mg and treat it as the canonical load unit (it’s common in robotics/precision contexts). Just make sure every field name is explicit: mass_mg, max_load_mg.

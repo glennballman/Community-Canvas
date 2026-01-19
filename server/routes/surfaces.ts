@@ -463,8 +463,8 @@ surfacesRouter.get('/policies', async (req, res) => {
         p.portal_id,
         p.container_id,
         p.surface_type,
-        p.normal_units_override,
-        p.emergency_units_override,
+        p.normal_units_limit,
+        p.emergency_units_limit,
         p.metadata,
         c.title as container_title,
         c.container_type
@@ -535,10 +535,10 @@ surfacesRouter.get('/summary', async (req, res) => {
         containerTitle: row.title,
         containerType: row.container_type,
         surfaceType: row.surface_type,
-        baseUnits: parseInt(row.unit_count),
-        effectiveUnits: effectiveCapacity.effectiveUnits,
+        physicalUnits: effectiveCapacity.physicalUnitsTotal,
+        lensUnitsTotal: effectiveCapacity.lensUnitsTotal,
         availableUnits: effectiveCapacity.availableUnits,
-        hasPolicy: effectiveCapacity.policyOverride !== null,
+        hasPolicy: effectiveCapacity.lensCap !== null,
       });
     }
 
@@ -547,10 +547,10 @@ surfacesRouter.get('/summary', async (req, res) => {
       lens,
       summaries,
       totals: {
-        sleep: summaries.filter(s => s.surfaceType === 'sleep').reduce((sum, s) => sum + s.effectiveUnits, 0),
-        sit: summaries.filter(s => s.surfaceType === 'sit').reduce((sum, s) => sum + s.effectiveUnits, 0),
-        stand: summaries.filter(s => s.surfaceType === 'stand').reduce((sum, s) => sum + s.effectiveUnits, 0),
-        utility: summaries.filter(s => s.surfaceType === 'utility').reduce((sum, s) => sum + s.effectiveUnits, 0),
+        sleep: summaries.filter(s => s.surfaceType === 'sleep').reduce((sum, s) => sum + s.lensUnitsTotal, 0),
+        sit: summaries.filter(s => s.surfaceType === 'sit').reduce((sum, s) => sum + s.lensUnitsTotal, 0),
+        stand: summaries.filter(s => s.surfaceType === 'stand').reduce((sum, s) => sum + s.lensUnitsTotal, 0),
+        utility: summaries.filter(s => s.surfaceType === 'utility').reduce((sum, s) => sum + s.lensUnitsTotal, 0),
       },
     });
   } catch (err) {

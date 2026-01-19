@@ -2,10 +2,16 @@
  * PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
  * Capacity Lens System
  * 
- * Computes effective units for containers based on:
- * - Base unit count from surface units
- * - Capacity policy overrides for Normal vs Emergency lenses
- * - Time window claim overlaps
+ * Lenses MUST NOT change physical reality.
+ * A lens is a policy CAP on offerable atomic units of a given unit_type within a container subtree.
+ * 
+ * Offerable units = min(physical_active_units, lens_cap_if_set)
+ * 
+ * Invariants:
+ * - cap_normal = clamp(cap_normal, 0, physical)
+ * - cap_emergency = clamp(cap_emergency, 0, physical)
+ * - If both caps exist: cap_normal <= cap_emergency
+ * - available_units = max(0, lens_units_total - claimed_units_total)
  */
 
 import { db } from '../../db';
@@ -16,26 +22,29 @@ import {
   ccSurfaceClaims,
   ccCapacityPolicies
 } from '@shared/schema';
-import { eq, and, sql, lte, gt } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 export type CapacityLens = 'normal' | 'emergency';
 
-export interface EffectiveCapacity {
+export interface CapacityResult {
   containerId: string;
   surfaceType: string;
   lens: CapacityLens;
-  baseUnits: number;
-  policyOverride: number | null;
-  effectiveUnits: number;
-  claimedUnits: number;
-  availableUnits: number;
+  physicalUnitsTotal: number;      // Count of active atomic units in subtree
+  lensCap: number | null;          // Policy cap (null = no cap)
+  lensUnitsTotal: number;          // min(physical, cap) or physical if no cap
+  claimedUnitsTotal: number;       // Overlapping claims
+  availableUnits: number;          // max(0, lensUnitsTotal - claimedUnitsTotal)
+  feasible: boolean;               // availableUnits >= requestedUnits (for queries with requested)
+  requestedUnits?: number;
 }
 
-export interface GetEffectiveUnitsOptions {
+export interface GetCapacityOptions {
   portalId: string;
   containerId: string;
   surfaceType: string;
   lens?: CapacityLens;
+  requestedUnits?: number;
   timeWindow?: {
     start: Date;
     end: Date;
@@ -43,21 +52,18 @@ export interface GetEffectiveUnitsOptions {
 }
 
 /**
- * Get the effective unit count for a container/surface type combination
- * considering capacity lens and time window claims
- * 
- * Uses recursive CTE to find all descendant containers
+ * Count physical active units in a container subtree for a given unit type.
+ * Uses recursive CTE to find all descendant containers.
  */
-export async function getEffectiveUnits(options: GetEffectiveUnitsOptions): Promise<EffectiveCapacity> {
-  const { portalId, containerId, surfaceType, lens = 'normal', timeWindow } = options;
-
-  // 1. Get base unit count from surface units (including all descendant containers)
-  const baseQuery = await db.execute<{ count: string }>(sql`
+export async function countPhysicalUnits(
+  portalId: string, 
+  containerId: string, 
+  unitType: string
+): Promise<number> {
+  const result = await db.execute<{ count: string }>(sql`
     WITH RECURSIVE container_tree AS (
-      -- Base case: the target container
       SELECT id FROM cc_surface_containers WHERE id = ${containerId}
       UNION ALL
-      -- Recursive case: all child containers
       SELECT c.id 
       FROM cc_surface_containers c
       JOIN container_tree ct ON c.parent_container_id = ct.id
@@ -67,13 +73,24 @@ export async function getEffectiveUnits(options: GetEffectiveUnitsOptions): Prom
     JOIN cc_surfaces s ON su.surface_id = s.id
     JOIN cc_surface_container_members scm ON s.id = scm.surface_id
     JOIN container_tree ct ON scm.container_id = ct.id
-    WHERE su.unit_type = ${surfaceType}
+    WHERE su.unit_type = ${unitType}
       AND su.portal_id = ${portalId}
+      AND su.is_active = true
   `);
   
-  const baseUnits = parseInt(baseQuery.rows?.[0]?.count || '0');
+  return parseInt(result.rows?.[0]?.count || '0');
+}
 
-  // 2. Get capacity policy override
+/**
+ * Get the lens cap for a container/surface type/lens combination.
+ * Returns null if no policy exists or no cap is set for that lens.
+ */
+export async function getLensCap(
+  portalId: string,
+  containerId: string,
+  unitType: string,
+  lens: CapacityLens
+): Promise<number | null> {
   const policies = await db
     .select()
     .from(ccCapacityPolicies)
@@ -81,82 +98,130 @@ export async function getEffectiveUnits(options: GetEffectiveUnitsOptions): Prom
       and(
         eq(ccCapacityPolicies.portalId, portalId),
         eq(ccCapacityPolicies.containerId, containerId),
-        eq(ccCapacityPolicies.surfaceType, surfaceType)
+        eq(ccCapacityPolicies.surfaceType, unitType)
       )
     )
     .limit(1);
 
   const policy = policies[0];
-  let policyOverride: number | null = null;
-  
-  if (policy) {
-    if (lens === 'emergency' && policy.emergencyUnitsOverride !== null) {
-      policyOverride = policy.emergencyUnitsOverride;
-    } else if (lens === 'normal' && policy.normalUnitsOverride !== null) {
-      policyOverride = policy.normalUnitsOverride;
-    }
+  if (!policy) return null;
+
+  if (lens === 'emergency') {
+    return policy.emergencyUnitsLimit ?? null;
+  } else {
+    return policy.normalUnitsLimit ?? null;
   }
+}
 
-  // Calculate effective units (policy override takes precedence if set)
-  const effectiveUnits = policyOverride !== null ? policyOverride : baseUnits;
+/**
+ * Calculate lens units total from physical count and cap.
+ * If cap is null, returns physical. Otherwise returns min(physical, cap).
+ */
+export function getLensUnitsTotal(physical: number, cap: number | null): number {
+  if (cap === null) return physical;
+  return Math.min(physical, Math.max(0, cap));
+}
 
-  // 3. Get claimed units in time window (using recursive CTE for descendant containers)
-  let claimedUnits = 0;
+/**
+ * Count claimed units in a time window for a container subtree.
+ */
+async function countClaimedUnits(
+  portalId: string,
+  containerId: string,
+  unitType: string,
+  timeWindow: { start: Date; end: Date }
+): Promise<number> {
+  const result = await db.execute<{ count: string }>(sql`
+    WITH RECURSIVE container_tree AS (
+      SELECT id FROM cc_surface_containers WHERE id = ${containerId}
+      UNION ALL
+      SELECT c.id 
+      FROM cc_surface_containers c
+      JOIN container_tree ct ON c.parent_container_id = ct.id
+    )
+    SELECT COUNT(*) as count
+    FROM cc_surface_claims sc
+    JOIN cc_surface_units su ON sc.unit_id = su.id
+    JOIN cc_surfaces s ON su.surface_id = s.id
+    JOIN cc_surface_container_members scm ON s.id = scm.surface_id
+    JOIN container_tree ct ON scm.container_id = ct.id
+    WHERE su.unit_type = ${unitType}
+      AND sc.portal_id = ${portalId}
+      AND sc.claim_start <= ${timeWindow.end}
+      AND sc.claim_end > ${timeWindow.start}
+      AND sc.status = 'active'
+  `);
   
+  return parseInt(result.rows?.[0]?.count || '0');
+}
+
+/**
+ * Get capacity for a container/surface type with lens semantics.
+ * 
+ * Returns:
+ * - physicalUnitsTotal: actual atomic units in subtree
+ * - lensCap: policy cap (null if none)
+ * - lensUnitsTotal: offerable units = min(physical, cap)
+ * - claimedUnitsTotal: units with overlapping claims
+ * - availableUnits: lensUnitsTotal - claimedUnitsTotal
+ * - feasible: availableUnits >= requestedUnits
+ */
+export async function getCapacity(options: GetCapacityOptions): Promise<CapacityResult> {
+  const { portalId, containerId, surfaceType, lens = 'normal', requestedUnits = 0, timeWindow } = options;
+
+  // 1. Count physical units
+  const physicalUnitsTotal = await countPhysicalUnits(portalId, containerId, surfaceType);
+
+  // 2. Get lens cap
+  const lensCap = await getLensCap(portalId, containerId, surfaceType, lens);
+
+  // 3. Calculate lens units (capped)
+  const lensUnitsTotal = getLensUnitsTotal(physicalUnitsTotal, lensCap);
+
+  // 4. Count claimed units (if time window provided)
+  let claimedUnitsTotal = 0;
   if (timeWindow) {
-    const claimsQuery = await db.execute<{ count: string }>(sql`
-      WITH RECURSIVE container_tree AS (
-        SELECT id FROM cc_surface_containers WHERE id = ${containerId}
-        UNION ALL
-        SELECT c.id 
-        FROM cc_surface_containers c
-        JOIN container_tree ct ON c.parent_container_id = ct.id
-      )
-      SELECT COUNT(*) as count
-      FROM cc_surface_claims sc
-      JOIN cc_surface_units su ON sc.unit_id = su.id
-      JOIN cc_surfaces s ON su.surface_id = s.id
-      JOIN cc_surface_container_members scm ON s.id = scm.surface_id
-      JOIN container_tree ct ON scm.container_id = ct.id
-      WHERE su.unit_type = ${surfaceType}
-        AND sc.portal_id = ${portalId}
-        AND sc.claim_start <= ${timeWindow.end}
-        AND sc.claim_end > ${timeWindow.start}
-        AND sc.status = 'active'
-    `);
-    
-    claimedUnits = parseInt(claimsQuery.rows?.[0]?.count || '0');
+    claimedUnitsTotal = await countClaimedUnits(portalId, containerId, surfaceType, timeWindow);
   }
+
+  // 5. Calculate available
+  const availableUnits = Math.max(0, lensUnitsTotal - claimedUnitsTotal);
+
+  // 6. Check feasibility
+  const feasible = availableUnits >= requestedUnits;
 
   return {
     containerId,
     surfaceType,
     lens,
-    baseUnits,
-    policyOverride,
-    effectiveUnits,
-    claimedUnits,
-    availableUnits: Math.max(0, effectiveUnits - claimedUnits),
+    physicalUnitsTotal,
+    lensCap,
+    lensUnitsTotal,
+    claimedUnitsTotal,
+    availableUnits,
+    feasible,
+    requestedUnits: requestedUnits > 0 ? requestedUnits : undefined,
   };
 }
 
 /**
- * Batch get effective units for multiple containers
+ * Batch get capacity for multiple containers
  */
-export async function batchGetEffectiveUnits(
+export async function batchGetCapacity(
   portalId: string,
-  containers: Array<{ containerId: string; surfaceType: string }>,
+  containers: Array<{ containerId: string; surfaceType: string; requestedUnits?: number }>,
   lens: CapacityLens = 'normal',
   timeWindow?: { start: Date; end: Date }
-): Promise<EffectiveCapacity[]> {
-  const results: EffectiveCapacity[] = [];
+): Promise<CapacityResult[]> {
+  const results: CapacityResult[] = [];
 
-  for (const { containerId, surfaceType } of containers) {
-    const result = await getEffectiveUnits({
+  for (const { containerId, surfaceType, requestedUnits } of containers) {
+    const result = await getCapacity({
       portalId,
       containerId,
       surfaceType,
       lens,
+      requestedUnits,
       timeWindow,
     });
     results.push(result);
@@ -166,7 +231,8 @@ export async function batchGetEffectiveUnits(
 }
 
 /**
- * Compare capacity between normal and emergency lenses
+ * Compare capacity between normal and emergency lenses.
+ * Validates that normal <= emergency when both caps are set.
  */
 export async function compareCapacityLenses(
   portalId: string,
@@ -174,11 +240,13 @@ export async function compareCapacityLenses(
   surfaceType: string,
   timeWindow?: { start: Date; end: Date }
 ): Promise<{
-  normal: EffectiveCapacity;
-  emergency: EffectiveCapacity;
-  delta: number;
+  normal: CapacityResult;
+  emergency: CapacityResult;
+  physicalUnitsTotal: number;
+  invariantViolation: boolean;
+  invariantMessage?: string;
 }> {
-  const normal = await getEffectiveUnits({
+  const normal = await getCapacity({
     portalId,
     containerId,
     surfaceType,
@@ -186,7 +254,7 @@ export async function compareCapacityLenses(
     timeWindow,
   });
 
-  const emergency = await getEffectiveUnits({
+  const emergency = await getCapacity({
     portalId,
     containerId,
     surfaceType,
@@ -194,9 +262,27 @@ export async function compareCapacityLenses(
     timeWindow,
   });
 
+  // Check invariant: normal <= emergency (when both caps set)
+  let invariantViolation = false;
+  let invariantMessage: string | undefined;
+  
+  if (normal.lensCap !== null && emergency.lensCap !== null) {
+    if (normal.lensUnitsTotal > emergency.lensUnitsTotal) {
+      invariantViolation = true;
+      invariantMessage = `Normal cap (${normal.lensCap}) exceeds emergency cap (${emergency.lensCap})`;
+    }
+  }
+
   return {
     normal,
     emergency,
-    delta: emergency.effectiveUnits - normal.effectiveUnits,
+    physicalUnitsTotal: normal.physicalUnitsTotal,
+    invariantViolation,
+    invariantMessage,
   };
 }
+
+// Legacy aliases for backward compatibility
+export type EffectiveCapacity = CapacityResult;
+export const getEffectiveUnits = getCapacity;
+export const batchGetEffectiveUnits = batchGetCapacity;

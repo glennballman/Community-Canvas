@@ -6920,15 +6920,17 @@ export type SurfaceUtilityBinding = typeof ccSurfaceUtilityBindings.$inferSelect
 export type InsertSurfaceUtilityBinding = z.infer<typeof insertSurfaceUtilityBindingSchema>;
 
 // PATENT CC-02 SURFACES PATENT INVENTOR GLENN BALLMAN
-// Capacity Policies - Normal vs Emergency lens overrides
+// Capacity Policies - Normal vs Emergency lens CAPS (limits, not overrides)
+// A lens cap is a policy limit on offerable units. Offerable = min(physical, cap).
+// Invariant: normal_units_limit <= emergency_units_limit (if both set)
 export const ccCapacityPolicies = pgTable("cc_capacity_policies", {
   id: uuid("id").primaryKey().defaultRandom(),
   portalId: uuid("portal_id").notNull(),
   tenantId: uuid("tenant_id"),
   containerId: uuid("container_id").notNull().references(() => ccSurfaceContainers.id, { onDelete: "cascade" }),
   surfaceType: varchar("surface_type").notNull(), // 'sleep' | 'sit' | 'stand' | 'utility' | 'movement'
-  normalUnitsOverride: integer("normal_units_override"),
-  emergencyUnitsOverride: integer("emergency_units_override"),
+  normalUnitsLimit: integer("normal_units_limit"),     // Cap for normal operations (null = no cap)
+  emergencyUnitsLimit: integer("emergency_units_limit"), // Cap for emergency operations (null = no cap)
   metadata: jsonb("metadata").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
