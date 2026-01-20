@@ -1,0 +1,74 @@
+✅ REPLIT PROMPT — Terminology Hardening Patch (No Guessing)
+
+Paste this into Replit verbatim:
+
+Goal: Ensure we never use the word “job” for maintenance/contractor work. “Job” is employment only.
+
+A) Database migration: rename entity_type value job → work_request
+
+Create a new migration.
+
+Update existing rows (if any) in cc_access_constraints:
+
+UPDATE cc_access_constraints
+SET entity_type = 'work_request'
+WHERE entity_type = 'job';
+
+
+Update the CHECK constraint on cc_access_constraints.entity_type:
+
+Drop the existing CHECK constraint (find its name from pg_constraint if needed).
+
+Recreate it with allowed values:
+('property','asset','work_request','zone','route_edge','portal')
+
+Ensure 'job' is NOT allowed.
+
+B) Server code: entity type enum
+
+Search the codebase for any usage of:
+
+'job' as an access constraint entity type
+
+routes like /access-constraints/.../job/...
+Replace with 'work_request'.
+
+C) Work item linkage
+
+Wherever we previously said “job.details.work_area_id”, confirm the correct maintenance-work table:
+
+If the maintenance entity is cc_work_requests, store work_area_id under work_request.details.work_area_id
+
+If there is a different table name, use that — but do not use employment job posting tables.
+
+D) UI copy
+
+In the Host Properties Work Catalog and the maintenance/work flows:
+
+Use “Work Request” / “Work”
+
+Do NOT show “Job” unless it’s the employment module under /app/jobs or /b/:portalSlug/jobs
+
+Acceptance
+
+DB rejects entity_type='job'
+
+Any existing entity_type='job' rows are converted to 'work_request'
+
+No maintenance screens use the word “job”
+
+Employment screens continue using “job” as-is
+
+About the Drizzle note (CHECK + GIN)
+
+That’s fine. Your DB is the source of truth. Drizzle not representing CHECK/GIN perfectly is acceptable as long as:
+
+migrations create them in Postgres ✅
+
+runtime behavior relies on DB enforcement ✅
+
+types in TS are aligned enough to prevent accidental use ✅
+
+One more small naming tweak I recommend (optional, but clean)
+
+In cc_work_media.entity_type you currently allow 'job' (from the earlier enum list). That should also become 'work_request' for the same reason, if it’s present.
