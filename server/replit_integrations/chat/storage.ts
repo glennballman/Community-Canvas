@@ -1,43 +1,78 @@
-import { db } from "../../db";
-import { conversations, messages } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+/**
+ * Chat storage for the OpenAI integration.
+ * Uses in-memory storage for demo purposes.
+ * For production, wire up to your existing database tables.
+ */
 
-export interface IChatStorage {
-  getConversation(id: number): Promise<typeof conversations.$inferSelect | undefined>;
-  getAllConversations(): Promise<(typeof conversations.$inferSelect)[]>;
-  createConversation(title: string): Promise<typeof conversations.$inferSelect>;
-  deleteConversation(id: number): Promise<void>;
-  getMessagesByConversation(conversationId: number): Promise<(typeof messages.$inferSelect)[]>;
-  createMessage(conversationId: number, role: string, content: string): Promise<typeof messages.$inferSelect>;
+interface Conversation {
+  id: number;
+  title: string;
+  createdAt: Date;
 }
 
-export const chatStorage: IChatStorage = {
+interface Message {
+  id: number;
+  conversationId: number;
+  role: string;
+  content: string;
+  createdAt: Date;
+}
+
+export interface IChatStorage {
+  getConversation(id: number): Promise<Conversation | undefined>;
+  getAllConversations(): Promise<Conversation[]>;
+  createConversation(title: string): Promise<Conversation>;
+  deleteConversation(id: number): Promise<void>;
+  getMessagesByConversation(conversationId: number): Promise<Message[]>;
+  createMessage(conversationId: number, role: string, content: string): Promise<Message>;
+}
+
+class InMemoryChatStorage implements IChatStorage {
+  private conversations: Conversation[] = [];
+  private messages: Message[] = [];
+  private nextConvId = 1;
+  private nextMsgId = 1;
+
   async getConversation(id: number) {
-    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id));
-    return conversation;
-  },
+    return this.conversations.find(c => c.id === id);
+  }
 
   async getAllConversations() {
-    return db.select().from(conversations).orderBy(desc(conversations.createdAt));
-  },
+    return [...this.conversations].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
 
   async createConversation(title: string) {
-    const [conversation] = await db.insert(conversations).values({ title }).returning();
+    const conversation: Conversation = {
+      id: this.nextConvId++,
+      title,
+      createdAt: new Date(),
+    };
+    this.conversations.push(conversation);
     return conversation;
-  },
+  }
 
   async deleteConversation(id: number) {
-    await db.delete(messages).where(eq(messages.conversationId, id));
-    await db.delete(conversations).where(eq(conversations.id, id));
-  },
+    this.conversations = this.conversations.filter(c => c.id !== id);
+    this.messages = this.messages.filter(m => m.conversationId !== id);
+  }
 
   async getMessagesByConversation(conversationId: number) {
-    return db.select().from(messages).where(eq(messages.conversationId, conversationId)).orderBy(messages.createdAt);
-  },
+    return this.messages
+      .filter(m => m.conversationId === conversationId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
 
   async createMessage(conversationId: number, role: string, content: string) {
-    const [message] = await db.insert(messages).values({ conversationId, role, content }).returning();
+    const message: Message = {
+      id: this.nextMsgId++,
+      conversationId,
+      role,
+      content,
+      createdAt: new Date(),
+    };
+    this.messages.push(message);
     return message;
-  },
-};
+  }
+}
 
+export const chatStorage: IChatStorage = new InMemoryChatStorage();

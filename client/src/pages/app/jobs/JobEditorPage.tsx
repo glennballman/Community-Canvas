@@ -25,9 +25,16 @@ import {
   Job, JobDetailResponse, createJob, updateJob,
   roleCategories, employmentTypes, payUnits, housingStatuses, workPermitSupports 
 } from '@/lib/api/jobs';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 type InputMode = 'manual' | 'paste' | 'upload' | 'ai';
+
+interface AIDraft {
+  title?: string;
+  description?: string;
+  requirements?: string[];
+  benefits?: string[];
+}
 
 export default function JobEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +44,9 @@ export default function JobEditorPage() {
   const { toast } = useToast();
 
   const [inputMode, setInputMode] = useState<InputMode>('manual');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Job>>({
     title: '',
     description: '',
@@ -187,12 +197,61 @@ export default function JobEditorPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Describe the role and let AI create a draft for you.
               </p>
-              <Textarea placeholder="We need a summer line cook for our busy restaurant..." />
-              <Button className="mt-2" disabled>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Draft
+              <Textarea 
+                placeholder="We need a summer line cook for our busy restaurant..." 
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                data-testid="input-ai-prompt"
+              />
+              {aiError && (
+                <p className="text-sm text-destructive mt-2">{aiError}</p>
+              )}
+              <Button 
+                className="mt-2" 
+                disabled={aiLoading || !aiPrompt.trim()}
+                onClick={async () => {
+                  setAiLoading(true);
+                  setAiError(null);
+                  try {
+                    const response = await fetch('/api/p2/ai/job-posting-draft', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({
+                        title: aiPrompt,
+                        type: formData.employment_type,
+                        location: formData.location_text,
+                      }),
+                    });
+                    const data = await response.json();
+                    if (data.ok && data.draft) {
+                      setFormData(prev => ({
+                        ...prev,
+                        title: data.draft.title || prev.title,
+                        description: data.draft.description || prev.description,
+                        requirements: (data.draft.requirements || []).join('\n'),
+                        nice_to_have: (data.draft.benefits || []).join('\n'),
+                      }));
+                      setInputMode('manual');
+                      toast({ title: 'AI draft applied' });
+                    } else {
+                      setAiError(data.error?.message || 'Failed to generate draft');
+                    }
+                  } catch (e) {
+                    setAiError('Failed to connect to AI service');
+                  } finally {
+                    setAiLoading(false);
+                  }
+                }}
+                data-testid="button-generate-ai-draft"
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                {aiLoading ? 'Generating...' : 'Generate Draft'}
               </Button>
-              <p className="text-xs text-muted-foreground mt-2">Coming soon</p>
             </CardContent>
           </Card>
         </TabsContent>
