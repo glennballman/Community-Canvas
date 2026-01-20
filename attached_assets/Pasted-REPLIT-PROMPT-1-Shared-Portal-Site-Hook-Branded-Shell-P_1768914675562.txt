@@ -1,0 +1,84 @@
+REPLIT PROMPT 1 — Shared Portal Site Hook + Branded Shell (Public Pages)
+Goal
+
+Create a reusable way to apply existing portal site branding to public pages without duplicating PortalHomePage logic.
+
+Create: client/src/pages/public/hooks/usePortalSite.ts
+import { useQuery } from '@tanstack/react-query';
+
+export function usePortalSite(portalSlug?: string) {
+  return useQuery({
+    queryKey: portalSlug
+      ? [`/api/public/cc_portals/${portalSlug}/site`]
+      : ['portal-site', 'none'],
+    queryFn: async () => {
+      if (!portalSlug) return null;
+      const res = await fetch(`/api/public/cc_portals/${portalSlug}/site`);
+      if (!res.ok) throw new Error('Failed to load portal site');
+      return res.json();
+    },
+    enabled: !!portalSlug,
+  });
+}
+
+Create: client/src/pages/public/components/PortalBrandedShell.tsx
+import React from 'react';
+import { usePortalSite } from '../hooks/usePortalSite';
+
+type Props = {
+  portalSlug?: string;
+  site?: any;
+  backHref?: string;
+  backLabel?: string;
+  children: React.ReactNode;
+};
+
+export function PortalBrandedShell({
+  portalSlug,
+  site: siteProp,
+  backHref,
+  backLabel,
+  children,
+}: Props) {
+  const { data: siteData, isLoading } = usePortalSite(
+    siteProp ? undefined : portalSlug
+  );
+
+  const site = siteProp ?? siteData;
+  const portalName =
+    site?.portal?.name || site?.name || portalSlug || 'Portal';
+
+  if (portalSlug && !site && isLoading) {
+    return <div className="p-6">Loading…</div>;
+  }
+
+  return (
+    <div
+      className="min-h-screen"
+      style={{
+        '--portal-primary':
+          site?.theme?.primaryColor || site?.branding?.primaryColor,
+      } as React.CSSProperties}
+    >
+      <header className="border-b px-6 py-4 flex items-center justify-between">
+        <div className="font-semibold text-lg">{portalName}</div>
+        {backHref && (
+          <a href={backHref} className="text-sm underline">
+            {backLabel ?? 'Back'}
+          </a>
+        )}
+      </header>
+
+      <main className="p-6">{children}</main>
+    </div>
+  );
+}
+
+
+Acceptance
+
+Uses existing portal site endpoint
+
+No global CSS refactor
+
+No forbidden terminology
