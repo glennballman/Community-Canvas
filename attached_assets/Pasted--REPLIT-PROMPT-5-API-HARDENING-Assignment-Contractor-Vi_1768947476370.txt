@@ -1,0 +1,63 @@
+✅ REPLIT PROMPT 5 — API HARDENING (Assignment + Contractor View Rules + Audit)
+
+Paste verbatim:
+
+Update Work Request assignment and contractor disclosure access to use deterministic IDs, and write audit logs.
+
+IMPORTANT:
+- "job" is employment. This feature uses Work Requests (cc_maintenance_requests).
+- Contractors are represented by cc_people (entityType = 'contractor').
+
+A) Work Request assignment endpoints (owner/admin only)
+
+Wherever work requests are created/updated (p2/app maintenance/work-request routes):
+- Accept optional field: assignedContractorPersonId (uuid)
+- Persist to cc_maintenance_requests.assigned_contractor_person_id
+- Keep legacy assignedTo/assignedVendor text fields optional for display, but DO NOT use them for auth.
+
+Add validation:
+- assignedContractorPersonId must belong to same tenant
+- and must reference a cc_people row with entityType='contractor' (or equivalent contractor marker)
+
+B) Contractor disclosure endpoint authorization must be provable
+
+Route: GET /api/p2/app/work-disclosures/contractor/:workRequestId
+(Currently requireTenantMember + check "assigned contractor")
+
+Update the check:
+1) Load work request by id and tenant_id
+2) Determine the requester’s contractorPersonId:
+   - There should be an existing mapping from user -> person OR a "my person" record.
+   - If none exists, return 403.
+3) Allow access only if EITHER:
+   (a) workRequest.assigned_contractor_person_id == requester contractorPersonId
+   OR
+   (b) there exists a disclosure row for that workRequestId with visibility='specific_contractor' and specificContractorId == requester contractorPersonId
+
+If neither, return 403.
+
+C) Contractor data returned must be strictly scoped to disclosed items
+
+When returning subsystems/resources/media/notes:
+- Return ONLY the items referenced in disclosures for that work request
+- Do NOT return the full property catalog
+- Do NOT allow listing by propertyId for contractors
+
+D) Audit logging
+
+On disclosure changes (create/update/revoke):
+- Insert row into cc_work_disclosure_audit with:
+  tenant_id, work_request_id, actor_user_id, contractor_person_id (if specific),
+  action and payload (include counts + ids, not raw secrets)
+
+On contractor access denied:
+- Insert audit row action='view_denied' with payload containing requester contractorPersonId and reason code.
+
+E) Keep owner/admin APIs locked
+
+Ensure all Work Catalog APIs remain behind requireOwnerOrAdmin().
+
+Acceptance:
+- Contractor can only view disclosed items when assigned by UUID or explicitly disclosed
+- Unauthorized contractor always gets 403
+- Audit rows are written for disclosure changes + denied views

@@ -63,6 +63,38 @@ async function requireOwnerOrAdmin(req: any, res: any): Promise<{ tenantId: stri
   return auth;
 }
 
+/**
+ * Get the user's cc_people record with contractor type (if they have one)
+ * Returns null if no contractor person record exists for this user
+ * PROMPT 5: Validates entity_type='contractor' to prevent non-contractors from accessing
+ */
+async function getUserContractorRecord(tenantId: string, userId: string): Promise<{ id: string; entityType: string } | null> {
+  const result = await pool.query(`
+    SELECT id, entity_type 
+    FROM cc_people 
+    WHERE tenant_id = $1 AND user_id = $2 AND entity_type = 'contractor'
+    LIMIT 1
+  `, [tenantId, userId]);
+  
+  return result.rows.length > 0 
+    ? { id: result.rows[0].id, entityType: result.rows[0].entity_type }
+    : null;
+}
+
+/**
+ * Validate that a contractor person ID belongs to the tenant and is marked as contractor
+ * Returns true if valid, false otherwise
+ */
+async function validateContractorPersonId(tenantId: string, contractorPersonId: string): Promise<boolean> {
+  const result = await pool.query(`
+    SELECT id FROM cc_people 
+    WHERE id = $1 AND tenant_id = $2 AND entity_type = 'contractor'
+    LIMIT 1
+  `, [contractorPersonId, tenantId]);
+  
+  return result.rows.length > 0;
+}
+
 // ============================================================================
 // ACCESS CONSTRAINTS CRUD
 // ============================================================================
@@ -791,8 +823,17 @@ router.post('/work-disclosures/bulk', async (req: any, res) => {
       return res.status(404).json({ ok: false, error: 'Work request not found or not accessible' });
     }
 
-    // If contractorPersonId provided, update the work request's assigned contractor
+    // If contractorPersonId provided, validate and update the work request's assigned contractor
     if (contractorPersonId) {
+      // Validate contractor belongs to tenant and has contractor entity type
+      const isValidContractor = await validateContractorPersonId(auth.tenantId, contractorPersonId);
+      if (!isValidContractor) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'Invalid contractor: must belong to tenant and have entity_type=contractor' 
+        });
+      }
+      
       await pool.query(`
         UPDATE cc_maintenance_requests
         SET assigned_contractor_person_id = $1
@@ -864,6 +905,7 @@ router.post('/work-disclosures/bulk', async (req: any, res) => {
 /**
  * DELETE /api/p2/app/work-disclosures/:id
  * Delete a disclosure (revoke)
+ * PROMPT 5: Logs revoke action to audit table
  */
 router.delete('/work-disclosures/:id', async (req: any, res) => {
   try {
@@ -872,15 +914,41 @@ router.delete('/work-disclosures/:id', async (req: any, res) => {
 
     const { id } = req.params;
 
-    const result = await pool.query(`
-      DELETE FROM cc_work_disclosures
+    // Get disclosure details before deleting for audit log
+    const disclosureResult = await pool.query(`
+      SELECT work_request_id, item_type, item_id, specific_contractor_id
+      FROM cc_work_disclosures
       WHERE id = $1 AND tenant_id = $2
-      RETURNING id
     `, [id, auth.tenantId]);
 
-    if (result.rows.length === 0) {
+    if (disclosureResult.rows.length === 0) {
       return res.status(404).json({ ok: false, error: 'Disclosure not found' });
     }
+
+    const disclosure = disclosureResult.rows[0];
+
+    // Delete the disclosure
+    await pool.query(`
+      DELETE FROM cc_work_disclosures
+      WHERE id = $1 AND tenant_id = $2
+    `, [id, auth.tenantId]);
+
+    // Log revoke action to audit table
+    await pool.query(`
+      INSERT INTO cc_work_disclosure_audit 
+      (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+      VALUES ($1, $2, $3, $4, 'revoke', $5)
+    `, [
+      auth.tenantId, 
+      disclosure.work_request_id, 
+      auth.userId, 
+      disclosure.specific_contractor_id,
+      JSON.stringify({ 
+        revokedId: id,
+        itemType: disclosure.item_type,
+        itemId: disclosure.item_id
+      })
+    ]);
 
     res.json({ ok: true, deleted: true });
   } catch (error: any) {
@@ -893,12 +961,17 @@ router.delete('/work-disclosures/:id', async (req: any, res) => {
  * GET /api/p2/app/work-disclosures/contractor/:workRequestId
  * Get disclosed items for a contractor (read-only view)
  * 
- * SECURITY: This endpoint uses requireTenantMember (not requireOwnerOrAdmin)
- * because contractors need access to their disclosed items.
- * Additional check: verifies user is the assigned contractor via cc_people.user_id.
+ * PROMPT 5 COMPLIANCE: This endpoint is for contractors ONLY.
+ * Owners/admins should use full-access endpoints (GET /work-disclosures/work-request/:id)
  * 
- * NOTE: assigned_contractor_person_id references cc_people, not users directly.
- * We join cc_people to get user_id for contractor assignment verification.
+ * AUTHORIZATION:
+ * 1. Get the requester's cc_people contractor record (validates entity_type='contractor')
+ * 2. If none exists, return 403
+ * 3. Allow access only if EITHER:
+ *    (a) workRequest.assigned_contractor_person_id == requester contractorPersonId
+ *    OR
+ *    (b) there exists a disclosure row with visibility='specific_contractor' 
+ *        and specific_contractor_id == requester contractorPersonId
  */
 router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) => {
   try {
@@ -907,16 +980,21 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
 
     const { workRequestId } = req.params;
 
-    // Verify the work request belongs to the tenant AND get assigned contractor person
-    // Or user is owner/admin (they can view everything)
+    // PROMPT 5: This endpoint is contractor-only. Owners/admins should use full-access endpoints.
     const allowedRoles = ['owner', 'admin', 'manager'];
     const isOwnerOrAdmin = allowedRoles.includes(auth.role);
-    
+    if (isOwnerOrAdmin) {
+      return res.status(403).json({ 
+        ok: false, 
+        error: 'This endpoint is for contractors only. Use /work-disclosures/work-request/:id for full access.' 
+      });
+    }
+
+    // Verify the work request belongs to the tenant
     const wrCheck = await pool.query(`
-      SELECT wr.id, wr.assigned_contractor_person_id, p2.user_id as contractor_user_id
+      SELECT wr.id, wr.assigned_contractor_person_id
       FROM cc_maintenance_requests wr
       JOIN cc_portals p ON wr.portal_id = p.id
-      LEFT JOIN cc_people p2 ON wr.assigned_contractor_person_id = p2.id
       WHERE wr.id = $1 AND p.owning_tenant_id = $2
     `, [workRequestId, auth.tenantId]);
 
@@ -924,20 +1002,51 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
       return res.status(404).json({ ok: false, error: 'Work request not found' });
     }
     
-    // If not owner/admin, verify user is the assigned contractor
-    const contractorPersonId = wrCheck.rows[0].assigned_contractor_person_id;
-    if (!isOwnerOrAdmin) {
-      const contractorUserId = wrCheck.rows[0].contractor_user_id;
+    // Step 1: Get the requester's cc_people contractor record (validates entity_type='contractor')
+    const userPerson = await getUserContractorRecord(auth.tenantId, auth.userId);
+    
+    if (!userPerson) {
+      // No person record - log and deny
+      await pool.query(`
+        INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+        VALUES ($1, $2, $3, NULL, 'view_denied', $4)
+      `, [auth.tenantId, workRequestId, auth.userId, JSON.stringify({ reason: 'no_contractor_record' })]);
       
-      if (!contractorPersonId || contractorUserId !== auth.userId) {
-        // Log denied access attempt with contractor attribution
-        await pool.query(`
-          INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
-          VALUES ($1, $2, $3, $4, 'view_denied', $5)
-        `, [auth.tenantId, workRequestId, auth.userId, contractorPersonId, JSON.stringify({ reason: 'not_assigned' })]);
-        
-        return res.status(403).json({ ok: false, error: 'You are not assigned to this work request' });
-      }
+      return res.status(403).json({ ok: false, error: 'No contractor profile linked to your account' });
+    }
+    
+    const requesterContractorId = userPerson.id;
+    const assignedContractorId = wrCheck.rows[0].assigned_contractor_person_id;
+    
+    // Step 2: Check authorization - assignment OR specific disclosure
+    const isAssigned = assignedContractorId === requesterContractorId;
+    
+    // Check for specific_contractor disclosure
+    const specificDisclosureCheck = await pool.query(`
+      SELECT 1 FROM cc_work_disclosures
+      WHERE work_request_id = $1 AND tenant_id = $2 
+        AND visibility = 'specific_contractor' AND specific_contractor_id = $3
+      LIMIT 1
+    `, [workRequestId, auth.tenantId, requesterContractorId]);
+    
+    const hasSpecificDisclosure = specificDisclosureCheck.rows.length > 0;
+    
+    if (!isAssigned && !hasSpecificDisclosure) {
+      // Log denied access attempt with requester's contractor ID
+      await pool.query(`
+        INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+        VALUES ($1, $2, $3, $4, 'view_denied', $5)
+      `, [
+        auth.tenantId, workRequestId, auth.userId, requesterContractorId, 
+        JSON.stringify({ 
+          reason: 'not_authorized', 
+          requesterContractorId, 
+          assignedContractorId,
+          hasSpecificDisclosure: false
+        })
+      ]);
+      
+      return res.status(403).json({ ok: false, error: 'You are not authorized to access this work request' });
     }
 
     // Get disclosed items only - includes work_areas, work_media, access_constraints,
