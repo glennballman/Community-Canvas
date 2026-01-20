@@ -1,0 +1,143 @@
+Keep it exactly as /api/p2/admin/.... ✅ That matches your router reality and avoids inventing a parallel namespace. No changes needed.
+
+Hardening patches sound perfect (role gate + deterministic limits + totals + overflow UI). That’s production-grade.
+
+Next: Fixture Buttons (Phase 2) — Make QA work even when portal is empty
+
+This is the piece that eliminates the last “hunting” problem permanently, because you can stand up a brand-new portal with no data and still validate all workflows in minutes.
+
+What we’ll add
+
+On /app/admin/portals/:portalId/qa:
+
+Create Test Fixtures
+
+Create Test Campaign → returns campaignKey → generates /b/:slug/apply/:campaignKey
+
+Create Test Job Posting → returns postingId → generates detail/apply links
+
+Create Test Proposal (+ pay token) → returns proposalId + payToken → generates view/pay links
+
+Create Test Trip → returns accessCode → generates /trip/:accessCode
+
+Design rules
+
+Admin-only (requireTenantAdmin)
+
+Tenant-scoped
+
+Idempotent: reuse existing test fixtures (avoid duplicates)
+
+No forbidden terminology
+
+After each creation, auto-refresh the QA data and scroll to the new link
+
+REPLIT PROMPT — Add Fixture Endpoints + UI Buttons
+
+Implement “Create Test Fixtures” on the Portal QA Launchpad page.
+
+Backend (p2-admin router)
+
+Add the following POST endpoints under the existing /api/p2/admin/portals/:portalId/qa namespace (same router that currently serves GET portals + QA bundle):
+
+POST /api/p2/admin/portals/:portalId/qa/seed-campaign
+
+POST /api/p2/admin/portals/:portalId/qa/seed-job
+
+POST /api/p2/admin/portals/:portalId/qa/seed-proposal
+
+POST /api/p2/admin/portals/:portalId/qa/seed-trip
+
+All four endpoints must:
+
+Require auth + requireTenantAdmin
+
+Enforce tenant scoping on portalId (unless platform_admin)
+
+Be idempotent by reusing a prior test item if it already exists for the portal
+
+Idempotency tagging (deterministic)
+
+Use a consistent marker so we can safely find/reuse test fixtures:
+
+Title prefix: "[TEST] " for job postings/proposals/campaigns
+
+Optional is_test boolean if such a column already exists (only use if present; do not add migrations today)
+
+Seed Campaign
+
+Behavior:
+
+Look for an existing campaign for this portal with title starting "[TEST]" (most recent) and reuse it.
+
+If none exists, create a minimal valid campaign and return:
+{ ok: true, campaignKey, campaignId }
+
+Ensure the campaignKey can be used in /b/:slug/apply/:campaignKey.
+
+Seed Job Posting
+
+Behavior:
+
+Look for an existing job posting tied to this portal (or tenant) with title starting "[TEST]" and reuse it.
+
+If none exists, create a minimal valid posting visible on the public jobs portal and return:
+{ ok: true, postingId }
+
+Seed Proposal (+ pay token)
+
+Behavior:
+
+Look for an existing proposal with title starting "[TEST]" and portal_id = portalId and reuse it.
+
+If none exists, create a minimal valid proposal and ensure a pay token exists (whatever your current proposal payment model requires).
+
+Return:
+{ ok: true, proposalId, payToken }
+
+Seed Trip
+
+Behavior:
+
+Look for an existing trip tied to portalId with title starting "[TEST]" (or other deterministic marker) and reuse it.
+
+If none exists, create a minimal valid trip with an accessCode and portal_id = portalId.
+
+Return:
+{ ok: true, accessCode, tripId }
+
+Frontend
+
+On /app/admin/portals/:portalId/qa:
+
+Add a “Create Test Fixtures” card with four buttons matching the endpoints.
+
+Clicking a button calls the endpoint, shows success toast, and then refreshes the QA bundle query so the new links appear.
+
+Also show the direct URL link immediately using the returned identifiers.
+
+UX:
+
+Each fixture row shows: status (exists/created), returned key/id, and “Open” + “Copy” actions.
+
+Must not use forbidden terminology anywhere.
+
+Acceptance
+
+For a portal with zero data:
+
+Clicking “Create Test Campaign” yields a working /b/:slug/apply/:campaignKey page.
+
+Clicking “Create Test Trip” yields a working /trip/:accessCode page (branded if portal exists).
+
+Clicking “Create Test Proposal” yields working proposal view + pay URLs.
+
+Clicking “Create Test Job Posting” yields listing + detail + apply flow.
+
+Re-clicking the same buttons should reuse existing [TEST] fixtures (no duplicates).
+
+One small implementation note (so Replit doesn’t stall)
+
+If any of those object creations require complex fields, keep the seed minimal by using existing helper creators (if present) or copying the simplest “create” payload used in your app UI.
+
+We don’t need perfect realism — we need valid objects that exercise the workflow.

@@ -6,18 +6,20 @@
  * without hunting for dynamic keys (campaign keys, trip access codes, pay tokens).
  */
 
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, ExternalLink, Copy, Globe, Briefcase, Users, 
   FileText, Calendar, CheckCircle, Clock, AlertCircle,
-  Rocket, Link2
+  Rocket, Link2, Plus, Loader2, Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 interface QaData {
   ok: boolean;
@@ -130,9 +132,113 @@ function LinkRow({
   );
 }
 
+interface FixtureResult {
+  ok: boolean;
+  created: boolean;
+  url?: string;
+  campaignKey?: string;
+  postingId?: string;
+  jobId?: string;
+  proposalId?: string;
+  payToken?: string;
+  viewUrl?: string;
+  payUrl?: string;
+  tripId?: string;
+  accessCode?: string;
+}
+
+function FixtureButton({
+  label,
+  icon: Icon,
+  onSeed,
+  isPending,
+  result,
+}: {
+  label: string;
+  icon: typeof Briefcase;
+  onSeed: () => void;
+  isPending: boolean;
+  result: FixtureResult | null;
+}) {
+  const { toast } = useToast();
+  
+  const handleCopy = (url: string) => {
+    navigator.clipboard.writeText(window.location.origin + url);
+    toast({ title: 'Copied to clipboard' });
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 p-3 border rounded-md" data-testid={`fixture-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">{label}</div>
+          {result && (
+            <div className="text-xs text-muted-foreground mt-1">
+              {result.created ? (
+                <Badge variant="default" className="mr-2">Created</Badge>
+              ) : (
+                <Badge variant="secondary" className="mr-2">Exists</Badge>
+              )}
+              {result.url && <span className="truncate">{result.url}</span>}
+              {result.viewUrl && <span className="truncate">{result.viewUrl}</span>}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {result?.url && (
+          <>
+            <Button size="icon" variant="ghost" onClick={() => handleCopy(result.url!)} data-testid={`button-copy-fixture-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="ghost" asChild data-testid={`button-open-fixture-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+              <a href={result.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </>
+        )}
+        {result?.viewUrl && (
+          <>
+            <Button size="icon" variant="ghost" onClick={() => handleCopy(result.viewUrl!)} data-testid={`button-copy-fixture-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="ghost" asChild data-testid={`button-open-fixture-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+              <a href={result.viewUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </>
+        )}
+        <Button 
+          size="sm" 
+          onClick={onSeed} 
+          disabled={isPending}
+          data-testid={`button-seed-${label.toLowerCase().replace(/\s+/g, '-')}`}
+        >
+          {isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
+          <span className="ml-1">{result ? 'Refresh' : 'Create'}</span>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function PortalQaLaunchpadPage() {
   const { portalId } = useParams<{ portalId: string }>();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fixture results state
+  const [campaignResult, setCampaignResult] = useState<FixtureResult | null>(null);
+  const [jobResult, setJobResult] = useState<FixtureResult | null>(null);
+  const [proposalResult, setProposalResult] = useState<FixtureResult | null>(null);
+  const [tripResult, setTripResult] = useState<FixtureResult | null>(null);
   
   const { data, isLoading, error } = useQuery<QaData>({
     queryKey: ['/api/p2/admin/portals', portalId, 'qa'],
@@ -144,6 +250,59 @@ export default function PortalQaLaunchpadPage() {
       return res.json();
     },
     enabled: !!portalId,
+  });
+  
+  // Seed mutations
+  const seedCampaign = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-campaign`);
+      return res.json();
+    },
+    onSuccess: (data: FixtureResult) => {
+      setCampaignResult(data);
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa'] });
+      toast({ title: data.created ? 'Test campaign created' : 'Test campaign exists' });
+    },
+    onError: () => toast({ title: 'Failed to create campaign', variant: 'destructive' }),
+  });
+  
+  const seedJob = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-job`);
+      return res.json();
+    },
+    onSuccess: (data: FixtureResult) => {
+      setJobResult(data);
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa'] });
+      toast({ title: data.created ? 'Test job created' : 'Test job exists' });
+    },
+    onError: () => toast({ title: 'Failed to create job', variant: 'destructive' }),
+  });
+  
+  const seedProposal = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-proposal`);
+      return res.json();
+    },
+    onSuccess: (data: FixtureResult) => {
+      setProposalResult(data);
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa'] });
+      toast({ title: data.created ? 'Test proposal created' : 'Test proposal exists' });
+    },
+    onError: () => toast({ title: 'Failed to create proposal', variant: 'destructive' }),
+  });
+  
+  const seedTrip = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-trip`);
+      return res.json();
+    },
+    onSuccess: (data: FixtureResult) => {
+      setTripResult(data);
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa'] });
+      toast({ title: data.created ? 'Test trip created' : 'Test trip exists' });
+    },
+    onError: () => toast({ title: 'Failed to create trip', variant: 'destructive' }),
   });
   
   const portal = data?.portal;
@@ -215,6 +374,48 @@ export default function PortalQaLaunchpadPage() {
           Open All Core Links
         </Button>
       </div>
+      
+      <Card data-testid="card-fixtures">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Create Test Fixtures
+          </CardTitle>
+          <CardDescription>
+            Seed test data for QA workflows (idempotent - reuses existing [TEST] items)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <FixtureButton
+            label="Test Campaign"
+            icon={Briefcase}
+            onSeed={() => seedCampaign.mutate()}
+            isPending={seedCampaign.isPending}
+            result={campaignResult}
+          />
+          <FixtureButton
+            label="Test Job Posting"
+            icon={Users}
+            onSeed={() => seedJob.mutate()}
+            isPending={seedJob.isPending}
+            result={jobResult}
+          />
+          <FixtureButton
+            label="Test Proposal"
+            icon={FileText}
+            onSeed={() => seedProposal.mutate()}
+            isPending={seedProposal.isPending}
+            result={proposalResult}
+          />
+          <FixtureButton
+            label="Test Trip"
+            icon={Calendar}
+            onSeed={() => seedTrip.mutate()}
+            isPending={seedTrip.isPending}
+            result={tripResult}
+          />
+        </CardContent>
+      </Card>
       
       <div className="grid gap-6 md:grid-cols-2">
         <Card data-testid="card-public-links">

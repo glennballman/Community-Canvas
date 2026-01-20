@@ -796,4 +796,336 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
   }
 });
 
+// ============================================================================
+// QA FIXTURE SEEDING ENDPOINTS
+// Create test data for QA workflows (idempotent - reuses existing [TEST] items)
+// ============================================================================
+
+const TEST_PREFIX = '[TEST] ';
+
+/**
+ * Helper: Verify portal access for seed operations
+ */
+async function verifyPortalAccess(portalId: string, tenantId: string, isPlatformAdmin: boolean) {
+  const result = await pool.query(`
+    SELECT id, slug, name, owning_tenant_id
+    FROM cc_portals
+    WHERE id = $1
+      AND (owning_tenant_id = $2 OR $3 = true)
+  `, [portalId, tenantId, isPlatformAdmin]);
+  return result.rows[0] || null;
+}
+
+/**
+ * Helper: Generate random access code
+ */
+function generateAccessCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+/**
+ * Helper: Generate random token
+ */
+function generateToken(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 24; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+/**
+ * POST /api/p2/admin/portals/:portalId/qa/seed-campaign
+ * Create or reuse a test campaign for the portal
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin
+ */
+router.post('/portals/:portalId/qa/seed-campaign', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    if (!portal) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    // Campaigns are stored in portal settings.enabled_campaigns
+    // Check if test campaign key exists
+    const testCampaignKey = 'test_qa_campaign';
+    
+    // Get current settings
+    const settingsResult = await pool.query(`
+      SELECT settings FROM cc_portals WHERE id = $1
+    `, [portalId]);
+    
+    const settings = settingsResult.rows[0]?.settings || {};
+    const enabledCampaigns = settings.enabled_campaigns || [];
+    
+    const exists = enabledCampaigns.includes(testCampaignKey);
+    
+    if (!exists) {
+      // Add test campaign to enabled list
+      const newCampaigns = [...enabledCampaigns, testCampaignKey];
+      await pool.query(`
+        UPDATE cc_portals
+        SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{enabled_campaigns}', $1::jsonb)
+        WHERE id = $2
+      `, [JSON.stringify(newCampaigns), portalId]);
+    }
+
+    res.json({
+      ok: true,
+      created: !exists,
+      campaignKey: testCampaignKey,
+      url: `/b/${portal.slug}/apply/${testCampaignKey}`,
+    });
+  } catch (error: any) {
+    console.error('[Admin] POST seed-campaign error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/admin/portals/:portalId/qa/seed-job
+ * Create or reuse a test job posting for the portal
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin
+ */
+router.post('/portals/:portalId/qa/seed-job', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    if (!portal) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    // Look for existing [TEST] job posting for this portal
+    const existingResult = await pool.query(`
+      SELECT jp.id as posting_id, j.id as job_id, j.title, j.slug
+      FROM cc_job_postings jp
+      JOIN cc_jobs j ON jp.job_id = j.id
+      WHERE jp.portal_id = $1
+        AND j.title LIKE $2
+      ORDER BY jp.created_at DESC
+      LIMIT 1
+    `, [portalId, TEST_PREFIX + '%']);
+
+    if (existingResult.rows.length > 0) {
+      const existing = existingResult.rows[0];
+      return res.json({
+        ok: true,
+        created: false,
+        postingId: existing.posting_id,
+        jobId: existing.job_id,
+        url: `/b/${portal.slug}/jobs/${existing.job_id}`,
+      });
+    }
+
+    // Create minimal test job
+    const jobResult = await pool.query(`
+      INSERT INTO cc_jobs (
+        title, slug, role_category, employment_type, description,
+        status, verification_state, tenant_id, portal_id
+      ) VALUES (
+        $1, $2, 'general', 'full_time', $3,
+        'open', 'verified', $4, $5
+      )
+      RETURNING id
+    `, [
+      TEST_PREFIX + 'QA Test Position',
+      'test-qa-position-' + Date.now(),
+      'This is a test job posting created for QA purposes. It exercises the full job application workflow.',
+      auth.tenantId,
+      portalId,
+    ]);
+    
+    const jobId = jobResult.rows[0].id;
+
+    // Create job posting (links job to portal for public display)
+    const postingResult = await pool.query(`
+      INSERT INTO cc_job_postings (
+        job_id, portal_id, publish_state, published_at
+      ) VALUES ($1, $2, 'published', NOW())
+      RETURNING id
+    `, [jobId, portalId]);
+
+    const postingId = postingResult.rows[0].id;
+
+    res.json({
+      ok: true,
+      created: true,
+      postingId,
+      jobId,
+      url: `/b/${portal.slug}/jobs/${jobId}`,
+    });
+  } catch (error: any) {
+    console.error('[Admin] POST seed-job error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/admin/portals/:portalId/qa/seed-proposal
+ * Create or reuse a test proposal with pay token
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin
+ */
+router.post('/portals/:portalId/qa/seed-proposal', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    if (!portal) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    // Look for existing [TEST] proposal (trip with pay invitation)
+    const existingResult = await pool.query(`
+      SELECT t.id as trip_id, t.group_name, ti.token as pay_token
+      FROM cc_trips t
+      LEFT JOIN cc_trip_invitations ti ON ti.trip_id = t.id AND ti.invitation_type = 'pay'
+      WHERE t.portal_id = $1
+        AND t.group_name LIKE $2
+      ORDER BY t.created_at DESC
+      LIMIT 1
+    `, [portalId, TEST_PREFIX + '%']);
+
+    if (existingResult.rows.length > 0) {
+      const existing = existingResult.rows[0];
+      
+      // Ensure pay token exists
+      let payToken = existing.pay_token;
+      if (!payToken) {
+        payToken = generateToken();
+        await pool.query(`
+          INSERT INTO cc_trip_invitations (trip_id, invitation_type, token, status)
+          VALUES ($1, 'pay', $2, 'pending')
+        `, [existing.trip_id, payToken]);
+      }
+      
+      return res.json({
+        ok: true,
+        created: false,
+        proposalId: existing.trip_id,
+        payToken,
+        viewUrl: `/proposal/${existing.trip_id}`,
+        payUrl: `/pay/${payToken}`,
+      });
+    }
+
+    // Create minimal test proposal (trip)
+    const tripResult = await pool.query(`
+      INSERT INTO cc_trips (
+        group_name, status, portal_id, tenant_id, group_size, start_date
+      ) VALUES ($1, 'pending', $2, $3, 4, CURRENT_DATE + interval '30 days')
+      RETURNING id
+    `, [TEST_PREFIX + 'QA Test Proposal', portalId, auth.tenantId]);
+
+    const tripId = tripResult.rows[0].id;
+
+    // Create pay invitation token
+    const payToken = generateToken();
+    await pool.query(`
+      INSERT INTO cc_trip_invitations (trip_id, invitation_type, token, status)
+      VALUES ($1, 'pay', $2, 'pending')
+    `, [tripId, payToken]);
+
+    res.json({
+      ok: true,
+      created: true,
+      proposalId: tripId,
+      payToken,
+      viewUrl: `/proposal/${tripId}`,
+      payUrl: `/pay/${payToken}`,
+    });
+  } catch (error: any) {
+    console.error('[Admin] POST seed-proposal error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/admin/portals/:portalId/qa/seed-trip
+ * Create or reuse a test trip with access code
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin
+ */
+router.post('/portals/:portalId/qa/seed-trip', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    if (!portal) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    // Look for existing [TEST] trip with access code
+    const existingResult = await pool.query(`
+      SELECT id, access_code, group_name
+      FROM cc_trips
+      WHERE portal_id = $1
+        AND group_name LIKE $2
+        AND access_code IS NOT NULL
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [portalId, TEST_PREFIX + '%']);
+
+    if (existingResult.rows.length > 0) {
+      const existing = existingResult.rows[0];
+      return res.json({
+        ok: true,
+        created: false,
+        tripId: existing.id,
+        accessCode: existing.access_code,
+        url: `/trip/${existing.access_code}`,
+      });
+    }
+
+    // Create minimal test trip
+    const accessCode = generateAccessCode();
+    const tripResult = await pool.query(`
+      INSERT INTO cc_trips (
+        group_name, status, portal_id, tenant_id, access_code, group_size, start_date
+      ) VALUES ($1, 'confirmed', $2, $3, $4, 2, CURRENT_DATE + interval '14 days')
+      RETURNING id
+    `, [TEST_PREFIX + 'QA Test Trip', portalId, auth.tenantId, accessCode]);
+
+    const tripId = tripResult.rows[0].id;
+
+    res.json({
+      ok: true,
+      created: true,
+      tripId,
+      accessCode,
+      url: `/trip/${accessCode}`,
+    });
+  } catch (error: any) {
+    console.error('[Admin] POST seed-trip error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 export default router;
