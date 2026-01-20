@@ -1,0 +1,91 @@
+Implement Option B: allow true circle-only conversations by removing NOT NULL party constraints on cc_conversations,
+and harden routes/RLS/query logic so circle conversations are visible and usable.
+
+Constraints:
+- This is production: preserve multi-tenant isolation and existing messaging semantics.
+- Additive-only where possible; but schema change is required.
+- Do NOT break work-request conversations or job-application conversations.
+
+PART 1 — SCHEMA AUDIT (must be done first)
+1) Inspect cc_conversations schema:
+   - confirm which columns are NOT NULL: contractor_party_id, owner_party_id, work_request_id, etc.
+   - confirm job_id/job_application_id columns exist (migration 156).
+2) Search for foreign keys referencing contractor_party_id / owner_party_id.
+
+PART 2 — MIGRATION (required)
+Create a new migration (next number) that:
+A) Drops NOT NULL on contractor_party_id
+B) If owner_party_id is also NOT NULL, drop NOT NULL on owner_party_id as well
+C) Leave FKs intact (still references cc_parties when populated)
+D) Add supporting indexes if needed for circle conversations:
+   - index on cc_conversation_participants(circle_id, conversation_id) if not present
+   - ensure cc_messages(conversation_id, created_at) exists (performance)
+
+Migration example (adapt to actual column names):
+ALTER TABLE cc_conversations
+  ALTER COLUMN contractor_party_id DROP NOT NULL;
+ALTER TABLE cc_conversations
+  ALTER COLUMN owner_party_id DROP NOT NULL;
+
+DO NOT add a CHECK constraint that requires parties, because circle-only must be valid.
+(Checks cannot reference participants anyway.)
+
+PART 3 — RLS POLICY REVIEW (critical)
+Review policies on:
+- cc_conversations
+- cc_messages
+Ensure circle-only conversations remain readable to circle members.
+
+Key risk:
+Existing policies may grant access via cc_parties joins (contractor/owner). When party ids are NULL,
+those policies will not grant access, so circle conversations may become invisible unless there is already a
+participant-based policy.
+
+Action:
+- Ensure there is a policy that grants SELECT on cc_conversations if the current user is a participant:
+  EXISTS (SELECT 1 FROM cc_conversation_participants p WHERE p.conversation_id = cc_conversations.id AND
+          p.is_active = true AND (p.individual_id = current_user_individual OR p.party_id = current_user_party
+          OR (p.circle_id IS NOT NULL AND user is active circle member for p.circle_id in same tenant)))
+
+If such participant-based policy exists, verify it includes circle membership.
+If it does not exist, add it via migration (CREATE POLICY ...) with tenant scoping enforced.
+
+PART 4 — API / QUERY HARDENING (must)
+Search for all queries that assume party ids are non-null:
+- server/routes/conversations.ts
+- server/routes/p2-conversations.ts
+- any messaging services
+Look specifically for INNER JOIN cc_parties on contractor_party_id or owner_party_id, and any WHERE clauses requiring them.
+
+Fix:
+- Use LEFT JOIN for party tables.
+- Ensure conversation list endpoints include circle conversations:
+  - /api/conversations should list conversations based on participation, not party joins.
+- Ensure serializers handle null contractor_party_id/owner_party_id safely.
+
+PART 5 — CREATION FLOW (circle conversations)
+Confirm POST /api/conversations/circle (or equivalent) can create cc_conversations rows with:
+- contractor_party_id = NULL
+- owner_party_id = NULL
+- work_request_id = NULL
+and inserts participants appropriately:
+- a cc_conversation_participants row for the circle (participant_type = circle, circle_id set)
+- participant rows for individuals as needed (or rely on circle recipient fan-out)
+
+PART 6 — VERIFICATION (E2E, minimal)
+1) Create a circle in UI, add two members (two accounts if possible).
+2) Create a circle conversation.
+3) Send a message.
+4) Verify:
+   - /api/conversations returns the circle conversation
+   - unread_count increments for the other member
+   - opening thread + mark-read returns unread_count to 0
+   - dashboard unread-count matches sum(unread_count)
+5) Run: tsx scripts/v35-cert.ts (must pass)
+6) Ensure no terminology violations.
+
+Return:
+- migration number + SQL
+- policies added/changed (exact text)
+- files changed in routes/services
+- confirmation that circle-only, work-request, and job-application conversations all still work
