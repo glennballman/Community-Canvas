@@ -1,0 +1,77 @@
+NEXT: P-UI-16 — Circles (CRUD + Delegations + Role-to-Nav completeness)
+
+Circles were explicitly flagged earlier as: tables exist, APIs thin, UI minimal, and Circles are the coordination backbone for Jobs + Ops.
+
+Here’s the next authoritative Replit prompt.
+
+Replit Prompt P-UI-16 (Additive-only)
+Community Canvas V3.5 — Additive-only.
+
+Goal: Complete Circles UX and API depth to match the Role-to-Nav Matrix:
+- Circles list
+- Create circle
+- Circle detail with Members + Delegations
+- Permissions (circle owner/admin)
+- No refactors; extend thin APIs.
+
+STEP 1 — INVENTORY (evidence required)
+1) List all circles-related tables (expect ~7) and their relationships:
+- circles
+- circle_members
+- circle_roles (or role columns)
+- circle_delegations
+- invitations / join requests (if present)
+- any views used for recipient resolution (e.g. v_conversation_circle_recipients)
+2) Identify existing circles routes/endpoints (currently reported as thin: ~4 endpoints).
+3) Identify existing UI pages for circles (if any), and current nav placement.
+
+STEP 2 — API COMPLETION (fill gaps only)
+Implement endpoints under /api/p2/circles (or extend existing) as needed:
+
+- GET  /api/p2/circles
+- POST /api/p2/circles
+- GET  /api/p2/circles/:circleId
+- POST /api/p2/circles/:circleId/members
+- PATCH /api/p2/circles/:circleId/members/:memberId   (role/state)
+- DELETE /api/p2/circles/:circleId/members/:memberId  (optional, if spec requires removal)
+- GET  /api/p2/circles/:circleId/delegations
+- POST /api/p2/circles/:circleId/delegations
+- DELETE /api/p2/circles/:circleId/delegations/:id    (optional)
+
+Rules:
+- Enforce portal/tenant scoping
+- Enforce circle admin/owner permissions for mutations
+- Prevent PII leakage outside portal
+- Use standard envelope { ok, error?, ...data }
+
+STEP 3 — UI (excellent but focused)
+Add routes:
+- /app/circles                 (CirclesListPage)
+- /app/circles/new             (CircleCreatePage)
+- /app/circles/:circleId       (CircleDetailPage)
+
+CircleDetail tabs:
+- Members
+- Delegations
+- Activity (optional if there is existing event/audit table; otherwise omit)
+
+UI requirements:
+- List page: search + sort + “Create circle”
+- Detail page: header with circle name + type + visibility badge
+- Members tab: list members, role badge, add member modal
+- Delegations tab: list delegations (who delegated to whom, scope, status), create delegation modal
+- Use data-testid on interactive elements
+
+STEP 4 — NAV / ROLE VISIBILITY
+- Expose Circles to Operator + Admin by default; include Host if the matrix indicates.
+- Keep participant nav minimal unless explicitly required.
+
+STEP 5 — QA
+- Update route inventory
+- Add an auth test: non-members cannot access a circle
+- Terminology scan clean
+
+Return:
+- files changed
+- endpoints created vs reused
+- a short “role → permission” summary for circles.

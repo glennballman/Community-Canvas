@@ -120,6 +120,7 @@ import { p2ServiceRunsRouter } from "./routes/p2-service-runs";
 import p2ConversationsRouter from "./routes/p2-conversations";
 import p2ParkingRouter from "./routes/p2-parking";
 import p2MarinaRouter from "./routes/p2-marina";
+import p2CirclesRouter from "./routes/p2-circles";
 import { createParticipantTripsRouter } from "./routes/participant-trips";
 import participantRouter from "./routes/participant";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
@@ -333,6 +334,9 @@ export async function registerRoutes(
   
   // P2 marina API (plan view, availability)
   app.use('/api/p2/marina', p2MarinaRouter);
+  
+  // P2 circles API (CRUD, members, delegations)
+  app.use('/api/p2/circles', p2CirclesRouter);
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);
