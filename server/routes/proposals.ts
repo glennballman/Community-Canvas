@@ -95,6 +95,18 @@ router.get('/:proposalId', async (req, res) => {
       return res.status(404).json({ ok: false, error: 'Proposal not found' });
     }
     
+    // Fetch portal if present
+    let portal: { id: string; slug: string; name: string } | null = null;
+    if (trip.portalId) {
+      const portalResult = await db.execute(sql`
+        SELECT id, slug, title as name FROM cc_portals WHERE id = ${trip.portalId} LIMIT 1
+      `);
+      if (portalResult.rows.length > 0) {
+        const row = portalResult.rows[0] as { id: string; slug: string; name: string };
+        portal = { id: row.id, slug: row.slug, name: row.name };
+      }
+    }
+    
     const participants = await db
       .select()
       .from(ccTripPartyProfiles)
@@ -254,6 +266,7 @@ router.get('/:proposalId', async (req, res) => {
         group_size: trip.groupSize,
         created_at: trip.createdAt,
       },
+      portal,
       participants: participants.map((p, idx) => ({
         id: p.id,
         display_name: isAuthenticated || trip.status === 'confirmed'
