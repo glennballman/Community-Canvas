@@ -1,0 +1,79 @@
+Community Canvas V3.5 — Additive-only. No refactors. No forbidden terminology tokens.
+
+Goal: Complete P-UI-17:
+- Admin: Roles & access management
+- Admin: Settings
+- Folios: dedicated UI for viewing folios/ledger summaries (read-only unless existing mutation endpoints already exist)
+
+STEP 1 — INVENTORY (evidence required)
+1) Admin role sources:
+- Identify where tenant roles are defined (cc_tenant_users roles)
+- Identify where portal roles are defined (cc_portal_members roles)
+- Identify any role catalogs/endpoints already created (you just added circle roles list; check for tenant/portal role list)
+2) Settings:
+- Identify settings tables (tenant_settings, portal_settings, notification_preferences, etc.)
+- Identify any existing settings endpoints
+3) Folios:
+- Identify folio tables (cc_folios, cc_folio_ledger, cc_folio_ledger_links)
+- Identify existing API endpoints for folios/ledger (search for /folios, /ledger)
+- Identify any existing UI surface that already shows folio summaries (if any)
+
+STEP 2 — NAV / ROLE VISIBILITY
+Add an "Admin" section visible only to tenant admin/owner (and platform admin if exists):
+- /app/admin/roles
+- /app/admin/settings
+Add a "Folios" item under Admin or Finance depending on existing nav conventions:
+- /app/folios (or /app/admin/folios)
+
+STEP 3 — API (ONLY if missing; do not redesign)
+A) Roles management endpoints:
+- GET  /api/p2/admin/roles/catalog       (available role types for tenant + portal)
+- GET  /api/p2/admin/users              (tenant users + portal members)
+- PATCH /api/p2/admin/users/:id          (update role / status)
+All must enforce tenant admin/owner permission and portal scoping.
+
+B) Settings endpoints:
+- GET  /api/p2/admin/settings/tenant
+- PATCH /api/p2/admin/settings/tenant
+- GET  /api/p2/admin/settings/portal
+- PATCH /api/p2/admin/settings/portal
+Only implement fields that already exist in schema (no invented settings).
+
+C) Folios endpoints (read-only minimum):
+- GET /api/p2/folios                      (list)
+- GET /api/p2/folios/:folioId             (summary)
+- GET /api/p2/folios/:folioId/ledger      (ledger lines, paginated)
+If these already exist elsewhere, reuse them and do not duplicate.
+
+STEP 4 — UI
+A) Admin Roles Page: /app/admin/roles
+- Table of users/members
+- Filters: role, status
+- Edit role dialog (dropdown)
+- Clear permission copy: “Tenant role” vs “Portal role”
+- data-testid on all interactive elements
+
+B) Admin Settings Page: /app/admin/settings
+- Tenant Settings panel + Portal Settings panel (tabs)
+- Each setting has label + helper text
+- Save button with optimistic UI + error handling
+- Do not include settings that are not backed by schema
+
+C) Folios UI:
+- Folios list page: searchable, filter by status/date, shows totals
+- Folio detail page: header summary + ledger table
+- Ledger lines show: timestamp, type, amount, linked entity (reservation/surface/incident) if available
+- No mutations unless mutation endpoints already exist and are already used elsewhere
+
+STEP 5 — QA
+- Route inventory updated
+- Auth tests:
+  - non-admin cannot access admin endpoints/pages
+  - admin can list users and update roles
+- Terminology scan clean
+
+Return:
+- files changed
+- endpoints created vs reused
+- which settings fields were exposed
+- folio UI routes created
