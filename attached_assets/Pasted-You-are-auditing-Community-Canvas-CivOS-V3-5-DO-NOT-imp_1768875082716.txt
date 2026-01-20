@@ -1,0 +1,132 @@
+You are auditing Community Canvas / CivOS V3.5. DO NOT implement or change anything. Inventory only.
+
+Goal: produce an authoritative, repo-truth inventory of ALL V3.5 UI, including:
+- every UI route/page file
+- every navigation definition (portal app nav, tenant admin nav, platform admin nav, public nav)
+- role gating and context gating (tenant_id / portal_id / circle_id required)
+- which features are reachable vs only via direct URL
+- a consolidated "How do I get to X?" index for all major subsystems
+
+Write outputs into ./proof/v3.5/ as markdown files.
+
+========================
+PART A — ROUTE INVENTORY
+========================
+1) Enumerate all routes registered in client routing:
+   - Find the main router file (client/src/App.tsx or equivalent)
+   - List every Route path and the component/page file it renders
+   - Capture role/guard wrappers (RequireAuth, RequireTenant, portal context, etc.)
+2) Enumerate all page files:
+   - grep for client/src/pages/**/*.tsx
+   - classify each into:
+     - Public
+     - Portal App (/app/*)
+     - Tenant Admin (/app/admin/* or similar)
+     - Platform Admin (/admin or /app/platform/*)
+     - Dev-only (/app/dev/*)
+3) Output: proof/v3.5/ui-routes-inventory.md
+   Include a table: route | page file | shell | guards | notes
+
+=============================
+PART B — NAVIGATION INVENTORY
+=============================
+1) Locate ALL nav config sources:
+   - client/src/lib/routes/v3Nav.ts (portal nav)
+   - tenant admin nav config file(s)
+   - platform admin nav config file(s)
+   - public nav (marketing/public portal)
+2) For each nav:
+   - list sections + items in order
+   - each item: label | icon | href | gating conditions
+3) Output: proof/v3.5/ui-nav-inventory.md
+   Include separate sections for:
+   - Portal App Nav
+   - Tenant Admin Nav
+   - Platform Admin Nav
+   - Public Nav
+
+=========================================
+PART C — ROLE-TO-NAV VISIBILITY MATRIX
+=========================================
+1) Identify the role model used for gating:
+   - tenant roles (tenant admin/owner/operator/etc.)
+   - portal roles (portal admin/member/etc.)
+   - participant roles (participant/applicant/etc.)
+   - platform admin role
+2) For each role, compute which nav items appear AND which routes are accessible.
+   - If gating is dynamic (depends on modules or portal type), note that.
+3) Output: proof/v3.5/ui-role-nav-matrix.md
+   Format:
+   Role -> visible nav items
+   Role -> accessible routes
+   Role -> required context (tenant/portal/circle)
+
+=================================
+PART D — SUBSYSTEM UI COVERAGE
+=================================
+Subsystems to inventory (at minimum):
+- Reservations (public + portal)
+- Availability / Proposal / Hold / Confirm loop (public)
+- Participant Trips
+- Messaging
+- Notifications
+- Jobs (job advertisements/postings + applications + applicant messaging)
+- Service Runs
+- Work Requests / Procurement Requests
+- Assets / Capability Units
+- Operations Board
+- Housekeeping tasks + task photos
+- Fleet manager UX
+- Circles CRUD + delegations
+- Admin (roles/settings/folios)
+- Platform (tenants/analytics/cert status)
+- Media (DevMediaPage + any embedded uses)
+
+For each subsystem:
+- UI routes/pages
+- left-nav entry point (if any)
+- primary CTAs (where to create/list/manage)
+- missing discoverability (exists but not linked)
+Output: proof/v3.5/ui-subsystem-coverage.md
+
+==========================================
+PART E — “HOW DO I…?” OPERATOR INDEX
+==========================================
+Create a user-facing index mapping common intents -> exact navigation steps / URLs.
+Include at least:
+- Post a job advertisement
+- View job applicants
+- Create a service run
+- Open bidding / collect signups
+- Create a reservation (manual)
+- View/manage reservations
+- View operations board occupancy
+- Message a contractor
+- Message a job applicant
+- Upload media to a bid
+- Upload photos to a housekeeping task
+- Manage fleet assets + maintenance
+- Create a circle + add members + delegate
+- View folios + ledger entries
+- Adjust portal settings
+- Platform: view tenants + analytics + cert status
+
+Output: proof/v3.5/ui-how-to-index.md
+
+=================================
+PART F — DISCOVERABILITY GAPS
+=================================
+Without changing code, produce a delta list:
+- Routes that exist but have no nav entry
+- Nav entries that point to missing routes
+- Features that require portal context but are reachable only from tenant/platform shells
+- Duplicate or confusing labels (e.g., Jobs vs Work Requests vs Service Runs)
+Output: proof/v3.5/ui-discoverability-gaps.md
+
+=================================
+DELIVERABLE SUMMARY
+=================================
+Write proof/v3.5/ui-inventory-summary.md that links to the five files above and gives:
+- counts (routes/pages/nav items)
+- the top 10 discoverability blockers
+- recommended navigation normalization plan (NO IMPLEMENTATION, just proposal bullets)
