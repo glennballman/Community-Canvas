@@ -13,6 +13,7 @@ import {
   RiskBanner,
   HoldExpirationBanner,
 } from '@/components/proposals';
+import { PortalBrandedShell } from './components/PortalBrandedShell';
 
 export default function PublicProposalPage() {
   const { proposalId, token } = useParams<{ proposalId: string; token?: string }>();
@@ -28,25 +29,39 @@ export default function PublicProposalPage() {
     enabled: !!proposalId,
   });
   
+  const portalSlug = data?.portal?.slug;
+  
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" data-testid="proposal-loading">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
+      <PortalBrandedShell
+        portalSlug={undefined}
+        backHref={undefined}
+        backLabel="Back to Portal"
+      >
+        <div className="flex items-center justify-center py-20" data-testid="proposal-loading">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </PortalBrandedShell>
     );
   }
   
   if (error || !data?.ok) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" data-testid="proposal-error">
-        <div className="text-center">
-          <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-lg font-medium mb-2">Reservation Not Found</h2>
-          <p className="text-sm text-muted-foreground">
-            {data?.error || 'Unable to load this reservation. Please check your link.'}
-          </p>
+      <PortalBrandedShell
+        portalSlug={undefined}
+        backHref={undefined}
+        backLabel="Back to Portal"
+      >
+        <div className="flex items-center justify-center py-20" data-testid="proposal-error">
+          <div className="text-center">
+            <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h2 className="text-lg font-medium mb-2">Reservation Not Found</h2>
+            <p className="text-sm text-muted-foreground">
+              {data?.error || 'Unable to load this reservation. Please check your link.'}
+            </p>
+          </div>
         </div>
-      </div>
+      </PortalBrandedShell>
     );
   }
   
@@ -74,13 +89,19 @@ export default function PublicProposalPage() {
   };
   
   return (
-    <div className="min-h-screen bg-background" data-testid="public-proposal-page">
-      <div className="max-w-3xl mx-auto py-8 px-4">
-        <ProposalHeaderCard 
-          proposal={proposal} 
-          participantCount={participants.length}
-          isAuthenticated={false}
-        />
+    <PortalBrandedShell
+      portalSlug={portalSlug}
+      preloadedData={data?.portal ? { portal: data.portal } : undefined}
+      backHref={portalSlug ? `/p/${portalSlug}` : undefined}
+      backLabel="Back to Portal"
+    >
+      <div data-testid="public-proposal-page">
+        <div className="max-w-3xl mx-auto">
+          <ProposalHeaderCard 
+            proposal={proposal} 
+            participantCount={participants.length}
+            isAuthenticated={false}
+          />
         
         {proposal.status === 'planning' && (
           <div className="mt-4">
@@ -138,7 +159,8 @@ export default function PublicProposalPage() {
           participant={selectedParticipant || null}
           allocation={selectedAllocation || null}
         />
+        </div>
       </div>
-    </div>
+    </PortalBrandedShell>
   );
 }

@@ -57,10 +57,17 @@ export interface Proposal {
   created_at: string;
 }
 
+export interface ProposalPortal {
+  id: string;
+  slug: string;
+  name: string;
+}
+
 export interface ProposalResponse {
   ok: boolean;
   error?: string;
   proposal: Proposal;
+  portal: ProposalPortal | null;
   participants: ProposalParticipant[];
   allocations: ProposalAllocation[];
   unassigned_units?: Array<{
