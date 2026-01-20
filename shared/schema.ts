@@ -2350,6 +2350,67 @@ export const insertPropertySchema = createInsertSchema(ccProperties).omit({
 export type Property = typeof ccProperties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 
+// ============ ACCESS CONSTRAINTS ============
+export const ccAccessConstraints = pgTable('cc_access_constraints', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: uuid('entity_id').notNull(),
+  access: jsonb('access').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const insertAccessConstraintSchema = createInsertSchema(ccAccessConstraints).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type AccessConstraint = typeof ccAccessConstraints.$inferSelect;
+export type InsertAccessConstraint = z.infer<typeof insertAccessConstraintSchema>;
+
+// ============ WORK AREAS ============
+export const ccWorkAreas = pgTable('cc_work_areas', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  propertyId: uuid('property_id').notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  tags: text('tags').array().notNull().default([]),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const insertWorkAreaSchema = createInsertSchema(ccWorkAreas).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type WorkArea = typeof ccWorkAreas.$inferSelect;
+export type InsertWorkArea = z.infer<typeof insertWorkAreaSchema>;
+
+// ============ WORK MEDIA ============
+export const ccWorkMedia = pgTable('cc_work_media', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  portalId: uuid('portal_id'),
+  propertyId: uuid('property_id'),
+  workAreaId: uuid('work_area_id'),
+  entityType: text('entity_type'),
+  entityId: uuid('entity_id'),
+  mediaId: uuid('media_id').notNull(),
+  title: text('title'),
+  notes: text('notes'),
+  tags: text('tags').array().notNull().default([]),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const insertWorkMediaSchema = createInsertSchema(ccWorkMedia).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type WorkMedia = typeof ccWorkMedia.$inferSelect;
+export type InsertWorkMedia = z.infer<typeof insertWorkMediaSchema>;
+
 // ============ UNITS ============
 export const ccUnits = pgTable('cc_units', {
   id: uuid('id').primaryKey().defaultRandom(),

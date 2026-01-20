@@ -1,0 +1,88 @@
+✅ REPLIT PROMPT 1 — Migration (FINAL, ADJUSTED)
+
+Paste verbatim into Replit
+
+Create normalized access constraints and work photo catalog tables, scoped to cc_properties and portals.
+
+A) Access Constraints
+
+Create migration:
+
+CREATE TABLE cc_access_constraints (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  entity_type text NOT NULL CHECK (
+    entity_type IN ('property','asset','job','zone','route_edge','portal')
+  ),
+  entity_id uuid NOT NULL,
+  access jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, entity_type, entity_id)
+);
+
+CREATE INDEX cc_access_constraints_tenant_entity_idx
+  ON cc_access_constraints (tenant_id, entity_type, entity_id);
+
+CREATE INDEX cc_access_constraints_access_gin
+  ON cc_access_constraints USING GIN (access);
+
+
+Add updated_at trigger consistent with existing migrations.
+
+B) Work Areas (belong to properties)
+CREATE TABLE cc_work_areas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  property_id uuid NOT NULL REFERENCES cc_properties(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  description text,
+  tags text[] NOT NULL DEFAULT '{}',
+  created_by uuid NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX cc_work_areas_tenant_property_idx
+  ON cc_work_areas (tenant_id, property_id);
+
+CREATE INDEX cc_work_areas_tags_gin
+  ON cc_work_areas USING GIN (tags);
+
+C) Work Media (maintenance / contractor photos)
+CREATE TABLE cc_work_media (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  portal_id uuid NULL,
+  property_id uuid NULL REFERENCES cc_properties(id) ON DELETE CASCADE,
+  work_area_id uuid NULL REFERENCES cc_work_areas(id) ON DELETE CASCADE,
+  entity_type text NULL CHECK (
+    entity_type IN ('property','asset','job','zone','route_edge','portal')
+  ),
+  entity_id uuid NULL,
+  media_id uuid NOT NULL,
+  title text,
+  notes text,
+  tags text[] NOT NULL DEFAULT '{}',
+  sort_order int NOT NULL DEFAULT 0,
+  created_by uuid NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX cc_work_media_tenant_idx ON cc_work_media (tenant_id);
+CREATE INDEX cc_work_media_area_idx ON cc_work_media (tenant_id, work_area_id);
+CREATE INDEX cc_work_media_portal_idx ON cc_work_media (tenant_id, portal_id);
+CREATE INDEX cc_work_media_tags_gin ON cc_work_media USING GIN (tags);
+
+D) RLS
+
+Apply tenant_id RLS consistent with existing cc_properties and admin rules.
+
+Acceptance
+
+Migration runs clean
+
+Drizzle schema compiles
+
+No existing tables touched
