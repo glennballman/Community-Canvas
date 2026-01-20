@@ -241,6 +241,41 @@ export default function WorkRequestDetail() {
     return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
   };
 
+  // PROMPT 8: Handle "Preview as Contractor" button click
+  const handlePreviewAsContractor = async () => {
+    if (!request?.id || !request?.assigned_contractor_person_id) {
+      toast({ title: 'Error', description: 'No contractor assigned', variant: 'destructive' });
+      return;
+    }
+    
+    try {
+      // Request a preview token
+      const res = await fetch('/api/p2/app/work-disclosures/preview-token', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          workRequestId: request.id,
+          contractorPersonId: request.assigned_contractor_person_id,
+        }),
+      });
+      
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to generate preview token');
+      }
+      
+      const data = await res.json();
+      
+      // Open preview page in new tab with token (public route, no auth required)
+      const previewUrl = `/preview/contractor/work-request/${request.id}?previewToken=${encodeURIComponent(data.token)}`;
+      window.open(previewUrl, '_blank');
+      
+      toast({ title: 'Preview opened', description: 'A new tab has been opened with the contractor view. Token expires in 15 minutes.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to preview', variant: 'destructive' });
+    }
+  };
+
   const saveDisclosuresMutation = useMutation({
     mutationFn: async (selection: DisclosureSelection) => {
       const res = await fetch('/api/p2/app/work-disclosures/bulk', {
@@ -586,6 +621,7 @@ export default function WorkRequestDetail() {
             onChange={(contractorId) => assignContractorMutation.mutate(contractorId)}
             workRequestId={request.id}
             disabled={assignContractorMutation.isPending}
+            onPreviewAsContractor={handlePreviewAsContractor}
           />
 
           {/* Share with Contractor */}

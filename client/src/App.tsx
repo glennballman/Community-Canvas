@@ -63,6 +63,9 @@ import WorkRequestDetail from './pages/WorkRequestDetail';
 import WorkRequestsList from './pages/intake/WorkRequestsList';
 import IntakeWorkRequestDetail from './pages/intake/WorkRequestDetail';
 
+// Pages - Contractor Preview (PROMPT 8)
+import ContractorWorkRequestPreview from './pages/app/ContractorWorkRequestPreview';
+
 // Pages - Projects
 import ProjectsList from './pages/projects/ProjectsList';
 import CreateProject from './pages/projects/CreateProject';
@@ -275,6 +278,9 @@ export default function App() {
               
               {/* Public Trip Portal - guest-facing trip view */}
               <Route path="/trip/:accessCode" element={<TripPortalPage />} />
+              
+              {/* PROMPT 8: Contractor Preview - public route with previewToken auth */}
+              <Route path="/preview/contractor/work-request/:workRequestId" element={<ContractorWorkRequestPreview />} />
               
               {/* ========================================== */}
               {/* PUBLIC PROPOSAL - /p/proposal/:proposalId */}
