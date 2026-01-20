@@ -100,21 +100,41 @@ p2DashboardRouter.get("/jobs/summary", async (req, res) => {
 
 p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
   try {
-    const tenantId = getTenantId(req);
+    const userId = (req as any).user?.id as string | undefined;
+    
+    // If no authenticated user, return 0
+    if (!userId) {
+      return res.json({ ok: true, count: 0 });
+    }
 
-    const result = tenantId
-      ? await pool.query(`
-          SELECT count(*)::int as unread
-          FROM cc_conversation_participants
-          WHERE tenant_id = $1 AND unread_count > 0
-        `, [tenantId])
-      : await pool.query(`
-          SELECT count(*)::int as unread
-          FROM cc_conversation_participants
-          WHERE unread_count > 0
-        `);
+    // Count unread messages for conversations the user participates in
+    // A message is unread if:
+    // - read_at IS NULL
+    // - conversation_id matches a conversation where user is an active participant
+    // - message was not sent by the user (sender_participant_id != user's participant)
+    // - message was created after user joined the conversation
+    // 
+    // User participates via individual_id = user_id (user.id == individual.id in this system)
+    const result = await pool.query(`
+      WITH user_participations AS (
+        SELECT 
+          p.id as participant_id,
+          p.conversation_id,
+          p.joined_at
+        FROM cc_conversation_participants p
+        WHERE p.is_active = true
+          AND p.individual_id = $1
+      )
+      SELECT COUNT(*)::int as unread
+      FROM cc_messages m
+      JOIN user_participations up ON m.conversation_id = up.conversation_id
+      WHERE m.read_at IS NULL
+        AND m.deleted_at IS NULL
+        AND m.sender_participant_id IS DISTINCT FROM up.participant_id
+        AND m.created_at >= COALESCE(up.joined_at, '1970-01-01'::timestamptz)
+    `, [userId]);
 
-    res.json({ ok: true, unread: result.rows[0]?.unread || 0 });
+    res.json({ ok: true, count: result.rows[0]?.unread || 0 });
   } catch (e: any) {
     console.error("[p2-dashboard] messages/unread-count error:", e.message);
     res.status(500).json({ ok: false, error: { code: "INTERNAL", message: e.message } });
