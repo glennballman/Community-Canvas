@@ -155,6 +155,13 @@ interface FixtureResult {
   payUrl?: string;
   tripId?: string;
   accessCode?: string;
+  workRequest?: {
+    id: string;
+    title: string;
+    status: string;
+    propertyId?: string;
+    assignedContractorPersonId?: string | null;
+  };
 }
 
 function FixtureButton({
@@ -253,6 +260,110 @@ function FixtureButton({
 }
 
 type SeedStep = 'idle' | 'campaign' | 'job' | 'proposal' | 'trip' | 'done';
+
+function WorkRequestFixtureButton({
+  onSeed,
+  isPending,
+  result,
+}: {
+  onSeed: () => void;
+  isPending: boolean;
+  result: FixtureResult | null;
+}) {
+  const { toast } = useToast();
+  const [previewLoading, setPreviewLoading] = useState(false);
+  
+  const handlePreview = async () => {
+    if (!result?.workRequest?.id) return;
+    setPreviewLoading(true);
+    try {
+      const res = await fetch('/api/p2/app/work-disclosures/preview-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ workRequestId: result.workRequest.id }),
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to create preview token');
+      }
+      
+      const data = await res.json();
+      const previewUrl = `/preview/contractor/work-request/${result.workRequest.id}?previewToken=${encodeURIComponent(data.token)}`;
+      window.open(previewUrl, '_blank');
+      toast({ title: 'Preview opened', description: 'Token expires in 15 minutes.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 p-3 border rounded-md" data-testid="fixture-test-work-request">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <ClipboardList className="h-5 w-5 text-muted-foreground shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">Test Work Request</div>
+          {result && (
+            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+              {result.created ? (
+                <Badge variant="default">Created</Badge>
+              ) : (
+                <Badge variant="secondary">Exists</Badge>
+              )}
+              {result.workRequest?.title && (
+                <span className="truncate">{result.workRequest.title}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0 flex-wrap">
+        {result?.workRequest?.id && (
+          <>
+            <Button size="sm" variant="outline" asChild data-testid="button-open-work-request-owner">
+              <Link to={`/app/intake/work-requests/${result.workRequest.id}`}>
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open
+              </Link>
+            </Button>
+            {result.workRequest.assignedContractorPersonId && (
+              <Button 
+                size="sm" 
+                variant="ghost"
+                onClick={handlePreview}
+                disabled={previewLoading}
+                data-testid="button-preview-work-request-contractor"
+              >
+                {previewLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Eye className="h-3 w-3 mr-1" />
+                )}
+                Preview
+              </Button>
+            )}
+          </>
+        )}
+        <Button 
+          size="sm" 
+          onClick={onSeed} 
+          disabled={isPending}
+          data-testid="button-seed-test-work-request"
+        >
+          {isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
+          <span className="ml-1">{result ? 'Refresh' : 'Create'}</span>
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface WorkRequest {
   id: string;
@@ -394,6 +505,7 @@ export default function PortalQaLaunchpadPage() {
   const [jobResult, setJobResult] = useState<FixtureResult | null>(null);
   const [proposalResult, setProposalResult] = useState<FixtureResult | null>(null);
   const [tripResult, setTripResult] = useState<FixtureResult | null>(null);
+  const [workRequestResult, setWorkRequestResult] = useState<FixtureResult | null>(null);
   
   // Seed All state
   const [seedAllStep, setSeedAllStep] = useState<SeedStep>('idle');
@@ -490,6 +602,19 @@ export default function PortalQaLaunchpadPage() {
       toast({ title: data.created ? 'Test trip created' : 'Test trip exists' });
     },
     onError: () => toast({ title: 'Failed to create trip', variant: 'destructive' }),
+  });
+  
+  const seedWorkRequest = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-work-request`);
+      return res.json();
+    },
+    onSuccess: (data: FixtureResult) => {
+      setWorkRequestResult(data);
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa'] });
+      toast({ title: data.created ? 'Test work request created' : 'Test work request exists' });
+    },
+    onError: () => toast({ title: 'Failed to create work request', variant: 'destructive' }),
   });
   
   const portal = data?.portal;
@@ -758,6 +883,11 @@ export default function PortalQaLaunchpadPage() {
               onSeed={() => seedTrip.mutate()}
               isPending={seedTrip.isPending || (isSeedingAll && seedAllStep === 'trip')}
               result={tripResult}
+            />
+            <WorkRequestFixtureButton
+              onSeed={() => seedWorkRequest.mutate()}
+              isPending={seedWorkRequest.isPending}
+              result={workRequestResult}
             />
           </div>
         </CardContent>

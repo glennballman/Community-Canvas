@@ -1156,6 +1156,154 @@ router.post('/portals/:portalId/qa/seed-trip', async (req: any, res) => {
   }
 });
 
+/**
+ * POST /api/p2/admin/portals/:portalId/qa/seed-work-request
+ * Create or reuse a test work request (PROMPT 10)
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin
+ */
+router.post('/portals/:portalId/qa/seed-work-request', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    if (!portal) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    // Look for existing [TEST] work request for this portal
+    const existingResult = await pool.query(`
+      SELECT id, title, status, property_id, assigned_contractor_person_id
+      FROM cc_maintenance_requests
+      WHERE portal_id = $1
+        AND title LIKE $2
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [portalId, TEST_PREFIX + '%']);
+
+    if (existingResult.rows.length > 0) {
+      const existing = existingResult.rows[0];
+      return res.json({
+        ok: true,
+        created: false,
+        workRequest: {
+          id: existing.id,
+          title: existing.title,
+          status: existing.status,
+          propertyId: existing.property_id,
+          assignedContractorPersonId: existing.assigned_contractor_person_id,
+        },
+      });
+    }
+
+    // Find or create a TEST property for this portal
+    let propertyId: string;
+    const existingProperty = await pool.query(`
+      SELECT id FROM cc_properties
+      WHERE portal_id = $1 AND name LIKE $2
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [portalId, TEST_PREFIX + '%']);
+
+    if (existingProperty.rows.length > 0) {
+      propertyId = existingProperty.rows[0].id;
+    } else {
+      // Create a minimal TEST property
+      const newProperty = await pool.query(`
+        INSERT INTO cc_properties (name, portal_id, tenant_id, property_type)
+        VALUES ($1, $2, $3, 'residential')
+        RETURNING id
+      `, [TEST_PREFIX + 'QA Property', portalId, auth.tenantId]);
+      propertyId = newProperty.rows[0].id;
+    }
+
+    // Find contractor person if any exist in tenant (deterministic)
+    const contractorResult = await pool.query(`
+      SELECT id FROM cc_people
+      WHERE tenant_id = $1 AND entity_type = 'contractor'
+      ORDER BY created_at DESC, id ASC
+      LIMIT 1
+    `, [auth.tenantId]);
+    const assignedContractorPersonId = contractorResult.rows[0]?.id || null;
+
+    // Find most recent work area for the property (if any exist)
+    const workAreaResult = await pool.query(`
+      SELECT id FROM cc_work_areas
+      WHERE property_id = $1
+      ORDER BY created_at DESC, id ASC
+      LIMIT 1
+    `, [propertyId]);
+    const workAreaId = workAreaResult.rows[0]?.id || null;
+
+    // Generate unique request number
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const requestNumber = `TEST-${timestamp}`;
+
+    // Create the TEST work request with work_area_id in details_json
+    const detailsJson = {
+      work_area_id: workAreaId,
+      disclosure_recommended: true,
+    };
+
+    const workRequestResult = await pool.query(`
+      INSERT INTO cc_maintenance_requests (
+        portal_id, property_id, title, description, category, status, 
+        request_number, assigned_contractor_person_id, details_json
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id, title, status, property_id, assigned_contractor_person_id
+    `, [
+      portalId,
+      propertyId,
+      TEST_PREFIX + 'Work Request — Electrical panel inspection',
+      'Annual inspection of main electrical panel for safety compliance. Check all breakers, wiring connections, and grounding.',
+      'electrical',
+      'new',
+      requestNumber,
+      assignedContractorPersonId,
+      JSON.stringify(detailsJson),
+    ]);
+
+    const workRequest = workRequestResult.rows[0];
+
+    // Audit log the seed action
+    await pool.query(`
+      INSERT INTO cc_work_disclosure_audit 
+      (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+      VALUES ($1, $2, $3, $4, 'qa_seed_work_request', $5)
+    `, [
+      auth.tenantId,
+      workRequest.id,
+      req.user?.id || null,
+      assignedContractorPersonId,
+      JSON.stringify({ 
+        created: true, 
+        propertyId,
+        portalId,
+        assignedContractorPersonId,
+      }),
+    ]);
+
+    res.json({
+      ok: true,
+      created: true,
+      workRequest: {
+        id: workRequest.id,
+        title: workRequest.title,
+        status: workRequest.status,
+        propertyId: workRequest.property_id,
+        assignedContractorPersonId: workRequest.assigned_contractor_person_id,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Admin] POST seed-work-request error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // ============================================================================
 // QA STATUS ENDPOINT
 // Mark portal QA as complete/incomplete for rollout tracking

@@ -1,0 +1,73 @@
+✅ REPLIT PROMPT 10 — QA Launchpad: Seed Work Request Fixture (Idempotent)
+
+Paste verbatim:
+
+Add QA fixture seeding for Work Requests in the Portal QA Launchpad.
+
+Terminology:
+- Work Requests = cc_maintenance_requests
+- Contractors are People records (cc_people.entity_type='contractor')
+- Do NOT use "job" terminology.
+
+Backend
+
+A) Add endpoint:
+POST /api/p2/admin/portals/:portalId/qa/seed-work-request
+
+Role gating:
+- requireTenantAdmin (platform_admin OR tenant_owner/tenant_admin)
+
+Behavior:
+- Idempotent per portal using a deterministic TEST key:
+  - Use title prefix: "[TEST] Work Request"
+  - Optionally include portal slug for clarity
+
+Portal scoping:
+- The seeded work request MUST be linked to the portal in a way the portal QA list can retrieve it.
+- Prefer:
+  - If cc_maintenance_requests has portal_id: set portal_id = :portalId
+  - Else:
+    - Find or create a TEST property under this portal:
+      - cc_properties.portal_id = :portalId
+      - name = "[TEST] QA Property"
+    - Set cc_maintenance_requests.property_id = that property id
+
+Seed data contents (safe defaults):
+- title: "[TEST] Work Request — Electrical panel inspection"
+- status: initial state consistent with existing enum (e.g. 'new' or 'open')
+- details_json should include:
+  - work_area_id: if any work areas exist for that property, select the most recent; else null
+  - disclosure_recommended: true (optional hint for UI)
+- assigned_contractor_person_id:
+  - If any contractor People exist in tenant, pick the most recent contractor (deterministic ORDER BY created_at DESC, id ASC LIMIT 1)
+  - Else leave null
+
+Return:
+{
+  ok: true,
+  created: boolean,
+  workRequest: { id, title, status, propertyId?, assignedContractorPersonId? }
+}
+
+Audit:
+- Insert cc_work_disclosure_audit row with action='qa_seed_work_request' and payload including created flag and ids.
+
+Frontend
+
+B) Update /app/admin/portals/:portalId/qa page
+
+In "Create Test Fixtures" card add button:
+- "Work Request"
+
+On click:
+- POST /api/p2/admin/portals/:portalId/qa/seed-work-request
+- Show status "Created" or "Exists"
+- Provide buttons:
+  - "Open (Owner/Admin)" → /app/work-requests/:id
+  - If assignedContractorPersonId exists:
+    - "Preview contractor view" → mint preview token then open preview URL
+
+Acceptance:
+- Seeding is idempotent and portal-scoped
+- Seeded work request appears in QA Launchpad Work Requests list
+- Preview contractor view works if contractor assigned
