@@ -150,11 +150,12 @@ export default function PortalQaLaunchpadPage() {
     if (!slug) return;
     const urls = [
       `/p/${slug}`,
+      `/p/${slug}/onboarding`,
       `/p/${slug}/reserve`,
       `/b/${slug}/jobs`,
     ];
     urls.forEach(url => window.open(url, '_blank'));
-    toast({ title: 'Opened 3 core links in new tabs' });
+    toast({ title: 'Opened 4 core links in new tabs' });
   };
   
   if (isLoading) {
