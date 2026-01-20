@@ -18,8 +18,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, Calendar, MapPin, Settings, Users, Truck, 
   Loader2, Plus, Trash2, Edit, Check, X, Download, Upload,
-  ChevronLeft, ChevronRight, Wrench, DollarSign, Star, Bed
+  ChevronLeft, ChevronRight, Wrench, DollarSign, Star, Bed, ClipboardList
 } from 'lucide-react';
+import WorkCatalogPage from './WorkCatalogPage';
 
 interface Property {
   id: number;
@@ -589,6 +590,7 @@ function PropertyManageContent() {
             <TabsTrigger value="pricing" data-testid="tab-pricing"><DollarSign className="h-4 w-4 mr-1" /> Pricing</TabsTrigger>
             <TabsTrigger value="providers" data-testid="tab-providers"><Wrench className="h-4 w-4 mr-1" /> Providers</TabsTrigger>
             <TabsTrigger value="reservations" data-testid="tab-reservations"><Users className="h-4 w-4 mr-1" /> Reservations</TabsTrigger>
+            <TabsTrigger value="work-catalog" data-testid="tab-work-catalog"><ClipboardList className="h-4 w-4 mr-1" /> Work Catalog</TabsTrigger>
             <TabsTrigger value="reviews" data-testid="tab-reviews"><Star className="h-4 w-4 mr-1" /> Reviews</TabsTrigger>
             <TabsTrigger value="settings" data-testid="tab-settings"><Settings className="h-4 w-4 mr-1" /> Settings</TabsTrigger>
           </TabsList>
@@ -885,6 +887,12 @@ function PropertyManageContent() {
                 <p className="text-muted-foreground text-center py-8">No reviews yet</p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="work-catalog">
+            {property?.canvasId && (
+              <WorkCatalogPage propertyId={property.canvasId} />
+            )}
           </TabsContent>
 
           <TabsContent value="settings">

@@ -2420,6 +2420,28 @@ export const insertWorkMediaSchema = createInsertSchema(ccWorkMedia).omit({
 export type WorkMedia = typeof ccWorkMedia.$inferSelect;
 export type InsertWorkMedia = z.infer<typeof insertWorkMediaSchema>;
 
+// ============ WORK DISCLOSURES ============
+export const ccWorkDisclosures = pgTable('cc_work_disclosures', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  workRequestId: uuid('work_request_id').notNull(),
+  itemType: varchar('item_type', { length: 50 }).notNull(),
+  itemId: uuid('item_id'),
+  visibility: varchar('visibility', { length: 50 }).notNull().default('contractor'),
+  specificContractorId: uuid('specific_contractor_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdBy: uuid('created_by'),
+}, (table) => ({
+  tenantIdx: index('cc_work_disclosures_tenant_idx_drizzle').on(table.tenantId),
+  workRequestIdx: index('cc_work_disclosures_work_request_idx_drizzle').on(table.tenantId, table.workRequestId),
+}));
+
+export const insertWorkDisclosureSchema = createInsertSchema(ccWorkDisclosures).omit({
+  id: true, createdAt: true
+});
+export type WorkDisclosure = typeof ccWorkDisclosures.$inferSelect;
+export type InsertWorkDisclosure = z.infer<typeof insertWorkDisclosureSchema>;
+
 // ============ UNITS ============
 export const ccUnits = pgTable('cc_units', {
   id: uuid('id').primaryKey().defaultRandom(),

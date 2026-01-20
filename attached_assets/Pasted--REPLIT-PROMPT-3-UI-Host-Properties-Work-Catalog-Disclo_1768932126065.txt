@@ -1,0 +1,217 @@
+✅ REPLIT PROMPT 3 — UI
+Host Properties → Work Catalog + Disclosure
+
+Paste verbatim into Replit
+
+Extend the Host Properties UI to allow residents to set up reusable Work Catalog data (work areas, reference notes, media, access constraints) and selectively disclose this information when creating or editing a maintenance work request.
+
+IMPORTANT TERMINOLOGY RULES
+
+“Job” refers ONLY to employment postings.
+
+Maintenance items are “Work Requests” (cc_maintenance_requests).
+
+Do not use “job” language anywhere in this UI.
+
+A) Entry Point
+
+In PropertyManage.tsx, add a new primary action or tab:
+
+Label: Work Catalog
+
+Route: /app/host/properties/:propertyId/work-catalog
+
+This is accessible only to tenant owner/admin or authorized host staff.
+
+B) Work Catalog Page Layout
+Top Section — Property Access Constraints
+
+Render the existing Access Constraints editor for:
+
+entity_type = property
+
+entity_id = propertyId
+
+Fields include (using existing schema):
+
+Last-mile access (distance, elevation, surface)
+
+Vertical access (stairs, elevator, load limits)
+
+Rolling allowed / not allowed
+
+Daylight required (auto sunrise/sunset)
+
+Wind threshold (kts)
+
+Persist via:
+
+PUT /api/p2/app/access-constraints/property/:propertyId
+
+These are reference constraints, not evidentiary records.
+
+Middle Section — Work Areas
+
+Two-pane layout:
+
+Left Pane
+
+List of Work Areas (title + tags)
+
+Add / Edit / Delete
+
+Search/filter
+
+Right Pane (selected area)
+
+Title
+
+Description (reference notes)
+
+Tags
+
+Media grid (photos, drawings, documents)
+
+Recommend 5–6 photos
+
+Caption per photo (e.g. “300 m steep walk from dock”)
+
+Data sources:
+
+Work Areas CRUD (Prompt 2)
+
+Work Media CRUD (Prompt 2)
+
+Notes:
+
+These notes/media are reference knowledge
+
+Editable and deletable
+
+Not disclosed by default
+
+Bottom Section — Community Use (Portal-Scoped)
+
+Secondary tab: Community Use
+
+Purpose:
+
+Shared infrastructure photos and notes
+
+Examples:
+
+Boat launch
+
+Lucky Lander
+
+Water taxi
+
+Docks, ramps, stairways
+
+Implementation:
+
+Media stored in cc_work_media
+
+portal_id = current portal
+
+work_area_id = NULL
+
+Not automatically shared — disclosure controlled later.
+
+C) Work Request Integration (Disclosure UI)
+
+In Create / Edit Work Request UI:
+
+Add a step labeled “What do you want to share?”
+
+Disclosure Selector
+
+Checkbox groups:
+
+Work Area
+
+⬜ Selected Work Area notes
+
+⬜ Selected Work Area media
+
+Property
+
+⬜ Property reference notes
+
+⬜ Property access constraints
+
+Subsystems (if present — see Prompt 3B)
+
+⬜ Electrical system notes/media
+
+⬜ Plumbing system notes/media
+
+⬜ Trenching / underground notes/media
+
+Community
+
+⬜ Community use photos / notes
+
+Defaults:
+
+Only access constraints suggested
+
+Nothing else pre-selected
+
+Disclosure Behavior
+
+On save:
+
+Create disclosure rows (cc_work_disclosures)
+
+Each row ties:
+
+work_request_id
+
+item_type (work_area, work_media, subsystem, access_constraints)
+
+item_id
+
+visibility:
+
+contractor (all invited)
+
+or specific_contractor
+
+Disclosure rules:
+
+Items are NOT shared unless explicitly selected
+
+Owner can revoke at any time (DELETE rows)
+
+Revocation is silent
+
+D) Contractor View
+
+Contractors:
+
+See ONLY disclosed items
+
+Cannot see catalog directly
+
+Cannot infer what exists but is undisclosed
+
+Show:
+
+Resolved access constraints summary
+
+Photos and notes disclosed
+
+Subsystems if disclosed
+
+Acceptance Criteria
+
+Property owners set up Work Catalog once
+
+Notes and photos are reusable forever
+
+Disclosure is explicit, selective, revocable
+
+No evidentiary or immutable semantics introduced
+
+No employment “job” terminology appears

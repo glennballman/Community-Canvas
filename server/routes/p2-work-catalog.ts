@@ -443,7 +443,7 @@ router.get('/work-media', async (req: any, res) => {
 
     const result = await pool.query(query, params);
 
-    res.json({ ok: true, media: result.rows, total: result.rows.length });
+    res.json({ ok: true, workMedia: result.rows, total: result.rows.length });
   } catch (error: any) {
     console.error('[WorkCatalog] GET work-media error:', error);
     res.status(500).json({ ok: false, error: error.message });
@@ -487,7 +487,7 @@ router.post('/work-media', async (req: any, res) => {
       auth.userId
     ]);
 
-    res.json({ ok: true, media: result.rows[0] });
+    res.json({ ok: true, workMedia: result.rows[0] });
   } catch (error: any) {
     console.error('[WorkCatalog] POST work-media error:', error);
     res.status(500).json({ ok: false, error: error.message });
@@ -537,7 +537,7 @@ router.put('/work-media/:id', async (req: any, res) => {
       return res.status(404).json({ ok: false, error: 'Work media not found' });
     }
 
-    res.json({ ok: true, media: result.rows[0] });
+    res.json({ ok: true, workMedia: result.rows[0] });
   } catch (error: any) {
     console.error('[WorkCatalog] PUT work-media error:', error);
     res.status(500).json({ ok: false, error: error.message });
@@ -659,6 +659,208 @@ router.get('/maintenance-requests/:id/work-area', async (req: any, res) => {
     });
   } catch (error: any) {
     console.error('[WorkCatalog] GET maintenance-request work-area error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// WORK DISCLOSURES
+// ============================================================================
+
+const disclosureSchema = z.object({
+  workRequestId: z.string().uuid(),
+  itemType: z.enum(['work_area', 'work_media', 'subsystem', 'access_constraints', 'property_notes', 'community_media']),
+  itemId: z.string().uuid().nullable().optional(),
+  visibility: z.enum(['contractor', 'specific_contractor']).default('contractor'),
+  specificContractorId: z.string().uuid().nullable().optional(),
+});
+
+/**
+ * GET /api/p2/app/work-disclosures/:workRequestId
+ * Get all disclosures for a work request
+ */
+router.get('/work-disclosures/:workRequestId', async (req: any, res) => {
+  try {
+    const auth = await requireTenantMember(req, res);
+    if (!auth) return;
+
+    const { workRequestId } = req.params;
+
+    const result = await pool.query(`
+      SELECT d.*, 
+             wa.title as work_area_title,
+             wm.title as work_media_title, wm.notes as work_media_notes
+      FROM cc_work_disclosures d
+      LEFT JOIN cc_work_areas wa ON d.item_type = 'work_area' AND d.item_id = wa.id
+      LEFT JOIN cc_work_media wm ON d.item_type = 'work_media' AND d.item_id = wm.id
+      WHERE d.tenant_id = $1 AND d.work_request_id = $2
+      ORDER BY d.created_at
+    `, [auth.tenantId, workRequestId]);
+
+    res.json({ ok: true, disclosures: result.rows });
+  } catch (error: any) {
+    console.error('[WorkCatalog] GET disclosures error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/app/work-disclosures
+ * Create a disclosure
+ */
+router.post('/work-disclosures', async (req: any, res) => {
+  try {
+    const auth = await requireTenantMember(req, res);
+    if (!auth) return;
+
+    const parsed = disclosureSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: parsed.error.message });
+    }
+
+    const { workRequestId, itemType, itemId, visibility, specificContractorId } = parsed.data;
+
+    const result = await pool.query(`
+      INSERT INTO cc_work_disclosures (
+        tenant_id, work_request_id, item_type, item_id, 
+        visibility, specific_contractor_id, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [auth.tenantId, workRequestId, itemType, itemId, visibility, specificContractorId, auth.userId]);
+
+    res.json({ ok: true, disclosure: result.rows[0] });
+  } catch (error: any) {
+    console.error('[WorkCatalog] POST disclosure error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/p2/app/work-disclosures/bulk
+ * Bulk create/update disclosures for a work request
+ */
+router.post('/work-disclosures/bulk', async (req: any, res) => {
+  try {
+    const auth = await requireTenantMember(req, res);
+    if (!auth) return;
+
+    const { workRequestId, disclosures } = req.body;
+    
+    if (!workRequestId || !Array.isArray(disclosures)) {
+      return res.status(400).json({ ok: false, error: 'workRequestId and disclosures array required' });
+    }
+
+    // Delete existing disclosures for this work request
+    await pool.query(`
+      DELETE FROM cc_work_disclosures
+      WHERE tenant_id = $1 AND work_request_id = $2
+    `, [auth.tenantId, workRequestId]);
+
+    // Insert new disclosures
+    if (disclosures.length > 0) {
+      const values = disclosures.map((d: any, i: number) => {
+        const offset = i * 7;
+        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`;
+      }).join(', ');
+
+      const params = disclosures.flatMap((d: any) => [
+        auth.tenantId, workRequestId, d.itemType, d.itemId || null,
+        d.visibility || 'contractor', d.specificContractorId || null, auth.userId
+      ]);
+
+      await pool.query(`
+        INSERT INTO cc_work_disclosures (
+          tenant_id, work_request_id, item_type, item_id, 
+          visibility, specific_contractor_id, created_by
+        )
+        VALUES ${values}
+      `, params);
+    }
+
+    res.json({ ok: true, count: disclosures.length });
+  } catch (error: any) {
+    console.error('[WorkCatalog] POST bulk disclosures error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/p2/app/work-disclosures/:id
+ * Delete a disclosure (revoke)
+ */
+router.delete('/work-disclosures/:id', async (req: any, res) => {
+  try {
+    const auth = await requireTenantMember(req, res);
+    if (!auth) return;
+
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      DELETE FROM cc_work_disclosures
+      WHERE id = $1 AND tenant_id = $2
+      RETURNING id
+    `, [id, auth.tenantId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Disclosure not found' });
+    }
+
+    res.json({ ok: true, deleted: true });
+  } catch (error: any) {
+    console.error('[WorkCatalog] DELETE disclosure error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/p2/app/work-disclosures/contractor/:workRequestId
+ * Get disclosed items for a contractor (read-only view)
+ * Requires tenant membership - contractor must be authenticated
+ */
+router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) => {
+  try {
+    const auth = await requireTenantMember(req, res);
+    if (!auth) return;
+
+    const { workRequestId } = req.params;
+
+    // Verify the work request belongs to the tenant
+    const wrCheck = await pool.query(`
+      SELECT id FROM cc_maintenance_requests 
+      WHERE id = $1 AND portal_id IN (
+        SELECT id FROM cc_portals WHERE owning_tenant_id = $2
+      )
+    `, [workRequestId, auth.tenantId]);
+
+    if (wrCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Work request not found' });
+    }
+
+    // Get disclosed items only
+    const result = await pool.query(`
+      SELECT d.item_type, d.item_id,
+             wa.title as work_area_title, wa.description as work_area_description, wa.tags as work_area_tags,
+             wm.title as work_media_title, wm.notes as work_media_notes, wm.tags as work_media_tags,
+             ac.access as access_constraints
+      FROM cc_work_disclosures d
+      LEFT JOIN cc_work_areas wa ON d.item_type = 'work_area' AND d.item_id = wa.id
+      LEFT JOIN cc_work_media wm ON d.item_type = 'work_media' AND d.item_id = wm.id
+      LEFT JOIN cc_access_constraints ac ON d.item_type = 'access_constraints' AND d.item_id = ac.id
+      WHERE d.work_request_id = $1 AND d.tenant_id = $2
+      ORDER BY d.item_type, d.created_at
+    `, [workRequestId, auth.tenantId]);
+
+    // Group by type
+    const grouped: Record<string, any[]> = {};
+    for (const row of result.rows) {
+      if (!grouped[row.item_type]) grouped[row.item_type] = [];
+      grouped[row.item_type].push(row);
+    }
+
+    res.json({ ok: true, disclosedItems: grouped });
+  } catch (error: any) {
+    console.error('[WorkCatalog] GET contractor disclosures error:', error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
