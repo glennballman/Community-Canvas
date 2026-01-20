@@ -81,6 +81,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Evidence Rule Enforcement**: Machine-enforceable evidence gates to track and verify system artifacts.
 - **Parking Plan View**: Visual operations map showing parking stall layout, real-time occupancy, and availability.
 - **Marina Plan View**: Visual operations map showing marina slip layout, real-time occupancy, and amenities.
+- **P-UI-17 Admin & Folios**: Admin pages for role management (users list, role updates), portal settings (branding, moderation, features), notification preferences, and read-only folio/ledger views with financial summaries.
 
 ## V3.5 Certification Suite
 
