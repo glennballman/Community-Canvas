@@ -14,7 +14,7 @@ import { z } from 'zod';
 
 const router = Router();
 
-async function requireTenantMember(req: any, res: any): Promise<{ tenantId: string; userId: string } | null> {
+async function requireTenantMember(req: any, res: any): Promise<{ tenantId: string; userId: string; role: string } | null> {
   const userId = req.user?.id;
   if (!userId) {
     res.status(401).json({ ok: false, error: 'Authentication required' });
@@ -38,9 +38,29 @@ async function requireTenantMember(req: any, res: any): Promise<{ tenantId: stri
       res.status(403).json({ ok: false, error: 'Tenant membership required' });
       return null;
     }
+    // Platform admins get owner role
+    return { tenantId, userId, role: 'owner' };
   }
   
-  return { tenantId, userId };
+  return { tenantId, userId, role: result.rows[0].role };
+}
+
+/**
+ * Require owner or admin role - blocks contractors from accessing sensitive routes
+ * CRITICAL: Work Catalog data should only be accessible by owners/admins
+ * Contractors must use disclosure-scoped endpoints only
+ */
+async function requireOwnerOrAdmin(req: any, res: any): Promise<{ tenantId: string; userId: string; role: string } | null> {
+  const auth = await requireTenantMember(req, res);
+  if (!auth) return null;
+  
+  const allowedRoles = ['owner', 'admin', 'manager'];
+  if (!allowedRoles.includes(auth.role)) {
+    res.status(403).json({ ok: false, error: 'Owner or admin access required' });
+    return null;
+  }
+  
+  return auth;
 }
 
 // ============ SUBSYSTEM CATALOG APIs ============
@@ -62,7 +82,7 @@ router.get('/subsystem-catalog', async (req: any, res) => {
 // ============ PROPERTY SUBSYSTEMS APIs ============
 
 router.get('/properties/:propertyId/subsystems', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { propertyId } = req.params;
   
@@ -93,7 +113,7 @@ const createSubsystemSchema = z.object({
 });
 
 router.post('/properties/:propertyId/subsystems', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { propertyId } = req.params;
   
@@ -168,7 +188,7 @@ const updateSubsystemSchema = z.object({
 });
 
 router.put('/subsystems/:subsystemId', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { subsystemId } = req.params;
   
@@ -237,7 +257,7 @@ router.put('/subsystems/:subsystemId', async (req: any, res) => {
 });
 
 router.delete('/subsystems/:subsystemId', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { subsystemId } = req.params;
   
@@ -261,7 +281,7 @@ router.delete('/subsystems/:subsystemId', async (req: any, res) => {
 // ============ ON-SITE RESOURCES APIs ============
 
 router.get('/properties/:propertyId/on-site-resources', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { propertyId } = req.params;
   const { resourceType } = req.query;
@@ -310,7 +330,7 @@ const createResourceSchema = z.object({
 });
 
 router.post('/properties/:propertyId/on-site-resources', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { propertyId } = req.params;
   
@@ -349,7 +369,7 @@ router.post('/properties/:propertyId/on-site-resources', async (req: any, res) =
 });
 
 router.put('/on-site-resources/:id', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { id } = req.params;
   
@@ -419,7 +439,7 @@ router.put('/on-site-resources/:id', async (req: any, res) => {
 });
 
 router.delete('/on-site-resources/:id', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { id } = req.params;
   
@@ -443,7 +463,7 @@ router.delete('/on-site-resources/:id', async (req: any, res) => {
 // ============ PEOPLE (CONTRACTORS) API ============
 
 router.get('/people', async (req: any, res) => {
-  const auth = await requireTenantMember(req, res);
+  const auth = await requireOwnerOrAdmin(req, res);
   if (!auth) return;
   const { entityType } = req.query;
   

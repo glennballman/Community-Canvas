@@ -14,7 +14,7 @@ import { z } from 'zod';
 
 const router = Router();
 
-async function requireTenantMember(req: any, res: any): Promise<{ tenantId: string; userId: string } | null> {
+async function requireTenantMember(req: any, res: any): Promise<{ tenantId: string; userId: string; role: string } | null> {
   const userId = req.user?.id;
   if (!userId) {
     res.status(401).json({ ok: false, error: 'Authentication required' });
@@ -38,9 +38,29 @@ async function requireTenantMember(req: any, res: any): Promise<{ tenantId: stri
       res.status(403).json({ ok: false, error: 'Tenant membership required' });
       return null;
     }
+    // Platform admins get owner role
+    return { tenantId, userId, role: 'owner' };
   }
   
-  return { tenantId, userId };
+  return { tenantId, userId, role: result.rows[0].role };
+}
+
+/**
+ * Require owner or admin role - blocks contractors from accessing sensitive routes
+ * CRITICAL: Work Catalog data should only be accessible by owners/admins
+ * Contractors must use disclosure-scoped endpoints only
+ */
+async function requireOwnerOrAdmin(req: any, res: any): Promise<{ tenantId: string; userId: string; role: string } | null> {
+  const auth = await requireTenantMember(req, res);
+  if (!auth) return null;
+  
+  const allowedRoles = ['owner', 'admin', 'manager'];
+  if (!allowedRoles.includes(auth.role)) {
+    res.status(403).json({ ok: false, error: 'Owner or admin access required' });
+    return null;
+  }
+  
+  return auth;
 }
 
 // ============================================================================
@@ -57,7 +77,7 @@ const accessConstraintSchema = z.object({
  */
 router.get('/access-constraints/:entityType/:entityId', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { entityType, entityId } = req.params;
@@ -90,7 +110,7 @@ router.get('/access-constraints/:entityType/:entityId', async (req: any, res) =>
  */
 router.put('/access-constraints/:entityType/:entityId', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { entityType, entityId } = req.params;
@@ -204,7 +224,7 @@ function mergeConstraints(
  */
 router.get('/access-constraints/resolve', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { propertyId, workRequestId, portalId } = req.query;
@@ -266,7 +286,7 @@ const workAreaSchema = z.object({
  */
 router.get('/properties/:propertyId/work-areas', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { propertyId } = req.params;
@@ -291,7 +311,7 @@ router.get('/properties/:propertyId/work-areas', async (req: any, res) => {
  */
 router.post('/properties/:propertyId/work-areas', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { propertyId } = req.params;
@@ -327,7 +347,7 @@ router.post('/properties/:propertyId/work-areas', async (req: any, res) => {
  */
 router.put('/work-areas/:workAreaId', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { workAreaId } = req.params;
@@ -367,7 +387,7 @@ router.put('/work-areas/:workAreaId', async (req: any, res) => {
  */
 router.delete('/work-areas/:workAreaId', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { workAreaId } = req.params;
@@ -413,7 +433,7 @@ const workMediaSchema = z.object({
  */
 router.get('/work-media', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { propertyId, workAreaId, portalId, subsystemId } = req.query;
@@ -461,7 +481,7 @@ router.get('/work-media', async (req: any, res) => {
  */
 router.post('/work-media', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
     
     const parsed = workMediaSchema.safeParse(req.body);
@@ -506,7 +526,7 @@ router.post('/work-media', async (req: any, res) => {
  */
 router.put('/work-media/:id', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { id } = req.params;
@@ -556,7 +576,7 @@ router.put('/work-media/:id', async (req: any, res) => {
  */
 router.delete('/work-media/:id', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { id } = req.params;
@@ -592,7 +612,7 @@ const maintenanceWorkAreaSchema = z.object({
  */
 router.put('/maintenance-requests/:id/work-area', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { id } = req.params;
@@ -633,7 +653,7 @@ router.put('/maintenance-requests/:id/work-area', async (req: any, res) => {
  */
 router.get('/maintenance-requests/:id/work-area', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { id } = req.params;
@@ -687,7 +707,7 @@ const disclosureSchema = z.object({
  */
 router.get('/work-disclosures/:workRequestId', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { workRequestId } = req.params;
@@ -716,7 +736,7 @@ router.get('/work-disclosures/:workRequestId', async (req: any, res) => {
  */
 router.post('/work-disclosures', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const parsed = disclosureSchema.safeParse(req.body);
@@ -748,7 +768,7 @@ router.post('/work-disclosures', async (req: any, res) => {
  */
 router.post('/work-disclosures/bulk', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { workRequestId, disclosures } = req.body;
@@ -797,7 +817,7 @@ router.post('/work-disclosures/bulk', async (req: any, res) => {
  */
 router.delete('/work-disclosures/:id', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
+    const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
     const { id } = req.params;
@@ -822,7 +842,10 @@ router.delete('/work-disclosures/:id', async (req: any, res) => {
 /**
  * GET /api/p2/app/work-disclosures/contractor/:workRequestId
  * Get disclosed items for a contractor (read-only view)
- * Requires tenant membership - contractor must be authenticated
+ * 
+ * SECURITY: This endpoint uses requireTenantMember (not requireOwnerOrAdmin)
+ * because contractors need access to their disclosed items.
+ * Additional check: verifies user is assigned to this work request.
  */
 router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) => {
   try {
@@ -831,16 +854,28 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
 
     const { workRequestId } = req.params;
 
-    // Verify the work request belongs to the tenant
+    // Verify the work request belongs to the tenant AND user is assigned contractor
+    // Or user is owner/admin (they can view everything)
+    const allowedRoles = ['owner', 'admin', 'manager'];
+    const isOwnerOrAdmin = allowedRoles.includes(auth.role);
+    
     const wrCheck = await pool.query(`
-      SELECT id FROM cc_maintenance_requests 
-      WHERE id = $1 AND portal_id IN (
-        SELECT id FROM cc_portals WHERE owning_tenant_id = $2
-      )
+      SELECT wr.id, wr.assigned_contractor_id
+      FROM cc_maintenance_requests wr
+      JOIN cc_portals p ON wr.portal_id = p.id
+      WHERE wr.id = $1 AND p.owning_tenant_id = $2
     `, [workRequestId, auth.tenantId]);
 
     if (wrCheck.rows.length === 0) {
       return res.status(404).json({ ok: false, error: 'Work request not found' });
+    }
+    
+    // If not owner/admin, verify user is the assigned contractor
+    if (!isOwnerOrAdmin) {
+      const assignedContractorId = wrCheck.rows[0].assigned_contractor_id;
+      if (assignedContractorId !== auth.userId) {
+        return res.status(403).json({ ok: false, error: 'You are not assigned to this work request' });
+      }
     }
 
     // Get disclosed items only
