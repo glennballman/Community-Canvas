@@ -182,6 +182,7 @@ function FixtureButton({
               )}
               {result.url && <span className="truncate">{result.url}</span>}
               {result.viewUrl && <span className="truncate">{result.viewUrl}</span>}
+              {result.payUrl && <span className="truncate ml-2">| Pay: {result.payUrl}</span>}
             </div>
           )}
         </div>
@@ -201,11 +202,23 @@ function FixtureButton({
         )}
         {result?.viewUrl && (
           <>
-            <Button size="icon" variant="ghost" onClick={() => handleCopy(result.viewUrl!)} data-testid={`button-copy-fixture-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Button size="icon" variant="ghost" onClick={() => handleCopy(result.viewUrl!)} title="Copy view URL" data-testid={`button-copy-fixture-${label.toLowerCase().replace(/\s+/g, '-')}-view`}>
               <Copy className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" asChild data-testid={`button-open-fixture-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Button size="icon" variant="ghost" asChild title="Open view" data-testid={`button-open-fixture-${label.toLowerCase().replace(/\s+/g, '-')}-view`}>
               <a href={result.viewUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </>
+        )}
+        {result?.payUrl && (
+          <>
+            <Button size="icon" variant="ghost" onClick={() => handleCopy(result.payUrl!)} title="Copy pay URL" data-testid={`button-copy-fixture-${label.toLowerCase().replace(/\s+/g, '-')}-pay`}>
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant="ghost" asChild title="Open pay page" data-testid={`button-open-fixture-${label.toLowerCase().replace(/\s+/g, '-')}-pay`}>
+              <a href={result.payUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
