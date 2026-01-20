@@ -53,6 +53,39 @@ async function requireTenantAdmin(req: any, res: any): Promise<{ tenantId: strin
 }
 
 /**
+ * GET /api/p2/admin/portals
+ * List portals for the current tenant (or all for platform admin)
+ */
+router.get('/portals', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const result = await pool.query(`
+      SELECT id, slug, name, status, portal_type
+      FROM cc_portals
+      WHERE owning_tenant_id = $1 OR $2 = true
+      ORDER BY name ASC
+    `, [auth.tenantId, isPlatformAdmin]);
+
+    const portals = result.rows.map((row: any) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      status: row.status,
+      portalType: row.portal_type,
+    }));
+
+    res.json({ ok: true, portals });
+  } catch (error: any) {
+    console.error('[Admin] GET portals error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
  * GET /api/p2/admin/roles/catalog
  * Returns available role types for tenant + portal
  */

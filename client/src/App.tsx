@@ -171,6 +171,7 @@ import FleetAssetsPage from './pages/app/fleet/FleetAssetsPage';
 import FleetAssetDetailPage from './pages/app/fleet/FleetAssetDetailPage';
 import FleetMaintenancePage from './pages/app/fleet/FleetMaintenancePage';
 import PortalAppearancePage from './pages/app/admin/PortalAppearancePage';
+import PortalQaLaunchpadPage from './pages/app/admin/PortalQaLaunchpadPage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
 // Pages - Admin
@@ -386,6 +387,7 @@ export default function App() {
                 <Route path="admin/usage" element={<UsageSummaryPage />} />
                 <Route path="admin/certifications" element={<CertificationsPage />} />
                 <Route path="admin/portals" element={<PortalsPage />} />
+                <Route path="admin/portals/:portalId/qa" element={<PortalQaLaunchpadPage />} />
                 <Route path="admin/portals/:portalId/appearance" element={<PortalAppearancePage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />
                 <Route path="platform/tenants" element={<TenantsListPage />} />
