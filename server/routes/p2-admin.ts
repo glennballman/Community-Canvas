@@ -1128,4 +1128,95 @@ router.post('/portals/:portalId/qa/seed-trip', async (req: any, res) => {
   }
 });
 
+// ============================================================================
+// QA STATUS ENDPOINT
+// Mark portal QA as complete/incomplete for rollout tracking
+// ============================================================================
+
+/**
+ * POST /api/p2/admin/portals/:portalId/qa/status
+ * Update portal QA status (stored in portal.settings.qa_status)
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin
+ */
+router.post('/portals/:portalId/qa/status', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const { status } = req.body; // 'complete' | 'incomplete' | 'in_progress'
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    if (!portal) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    // Validate status
+    const validStatuses = ['complete', 'incomplete', 'in_progress'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ ok: false, error: 'Invalid status. Use: complete, incomplete, in_progress' });
+    }
+
+    // Update portal settings with qa_status
+    await pool.query(`
+      UPDATE cc_portals
+      SET settings = jsonb_set(
+        COALESCE(settings, '{}'::jsonb),
+        '{qa_status}',
+        $1::jsonb
+      )
+      WHERE id = $2
+    `, [JSON.stringify(status), portalId]);
+
+    res.json({
+      ok: true,
+      status,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('[Admin] POST qa/status error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/p2/admin/portals/:portalId/qa/status
+ * Get portal QA status
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin
+ */
+router.get('/portals/:portalId/qa/status', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    if (!portal) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    // Get portal settings
+    const result = await pool.query(`
+      SELECT settings->'qa_status' as qa_status
+      FROM cc_portals
+      WHERE id = $1
+    `, [portalId]);
+
+    const status = result.rows[0]?.qa_status || 'incomplete';
+
+    res.json({
+      ok: true,
+      status: typeof status === 'string' ? status : status || 'incomplete',
+    });
+  } catch (error: any) {
+    console.error('[Admin] GET qa/status error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 export default router;

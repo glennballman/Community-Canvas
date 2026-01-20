@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -271,6 +272,34 @@ export default function PortalQaLaunchpadPage() {
     enabled: !!portalId,
   });
   
+  // QA Status query
+  const { data: statusData } = useQuery<{ ok: boolean; status: string }>({
+    queryKey: ['/api/p2/admin/portals', portalId, 'qa', 'status'],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/admin/portals/${portalId}/qa/status`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return { ok: true, status: 'incomplete' };
+      return res.json();
+    },
+    enabled: !!portalId,
+  });
+  
+  const qaStatus = statusData?.status || 'incomplete';
+  
+  // QA Status mutation
+  const updateQaStatus = useMutation({
+    mutationFn: async (status: string) => {
+      const res = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/status`, { status });
+      return res.json();
+    },
+    onSuccess: (_, status) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa', 'status'] });
+      toast({ title: `QA status updated to ${status}` });
+    },
+    onError: () => toast({ title: 'Failed to update QA status', variant: 'destructive' }),
+  });
+  
   // Seed mutations
   const seedCampaign = useMutation({
     mutationFn: async () => {
@@ -457,10 +486,45 @@ export default function PortalQaLaunchpadPage() {
           </div>
         </div>
         
-        <Button onClick={openAllCore} data-testid="button-open-all-core">
-          <Link2 className="h-4 w-4 mr-2" />
-          Open All Core Links
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">QA Status:</span>
+            <Select 
+              value={qaStatus} 
+              onValueChange={(v) => updateQaStatus.mutate(v)}
+              disabled={updateQaStatus.isPending}
+            >
+              <SelectTrigger className="w-32" data-testid="select-qa-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="incomplete">
+                  <span className="flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    Incomplete
+                  </span>
+                </SelectItem>
+                <SelectItem value="in_progress">
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-3 w-3" />
+                    In Progress
+                  </span>
+                </SelectItem>
+                <SelectItem value="complete">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3" />
+                    Complete
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Button onClick={openAllCore} data-testid="button-open-all-core">
+            <Link2 className="h-4 w-4 mr-2" />
+            Open All Core Links
+          </Button>
+        </div>
       </div>
       
       <Card data-testid="card-fixtures">
