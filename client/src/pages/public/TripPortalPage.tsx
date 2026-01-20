@@ -7,6 +7,7 @@ import {
   MapPin, Camera, Utensils, Tent, Fish, Sun, CloudRain,
   Share2, Plus, Check, AlertTriangle, X
 } from 'lucide-react';
+import { PortalBrandedShell } from './components/PortalBrandedShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -174,25 +175,39 @@ export default function TripPortalPage() {
     },
   });
   
+  const portalSlug = data?.portal?.slug;
+  
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" data-testid="loading-container">
-        <div className="text-foreground">Loading your expedition...</div>
-      </div>
+      <PortalBrandedShell
+        portalSlug={undefined}
+        backHref={undefined}
+        backLabel="Back to Portal"
+      >
+        <div className="flex items-center justify-center py-20" data-testid="loading-container">
+          <div className="text-foreground">Loading your expedition...</div>
+        </div>
+      </PortalBrandedShell>
     );
   }
   
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" data-testid="error-container">
-        <Card className="max-w-md">
-          <CardContent className="p-8 text-center">
-            <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-xl mb-2" data-testid="error-title">Trip Not Found</h2>
-            <p className="text-muted-foreground" data-testid="error-message">Check your access code and try again.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <PortalBrandedShell
+        portalSlug={undefined}
+        backHref={undefined}
+        backLabel="Back to Portal"
+      >
+        <div className="flex items-center justify-center py-20" data-testid="error-container">
+          <Card className="max-w-md">
+            <CardContent className="p-8 text-center">
+              <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+              <h2 className="text-xl mb-2" data-testid="error-title">Trip Not Found</h2>
+              <p className="text-muted-foreground" data-testid="error-message">Check your access code and try again.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </PortalBrandedShell>
     );
   }
   
@@ -205,8 +220,14 @@ export default function TripPortalPage() {
   };
   
   return (
-    <div className="min-h-screen bg-background" data-testid="trip-portal-page">
-      <header className="bg-card border-b px-4 py-6" data-testid="trip-header">
+    <PortalBrandedShell
+      portalSlug={portalSlug}
+      preloadedData={data?.portal ? { portal: data.portal } : undefined}
+      backHref={portalSlug ? `/p/${portalSlug}` : undefined}
+      backLabel="Back to Portal"
+    >
+      <div data-testid="trip-portal-page">
+        <header className="bg-card border-b px-4 py-6 -mx-6 -mt-6" data-testid="trip-header">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
             <div>
@@ -432,52 +453,53 @@ export default function TripPortalPage() {
         </Tabs>
       </main>
       
-      <Dialog open={showMomentsModal} onOpenChange={setShowMomentsModal}>
-        <DialogContent className="max-w-lg max-h-[80vh]" data-testid="moments-modal">
-          <DialogHeader>
-            <DialogTitle>
-              Add to {selectedDay && format(parseISO(selectedDay), 'EEEE, MMM d')}
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-4">
-              {momentsData?.grouped && Object.entries(momentsData.grouped).map(([type, moments]) => (
-                <div key={type}>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">{getMomentTypeLabel(type)}</h3>
-                  <div className="space-y-2">
-                    {moments.map((moment) => {
-                      const Icon = getItemIcon(moment.moment_type);
-                      return (
-                        <button
-                          key={moment.id}
-                          onClick={() => selectedDay && addItemMutation.mutate({ momentId: moment.id, dayDate: selectedDay })}
-                          disabled={addItemMutation.isPending}
-                          className="w-full text-left p-3 rounded bg-muted/50 hover-elevate disabled:opacity-50"
-                          data-testid={`moment-option-${moment.id}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <Icon className="w-5 h-5 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="font-medium">{moment.title}</p>
-                              <p className="text-sm text-muted-foreground">{moment.description}</p>
-                              {moment.pro_tip && (
-                                <p className="text-xs text-muted-foreground mt-1 italic">Tip: {moment.pro_tip}</p>
-                              )}
+        <Dialog open={showMomentsModal} onOpenChange={setShowMomentsModal}>
+          <DialogContent className="max-w-lg max-h-[80vh]" data-testid="moments-modal">
+            <DialogHeader>
+              <DialogTitle>
+                Add to {selectedDay && format(parseISO(selectedDay), 'EEEE, MMM d')}
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="space-y-4">
+                {momentsData?.grouped && Object.entries(momentsData.grouped).map(([type, moments]) => (
+                  <div key={type}>
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-2">{getMomentTypeLabel(type)}</h3>
+                    <div className="space-y-2">
+                      {moments.map((moment) => {
+                        const Icon = getItemIcon(moment.moment_type);
+                        return (
+                          <button
+                            key={moment.id}
+                            onClick={() => selectedDay && addItemMutation.mutate({ momentId: moment.id, dayDate: selectedDay })}
+                            disabled={addItemMutation.isPending}
+                            className="w-full text-left p-3 rounded bg-muted/50 hover-elevate disabled:opacity-50"
+                            data-testid={`moment-option-${moment.id}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Icon className="w-5 h-5 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="font-medium">{moment.title}</p>
+                                <p className="text-sm text-muted-foreground">{moment.description}</p>
+                                {moment.pro_tip && (
+                                  <p className="text-xs text-muted-foreground mt-1 italic">Tip: {moment.pro_tip}</p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {(!momentsData?.moments || momentsData.moments.length === 0) && (
-                <p className="text-muted-foreground text-center py-4">No suggested activities available for this destination.</p>
-              )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </div>
+                ))}
+                {(!momentsData?.moments || momentsData.moments.length === 0) && (
+                  <p className="text-muted-foreground text-center py-4">No suggested activities available for this destination.</p>
+                )}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PortalBrandedShell>
   );
 }
