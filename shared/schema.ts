@@ -2447,6 +2447,27 @@ export const insertWorkDisclosureSchema = createInsertSchema(ccWorkDisclosures).
 export type WorkDisclosure = typeof ccWorkDisclosures.$inferSelect;
 export type InsertWorkDisclosure = z.infer<typeof insertWorkDisclosureSchema>;
 
+// ============ WORK DISCLOSURE AUDIT (append-only) ============
+export const ccWorkDisclosureAudit = pgTable('cc_work_disclosure_audit', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  workRequestId: uuid('work_request_id').notNull(),
+  actorUserId: uuid('actor_user_id').notNull(),
+  contractorPersonId: uuid('contractor_person_id'),
+  action: varchar('action', { length: 50 }).notNull(),
+  payload: jsonb('payload').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  workRequestIdx: index('cc_work_disclosure_audit_work_request_idx').on(table.tenantId, table.workRequestId, table.createdAt),
+  contractorIdx: index('cc_work_disclosure_audit_contractor_idx').on(table.tenantId, table.contractorPersonId, table.createdAt),
+}));
+
+export const insertWorkDisclosureAuditSchema = createInsertSchema(ccWorkDisclosureAudit).omit({
+  id: true, createdAt: true
+});
+export type WorkDisclosureAudit = typeof ccWorkDisclosureAudit.$inferSelect;
+export type InsertWorkDisclosureAudit = z.infer<typeof insertWorkDisclosureAuditSchema>;
+
 // ============ SUBSYSTEM CATALOG (GLOBAL) ============
 export const ccSubsystemCatalog = pgTable('cc_subsystem_catalog', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -2924,6 +2945,7 @@ export const ccMaintenanceRequests = pgTable('cc_maintenance_requests', {
   
   assignedTo: text('assigned_to'),
   assignedVendor: text('assigned_vendor'),
+  assignedContractorPersonId: uuid('assigned_contractor_person_id'),
   assignedAt: timestamp('assigned_at', { withTimezone: true }),
   
   scheduledDate: date('scheduled_date'),

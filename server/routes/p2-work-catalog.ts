@@ -765,18 +765,48 @@ router.post('/work-disclosures', async (req: any, res) => {
 /**
  * POST /api/p2/app/work-disclosures/bulk
  * Bulk create/update disclosures for a work request
+ * 
+ * Optional: contractorPersonId - if provided, assigns this contractor to the work request
  */
 router.post('/work-disclosures/bulk', async (req: any, res) => {
   try {
     const auth = await requireOwnerOrAdmin(req, res);
     if (!auth) return;
 
-    const { workRequestId, disclosures } = req.body;
+    const { workRequestId, disclosures, contractorPersonId } = req.body;
     
     if (!workRequestId || !Array.isArray(disclosures)) {
       return res.status(400).json({ ok: false, error: 'workRequestId and disclosures array required' });
     }
 
+    // Validate work request belongs to this tenant via portal ownership
+    const wrCheck = await pool.query(`
+      SELECT wr.id 
+      FROM cc_maintenance_requests wr
+      JOIN cc_portals p ON wr.portal_id = p.id
+      WHERE wr.id = $1 AND p.owning_tenant_id = $2
+    `, [workRequestId, auth.tenantId]);
+
+    if (wrCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Work request not found or not accessible' });
+    }
+
+    // If contractorPersonId provided, update the work request's assigned contractor
+    if (contractorPersonId) {
+      await pool.query(`
+        UPDATE cc_maintenance_requests
+        SET assigned_contractor_person_id = $1
+        WHERE id = $2
+      `, [contractorPersonId, workRequestId]);
+    }
+
+    // Get previous disclosures for audit diff
+    const prevResult = await pool.query(`
+      SELECT item_type, item_id FROM cc_work_disclosures
+      WHERE tenant_id = $1 AND work_request_id = $2
+    `, [auth.tenantId, workRequestId]);
+    const prevItems = prevResult.rows.map(r => `${r.item_type}:${r.item_id}`);
+    
     // Delete existing disclosures for this work request
     await pool.query(`
       DELETE FROM cc_work_disclosures
@@ -803,6 +833,26 @@ router.post('/work-disclosures/bulk', async (req: any, res) => {
         VALUES ${values}
       `, params);
     }
+
+    // Log disclosure update to audit table
+    const newItems = disclosures.map((d: any) => `${d.itemType}:${d.itemId || 'null'}`);
+    const action = prevItems.length === 0 ? 'share_set' : 'share_update';
+    await pool.query(`
+      INSERT INTO cc_work_disclosure_audit 
+      (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [
+      auth.tenantId, 
+      workRequestId, 
+      auth.userId, 
+      contractorPersonId || null,
+      action,
+      JSON.stringify({ 
+        previous: prevItems, 
+        current: newItems,
+        count: disclosures.length 
+      })
+    ]);
 
     res.json({ ok: true, count: disclosures.length });
   } catch (error: any) {
@@ -845,7 +895,10 @@ router.delete('/work-disclosures/:id', async (req: any, res) => {
  * 
  * SECURITY: This endpoint uses requireTenantMember (not requireOwnerOrAdmin)
  * because contractors need access to their disclosed items.
- * Additional check: verifies user is assigned to this work request.
+ * Additional check: verifies user is the assigned contractor via cc_people.user_id.
+ * 
+ * NOTE: assigned_contractor_person_id references cc_people, not users directly.
+ * We join cc_people to get user_id for contractor assignment verification.
  */
 router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) => {
   try {
@@ -854,15 +907,16 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
 
     const { workRequestId } = req.params;
 
-    // Verify the work request belongs to the tenant AND user is assigned contractor
+    // Verify the work request belongs to the tenant AND get assigned contractor person
     // Or user is owner/admin (they can view everything)
     const allowedRoles = ['owner', 'admin', 'manager'];
     const isOwnerOrAdmin = allowedRoles.includes(auth.role);
     
     const wrCheck = await pool.query(`
-      SELECT wr.id, wr.assigned_contractor_id
+      SELECT wr.id, wr.assigned_contractor_person_id, p2.user_id as contractor_user_id
       FROM cc_maintenance_requests wr
       JOIN cc_portals p ON wr.portal_id = p.id
+      LEFT JOIN cc_people p2 ON wr.assigned_contractor_person_id = p2.id
       WHERE wr.id = $1 AND p.owning_tenant_id = $2
     `, [workRequestId, auth.tenantId]);
 
@@ -871,23 +925,37 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
     }
     
     // If not owner/admin, verify user is the assigned contractor
+    const contractorPersonId = wrCheck.rows[0].assigned_contractor_person_id;
     if (!isOwnerOrAdmin) {
-      const assignedContractorId = wrCheck.rows[0].assigned_contractor_id;
-      if (assignedContractorId !== auth.userId) {
+      const contractorUserId = wrCheck.rows[0].contractor_user_id;
+      
+      if (!contractorPersonId || contractorUserId !== auth.userId) {
+        // Log denied access attempt with contractor attribution
+        await pool.query(`
+          INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+          VALUES ($1, $2, $3, $4, 'view_denied', $5)
+        `, [auth.tenantId, workRequestId, auth.userId, contractorPersonId, JSON.stringify({ reason: 'not_assigned' })]);
+        
         return res.status(403).json({ ok: false, error: 'You are not assigned to this work request' });
       }
     }
 
-    // Get disclosed items only
+    // Get disclosed items only - includes work_areas, work_media, access_constraints,
+    // subsystems, and on_site_resources
     const result = await pool.query(`
       SELECT d.item_type, d.item_id,
              wa.title as work_area_title, wa.description as work_area_description, wa.tags as work_area_tags,
-             wm.title as work_media_title, wm.notes as work_media_notes, wm.tags as work_media_tags,
-             ac.access as access_constraints
+             wm.title as work_media_title, wm.notes as work_media_notes, wm.tags as work_media_tags, wm.url as work_media_url,
+             ac.access as access_constraints,
+             ps.title as subsystem_title, ps.description as subsystem_description, ps.tags as subsystem_tags,
+             osr.name as resource_name, osr.description as resource_description, 
+             osr.resource_type, osr.storage_location, osr.share_policy
       FROM cc_work_disclosures d
       LEFT JOIN cc_work_areas wa ON d.item_type = 'work_area' AND d.item_id = wa.id
       LEFT JOIN cc_work_media wm ON d.item_type = 'work_media' AND d.item_id = wm.id
       LEFT JOIN cc_access_constraints ac ON d.item_type = 'access_constraints' AND d.item_id = ac.id
+      LEFT JOIN cc_property_subsystems ps ON d.item_type = 'subsystem' AND d.item_id = ps.id
+      LEFT JOIN cc_on_site_resources osr ON d.item_type = 'on_site_resource' AND d.item_id = osr.id
       WHERE d.work_request_id = $1 AND d.tenant_id = $2
       ORDER BY d.item_type, d.created_at
     `, [workRequestId, auth.tenantId]);

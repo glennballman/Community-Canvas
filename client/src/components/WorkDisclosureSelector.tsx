@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Lock, Unlock, Image, FileText, MapPin, Mountain, Users } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Lock, Unlock, Image, MapPin, Mountain, Users, Settings, Package, Wrench, UserCircle } from 'lucide-react';
 
 interface WorkArea {
   id: string;
@@ -19,12 +19,40 @@ interface WorkMedia {
   title: string | null;
 }
 
+interface PropertySubsystem {
+  id: string;
+  title: string;
+  description: string | null;
+  visibility: string;
+  isSensitive: boolean;
+  tags: string[];
+}
+
+interface OnSiteResource {
+  id: string;
+  name: string;
+  resourceType: 'tool' | 'material';
+  description: string | null;
+  sharePolicy: 'private' | 'disclosable' | 'offerable';
+  storageLocation: string | null;
+}
+
+interface Person {
+  id: string;
+  displayName: string;
+  email: string | null;
+  personType: string;
+}
+
 interface DisclosureSelection {
+  contractorPersonId: string | null;
   workAreas: string[];
   workMedia: string[];
   accessConstraints: boolean;
   propertyNotes: boolean;
   communityMedia: string[];
+  subsystems: string[];
+  onSiteResources: string[];
 }
 
 interface WorkDisclosureSelectorProps {
@@ -88,11 +116,56 @@ export function WorkDisclosureSelector({
     enabled: !!portalId
   });
 
+  // Fetch property subsystems (visibility=contractor only)
+  const { data: subsystemsData, isLoading: loadingSubsystems } = useQuery<{ subsystems: PropertySubsystem[] }>({
+    queryKey: ['/api/p2/app/properties', propertyId, 'subsystems'],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/app/properties/${propertyId}/subsystems`, { 
+        headers: getAuthHeaders() 
+      });
+      if (!res.ok) return { subsystems: [] };
+      return res.json();
+    },
+    enabled: !!propertyId
+  });
+
+  // Fetch on-site resources (sharePolicy != private)
+  const { data: resourcesData, isLoading: loadingResources } = useQuery<{ resources: OnSiteResource[] }>({
+    queryKey: ['/api/p2/app/properties', propertyId, 'on-site-resources'],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/app/properties/${propertyId}/on-site-resources`, { 
+        headers: getAuthHeaders() 
+      });
+      if (!res.ok) return { resources: [] };
+      return res.json();
+    },
+    enabled: !!propertyId
+  });
+
+  // Fetch contractors (people with person_type = 'contractor')
+  const { data: contractorsData, isLoading: loadingContractors } = useQuery<{ people: Person[] }>({
+    queryKey: ['/api/p2/people', 'contractor'],
+    queryFn: async () => {
+      const res = await fetch('/api/p2/people?personType=contractor', { 
+        headers: getAuthHeaders() 
+      });
+      if (!res.ok) return { people: [] };
+      return res.json();
+    }
+  });
+
   const workAreas = areasData?.workAreas || [];
   const workMedia = mediaData?.workMedia || [];
   const communityMedia = communityData?.workMedia || [];
+  const contractors = contractorsData?.people || [];
+  // Only show subsystems with contractor visibility
+  const disclosableSubsystems = (subsystemsData?.subsystems || []).filter(s => s.visibility === 'contractor');
+  // Only show resources that are disclosable or offerable
+  const disclosableResources = (resourcesData?.resources || []).filter(r => r.sharePolicy !== 'private');
+  const tools = disclosableResources.filter(r => r.resourceType === 'tool');
+  const materials = disclosableResources.filter(r => r.resourceType === 'material');
 
-  const isLoading = loadingAreas || loadingMedia || loadingCommunity;
+  const isLoading = loadingAreas || loadingMedia || loadingCommunity || loadingSubsystems || loadingResources || loadingContractors;
 
   const toggleWorkArea = (areaId: string) => {
     const newAreas = value.workAreas.includes(areaId)
@@ -115,6 +188,20 @@ export function WorkDisclosureSelector({
     onChange({ ...value, communityMedia: newMedia });
   };
 
+  const toggleSubsystem = (subsystemId: string) => {
+    const newSubs = value.subsystems.includes(subsystemId)
+      ? value.subsystems.filter(id => id !== subsystemId)
+      : [...value.subsystems, subsystemId];
+    onChange({ ...value, subsystems: newSubs });
+  };
+
+  const toggleResource = (resourceId: string) => {
+    const newRes = value.onSiteResources.includes(resourceId)
+      ? value.onSiteResources.filter(id => id !== resourceId)
+      : [...value.onSiteResources, resourceId];
+    onChange({ ...value, onSiteResources: newRes });
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -130,7 +217,9 @@ export function WorkDisclosureSelector({
   const hasWorkAreas = workAreas.length > 0;
   const hasWorkMedia = workMedia.length > 0;
   const hasCommunityMedia = communityMedia.length > 0;
-  const hasAnything = hasWorkAreas || hasWorkMedia || hasCommunityMedia;
+  const hasSubsystems = disclosableSubsystems.length > 0;
+  const hasResources = disclosableResources.length > 0;
+  const hasAnything = hasWorkAreas || hasWorkMedia || hasCommunityMedia || hasSubsystems || hasResources;
 
   return (
     <Card>
@@ -144,9 +233,48 @@ export function WorkDisclosureSelector({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Share-with Contractor Selection */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <UserCircle className="h-4 w-4" />
+            Share With
+          </div>
+          <Select
+            value={value.contractorPersonId || ''}
+            onValueChange={(val) => onChange({ ...value, contractorPersonId: val || null })}
+          >
+            <SelectTrigger className="w-full" data-testid="select-contractor">
+              <SelectValue placeholder="Select a contractor..." />
+            </SelectTrigger>
+            <SelectContent>
+              {contractors.length === 0 ? (
+                <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                  No contractors found. Add people with contractor type first.
+                </div>
+              ) : (
+                contractors.map((person) => (
+                  <SelectItem key={person.id} value={person.id} data-testid={`select-contractor-${person.id}`}>
+                    {person.displayName}
+                    {person.email && <span className="text-muted-foreground ml-1">({person.email})</span>}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          {!value.contractorPersonId && (
+            <p className="text-xs text-amber-600">Select a contractor to enable disclosure</p>
+          )}
+        </div>
+
+        <Separator />
+
         {!hasAnything ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             No work catalog items available. Set up your Work Catalog first.
+          </p>
+        ) : !value.contractorPersonId ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Select a contractor above to configure disclosure items.
           </p>
         ) : (
           <>
@@ -233,6 +361,103 @@ export function WorkDisclosureSelector({
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
+
+            {/* Subsystems */}
+            {hasSubsystems && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Settings className="h-4 w-4" />
+                    Subsystems
+                  </div>
+                  <div className="pl-6 space-y-2">
+                    {disclosableSubsystems.map((subsystem) => (
+                      <div key={subsystem.id} className="flex items-center gap-2">
+                        <Checkbox 
+                          id={`subsystem-${subsystem.id}`}
+                          checked={value.subsystems.includes(subsystem.id)}
+                          onCheckedChange={() => toggleSubsystem(subsystem.id)}
+                          data-testid={`checkbox-disclose-subsystem-${subsystem.id}`}
+                        />
+                        <Label htmlFor={`subsystem-${subsystem.id}`} className="text-sm">
+                          {subsystem.title}
+                        </Label>
+                        {subsystem.isSensitive && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Lock className="h-3 w-3 mr-1" />
+                            Sensitive
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
+
+            {/* On-Site Resources */}
+            {hasResources && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Package className="h-4 w-4" />
+                    On-Site Resources
+                  </div>
+                  <div className="pl-6 space-y-3">
+                    {tools.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Wrench className="h-3 w-3" />
+                          Tools
+                        </div>
+                        {tools.map((resource) => (
+                          <div key={resource.id} className="flex items-center gap-2">
+                            <Checkbox 
+                              id={`resource-${resource.id}`}
+                              checked={value.onSiteResources.includes(resource.id)}
+                              onCheckedChange={() => toggleResource(resource.id)}
+                              data-testid={`checkbox-disclose-resource-${resource.id}`}
+                            />
+                            <Label htmlFor={`resource-${resource.id}`} className="text-sm">
+                              {resource.name}
+                            </Label>
+                            <Badge variant={resource.sharePolicy === 'offerable' ? 'default' : 'outline'} className="text-xs">
+                              {resource.sharePolicy === 'offerable' ? 'For Rent' : 'Shareable'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {materials.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Package className="h-3 w-3" />
+                          Materials
+                        </div>
+                        {materials.map((resource) => (
+                          <div key={resource.id} className="flex items-center gap-2">
+                            <Checkbox 
+                              id={`resource-${resource.id}`}
+                              checked={value.onSiteResources.includes(resource.id)}
+                              onCheckedChange={() => toggleResource(resource.id)}
+                              data-testid={`checkbox-disclose-resource-${resource.id}`}
+                            />
+                            <Label htmlFor={`resource-${resource.id}`} className="text-sm">
+                              {resource.name}
+                            </Label>
+                            <Badge variant={resource.sharePolicy === 'offerable' ? 'default' : 'outline'} className="text-xs">
+                              {resource.sharePolicy === 'offerable' ? 'For Rent' : 'Shareable'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Separator />
