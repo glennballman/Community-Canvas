@@ -2359,7 +2359,10 @@ export const ccAccessConstraints = pgTable('cc_access_constraints', {
   access: jsonb('access').notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantEntityUnique: uniqueIndex('cc_access_constraints_tenant_entity_unique').on(table.tenantId, table.entityType, table.entityId),
+  tenantEntityIdx: index('cc_access_constraints_tenant_entity_idx').on(table.tenantId, table.entityType, table.entityId),
+}));
 
 export const insertAccessConstraintSchema = createInsertSchema(ccAccessConstraints).omit({
   id: true, createdAt: true, updatedAt: true
@@ -2371,14 +2374,16 @@ export type InsertAccessConstraint = z.infer<typeof insertAccessConstraintSchema
 export const ccWorkAreas = pgTable('cc_work_areas', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull(),
-  propertyId: uuid('property_id').notNull(),
+  propertyId: uuid('property_id').notNull().references(() => ccProperties.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
   tags: text('tags').array().notNull().default([]),
   createdBy: uuid('created_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantPropertyIdx: index('cc_work_areas_tenant_property_idx').on(table.tenantId, table.propertyId),
+}));
 
 export const insertWorkAreaSchema = createInsertSchema(ccWorkAreas).omit({
   id: true, createdAt: true, updatedAt: true
@@ -2391,8 +2396,8 @@ export const ccWorkMedia = pgTable('cc_work_media', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull(),
   portalId: uuid('portal_id'),
-  propertyId: uuid('property_id'),
-  workAreaId: uuid('work_area_id'),
+  propertyId: uuid('property_id').references(() => ccProperties.id, { onDelete: 'cascade' }),
+  workAreaId: uuid('work_area_id').references(() => ccWorkAreas.id, { onDelete: 'cascade' }),
   entityType: text('entity_type'),
   entityId: uuid('entity_id'),
   mediaId: uuid('media_id').notNull(),
@@ -2403,7 +2408,11 @@ export const ccWorkMedia = pgTable('cc_work_media', {
   createdBy: uuid('created_by'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantIdx: index('cc_work_media_tenant_idx').on(table.tenantId),
+  areaIdx: index('cc_work_media_area_idx').on(table.tenantId, table.workAreaId),
+  portalIdx: index('cc_work_media_portal_idx').on(table.tenantId, table.portalId),
+}));
 
 export const insertWorkMediaSchema = createInsertSchema(ccWorkMedia).omit({
   id: true, createdAt: true, updatedAt: true
