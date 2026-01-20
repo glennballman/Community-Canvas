@@ -20,6 +20,7 @@ interface AssistButtonProps {
   buttonSize?: 'default' | 'sm' | 'icon';
   className?: string;
   disabled?: boolean;
+  testId?: string;
 }
 
 interface AIDraft {
@@ -41,6 +42,7 @@ export function AssistButton({
   buttonSize = 'sm',
   className,
   disabled,
+  testId = 'button-ai-assist',
 }: AssistButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -196,7 +198,7 @@ export function AssistButton({
         onClick={handleOpen}
         disabled={disabled}
         className={cn('gap-1.5', className)}
-        data-testid="button-ai-assist"
+        data-testid={testId}
       >
         <Sparkles className="h-3.5 w-3.5" />
         {buttonText}

@@ -223,7 +223,19 @@ export default function JobEditorPage() {
                         location: formData.location_text,
                       }),
                     });
-                    const data = await response.json();
+                    if (!response.ok) {
+                      setAiError(`AI service error (${response.status})`);
+                      setAiLoading(false);
+                      return;
+                    }
+                    let data;
+                    try {
+                      data = await response.json();
+                    } catch {
+                      setAiError('Invalid response from AI service');
+                      setAiLoading(false);
+                      return;
+                    }
                     if (data.ok && data.draft) {
                       setFormData(prev => ({
                         ...prev,

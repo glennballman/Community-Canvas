@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Unlock, Send } from 'lucide-react';
+import { AssistButton } from '@/components/ai/AssistButton';
 
 interface Message {
   id: string;
@@ -253,6 +254,30 @@ export function ConversationView({ conversationId, myRole }: ConversationViewPro
             placeholder="Type a message..."
             disabled={sending}
             data-testid="input-message"
+          />
+          <AssistButton
+            endpoint="message-suggest"
+            payload={{
+              context: messages
+                .filter(m => !m.was_redacted)
+                .slice(-5)
+                .map(m => ({
+                  role: m.sender_role === 'me' ? 'user' : 'other',
+                  content: m.content.substring(0, 200).replace(/\S+@\S+\.\S+/g, '[email]').replace(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/g, '[phone]'),
+                })),
+              my_role: myRole,
+            }}
+            onInsert={(content) => {
+              if (typeof content === 'string') {
+                setNewMessage(content);
+              }
+            }}
+            buttonVariant="ghost"
+            buttonSize="icon"
+            buttonText=""
+            className="flex-shrink-0"
+            disabled={sending || loading}
+            testId="button-ai-assist-message"
           />
           <Button
             type="submit"
