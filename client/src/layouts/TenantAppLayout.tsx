@@ -3,14 +3,8 @@
  * 
  * Used for: /app/* routes
  * 
- * CRITICAL REQUIREMENTS:
- * 1. LEFT SIDEBAR navigation (not top nav)
- * 2. Sidebar width: 256px (or 64px collapsed)
- * 3. Nav items change based on tenant TYPE
- * 4. Tenant switcher in sidebar
- * 5. "My Places" link at bottom of sidebar
- * 
- * DO NOT MODIFY THIS FILE.
+ * Uses V3_NAV from v3Nav.ts as the single source of truth for navigation.
+ * Navigation is filtered based on user context (role, tenant, portal, platform admin).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,16 +17,6 @@ import {
 } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  LayoutDashboard, 
-  Phone, 
-  Wrench, 
-  Building2, 
-  Palette, 
-  Settings,
-  Package,
-  Calendar,
-  Users,
-  MessageSquare,
   ArrowLeft,
   ChevronDown,
   ChevronLeft,
@@ -40,61 +24,35 @@ import {
   LogOut,
   User,
   Shield,
-  Layers,
-  Briefcase,
-  MapPin,
-  Contact,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
-import { useTenant, TenantMembership } from '../contexts/TenantContext';
+import { useTenant } from '../contexts/TenantContext';
 import { PortalSelector } from '../components/PortalSelector';
 import { ContextIndicator } from '../components/context/ContextIndicator';
+import { getFilteredNavSections, NavSection, NavItem } from '../lib/routes/v3Nav';
 
 // ============================================================================
-// NAVIGATION CONFIGURATION
+// FOUNDER NAV TOGGLE (localStorage persistence)
 // ============================================================================
 
-interface NavItem {
-  icon: React.ElementType;
-  label: string;
-  href: string;
+const FOUNDER_NAV_KEY = 'cc_founder_nav_enabled';
+
+function getFounderNavEnabled(): boolean {
+  try {
+    return localStorage.getItem(FOUNDER_NAV_KEY) === 'true';
+  } catch {
+    return false;
+  }
 }
 
-const COMMUNITY_NAV: NavItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
-  { icon: Phone, label: 'Availability', href: '/app/availability' },
-  { icon: Calendar, label: 'Operations', href: '/app/operations' },
-  { icon: Wrench, label: 'Service Runs', href: '/app/service-runs' },
-  { icon: Briefcase, label: 'Services', href: '/app/services' },
-  { icon: Layers, label: 'Bundles', href: '/app/bundles' },
-  { icon: Building2, label: 'Directory', href: '/app/directory' },
-  { icon: MessageSquare, label: 'Work Requests', href: '/app/intake/work-requests' },
-  { icon: Briefcase, label: 'Projects', href: '/app/projects' },
-  { icon: MapPin, label: 'Places', href: '/app/crm/places' },
-  { icon: Contact, label: 'People', href: '/app/crm/people' },
-  { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
-  { icon: Palette, label: 'Content', href: '/app/content' },
-  { icon: Settings, label: 'Settings', href: '/app/settings' },
-];
-
-const BUSINESS_NAV: NavItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
-  { icon: Package, label: 'Assets', href: '/app/assets' },
-  { icon: Calendar, label: 'Reservations', href: '/app/reservations' },
-  { icon: Calendar, label: 'Operations', href: '/app/operations' },
-  { icon: MessageSquare, label: 'Work Requests', href: '/app/intake/work-requests' },
-  { icon: Briefcase, label: 'Projects', href: '/app/projects' },
-  { icon: MapPin, label: 'Places', href: '/app/crm/places' },
-  { icon: Contact, label: 'People', href: '/app/crm/people' },
-  { icon: Building2, label: 'Organizations', href: '/app/crm/orgs' },
-  { icon: MessageSquare, label: 'Messages', href: '/app/messages' },
-  { icon: Settings, label: 'Settings', href: '/app/settings' },
-];
-
-const INDIVIDUAL_NAV: NavItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard' },
-  { icon: MessageSquare, label: 'Messages', href: '/app/messages' },
-  { icon: Settings, label: 'Settings', href: '/app/settings' },
-];
+function setFounderNavEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(FOUNDER_NAV_KEY, enabled ? 'true' : 'false');
+  } catch {
+    // Ignore localStorage errors
+  }
+}
 
 const TYPE_ICONS: Record<string, string> = {
   community: '🏔️',
@@ -123,6 +81,7 @@ export function TenantAppLayout(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [founderNavEnabled, setFounderNavState] = useState(getFounderNavEnabled);
 
   // Messages unread count query (global badge)
   const { data: unreadData } = useQuery<{ ok: boolean; count: number }>({
@@ -224,26 +183,36 @@ export function TenantAppLayout(): React.ReactElement {
   }
 
   // --------------------------------------------------------------------------
-  // Navigation items based on tenant type
+  // Navigation using V3_NAV (filtered by user context)
   // --------------------------------------------------------------------------
-
-  function getNavItems(): NavItem[] {
-    if (!currentTenant) return [];
-    
-    switch (currentTenant.tenant_type) {
-      case 'community':
-      case 'government':
-        return COMMUNITY_NAV;
-      case 'business':
-        return BUSINESS_NAV;
-      case 'individual':
-        return INDIVIDUAL_NAV;
-      default:
-        return BUSINESS_NAV;
-    }
+  
+  function toggleFounderNav() {
+    const newValue = !founderNavEnabled;
+    setFounderNavEnabled(newValue);
+    setFounderNavState(newValue);
   }
 
-  const navItems = getNavItems();
+  // Normalize role strings to match V3_NAV tenantRolesAny values
+  // API returns: 'owner', 'admin', 'operator', 'staff', 'member'
+  // V3_NAV expects: 'tenant_owner', 'tenant_admin', 'operator', 'staff', 'member'
+  function normalizeRole(role: string | undefined): string | undefined {
+    if (!role) return undefined;
+    if (role === 'owner') return 'tenant_owner';
+    if (role === 'admin') return 'tenant_admin';
+    return role;
+  }
+
+  const navSections = getFilteredNavSections({
+    isAuthenticated: !!user,
+    hasTenant: !!currentTenant,
+    hasPortal: false,
+    isPlatformAdmin: user?.is_platform_admin || false,
+    tenantRole: normalizeRole(currentTenant?.role),
+    portalRole: undefined,
+    founderNavEnabled: founderNavEnabled && (user?.is_platform_admin || false),
+  });
+  
+  const canToggleFounderNav = user?.is_platform_admin || false;
 
   // --------------------------------------------------------------------------
   // Handlers
@@ -496,63 +465,79 @@ export function TenantAppLayout(): React.ReactElement {
           <PortalSelector />
         )}
 
-        {/* Navigation */}
+        {/* Navigation - V3_NAV with sections */}
         <nav style={styles.nav}>
-          {navItems.map((item) => {
-            const isMessagesItem = item.href === '/app/messages';
-            const showBadge = isMessagesItem && messagesUnreadCount > 0;
-            
-            return (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                style={({ isActive }) => ({
-                  ...styles.navItem,
-                  ...(isActive ? styles.navItemActive : {}),
-                })}
-                title={sidebarCollapsed ? item.label : undefined}
-                data-testid={isMessagesItem ? 'nav-messages' : undefined}
-              >
-                <item.icon size={20} />
-                {!sidebarCollapsed && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                    {item.label}
-                    {showBadge && (
-                      <span
-                        style={{
-                          backgroundColor: '#3b82f6',
-                          color: 'white',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          padding: '2px 6px',
-                          borderRadius: '9999px',
-                          minWidth: '18px',
-                          textAlign: 'center',
-                        }}
-                        data-testid="badge-messages-unread"
-                      >
-                        {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
+          {navSections.map((section, sectionIndex) => (
+            <div key={section.title} style={{ marginBottom: sectionIndex < navSections.length - 1 ? '16px' : 0 }}>
+              {!sidebarCollapsed && (
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#6b7280',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: '8px 12px 4px',
+                }}>
+                  {section.title}
+                </div>
+              )}
+              {section.items.map((item: NavItem) => {
+                const isMessagesItem = item.href === '/app/messages';
+                const showBadge = isMessagesItem && messagesUnreadCount > 0;
+                
+                return (
+                  <NavLink
+                    key={item.href}
+                    to={item.href}
+                    style={({ isActive }) => ({
+                      ...styles.navItem,
+                      ...(isActive ? styles.navItemActive : {}),
+                    })}
+                    title={sidebarCollapsed ? item.label : undefined}
+                    data-testid={item.testId}
+                  >
+                    <item.icon size={20} />
+                    {!sidebarCollapsed && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                        {item.label}
+                        {showBadge && (
+                          <span
+                            style={{
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: '9999px',
+                              minWidth: '18px',
+                              textAlign: 'center',
+                            }}
+                            data-testid="badge-messages-unread"
+                          >
+                            {messagesUnreadCount > 99 ? '99+' : messagesUnreadCount}
+                          </span>
+                        )}
                       </span>
                     )}
-                  </span>
-                )}
-                {sidebarCollapsed && showBadge && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      width: '8px',
-                      height: '8px',
-                      backgroundColor: '#3b82f6',
-                      borderRadius: '50%',
-                    }}
-                    data-testid="indicator-messages-unread"
-                  />
-                )}
-              </NavLink>
-            );
-          })}
+                    {sidebarCollapsed && showBadge && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          width: '8px',
+                          height: '8px',
+                          backgroundColor: '#3b82f6',
+                          borderRadius: '50%',
+                        }}
+                        data-testid="indicator-messages-unread"
+                      />
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Bottom Section */}
@@ -578,10 +563,37 @@ export function TenantAppLayout(): React.ReactElement {
             {!sidebarCollapsed && <span>My Places</span>}
           </Link>
 
+          {/* Founder Nav Toggle (platform admin only) */}
+          {canToggleFounderNav && !sidebarCollapsed && (
+            <button
+              onClick={toggleFounderNav}
+              data-testid="button-founder-nav-toggle"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 20px',
+                width: '100%',
+                backgroundColor: founderNavEnabled ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
+                border: 'none',
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+                color: founderNavEnabled ? '#a855f7' : '#6b7280',
+                textDecoration: 'none',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              {founderNavEnabled ? <Eye size={18} /> : <EyeOff size={18} />}
+              <span>{founderNavEnabled ? 'Founder Nav: ON' : 'Founder Nav: OFF'}</span>
+            </button>
+          )}
+
           {/* Platform Admin Link (if admin) */}
           {user.is_platform_admin && !impersonation.is_impersonating && (
             <Link
               to="/admin"
+              data-testid="link-platform-admin"
               style={{
                 display: 'flex',
                 alignItems: 'center',

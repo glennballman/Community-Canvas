@@ -1,0 +1,73 @@
+Community Canvas / CivOS V3.5 — Navigation Wiring Fix
+Scope: NAV ONLY. Do not add new pages. Do not change route guards. Do not change auth/RLS. Additive-only changes.
+
+Goal:
+Wire the Portal App sidebar in client/src/layouts/TenantAppLayout.tsx to use the authoritative V3_NAV from client/src/lib/routes/v3Nav.ts
+instead of legacy arrays (COMMUNITY_NAV, BUSINESS_NAV, INDIVIDUAL_NAV).
+Ensure Jobs/Fleet/Circles/Admin/Platform features become discoverable via nav, with correct role/context gating.
+
+Step 0 — Evidence
+Open client/src/layouts/TenantAppLayout.tsx and confirm:
+- legacy arrays exist (COMMUNITY_NAV/BUSINESS_NAV/INDIVIDUAL_NAV)
+- getNavItems() switches on currentTenant.tenant_type
+Document the line ranges changed in final patch summary.
+
+Step 1 — Update v3Nav.ts to be authoritative
+In client/src/lib/routes/v3Nav.ts:
+- Export NavSection + NavItem types supporting gating:
+  - requiresAuth?: boolean
+  - requiresTenant?: boolean
+  - requiresPortal?: boolean
+  - platformAdminOnly?: boolean
+  - tenantRolesAny?: string[]
+  - portalRolesAny?: string[]
+  - participantOnly?: boolean
+  - hiddenInProduction?: boolean
+- Export V3_NAV: NavSection[] using the structure from proof/v3.5/final-navigation-proposal.md,
+  but DO NOT implement “single-user show everything”.
+  Instead, apply gating rules:
+  - Platform section: platformAdminOnly
+  - Admin section: tenantRolesAny includes tenant_owner/tenant_admin OR portal admin roles if used
+  - My Trips/My Applications: participantOnly
+  - Dev: hiddenInProduction
+
+Step 2 — Replace TenantAppLayout nav sourcing
+In client/src/layouts/TenantAppLayout.tsx:
+- Remove legacy arrays and tenant_type switch.
+- Import V3_NAV from v3Nav.ts.
+- Build visible nav sections by filtering items using current user context:
+  - isAuthenticated
+  - currentTenant exists
+  - currentPortal exists (if your app requires portal context for most /app routes)
+  - tenant role (tenant_owner/tenant_admin/operator/etc.)
+  - portal role (portal_admin/member/etc.)
+  - platform admin boolean (if present in user context)
+- Render sections with headers when sidebar expanded, icons-only when collapsed.
+- Preserve existing behavior:
+  - active route highlighting
+  - Messages unread badge logic (already added)
+  - Notifications nav item if present
+
+Step 3 — Optional Founder Nav toggle (visibility only; safe)
+Only if it’s trivial and additive:
+- Add a local toggle that ONLY affects nav filtering (does not bypass route guards).
+- Gate toggle availability to platform admin OR env SHOW_FOUNDER_NAV=true.
+- Persist in localStorage.
+- Default OFF.
+
+Step 4 — QA
+- Run tsx scripts/v35-cert.ts (must pass)
+- Verify these nav items are visible for tenant_owner:
+  - Job Postings (/app/jobs)
+  - Service Runs (/app/services/runs)
+  - Fleet (/app/fleet)
+  - Circles (/app/circles)
+  - Notifications (/app/notifications)
+  - Admin → Roles/Settings/Folios deep links
+- Verify Platform section appears only for platform admin.
+- Confirm no terminology violations.
+
+Return:
+- files changed
+- before/after nav source explanation
+- confirmation that multi-tenant gating is preserved
