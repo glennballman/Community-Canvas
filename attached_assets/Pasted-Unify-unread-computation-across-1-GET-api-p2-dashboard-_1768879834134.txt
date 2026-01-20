@@ -1,0 +1,79 @@
+Unify unread computation across:
+1) GET /api/p2/dashboard/messages/unread-count (aggregate)
+2) GET /api/conversations (per-conversation unread_count)
+
+Constraints:
+- No schema changes
+- Additive-only
+- Preserve existing response shapes and field names
+- Messages UI expects snake_case: conversation.unread_count
+
+Step 1 — Create shared service
+Create: server/services/unreadMessagingService.ts
+
+Export:
+- getUnreadByConversation(db, { tenantId, individualId, partyId }): Promise<Record<string, number>>
+- getUnreadTotal(db, { tenantId, individualId, partyId }): Promise<number>
+
+Participation semantics MUST match current dashboard logic:
+- direct participant rows via cc_conversation_participants where:
+  p.is_active = true AND (p.individual_id = $individualId OR p.party_id = $partyId)
+- circle-derived participant rows via cc_circle_members where:
+  cm.circle_id = p.circle_id
+  cm.individual_id = $individualId
+  cm.is_active = true
+  cm.tenant_id = $tenantId
+- Dedupe via UNION + DISTINCT
+- Only count messages:
+  m.read_at IS NULL
+  m.deleted_at IS NULL
+  m.sender_participant_id IS DISTINCT FROM up.participant_id
+  m.created_at >= COALESCE(up.joined_at, '1970-01-01'::timestamptz)
+- If tenantId missing or individualId missing: return 0 / empty map (circle needs individualId anyway)
+
+SQL for per-conversation (return map):
+WITH user_participations AS (...)
+SELECT m.conversation_id, COUNT(*)::int AS unread
+FROM cc_messages m
+JOIN user_participations up ON m.conversation_id = up.conversation_id
+WHERE m.read_at IS NULL
+  AND m.deleted_at IS NULL
+  AND m.sender_participant_id IS DISTINCT FROM up.participant_id
+  AND m.created_at >= COALESCE(up.joined_at, '1970-01-01'::timestamptz)
+GROUP BY m.conversation_id
+
+SQL for total:
+same but COUNT(*) without GROUP BY.
+
+Step 2 — Update dashboard endpoint to use shared service
+File: server/routes/p2-dashboard.ts
+- Replace inline SQL with getUnreadTotal(...)
+- Response remains { ok: true, count }
+
+Step 3 — Update /api/conversations list to return unread_count from shared service
+File: server/routes/conversations.ts
+Locate GET /api/conversations (or whichever handler returns conversation list used by ConversationsPage).
+
+Implementation approach (minimal, safe):
+A) Keep the existing conversation list query unchanged.
+B) After fetching conversations[], compute:
+   const unreadMap = await getUnreadByConversation(db, { tenantId, individualId, partyId });
+C) For each conversation:
+   conversation.unread_count = unreadMap[conversation.id] ?? 0
+   (ensure snake_case field name is preserved in the response object)
+
+Do NOT change the Conversation interface contract (it expects unread_count).
+Do NOT rename fields.
+
+Step 4 — Verification
+- Run: tsx scripts/v35-cert.ts (must pass)
+- Manual test:
+  1) two users in same tenant, open a conversation, send message
+  2) receiver sees unread badge increment in list (unread_count)
+  3) receiver sees dashboard /unread-count match sum(unread_count across list)
+  4) open thread triggers mark-read; both dashboard and list go back to 0
+
+Return:
+- files created/changed
+- final SQL in shared service
+- confirmation that /api/conversations includes unread_count and matches dashboard

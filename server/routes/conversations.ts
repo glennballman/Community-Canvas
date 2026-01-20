@@ -4,6 +4,7 @@ import { serviceQuery } from '../db/tenantDb';
 import { resolveActorParty, canUnlockContact } from '../lib/partyResolver';
 import { redactContactInfo, shouldBlockMessage } from '../lib/contactRedaction';
 import { findOrCreateCircleConversation, fanOutMessageToRecipients } from '../services/messagingRoutingService';
+import { getUnreadByConversation } from '../services/unreadMessagingService';
 
 const router = Router();
 
@@ -925,6 +926,29 @@ router.get('/conversations', async (req: Request, res: Response) => {
       const dateB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
       return dateB - dateA;
     });
+    
+    // Apply unified unread counts from shared service
+    const tenantId = ctx.tenant_id || tenantReq.tenant_id;
+    const individualId = ctx.individual_id || tenantReq.individual_id || actor?.individual_id;
+    const partyId = actor?.actor_party_id || null;
+    
+    if (tenantId && individualId && allConversations.length > 0) {
+      try {
+        const unreadMap = await getUnreadByConversation(pool, {
+          tenantId,
+          individualId,
+          partyId,
+        });
+        
+        // Apply unread counts to each conversation
+        for (const conv of allConversations) {
+          conv.unread_count = unreadMap[conv.id] ?? 0;
+        }
+      } catch (unreadErr) {
+        console.error('Error fetching unread counts:', unreadErr);
+        // Keep existing unread_count values on error
+      }
+    }
     
     res.json({
       conversations: allConversations,
