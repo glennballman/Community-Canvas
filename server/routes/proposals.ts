@@ -99,7 +99,7 @@ router.get('/:proposalId', async (req, res) => {
     let portal: { id: string; slug: string; name: string } | null = null;
     if (trip.portalId) {
       const portalResult = await db.execute(sql`
-        SELECT id, slug, title as name FROM cc_portals WHERE id = ${trip.portalId} LIMIT 1
+        SELECT id, slug, name FROM cc_portals WHERE id = ${trip.portalId} LIMIT 1
       `);
       if (portalResult.rows.length > 0) {
         const row = portalResult.rows[0] as { id: string; slug: string; name: string };
