@@ -1,0 +1,96 @@
+REPLIT PROMPT 1 — Portal QA Launchpad (MVP, No Fixtures)
+
+Create a new admin-only page that lets a founder select a portal and instantly get click-to-open links for every public workflow, including dynamic keys (campaign keys, trip access codes, proposal pay tokens) without hunting.
+
+UI Route + Nav
+
+Add a new route in the tenant app:
+/app/admin/portals/:portalId/qa → PortalQaLaunchpadPage
+
+Add a “QA Launchpad” link/button from the existing Portals admin UI (where portals are listed or portal detail is shown). It should navigate to /app/admin/portals/${portalId}/qa.
+
+Gate the page to: tenant_owner, tenant_admin, and platform_admin.
+
+Page Behavior (MVP)
+
+On load:
+
+Read portalId from params.
+
+Fetch portal record (must include id, slug, name).
+
+Display portal header: portal name + slug.
+
+Public Workflow Links (static)
+
+Render a “Public Workflow Links” card with buttons that open in a new tab:
+
+Portal Home: /p/${slug}
+
+Portal Onboarding: /p/${slug}/onboarding
+
+Portal Reserve: /p/${slug}/reserve
+
+Jobs List: /b/${slug}/jobs
+
+Dynamic Keys (no hunting)
+
+Render a “Dynamic Keys” section with lists (each item is a link that opens in a new tab):
+
+Campaign Apply Links
+
+Query existing campaigns for this portal and list each campaignKey with:
+/b/${slug}/apply/${campaignKey}
+
+Trip Links
+
+Query recent trips for this portal (or trips with portal_id = portalId) and list each accessCode with:
+/trip/${accessCode}
+
+Proposal Links
+
+Query recent proposals with portal_id = portalId and list:
+
+View: /p/proposal/${proposalId}
+
+Pay: /p/proposal/${proposalId}/pay/${token} (only if token exists; if stored differently, show whatever pay token exists)
+
+Data/API Requirements
+
+Prefer reusing existing admin endpoints if present.
+
+If any required read endpoints do not exist, add one tenant-scoped admin endpoint:
+GET /api/p2/app/admin/portals/:portalId/qa returning:
+
+{
+  "ok": true,
+  "portal": { "id": "...", "slug": "...", "name": "..." },
+  "campaigns": [{ "id": "...", "campaignKey": "...", "title": "...", "status": "..." }],
+  "trips": [{ "id": "...", "accessCode": "...", "status": "..." }],
+  "proposals": [{ "id": "...", "title": "...", "status": "...", "payToken": "..." }]
+}
+
+
+Must enforce tenant scoping + RLS-safe access (only portals the tenant can administer; platform admin can access all).
+
+UX Details
+
+Add “Copy” icon button next to each link to copy URL to clipboard.
+
+Add “Open all core links” button that opens: /p, /p/.../reserve, /b/.../jobs in separate tabs.
+
+Must not use forbidden terminology; use “reserve/reservation”.
+
+Acceptance
+
+Founder can go to /app/admin/portals/:portalId/qa and see:
+
+4 core public links
+
+existing campaign apply links (with campaign keys)
+
+existing trip links (with access codes)
+
+existing proposal links (with pay tokens if any)
+
+No hunting, no manual DB queries.

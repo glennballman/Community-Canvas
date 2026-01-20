@@ -623,4 +623,107 @@ router.patch('/settings/notifications', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/p2/admin/portals/:portalId/qa
+ * QA Launchpad - Returns portal info with all testable links
+ * (campaigns, trips, proposals with pay tokens)
+ */
+router.get('/portals/:portalId/qa', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+
+    // Get portal (verify tenant access)
+    const portalResult = await pool.query(`
+      SELECT id, slug, name, settings
+      FROM cc_portals
+      WHERE id = $1
+        AND (owning_tenant_id = $2 OR $3 = true)
+    `, [portalId, auth.tenantId, isPlatformAdmin]);
+
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
+    }
+
+    const portal = portalResult.rows[0];
+    const settings = portal.settings || {};
+    
+    // Get enabled campaigns from portal settings
+    const enabledCampaignKeys = settings.enabled_campaigns || ['hospitality_all', 'trades_all', 'crew_all', 'all_roles'];
+    const campaigns = enabledCampaignKeys.map((key: string) => ({
+      key,
+      title: key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+      status: 'active',
+    }));
+
+    // Get recent trips for this portal
+    const tripsResult = await pool.query(`
+      SELECT id, access_code, status, group_name, start_date, created_at
+      FROM cc_trips
+      WHERE portal_id = $1
+        AND access_code IS NOT NULL
+      ORDER BY created_at DESC
+      LIMIT 20
+    `, [portalId]);
+
+    const trips = tripsResult.rows.map((t: any) => ({
+      id: t.id,
+      accessCode: t.access_code,
+      status: t.status,
+      groupName: t.group_name,
+      startDate: t.start_date,
+    }));
+
+    // Get proposals (trips that have invitation tokens for payment)
+    const proposalsResult = await pool.query(`
+      SELECT 
+        t.id,
+        t.group_name as title,
+        t.status,
+        ti.token as pay_token,
+        ti.invitation_type
+      FROM cc_trips t
+      LEFT JOIN cc_trip_invitations ti ON ti.trip_id = t.id AND ti.invitation_type IN ('pay', 'forward', 'approve')
+      WHERE t.portal_id = $1
+      ORDER BY t.created_at DESC
+      LIMIT 20
+    `, [portalId]);
+
+    // Dedupe proposals by trip id, keeping first token found
+    const proposalMap = new Map<string, any>();
+    for (const row of proposalsResult.rows) {
+      if (!proposalMap.has(row.id)) {
+        proposalMap.set(row.id, {
+          id: row.id,
+          title: row.title || 'Untitled Proposal',
+          status: row.status,
+          payToken: row.pay_token || null,
+        });
+      } else if (row.pay_token && !proposalMap.get(row.id).payToken) {
+        proposalMap.get(row.id).payToken = row.pay_token;
+      }
+    }
+
+    const proposals = Array.from(proposalMap.values());
+
+    res.json({
+      ok: true,
+      portal: {
+        id: portal.id,
+        slug: portal.slug,
+        name: portal.name,
+      },
+      campaigns,
+      trips,
+      proposals,
+    });
+  } catch (error: any) {
+    console.error('[Admin] GET portals/:portalId/qa error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 export default router;
