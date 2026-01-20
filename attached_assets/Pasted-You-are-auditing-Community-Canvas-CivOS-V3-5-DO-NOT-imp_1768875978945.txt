@@ -1,0 +1,77 @@
+You are auditing Community Canvas / CivOS V3.5. DO NOT implement anything. Inventory only.
+
+GOAL:
+Produce a complete, authoritative inventory of:
+1) All features/subsystems implemented in the codebase
+2) All major workflows (end-to-end user journeys)
+3) All prompts/specs/plan documents since Dec 21 in this repo/workspace
+4) A proposed "Final Navigation Map" that exposes all features (single-user mode, no role gating required)
+
+OUTPUT FILES (write all to ./proof/v3.5/):
+- feature-inventory.md
+- workflow-inventory.md
+- prompt-history-inventory.md
+- final-navigation-proposal.md
+- nav-wiring-targets.md
+
+PART 1 — FEATURE INVENTORY (Repo-truth)
+Search and enumerate by subsystem with file paths:
+- Public reservation flow (availability → proposal → hold → risk → invite → split pay → confirm)
+- Portal operations: Assets, Reservations, Operations Board, Housekeeping, Incidents, Service Runs, Work Requests/Procurement
+- Messaging: Conversations, Notifications, Job Application Conversations, mark-read, redaction, contact unlock
+- Jobs: Job postings + applications + applicant messaging + operator review surfaces
+- Circles: CRUD + members + delegations + messaging linkage (if present)
+- Fleet: assets + maintenance + dashboard
+- Media: R2 integration + presign/complete + entity binding + upload UI + galleries
+- Admin: roles/settings/folios + folio ledger detail
+- Platform: tenants + analytics + certification status + system explorer
+- Dev surfaces
+
+For each feature:
+- UI routes/pages
+- API endpoints
+- DB tables (if relevant)
+- "entry point" (how a human finds it today)
+
+PART 2 — WORKFLOW INVENTORY (End-to-end)
+List workflows and their "happy path" steps, with route names:
+- Create a reservation (operator/manual if exists) and manage it
+- Public reservation conversion loop
+- Create a service run, collect signups, open bidding, select contractor
+- Create a work request, receive bids, message bidders, attach media, award
+- Post a job advertisement, review applicants, message applicant, progress status
+- Housekeeping: view tasks, open task detail, upload before/after/issue photos, complete task
+- Fleet: view assets, add maintenance record, view upcoming maintenance
+- Circles: create circle, add member, delegate, view circle detail
+- Messaging/notifications: unread badge, notifications center, mark read
+
+PART 3 — PROMPT HISTORY INVENTORY (Dec 21 → present)
+Search workspace for prompts/spec logs:
+- ./proof/
+- any docs named "prompt", "handoff", "context", "spec", "plan", "build", "status"
+- any markdown files in root/docs/ or similar
+Produce chronological list (best effort) including:
+- filename
+- date found (from file name or git history if available)
+- short description
+If git history is available locally: use `git log --name-only --since="2025-12-21"` to map commits to prompt/spec files.
+
+Write results to prompt-history-inventory.md.
+
+PART 4 — FINAL NAVIGATION PROPOSAL (single-user mode)
+Design a final left-nav (App) that exposes everything. Assume Glenn is the only user:
+- Show all feature areas
+- Minimal gating (only hide Dev if desired)
+- Provide clear labels that distinguish:
+  - Jobs (hiring) vs Work Requests (contractor bids) vs Service Runs (bundles)
+Output as a clean tree with routes.
+
+PART 5 — NAV WIRING TARGETS
+Locate the actual sidebar renderer and identify:
+- current nav source (legacy arrays vs V3_NAV)
+- file paths to change
+- minimal patch required to make sidebar consume the final nav config
+No implementation, only the exact wiring plan.
+
+DELIVERABLES:
+Write the 5 output files listed above into proof/v3.5/.
