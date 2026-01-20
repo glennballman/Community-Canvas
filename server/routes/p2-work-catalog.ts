@@ -755,7 +755,21 @@ router.get('/work-disclosures/:workRequestId', async (req: any, res) => {
       ORDER BY d.created_at
     `, [auth.tenantId, workRequestId]);
 
-    res.json({ ok: true, disclosures: result.rows });
+    // Transform to camelCase for frontend consumption
+    const disclosures = result.rows.map(row => ({
+      id: row.id,
+      workRequestId: row.work_request_id,
+      itemType: row.item_type,
+      itemId: row.item_id,
+      visibility: row.visibility,
+      specificContractorId: row.specific_contractor_id,
+      workAreaTitle: row.work_area_title,
+      workMediaTitle: row.work_media_title,
+      workMediaNotes: row.work_media_notes,
+      createdAt: row.created_at
+    }));
+
+    res.json({ ok: true, disclosures });
   } catch (error: any) {
     console.error('[WorkCatalog] GET disclosures error:', error);
     res.status(500).json({ ok: false, error: error.message });

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Phone, Mail, MessageCircle, MapPin, Clock, 
   DollarSign, ArrowRight, Check, X, AlertTriangle, Pencil,
-  Briefcase, Plus, Trash2
+  Briefcase, Plus, Trash2, Eye, Lock, Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { ContractorAssignmentPicker } from '@/components/ContractorAssignmentPicker';
+import { WorkDisclosureSelector, getDefaultDisclosureSelection, type DisclosureSelection } from '@/components/WorkDisclosureSelector';
 
 interface WorkRequest {
   id: string;
@@ -41,6 +43,7 @@ interface WorkRequest {
   property_id: string | null;
   property_address: string | null;
   property_name: string | null;
+  portal_id: string | null;
   summary: string | null;
   description: string | null;
   category: string | null;
@@ -51,6 +54,7 @@ interface WorkRequest {
   closed_reason: string | null;
   converted_to_project_id: string | null;
   converted_at: string | null;
+  assigned_contractor_person_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +111,8 @@ export default function WorkRequestDetail() {
   const [dropReason, setDropReason] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [projectTitle, setProjectTitle] = useState('');
+  const [disclosureDialogOpen, setDisclosureDialogOpen] = useState(false);
+  const [disclosureSelection, setDisclosureSelection] = useState<DisclosureSelection>(getDefaultDisclosureSelection());
 
   const { data: request, isLoading } = useQuery<WorkRequest>({
     queryKey: ['/api/work-requests', id],
@@ -211,6 +217,64 @@ export default function WorkRequestDetail() {
     },
     onError: () => {
       toast({ title: 'Error', description: 'Failed to add note', variant: 'destructive' });
+    }
+  });
+
+  const assignContractorMutation = useMutation({
+    mutationFn: async (contractorId: string | null) => {
+      const res = await apiRequest('PATCH', `/api/work-requests/${id}`, {
+        assigned_contractor_person_id: contractorId,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-requests'] });
+      toast({ title: 'Contractor assignment updated' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to assign contractor', variant: 'destructive' });
+    }
+  });
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('hostToken');
+    return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  };
+
+  const saveDisclosuresMutation = useMutation({
+    mutationFn: async (selection: DisclosureSelection) => {
+      const res = await fetch('/api/p2/app/work-disclosures/bulk', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          workRequestId: id,
+          assignedContractorPersonId: request?.assigned_contractor_person_id || null,
+          visibility: selection.visibilityScope,
+          specificContractorId: selection.specificContractorId,
+          items: [
+            ...(selection.accessConstraints ? [{ itemType: 'access_constraints', itemId: null }] : []),
+            ...(selection.propertyNotes ? [{ itemType: 'property_notes', itemId: null }] : []),
+            ...selection.workAreas.map(id => ({ itemType: 'work_area', itemId: id })),
+            ...selection.workMedia.map(id => ({ itemType: 'work_media', itemId: id })),
+            ...selection.communityMedia.map(id => ({ itemType: 'community_media', itemId: id })),
+            ...selection.subsystems.map(id => ({ itemType: 'subsystem', itemId: id })),
+            ...selection.onSiteResources.map(id => ({ itemType: 'on_site_resource', itemId: id })),
+          ]
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to save disclosures');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/app/work-disclosures', id] });
+      toast({ title: 'Access shared', description: 'Contractor disclosures updated' });
+      setDisclosureDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   });
 
@@ -515,6 +579,64 @@ export default function WorkRequestDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Contractor Assignment */}
+          <ContractorAssignmentPicker
+            value={request.assigned_contractor_person_id}
+            onChange={(contractorId) => assignContractorMutation.mutate(contractorId)}
+            workRequestId={request.id}
+            disabled={assignContractorMutation.isPending}
+          />
+
+          {/* Share with Contractor */}
+          {request.property_id && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Share2 className="w-4 h-4" />
+                  Work Catalog Access
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Share property work catalog items with the assigned contractor.
+                </p>
+                <Dialog open={disclosureDialogOpen} onOpenChange={setDisclosureDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full" data-testid="button-manage-disclosures">
+                      <Lock className="w-4 h-4 mr-2" />
+                      Manage Access
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Share with Contractor</DialogTitle>
+                    </DialogHeader>
+                    <WorkDisclosureSelector
+                      propertyId={request.property_id}
+                      portalId={request.portal_id || undefined}
+                      workRequestId={request.id}
+                      value={disclosureSelection}
+                      onChange={setDisclosureSelection}
+                      assignedContractorId={request.assigned_contractor_person_id}
+                    />
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button variant="outline" onClick={() => setDisclosureDialogOpen(false)} data-testid="button-disclosure-cancel">
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => saveDisclosuresMutation.mutate(disclosureSelection)} 
+                        disabled={saveDisclosuresMutation.isPending || disclosureSelection.visibilityScope === 'private'}
+                        data-testid="button-disclosure-save"
+                      >
+                        {saveDisclosuresMutation.isPending ? 'Saving...' : 'Save Access'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
