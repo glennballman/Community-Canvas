@@ -872,47 +872,88 @@ router.get('/conversations', async (req: Request, res: Response) => {
       });
     }
     
-    // 2. Circle conversations (when acting_as_circle)
-    if (isActingAsCircle) {
+    // 2. Circle conversations 
+    // Include circle conversations the user participates in (via individual, party, or circle membership)
+    const tenantId = ctx.tenant_id || tenantReq.tenant_id;
+    const individualId = ctx.individual_id || tenantReq.individual_id || actor?.individual_id;
+    
+    if (tenantId && individualId) {
       try {
-        // Query circle conversations using the circle participant type
+        // Query circle-only conversations (NULL party ids) where user is a participant
+        // via individual_id, party_id, or circle membership
         const circleQuery = `
+          WITH user_participations AS (
+            -- Direct individual participation
+            SELECT DISTINCT cp.conversation_id
+            FROM cc_conversation_participants cp
+            WHERE cp.is_active = true
+              AND cp.individual_id = $1
+            
+            UNION
+            
+            -- Party participation (if actor exists)
+            SELECT DISTINCT cp.conversation_id
+            FROM cc_conversation_participants cp
+            WHERE cp.is_active = true
+              AND cp.party_id IS NOT NULL
+              AND cp.party_id = $2
+            
+            UNION
+            
+            -- Circle membership (tenant-scoped)
+            SELECT DISTINCT cp.conversation_id
+            FROM cc_conversation_participants cp
+            JOIN cc_circle_members cm ON cm.circle_id = cp.circle_id
+              AND cm.individual_id = $1
+              AND cm.is_active = true
+              AND cm.tenant_id = $3
+            WHERE cp.is_active = true
+              AND cp.circle_id IS NOT NULL
+          )
           SELECT DISTINCT conv.id,
                  conv.subject as opportunity_title,
                  conv.status as state,
                  conv.created_at,
                  conv.updated_at as last_message_at,
                  c.name as circle_name,
-                 'circle' as conversation_type
-          FROM cc_conversation_participants cp
-          JOIN cc_conversations conv ON conv.id = cp.conversation_id
-          LEFT JOIN cc_coordination_circles c ON c.id = cp.circle_id
-          WHERE cp.participant_type = 'circle'
-            AND cp.circle_id = $1
-            AND cp.is_active = true
-          ORDER BY conv.updated_at DESC
+                 'circle' as conversation_type,
+                 (SELECT content FROM cc_messages WHERE conversation_id = conv.id ORDER BY created_at DESC LIMIT 1) as last_message_preview
+          FROM user_participations up
+          JOIN cc_conversations conv ON conv.id = up.conversation_id
+          LEFT JOIN cc_conversation_participants cp_circle ON cp_circle.conversation_id = conv.id 
+            AND cp_circle.participant_type = 'circle'
+            AND cp_circle.is_active = true
+          LEFT JOIN cc_coordination_circles c ON c.id = cp_circle.circle_id
+          WHERE conv.work_request_id IS NULL
+            AND conv.job_id IS NULL
+            AND conv.job_application_id IS NULL
+          ORDER BY COALESCE(conv.updated_at, conv.created_at) DESC
           LIMIT 50
         `;
         
-        const circleResult = await pool.query(circleQuery, [ctx.circle_id]);
+        const partyId = actor?.actor_party_id || null;
+        const circleResult = await pool.query(circleQuery, [individualId, partyId, tenantId]);
         
         circleResult.rows.forEach((c: any) => {
-          allConversations.push({
-            id: c.id,
-            opportunity_id: null,
-            opportunity_title: c.opportunity_title || `Circle: ${c.circle_name}`,
-            opportunity_ref: null,
-            owner_name: c.circle_name,
-            contractor_name: null,
-            state: c.state || 'active',
-            contact_unlocked: true,
-            last_message_at: c.last_message_at,
-            last_message_preview: null,
-            my_role: 'circle_member',
-            unread_count: 0,
-            is_circle_conversation: true,
-            circle_name: c.circle_name,
-          });
+          // Avoid duplicates
+          if (!allConversations.some(conv => conv.id === c.id)) {
+            allConversations.push({
+              id: c.id,
+              opportunity_id: null,
+              opportunity_title: c.opportunity_title || (c.circle_name ? `Circle: ${c.circle_name}` : 'Circle Conversation'),
+              opportunity_ref: null,
+              owner_name: c.circle_name || 'Circle',
+              contractor_name: null,
+              state: c.state || 'active',
+              contact_unlocked: true,
+              last_message_at: c.last_message_at,
+              last_message_preview: c.last_message_preview,
+              my_role: 'circle_member',
+              unread_count: 0,
+              is_circle_conversation: true,
+              circle_name: c.circle_name,
+            });
+          }
         });
       } catch (circleErr) {
         // Circle tables may not exist in all environments
@@ -928,16 +969,15 @@ router.get('/conversations', async (req: Request, res: Response) => {
     });
     
     // Apply unified unread counts from shared service
-    const tenantId = ctx.tenant_id || tenantReq.tenant_id;
-    const individualId = ctx.individual_id || tenantReq.individual_id || actor?.individual_id;
-    const partyId = actor?.actor_party_id || null;
+    // (tenantId, individualId already defined above)
+    const unreadPartyId = actor?.actor_party_id || null;
     
     if (tenantId && individualId && allConversations.length > 0) {
       try {
         const unreadMap = await getUnreadByConversation(pool, {
           tenantId,
           individualId,
-          partyId,
+          partyId: unreadPartyId,
         });
         
         // Apply unread counts to each conversation
