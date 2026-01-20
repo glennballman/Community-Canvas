@@ -156,6 +156,12 @@ import ApplicationDetailPage from './pages/app/participant/ApplicationDetailPage
 
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
+
+// Pages - Fleet (P-UI-15)
+import FleetPage from './pages/app/fleet/FleetPage';
+import FleetAssetsPage from './pages/app/fleet/FleetAssetsPage';
+import FleetAssetDetailPage from './pages/app/fleet/FleetAssetDetailPage';
+import FleetMaintenancePage from './pages/app/fleet/FleetMaintenancePage';
 import PortalAppearancePage from './pages/app/admin/PortalAppearancePage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
@@ -422,6 +428,12 @@ export default function App() {
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />
+                
+                {/* Fleet (P-UI-15) */}
+                <Route path="fleet" element={<FleetPage />} />
+                <Route path="fleet/assets" element={<FleetAssetsPage />} />
+                <Route path="fleet/assets/:id" element={<FleetAssetDetailPage />} />
+                <Route path="fleet/maintenance" element={<FleetMaintenancePage />} />
                 
                 {/* Shared routes */}
                 <Route path="messages" element={<ConversationsPage />} />

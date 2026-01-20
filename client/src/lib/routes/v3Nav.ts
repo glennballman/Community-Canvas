@@ -27,6 +27,7 @@ import {
   Plane,
   Bell,
   FileText,
+  Wrench,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -86,6 +87,14 @@ export const V3_NAV: NavSection[] = [
       { icon: ClipboardList, label: 'Work Requests', href: '/app/work-requests', testId: 'nav-work-requests' },
       { icon: FolderKanban, label: 'Projects', href: '/app/projects', testId: 'nav-projects' },
       { icon: Truck, label: 'Service Runs', href: '/app/services/runs', testId: 'nav-service-runs' },
+    ],
+  },
+  {
+    title: 'Fleet',
+    items: [
+      { icon: Truck, label: 'Fleet Dashboard', href: '/app/fleet', testId: 'nav-fleet' },
+      { icon: Car, label: 'Assets', href: '/app/fleet/assets', testId: 'nav-fleet-assets' },
+      { icon: Wrench, label: 'Maintenance', href: '/app/fleet/maintenance', testId: 'nav-fleet-maintenance' },
     ],
   },
   {

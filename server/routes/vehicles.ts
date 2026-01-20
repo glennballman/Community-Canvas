@@ -1009,4 +1009,215 @@ router.post('/fleets/:id/assign-trailer', requireAuth, async (req: Request, res:
     }
 });
 
+// MAINTENANCE ROUTES
+
+// GET /api/vehicles/maintenance/upcoming - Get upcoming maintenance (with next_service_date)
+router.get('/maintenance/upcoming', requireAuth, async (req: Request, res: Response) => {
+    try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
+
+        let query = `
+            SELECT m.*,
+                v.name as vehicle_name,
+                CONCAT(v.year, ' ', v.make, ' ', v.model) as vehicle_display,
+                t.name as trailer_name,
+                CONCAT(t.year, ' ', t.make, ' ', t.model) as trailer_display
+            FROM cc_maintenance_records m
+            LEFT JOIN cc_vehicles v ON m.vehicle_id = v.id
+            LEFT JOIN cc_trailers t ON m.trailer_id = t.id
+            WHERE m.next_service_date IS NOT NULL
+        `;
+        const params: any[] = [];
+
+        if (!isAdmin) {
+            params.push(userId);
+            query += ` AND (
+                (v.owner_type = 'individual' AND v.owner_user_id = $1)
+                OR (v.owner_type = 'business' AND v.owner_tenant_id IN (
+                    SELECT tenant_id FROM cc_tenant_users WHERE user_id = $1 AND status = 'active'
+                ))
+                OR (t.owner_type = 'individual' AND t.owner_user_id = $1)
+                OR (t.owner_type = 'business' AND t.owner_tenant_id IN (
+                    SELECT tenant_id FROM cc_tenant_users WHERE user_id = $1 AND status = 'active'
+                ))
+            )`;
+        }
+
+        query += ' ORDER BY m.next_service_date ASC';
+
+        const result = await req.tenantQuery(query, params);
+
+        const records = result.rows.map((r: any) => ({
+            ...r,
+            vehicle_name: r.vehicle_name || r.vehicle_display,
+            trailer_name: r.trailer_name || r.trailer_display
+        }));
+
+        res.json({ success: true, records });
+
+    } catch (error: any) {
+        console.error('Get upcoming maintenance error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get upcoming maintenance' });
+    }
+});
+
+// GET /api/vehicles/maintenance/history - Get past maintenance records
+router.get('/maintenance/history', requireAuth, async (req: Request, res: Response) => {
+    try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+        const isAdmin = tenantReq.ctx.roles?.includes('admin');
+        const { vehicle, trailer, limit = 50 } = req.query;
+
+        let query = `
+            SELECT m.*,
+                v.name as vehicle_name,
+                CONCAT(v.year, ' ', v.make, ' ', v.model) as vehicle_display,
+                t.name as trailer_name,
+                CONCAT(t.year, ' ', t.make, ' ', t.model) as trailer_display
+            FROM cc_maintenance_records m
+            LEFT JOIN cc_vehicles v ON m.vehicle_id = v.id
+            LEFT JOIN cc_trailers t ON m.trailer_id = t.id
+            WHERE 1=1
+        `;
+        const params: any[] = [];
+        let paramCount = 0;
+
+        if (!isAdmin) {
+            paramCount++;
+            params.push(userId);
+            query += ` AND (
+                (v.owner_type = 'individual' AND v.owner_user_id = $${paramCount})
+                OR (v.owner_type = 'business' AND v.owner_tenant_id IN (
+                    SELECT tenant_id FROM cc_tenant_users WHERE user_id = $${paramCount} AND status = 'active'
+                ))
+                OR (t.owner_type = 'individual' AND t.owner_user_id = $${paramCount})
+                OR (t.owner_type = 'business' AND t.owner_tenant_id IN (
+                    SELECT tenant_id FROM cc_tenant_users WHERE user_id = $${paramCount} AND status = 'active'
+                ))
+            )`;
+        }
+
+        if (vehicle) {
+            paramCount++;
+            params.push(vehicle);
+            query += ` AND m.vehicle_id = $${paramCount}`;
+        }
+
+        if (trailer) {
+            paramCount++;
+            params.push(trailer);
+            query += ` AND m.trailer_id = $${paramCount}`;
+        }
+
+        paramCount++;
+        params.push(parseInt(limit as string) || 50);
+        query += ` ORDER BY m.service_date DESC LIMIT $${paramCount}`;
+
+        const result = await req.tenantQuery(query, params);
+
+        const records = result.rows.map((r: any) => ({
+            ...r,
+            vehicle_name: r.vehicle_name || r.vehicle_display,
+            trailer_name: r.trailer_name || r.trailer_display
+        }));
+
+        res.json({ success: true, records });
+
+    } catch (error: any) {
+        console.error('Get maintenance history error:', error);
+        res.status(500).json({ success: false, error: 'Failed to get maintenance history' });
+    }
+});
+
+// POST /api/vehicles/maintenance - Create maintenance record
+router.post('/maintenance', requireAuth, async (req: Request, res: Response) => {
+    try {
+        const tenantReq = req as TenantRequest;
+        const userId = tenantReq.ctx.individual_id!;
+
+        const {
+            asset_type,
+            vehicle_id,
+            trailer_id,
+            service_type,
+            service_date,
+            next_service_date,
+            description,
+            total_cost,
+            service_provider,
+            odometer_reading
+        } = req.body;
+
+        if (!service_type || !service_date) {
+            return res.status(400).json({ success: false, error: 'Service type and date are required' });
+        }
+
+        if (asset_type === 'vehicle' && !vehicle_id) {
+            return res.status(400).json({ success: false, error: 'Vehicle ID is required' });
+        }
+
+        if (asset_type === 'trailer' && !trailer_id) {
+            return res.status(400).json({ success: false, error: 'Trailer ID is required' });
+        }
+
+        // Verify access
+        if (vehicle_id) {
+            const hasAccess = await canAccessVehicle(req, vehicle_id);
+            if (!hasAccess) {
+                return res.status(403).json({ success: false, error: 'Access denied to vehicle' });
+            }
+        }
+
+        if (trailer_id) {
+            const hasAccess = await canAccessTrailer(req, trailer_id);
+            if (!hasAccess) {
+                return res.status(403).json({ success: false, error: 'Access denied to trailer' });
+            }
+        }
+
+        const result = await req.tenantTransaction(async (client: PoolClient) => {
+            const insertResult = await client.query(`
+                INSERT INTO cc_maintenance_records (
+                    asset_type, vehicle_id, trailer_id, service_type, service_date,
+                    next_service_date, description, total_cost, service_provider,
+                    odometer_reading, recorded_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                RETURNING *
+            `, [
+                asset_type || (vehicle_id ? 'vehicle' : 'trailer'),
+                vehicle_id || null,
+                trailer_id || null,
+                service_type,
+                service_date,
+                next_service_date || null,
+                description || null,
+                total_cost || null,
+                service_provider || null,
+                odometer_reading || null,
+                userId
+            ]);
+
+            // Update last service on vehicle if odometer provided
+            if (vehicle_id && odometer_reading) {
+                await client.query(`
+                    UPDATE cc_vehicles 
+                    SET last_service_date = $1, last_service_odometer = $2, current_odometer = $3
+                    WHERE id = $4
+                `, [service_date, odometer_reading, odometer_reading, vehicle_id]);
+            }
+
+            return insertResult.rows[0];
+        });
+
+        res.status(201).json({ success: true, record: result });
+
+    } catch (error: any) {
+        console.error('Create maintenance record error:', error);
+        res.status(500).json({ success: false, error: 'Failed to create maintenance record' });
+    }
+});
+
 export default router;
