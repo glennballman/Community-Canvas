@@ -1,0 +1,49 @@
+Community Canvas V3.5 — Additive-only. No refactors. Terminology guardrail enforced.
+
+Goal: Implement Platform Console for platform admins:
+- Tenants list + tenant detail (high-level)
+- Analytics dashboard (reuse existing growth metrics endpoints if present)
+- Proof bundle viewer link/section (surfacing ./proof/v3.5 outputs or API-backed status)
+
+STEP 1 — INVENTORY (evidence required)
+1) Identify platform admin role / auth mechanism (platform_admin, super_admin, etc.)
+2) Identify existing tenants tables and APIs (cc_tenants, portals, modules).
+3) Identify existing analytics endpoints:
+- portal growth metrics endpoint (if exists)
+- any system metrics endpoints
+4) Identify where proof bundles are produced and whether any endpoint exposes cert status.
+
+STEP 2 — API (only if missing)
+A) Tenants
+- GET /api/p2/platform/tenants
+- GET /api/p2/platform/tenants/:tenantId (include portals summary + module flags)
+B) Analytics
+- GET /api/p2/platform/analytics/summary
+  (May proxy existing portal growth metrics for all portals, or return aggregated counts)
+C) Certification status (optional)
+- GET /api/p2/platform/cert/status
+  Returns last cert run timestamp + pass/fail + proof path pointer (no filesystem reads in production if not supported)
+
+All endpoints must enforce platform admin access.
+
+STEP 3 — UI
+Add Platform section visible only to platform admins:
+- /app/platform/tenants
+- /app/platform/tenants/:tenantId
+- /app/platform/analytics
+
+UI requirements:
+- Tenants list: search, filter, key stats (portals count, active users, last activity)
+- Tenant detail: portals list, modules enabled, recent activity snapshots, quick links to portal admin pages
+- Analytics: cards + trend summaries (7-day rolling if available), show operational metrics already supported
+- Include a “Certification” card showing current V3.5 cert status if endpoint exists
+
+STEP 4 — NAV
+Add a “Platform” section in V3_NAV, gated by platform admin.
+
+STEP 5 — QA
+- Non-platform user cannot access platform endpoints/pages
+- Route inventory updated
+- Terminology scan clean
+
+Return files changed + endpoints created/reused.
