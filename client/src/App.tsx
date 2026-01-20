@@ -133,6 +133,10 @@ import ProposalDetailPage from './pages/app/ProposalDetailPage';
 // Pages - Public Reservation Routes
 import { PublicReserveRoutes } from './public/routes/PublicReserveRoutes';
 import AdminHomePage from './pages/app/admin/AdminHomePage';
+import AdminRolesPage from './pages/app/admin/AdminRolesPage';
+import AdminSettingsPage from './pages/app/admin/AdminSettingsPage';
+import FoliosListPage from './pages/app/admin/FoliosListPage';
+import FolioDetailPage from './pages/app/admin/FolioDetailPage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
 import CertificationsPage from './pages/app/admin/CertificationsPage';
 import OperatorHomePage from './pages/app/operator/OperatorHomePage';
@@ -372,6 +376,10 @@ export default function App() {
                 <Route path="operator/authority" element={<OperatorAuthorityIndexPage />} />
                 <Route path="operator/authority/grants/:grantId" element={<OperatorAuthorityGrantPage />} />
                 <Route path="operator/audit" element={<OperatorAuditPage />} />
+                <Route path="admin/roles" element={<AdminRolesPage />} />
+                <Route path="admin/settings" element={<AdminSettingsPage />} />
+                <Route path="admin/folios" element={<FoliosListPage />} />
+                <Route path="admin/folios/:id" element={<FolioDetailPage />} />
                 <Route path="admin/usage" element={<UsageSummaryPage />} />
                 <Route path="admin/certifications" element={<CertificationsPage />} />
                 <Route path="admin/portals" element={<PortalsPage />} />

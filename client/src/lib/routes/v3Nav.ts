@@ -28,6 +28,8 @@ import {
   Bell,
   FileText,
   Wrench,
+  Wallet,
+  UserCog,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -114,6 +116,9 @@ export const V3_NAV: NavSection[] = [
     title: 'Admin',
     items: [
       { icon: Settings, label: 'Admin', href: '/app/admin', testId: 'nav-admin' },
+      { icon: UserCog, label: 'Roles', href: '/app/admin/roles', testId: 'nav-roles' },
+      { icon: Settings, label: 'Settings', href: '/app/admin/settings', testId: 'nav-settings' },
+      { icon: Wallet, label: 'Folios', href: '/app/admin/folios', testId: 'nav-folios' },
       { icon: BarChart3, label: 'Usage', href: '/app/admin/usage', testId: 'nav-usage' },
       { icon: ShieldCheck, label: 'Certifications', href: '/app/admin/certifications', testId: 'nav-certifications' },
       { icon: Building2, label: 'Operator', href: '/app/operator', testId: 'nav-operator' },
