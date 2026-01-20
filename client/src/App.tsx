@@ -138,6 +138,9 @@ import AdminSettingsPage from './pages/app/admin/AdminSettingsPage';
 import FoliosListPage from './pages/app/admin/FoliosListPage';
 import FolioDetailPage from './pages/app/admin/FolioDetailPage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
+import TenantsListPage from './pages/app/platform/TenantsListPage';
+import TenantDetailPage from './pages/app/platform/TenantDetailPage';
+import AnalyticsPage from './pages/app/platform/AnalyticsPage';
 import CertificationsPage from './pages/app/admin/CertificationsPage';
 import OperatorHomePage from './pages/app/operator/OperatorHomePage';
 import OperatorEmergencyIndexPage from './pages/app/operator/OperatorEmergencyIndexPage';
@@ -385,6 +388,9 @@ export default function App() {
                 <Route path="admin/portals" element={<PortalsPage />} />
                 <Route path="admin/portals/:portalId/appearance" element={<PortalAppearancePage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />
+                <Route path="platform/tenants" element={<TenantsListPage />} />
+                <Route path="platform/tenants/:tenantId" element={<TenantDetailPage />} />
+                <Route path="platform/analytics" element={<AnalyticsPage />} />
                 
                 {/* Community tenant routes */}
                 <Route path="availability" element={<AvailabilityConsole />} />

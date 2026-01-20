@@ -123,6 +123,7 @@ import p2MarinaRouter from "./routes/p2-marina";
 import p2CirclesRouter from "./routes/p2-circles";
 import p2AdminRouter from "./routes/p2-admin";
 import p2FoliosRouter from "./routes/p2-folios";
+import p2PlatformRouter from "./routes/p2-platform";
 import { createParticipantTripsRouter } from "./routes/participant-trips";
 import participantRouter from "./routes/participant";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
@@ -345,6 +346,9 @@ export async function registerRoutes(
   
   // P2 folios API (read-only folio/ledger views)
   app.use('/api/p2/folios', p2FoliosRouter);
+  
+  // P2 platform console API (platform admin only)
+  app.use('/api/p2/platform', p2PlatformRouter);
 
   // Register auth accounts routes (new user profiles + sessions system)
   app.use('/api/auth-accounts', authAccountsRouter);

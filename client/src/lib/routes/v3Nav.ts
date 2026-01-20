@@ -30,6 +30,7 @@ import {
   Wrench,
   Wallet,
   UserCog,
+  ShieldEllipsis,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -38,11 +39,13 @@ export interface NavItem {
   label: string;
   href: string;
   testId: string;
+  platformAdminOnly?: boolean;
 }
 
 export interface NavSection {
   title: string;
   items: NavItem[];
+  platformAdminOnly?: boolean;
 }
 
 /**
@@ -124,6 +127,14 @@ export const V3_NAV: NavSection[] = [
       { icon: Building2, label: 'Operator', href: '/app/operator', testId: 'nav-operator' },
       { icon: Building2, label: 'Portals', href: '/app/admin/portals', testId: 'nav-portals' },
       { icon: Users, label: 'Tenants', href: '/app/admin/tenants', testId: 'nav-tenants' },
+    ],
+  },
+  {
+    title: 'Platform',
+    platformAdminOnly: true,
+    items: [
+      { icon: Building2, label: 'Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants', platformAdminOnly: true },
+      { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics', platformAdminOnly: true },
     ],
   },
 ];
