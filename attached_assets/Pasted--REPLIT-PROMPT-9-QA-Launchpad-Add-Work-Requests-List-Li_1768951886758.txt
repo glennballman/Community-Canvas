@@ -1,0 +1,70 @@
+✅ REPLIT PROMPT 9 — QA Launchpad: Add Work Requests (List + Links)
+
+Paste verbatim into Replit:
+
+Extend the Portal QA Launchpad to include Work Requests for a portal.
+
+Terminology:
+- "Work Request" = maintenance/work (cc_maintenance_requests)
+- "job" is employment only. Do NOT use "job" terminology here.
+
+Backend
+
+A) Extend existing endpoint:
+GET /api/p2/admin/portals/:portalId/qa
+
+Add to response:
+- workRequests: list of recent work requests scoped to portal
+- workRequestsTotal: total count (for overflow UI)
+
+Query requirements:
+- Work requests must be portal-scoped:
+  - If cc_maintenance_requests has portal_id, filter WHERE portal_id = $1
+  - Else if portal linkage is via property -> portal, join through cc_properties:
+      cc_maintenance_requests.property_id -> cc_properties.id -> cc_properties.portal_id
+- Deterministic ordering:
+  ORDER BY created_at DESC, id ASC
+- Limit 50
+- Include fields needed for QA links:
+  id, title, status, created_at, property_id, assigned_contractor_person_id (if present)
+
+Return shape additions:
+{
+  ...
+  workRequestsTotal: number,
+  workRequests: Array<{
+    id: string,
+    title: string,
+    status: string,
+    createdAt: string,
+    propertyId?: string | null,
+    assignedContractorPersonId?: string | null
+  }>
+}
+
+Frontend
+
+B) Update /app/admin/portals/:portalId/qa page:
+
+Add a new card section: "Work Requests"
+
+For each work request show:
+- Title (or fallback "Work Request <shortId>")
+- Status badge
+- Created date
+- Buttons:
+  - "Open (Owner/Admin)" → /app/work-requests/:workRequestId  (or correct existing route)
+  - "Preview contractor view" (only if assignedContractorPersonId exists)
+      - On click, call POST /api/p2/app/work-disclosures/preview-token
+      - Open: /app/contractor/work-requests/:workRequestId?previewToken=TOKEN
+
+If more than 50 exist, show:
+"(showing 50 of X)"
+
+Acceptance:
+- QA Launchpad shows recent Work Requests for the portal
+- Links work
+- Contractor preview token flow works from Launchpad
+
+
+Note: if your Work Request detail route is different (some codebases use /app/work-requests/:id vs /app/work-requests/:id/view), Replit should use the existing route constant or current router.

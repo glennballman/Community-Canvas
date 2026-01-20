@@ -776,6 +776,32 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
 
     const proposals = Array.from(proposalMap.values());
 
+    // Count total work requests for this portal (PROMPT 9)
+    const workRequestsCountResult = await pool.query(`
+      SELECT COUNT(*) as total
+      FROM cc_maintenance_requests
+      WHERE portal_id = $1
+    `, [portalId]);
+    const workRequestsTotal = parseInt(workRequestsCountResult.rows[0]?.total || '0', 10);
+
+    // Get recent work requests for this portal (limited to 50, ordered deterministically)
+    const workRequestsResult = await pool.query(`
+      SELECT id, title, status, created_at, property_id, assigned_contractor_person_id
+      FROM cc_maintenance_requests
+      WHERE portal_id = $1
+      ORDER BY created_at DESC, id ASC
+      LIMIT 50
+    `, [portalId]);
+
+    const workRequests = workRequestsResult.rows.map((wr: any) => ({
+      id: wr.id,
+      title: wr.title,
+      status: wr.status,
+      createdAt: wr.created_at,
+      propertyId: wr.property_id,
+      assignedContractorPersonId: wr.assigned_contractor_person_id,
+    }));
+
     res.json({
       ok: true,
       portal: {
@@ -789,6 +815,8 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
       tripsTotal,
       proposals,
       proposalsTotal,
+      workRequests,
+      workRequestsTotal,
     });
   } catch (error: any) {
     console.error('[Admin] GET portals/:portalId/qa error:', error);

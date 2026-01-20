@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, ExternalLink, Copy, Globe, Briefcase, Users, 
   FileText, Calendar, CheckCircle, Clock, AlertCircle,
-  Rocket, Link2, Plus, Loader2, Wrench
+  Rocket, Link2, Plus, Loader2, Wrench, Eye, ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,6 +50,15 @@ interface QaData {
     payToken: string | null;
   }>;
   proposalsTotal: number;
+  workRequests: Array<{
+    id: string;
+    title: string | null;
+    status: string;
+    createdAt: string;
+    propertyId: string | null;
+    assignedContractorPersonId: string | null;
+  }>;
+  workRequestsTotal: number;
 }
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -244,6 +253,136 @@ function FixtureButton({
 }
 
 type SeedStep = 'idle' | 'campaign' | 'job' | 'proposal' | 'trip' | 'done';
+
+interface WorkRequest {
+  id: string;
+  title: string | null;
+  status: string;
+  createdAt: string;
+  propertyId: string | null;
+  assignedContractorPersonId: string | null;
+}
+
+function WorkRequestsCard({ 
+  workRequests, 
+  workRequestsTotal 
+}: { 
+  workRequests: WorkRequest[];
+  workRequestsTotal: number;
+}) {
+  const { toast } = useToast();
+  const [previewLoading, setPreviewLoading] = useState<string | null>(null);
+  
+  const handlePreviewContractor = async (workRequestId: string) => {
+    setPreviewLoading(workRequestId);
+    try {
+      const res = await fetch('/api/p2/app/work-disclosures/preview-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ workRequestId }),
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to create preview token');
+      }
+      
+      const data = await res.json();
+      const previewUrl = `/preview/contractor/work-request/${workRequestId}?previewToken=${encodeURIComponent(data.token)}`;
+      window.open(previewUrl, '_blank');
+      toast({ title: 'Preview opened', description: 'Token expires in 15 minutes.' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to preview', variant: 'destructive' });
+    } finally {
+      setPreviewLoading(null);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString();
+    } catch {
+      return 'Unknown';
+    }
+  };
+  
+  return (
+    <Card data-testid="card-work-requests">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ClipboardList className="h-5 w-5" />
+          Work Requests
+        </CardTitle>
+        <CardDescription>
+          {workRequests.length} work request{workRequests.length !== 1 ? 's' : ''}
+          {workRequestsTotal > workRequests.length && (
+            <span className="text-muted-foreground ml-1">(showing {workRequests.length} of {workRequestsTotal})</span>
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 max-h-80 overflow-y-auto">
+        {workRequests.length === 0 ? (
+          <p className="text-muted-foreground text-sm py-4 text-center" data-testid="text-no-work-requests">
+            No work requests found
+          </p>
+        ) : (
+          workRequests.map(wr => (
+            <div 
+              key={wr.id} 
+              className="flex items-center justify-between gap-2 p-2 rounded-md hover-elevate border"
+              data-testid={`item-work-request-${wr.id.slice(0, 8)}`}
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium truncate" data-testid={`text-work-request-title-${wr.id.slice(0, 8)}`}>
+                      {wr.title || `Work Request ${wr.id.slice(0, 8).toUpperCase()}`}
+                    </span>
+                    <StatusBadge status={wr.status} />
+                  </div>
+                  <span className="text-xs text-muted-foreground block">
+                    Created: {formatDate(wr.createdAt)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  asChild
+                  data-testid={`button-open-owner-${wr.id.slice(0, 8)}`}
+                >
+                  <Link to={`/app/intake/work-requests/${wr.id}`}>
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Open
+                  </Link>
+                </Button>
+                {wr.assignedContractorPersonId && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handlePreviewContractor(wr.id)}
+                    disabled={previewLoading === wr.id}
+                    data-testid={`button-preview-contractor-${wr.id.slice(0, 8)}`}
+                  >
+                    {previewLoading === wr.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Eye className="h-3 w-3 mr-1" />
+                    )}
+                    Preview
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function PortalQaLaunchpadPage() {
   const { portalId } = useParams<{ portalId: string }>();
@@ -766,6 +905,11 @@ export default function PortalQaLaunchpadPage() {
             )}
           </CardContent>
         </Card>
+        
+        <WorkRequestsCard 
+          workRequests={data.workRequests || []} 
+          workRequestsTotal={data.workRequestsTotal || 0} 
+        />
       </div>
     </div>
   );
