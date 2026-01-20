@@ -29,19 +29,14 @@ function requireAuth(req: Request, res: Response, next: Function) {
     next();
 }
 
-// Check if user is circle admin/owner
+// Check if user is circle admin/owner (scoped to circle membership only)
 async function isCircleAdmin(req: Request, circleId: string): Promise<boolean> {
     const tenantReq = req as TenantRequest;
     const userId = tenantReq.ctx.individual_id;
     
     if (!userId) return false;
     
-    // Check if tenant admin/owner
-    if (tenantReq.ctx.roles?.includes('admin') || tenantReq.ctx.roles?.includes('owner')) {
-        return true;
-    }
-    
-    // Check if circle member with admin role
+    // Check if circle member with admin or owner role (no tenant-wide bypass)
     const result = await tenantReq.tenantQuery(`
         SELECT cm.id, cr.level
         FROM cc_circle_members cm
@@ -72,14 +67,14 @@ async function isCircleMember(req: Request, circleId: string): Promise<boolean> 
     return result.rows.length > 0;
 }
 
-// GET /api/p2/circles - List circles user can access
+// GET /api/p2/circles - List circles user can access (must be a member)
 router.get('/', requireAuth, async (req: Request, res: Response) => {
     try {
         const tenantReq = req as TenantRequest;
         const userId = tenantReq.ctx.individual_id!;
-        const tenantId = tenantReq.ctx.tenant_id;
         const { search, status } = req.query;
         
+        // Only return circles where user is an active member
         let query = `
             SELECT DISTINCT c.*,
                 (SELECT COUNT(*) FROM cc_circle_members WHERE circle_id = c.id AND is_active = true) as member_count,
@@ -87,19 +82,12 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
                 cr.name as user_role_name,
                 cr.level as user_role_level
             FROM cc_coordination_circles c
-            LEFT JOIN cc_circle_members cm ON c.id = cm.circle_id AND cm.individual_id = $1 AND cm.is_active = true
+            INNER JOIN cc_circle_members cm ON c.id = cm.circle_id AND cm.individual_id = $1 AND cm.is_active = true
             LEFT JOIN cc_circle_roles cr ON cm.role_id = cr.id
             WHERE 1=1
         `;
         const params: any[] = [userId];
         let paramCount = 1;
-        
-        // Filter by tenant if set
-        if (tenantId) {
-            paramCount++;
-            query += ` AND (c.hub_tenant_id = $${paramCount} OR cm.tenant_id = $${paramCount})`;
-            params.push(tenantId);
-        }
         
         // Filter by status
         if (status && status !== 'all') {

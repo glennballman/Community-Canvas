@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ArrowLeft, Users, Settings, Shield, UserPlus, Trash2, Loader2, Link2 } from 'lucide-react';
@@ -72,6 +75,16 @@ export default function CircleDetailPage() {
   const [activeTab, setActiveTab] = useState('members');
   const [deletingMember, setDeletingMember] = useState<string | null>(null);
   const [revokingDelegation, setRevokingDelegation] = useState<string | null>(null);
+  
+  // Add member dialog state
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRoleId, setNewMemberRoleId] = useState('');
+  
+  // Add delegation dialog state
+  const [addDelegationOpen, setAddDelegationOpen] = useState(false);
+  const [delegateeEmail, setDelegateeEmail] = useState('');
+  const [delegationScopes, setDelegationScopes] = useState<string[]>(['view']);
 
   const { data: circleData, isLoading: circleLoading } = useQuery<{ circle: Circle; is_admin: boolean; is_member: boolean }>({
     queryKey: ['/api/p2/circles', circleId],
@@ -147,6 +160,64 @@ export default function CircleDetailPage() {
     },
     onSettled: () => setRevokingDelegation(null),
   });
+
+  const addMember = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/p2/circles/${circleId}/members`, {
+        member_type: 'individual',
+        individual_email: newMemberEmail,
+        role_id: newMemberRoleId || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/circles', circleId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/circles', circleId] });
+      toast({ title: 'Member added successfully' });
+      setAddMemberOpen(false);
+      setNewMemberEmail('');
+      setNewMemberRoleId('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Failed to add member',
+        description: error?.message || 'Something went wrong',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const addDelegation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/p2/circles/${circleId}/delegations`, {
+        delegatee_member_type: 'individual',
+        delegatee_email: delegateeEmail,
+        scopes: delegationScopes,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/circles', circleId, 'delegations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/circles', circleId] });
+      toast({ title: 'Delegation created successfully' });
+      setAddDelegationOpen(false);
+      setDelegateeEmail('');
+      setDelegationScopes(['view']);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Failed to create delegation',
+        description: error?.message || 'Something went wrong',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const toggleScope = (scope: string) => {
+    setDelegationScopes(prev => 
+      prev.includes(scope) 
+        ? prev.filter(s => s !== scope)
+        : [...prev, scope]
+    );
+  };
 
   const circle = circleData?.circle;
   const isAdmin = circleData?.is_admin ?? false;
@@ -292,10 +363,63 @@ export default function CircleDetailPage() {
                 <CardDescription>People and organizations in this circle</CardDescription>
               </div>
               {isAdmin && (
-                <Button size="sm" data-testid="button-add-member">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add Member
-                </Button>
+                <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" data-testid="button-add-member">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Member
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Circle Member</DialogTitle>
+                      <DialogDescription>
+                        Add a new member to this coordination circle by email.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="memberEmail">Email Address</Label>
+                        <Input
+                          id="memberEmail"
+                          type="email"
+                          placeholder="member@example.com"
+                          value={newMemberEmail}
+                          onChange={(e) => setNewMemberEmail(e.target.value)}
+                          data-testid="input-member-email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="memberRole">Role</Label>
+                        <Select value={newMemberRoleId} onValueChange={setNewMemberRoleId}>
+                          <SelectTrigger data-testid="select-member-role">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.filter(r => r.level !== 'owner').map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setAddMemberOpen(false)} data-testid="button-cancel-add-member">
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => addMember.mutate()}
+                        disabled={!newMemberEmail.trim() || addMember.isPending}
+                        data-testid="button-confirm-add-member"
+                      >
+                        {addMember.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Add Member
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               )}
             </CardHeader>
             <CardContent>
@@ -403,10 +527,66 @@ export default function CircleDetailPage() {
                 <CardTitle>Delegations</CardTitle>
                 <CardDescription>Access delegated to external parties</CardDescription>
               </div>
-              <Button size="sm" data-testid="button-add-delegation">
-                <Shield className="h-4 w-4 mr-2" />
-                Create Delegation
-              </Button>
+              <Dialog open={addDelegationOpen} onOpenChange={setAddDelegationOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" data-testid="button-add-delegation">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Create Delegation
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Delegation</DialogTitle>
+                    <DialogDescription>
+                      Delegate your access to an external party.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="delegateeEmail">Delegatee Email</Label>
+                      <Input
+                        id="delegateeEmail"
+                        type="email"
+                        placeholder="delegatee@example.com"
+                        value={delegateeEmail}
+                        onChange={(e) => setDelegateeEmail(e.target.value)}
+                        data-testid="input-delegatee-email"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Access Scopes</Label>
+                      <div className="space-y-2">
+                        {['view', 'send_messages', 'manage_members'].map((scope) => (
+                          <div key={scope} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`scope-${scope}`}
+                              checked={delegationScopes.includes(scope)}
+                              onCheckedChange={() => toggleScope(scope)}
+                              data-testid={`checkbox-scope-${scope}`}
+                            />
+                            <Label htmlFor={`scope-${scope}`} className="font-normal capitalize">
+                              {scope.replace(/_/g, ' ')}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setAddDelegationOpen(false)} data-testid="button-cancel-add-delegation">
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => addDelegation.mutate()}
+                      disabled={!delegateeEmail.trim() || delegationScopes.length === 0 || addDelegation.isPending}
+                      data-testid="button-confirm-add-delegation"
+                    >
+                      {addDelegation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Create Delegation
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {delegationsLoading ? (
