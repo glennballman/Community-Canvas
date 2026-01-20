@@ -242,6 +242,8 @@ function FixtureButton({
   );
 }
 
+type SeedStep = 'idle' | 'campaign' | 'job' | 'proposal' | 'trip' | 'done';
+
 export default function PortalQaLaunchpadPage() {
   const { portalId } = useParams<{ portalId: string }>();
   const { toast } = useToast();
@@ -252,6 +254,10 @@ export default function PortalQaLaunchpadPage() {
   const [jobResult, setJobResult] = useState<FixtureResult | null>(null);
   const [proposalResult, setProposalResult] = useState<FixtureResult | null>(null);
   const [tripResult, setTripResult] = useState<FixtureResult | null>(null);
+  
+  // Seed All state
+  const [seedAllStep, setSeedAllStep] = useState<SeedStep>('idle');
+  const [isSeedingAll, setIsSeedingAll] = useState(false);
   
   const { data, isLoading, error } = useQuery<QaData>({
     queryKey: ['/api/p2/admin/portals', portalId, 'qa'],
@@ -320,6 +326,75 @@ export default function PortalQaLaunchpadPage() {
   
   const portal = data?.portal;
   const slug = portal?.slug || '';
+  
+  // Seed All Fixtures - runs sequentially with progress tracking
+  const seedAllFixtures = async (andOpen = false) => {
+    if (isSeedingAll || !portalId) return;
+    
+    setIsSeedingAll(true);
+    const results: { campaign?: FixtureResult; job?: FixtureResult; proposal?: FixtureResult; trip?: FixtureResult } = {};
+    
+    try {
+      // Step 1: Campaign
+      setSeedAllStep('campaign');
+      const campaignRes = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-campaign`);
+      results.campaign = await campaignRes.json();
+      setCampaignResult(results.campaign!);
+      
+      // Step 2: Job
+      setSeedAllStep('job');
+      const jobRes = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-job`);
+      results.job = await jobRes.json();
+      setJobResult(results.job!);
+      
+      // Step 3: Proposal
+      setSeedAllStep('proposal');
+      const proposalRes = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-proposal`);
+      results.proposal = await proposalRes.json();
+      setProposalResult(results.proposal!);
+      
+      // Step 4: Trip
+      setSeedAllStep('trip');
+      const tripRes = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-trip`);
+      results.trip = await tripRes.json();
+      setTripResult(results.trip!);
+      
+      // Complete
+      setSeedAllStep('done');
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa'] });
+      
+      const created = [results.campaign, results.job, results.proposal, results.trip].filter(r => r?.created).length;
+      toast({ 
+        title: 'All fixtures seeded',
+        description: `${created} created, ${4 - created} already existed`,
+      });
+      
+      // Open tabs if requested
+      if (andOpen && slug) {
+        const urls: string[] = [
+          `/p/${slug}`,
+          `/p/${slug}/reserve`,
+          `/b/${slug}/jobs`,
+        ];
+        
+        // Add fixture-specific links (max 8 total)
+        if (results.campaign?.url) urls.push(results.campaign.url);
+        if (results.trip?.url) urls.push(results.trip.url);
+        if (results.proposal?.viewUrl) urls.push(results.proposal.viewUrl);
+        if (results.proposal?.payUrl) urls.push(results.proposal.payUrl);
+        if (results.job?.url) urls.push(results.job.url);
+        
+        // Cap at 8 tabs
+        urls.slice(0, 8).forEach(url => window.open(url, '_blank'));
+        toast({ title: `Opened ${Math.min(urls.length, 8)} tabs` });
+      }
+    } catch (error) {
+      toast({ title: 'Failed to seed fixtures', variant: 'destructive' });
+    } finally {
+      setIsSeedingAll(false);
+      setTimeout(() => setSeedAllStep('idle'), 2000);
+    }
+  };
   
   const openAllCore = () => {
     if (!slug) return;
@@ -398,35 +473,90 @@ export default function PortalQaLaunchpadPage() {
             Seed test data for QA workflows (idempotent - reuses existing [TEST] items)
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <FixtureButton
-            label="Test Campaign"
-            icon={Briefcase}
-            onSeed={() => seedCampaign.mutate()}
-            isPending={seedCampaign.isPending}
-            result={campaignResult}
-          />
-          <FixtureButton
-            label="Test Job Posting"
-            icon={Users}
-            onSeed={() => seedJob.mutate()}
-            isPending={seedJob.isPending}
-            result={jobResult}
-          />
-          <FixtureButton
-            label="Test Proposal"
-            icon={FileText}
-            onSeed={() => seedProposal.mutate()}
-            isPending={seedProposal.isPending}
-            result={proposalResult}
-          />
-          <FixtureButton
-            label="Test Trip"
-            icon={Calendar}
-            onSeed={() => seedTrip.mutate()}
-            isPending={seedTrip.isPending}
-            result={tripResult}
-          />
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/50 rounded-md">
+            <Button 
+              onClick={() => seedAllFixtures(false)}
+              disabled={isSeedingAll}
+              data-testid="button-seed-all"
+            >
+              {isSeedingAll ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {seedAllStep === 'campaign' && 'Seeding Campaign...'}
+                  {seedAllStep === 'job' && 'Seeding Job...'}
+                  {seedAllStep === 'proposal' && 'Seeding Proposal...'}
+                  {seedAllStep === 'trip' && 'Seeding Trip...'}
+                  {seedAllStep === 'done' && 'Complete!'}
+                </>
+              ) : (
+                <>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Seed All Fixtures
+                </>
+              )}
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => seedAllFixtures(true)}
+              disabled={isSeedingAll}
+              data-testid="button-seed-all-open"
+            >
+              {isSeedingAll ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Working...
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Seed All + Open Core
+                </>
+              )}
+            </Button>
+            {seedAllStep !== 'idle' && seedAllStep !== 'done' && (
+              <Badge variant="secondary" className="ml-auto">
+                Step: {seedAllStep}
+              </Badge>
+            )}
+            {seedAllStep === 'done' && (
+              <Badge variant="default" className="ml-auto">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Complete
+              </Badge>
+            )}
+          </div>
+          
+          <div className="space-y-3">
+            <FixtureButton
+              label="Test Campaign"
+              icon={Briefcase}
+              onSeed={() => seedCampaign.mutate()}
+              isPending={seedCampaign.isPending || (isSeedingAll && seedAllStep === 'campaign')}
+              result={campaignResult}
+            />
+            <FixtureButton
+              label="Test Job Posting"
+              icon={Users}
+              onSeed={() => seedJob.mutate()}
+              isPending={seedJob.isPending || (isSeedingAll && seedAllStep === 'job')}
+              result={jobResult}
+            />
+            <FixtureButton
+              label="Test Proposal"
+              icon={FileText}
+              onSeed={() => seedProposal.mutate()}
+              isPending={seedProposal.isPending || (isSeedingAll && seedAllStep === 'proposal')}
+              result={proposalResult}
+            />
+            <FixtureButton
+              label="Test Trip"
+              icon={Calendar}
+              onSeed={() => seedTrip.mutate()}
+              isPending={seedTrip.isPending || (isSeedingAll && seedAllStep === 'trip')}
+              result={tripResult}
+            />
+          </div>
         </CardContent>
       </Card>
       
