@@ -2830,6 +2830,8 @@ export const ccMaintenanceRequests = pgTable('cc_maintenance_requests', {
   internalNotes: text('internal_notes'),
   guestVisibleNotes: text('guest_visible_notes'),
   
+  detailsJson: jsonb('details_json').notNull().default({}),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

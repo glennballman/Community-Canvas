@@ -572,4 +572,95 @@ router.delete('/work-media/:id', async (req: any, res) => {
   }
 });
 
+// ============================================================================
+// MAINTENANCE REQUEST WORK AREA LINKAGE
+// ============================================================================
+
+const maintenanceWorkAreaSchema = z.object({
+  workAreaId: z.string().uuid().nullable(),
+});
+
+/**
+ * PUT /api/p2/app/maintenance-requests/:id/work-area
+ * Link a maintenance request to a work area (stores in details_json.work_area_id)
+ */
+router.put('/maintenance-requests/:id/work-area', async (req: any, res) => {
+  try {
+    const auth = await requireTenantMember(req, res);
+    if (!auth) return;
+
+    const { id } = req.params;
+    
+    const parsed = maintenanceWorkAreaSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: parsed.error.message });
+    }
+
+    const result = await pool.query(`
+      UPDATE cc_maintenance_requests
+      SET details_json = jsonb_set(
+        COALESCE(details_json, '{}'::jsonb),
+        '{work_area_id}',
+        to_jsonb($3::text)
+      ),
+      updated_at = now()
+      WHERE id = $1 AND portal_id IN (
+        SELECT id FROM cc_portals WHERE owning_tenant_id = $2
+      )
+      RETURNING id, details_json
+    `, [id, auth.tenantId, parsed.data.workAreaId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Maintenance request not found' });
+    }
+
+    res.json({ ok: true, maintenanceRequest: result.rows[0] });
+  } catch (error: any) {
+    console.error('[WorkCatalog] PUT maintenance-request work-area error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/p2/app/maintenance-requests/:id/work-area
+ * Get the work area linked to a maintenance request
+ */
+router.get('/maintenance-requests/:id/work-area', async (req: any, res) => {
+  try {
+    const auth = await requireTenantMember(req, res);
+    if (!auth) return;
+
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      SELECT mr.id, mr.details_json->>'work_area_id' as work_area_id,
+             wa.id as wa_id, wa.title as wa_title, wa.description as wa_description, wa.tags as wa_tags
+      FROM cc_maintenance_requests mr
+      LEFT JOIN cc_work_areas wa ON (mr.details_json->>'work_area_id')::uuid = wa.id
+      WHERE mr.id = $1 AND mr.portal_id IN (
+        SELECT id FROM cc_portals WHERE owning_tenant_id = $2
+      )
+    `, [id, auth.tenantId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Maintenance request not found' });
+    }
+
+    const row = result.rows[0];
+    res.json({ 
+      ok: true, 
+      workAreaId: row.work_area_id,
+      workArea: row.wa_id ? {
+        id: row.wa_id,
+        title: row.wa_title,
+        description: row.wa_description,
+        tags: row.wa_tags
+      } : null
+    });
+  } catch (error: any) {
+    console.error('[WorkCatalog] GET maintenance-request work-area error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 export default router;
