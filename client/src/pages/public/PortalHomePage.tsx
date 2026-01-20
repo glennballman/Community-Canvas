@@ -159,10 +159,10 @@ function AssetsSection({
   portalSlug 
 }: { 
   title: string; 
-  assets: PortalSiteData['initial_data']['assets'];
+  assets?: PortalSiteData['initial_data']['assets'];
   portalSlug: string;
 }) {
-  if (!assets.length) return null;
+  if (!assets?.length) return null;
   
   return (
     <section className="py-16 px-4 bg-background" data-testid="section-assets">
@@ -265,10 +265,10 @@ function ArticlesSection({
   portalSlug 
 }: { 
   title: string; 
-  articles: PortalSiteData['initial_data']['articles'];
+  articles?: PortalSiteData['initial_data']['articles'];
   portalSlug: string;
 }) {
-  if (!articles.length) return null;
+  if (!articles?.length) return null;
   
   return (
     <section className="py-16 px-4 bg-muted/30" data-testid="section-articles">
