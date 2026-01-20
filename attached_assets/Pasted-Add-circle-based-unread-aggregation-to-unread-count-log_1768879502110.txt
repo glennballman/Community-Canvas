@@ -1,0 +1,85 @@
+Add circle-based unread aggregation to unread count logic (additive-only).
+Do NOT add schema columns. Do NOT change auth/RLS. Do NOT bypass tenant/portal scoping.
+
+Context:
+Unread count currently counts cc_messages where read_at IS NULL
+for conversations where the current user participates via:
+- individual_id (and optionally party_id)
+
+We now also want unread counts to include conversations where the user is a participant
+because they are in a Circle that is a conversation participant.
+
+Assumptions:
+- cc_conversation_participants may have circle_id
+- circle membership exists (e.g., cc_circle_members or similar)
+- circle access validation exists elsewhere (validateCircleAccess / membership checks)
+
+Steps:
+
+1) Inventory circle participation sources:
+   - Identify conversation participant fields: cc_conversation_participants.circle_id
+   - Identify circle membership tables: cc_circles, cc_circle_members (or equivalent)
+   - Confirm membership columns: circle_id, individual_id, tenant_id, is_active
+   - Confirm any portal scoping columns if used.
+
+2) Update the unread count logic to include circle participations:
+   Build a CTE that collects all participant rows for the current user in three ways:
+   A) direct individual participation: p.individual_id = $individualId
+   B) direct party participation: p.party_id = $partyId (if available)
+   C) circle participation:
+      - conversation participant row p has circle_id
+      - user is an active member of that circle (circle_members.individual_id = $individualId)
+
+   Example shape (adapt to actual table names):
+
+   WITH user_participations AS (
+     -- direct participation
+     SELECT DISTINCT p.id AS participant_id, p.conversation_id, p.joined_at
+     FROM cc_conversation_participants p
+     WHERE p.is_active = true
+       AND (
+         (p.individual_id IS NOT NULL AND p.individual_id = $1)
+         OR (p.party_id IS NOT NULL AND p.party_id = $2)
+       )
+
+     UNION
+
+     -- circle-derived participation
+     SELECT DISTINCT p.id AS participant_id, p.conversation_id, p.joined_at
+     FROM cc_conversation_participants p
+     JOIN cc_circle_members cm
+       ON cm.circle_id = p.circle_id
+      AND cm.individual_id = $1
+      AND cm.is_active = true
+     WHERE p.is_active = true
+       AND p.circle_id IS NOT NULL
+   )
+   SELECT COUNT(*)::int AS unread
+   FROM cc_messages m
+   JOIN user_participations up ON m.conversation_id = up.conversation_id
+   WHERE m.read_at IS NULL
+     AND m.deleted_at IS NULL
+     AND m.sender_participant_id IS DISTINCT FROM up.participant_id
+     AND m.created_at >= COALESCE(up.joined_at, '1970-01-01'::timestamptz);
+
+3) Preserve scoping:
+   - Ensure the conversation belongs to current tenant context (join cc_conversations and enforce tenant_id)
+   - If portal scoping is required for messages, ensure portal_id checks are preserved.
+
+4) Guardrails:
+   - If individual_id missing, return { ok: true, count: 0 } (circle requires individual_id anyway)
+   - Prevent double counting (use DISTINCT + UNION not UNION ALL)
+   - Do not leak circles across tenant boundaries (enforce cm.tenant_id = current tenant if that column exists)
+
+5) Verification:
+   - Run tsx scripts/v35-cert.ts (must pass)
+   - Create a circle conversation, ensure:
+     - circle participant exists
+     - members receive unread count increments
+   - Confirm opening the conversation triggers mark-read and count decreases.
+
+Return:
+- final SQL
+- files changed
+- exact circle membership table used
+- proof that tenant scoping is enforced
