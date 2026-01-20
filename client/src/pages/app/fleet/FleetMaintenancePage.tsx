@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link } from 'wouter';
+import { Link } from 'react-router-dom';
 import { format, isBefore, addDays } from 'date-fns';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -201,7 +201,7 @@ export default function FleetMaintenancePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href="/app/fleet">
+          <Link to="/app/fleet">
             <Button variant="outline" data-testid="button-back-to-dashboard">
               <Truck className="w-4 h-4 mr-2" />
               Dashboard

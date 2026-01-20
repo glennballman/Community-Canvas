@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Link } from 'wouter';
+import { Link } from 'react-router-dom';
 
 interface Vehicle {
   id: string;
@@ -61,7 +61,7 @@ function AssetCard({ asset, type }: { asset: Vehicle | Trailer; type: 'vehicle' 
   const Icon = type === 'vehicle' ? Car : Caravan;
   
   return (
-    <Link href={`/app/fleet/assets/${asset.id}?type=${type}`}>
+    <Link to={`/app/fleet/assets/${asset.id}?type=${type}`}>
       <Card className="hover-elevate cursor-pointer" data-testid={`asset-card-${asset.id}`}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
@@ -159,7 +159,7 @@ export default function FleetAssetsPage() {
             </p>
           </div>
         </div>
-        <Link href="/app/fleet">
+        <Link to="/app/fleet">
           <Button variant="outline" data-testid="button-back-to-dashboard">
             Back to Dashboard
           </Button>

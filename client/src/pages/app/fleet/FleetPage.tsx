@@ -3,7 +3,7 @@ import { Truck, Car, Caravan, Wrench, CheckCircle2, Clock, AlertTriangle, Calend
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Link } from 'wouter';
+import { Link } from 'react-router-dom';
 import { format, addDays, isBefore } from 'date-fns';
 
 interface FleetStats {
@@ -101,13 +101,13 @@ export default function FleetPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href="/app/fleet/assets">
+          <Link to="/app/fleet/assets">
             <Button variant="outline" data-testid="button-view-assets">
               <Car className="w-4 h-4 mr-2" />
               View Assets
             </Button>
           </Link>
-          <Link href="/app/fleet/maintenance">
+          <Link to="/app/fleet/maintenance">
             <Button variant="outline" data-testid="button-view-maintenance">
               <Wrench className="w-4 h-4 mr-2" />
               Maintenance
@@ -185,7 +185,7 @@ export default function FleetPage() {
                       );
                     })}
                     {next14Days.length > 5 && (
-                      <Link href="/app/fleet/maintenance">
+                      <Link to="/app/fleet/maintenance">
                         <Button variant="ghost" size="sm" className="w-full" data-testid="button-view-all-maintenance">
                           View all {next14Days.length} items
                         </Button>

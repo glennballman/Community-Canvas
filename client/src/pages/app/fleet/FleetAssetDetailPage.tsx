@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRoute, Link } from 'wouter';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Car, Caravan, ArrowLeft, Wrench, Calendar, FileText, MapPin, Gauge, Fuel, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,9 +100,8 @@ function DetailRow({ label, value, icon: Icon }: { label: string; value: string 
 }
 
 export default function FleetAssetDetailPage() {
-  const [, params] = useRoute('/app/fleet/assets/:id');
-  const assetId = params?.id;
-  const searchParams = new URLSearchParams(window.location.search);
+  const { id: assetId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const assetType = searchParams.get('type') || 'vehicle';
 
   const vehicleQuery = useQuery<{ success: boolean; vehicle: VehicleDetail; recentMaintenance: MaintenanceRecord[] }>({
@@ -148,7 +147,7 @@ export default function FleetAssetDetailPage() {
           <CardContent className="py-12 text-center">
             <Icon className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
             <p className="text-muted-foreground mt-2">Asset not found</p>
-            <Link href="/app/fleet/assets">
+            <Link to="/app/fleet/assets">
               <Button variant="outline" className="mt-4">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Assets
@@ -167,7 +166,7 @@ export default function FleetAssetDetailPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Link href="/app/fleet/assets">
+          <Link to="/app/fleet/assets">
             <Button variant="ghost" size="icon" data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -303,7 +302,7 @@ export default function FleetAssetDetailPage() {
                 <Wrench className="w-5 h-5" />
                 Maintenance History
               </CardTitle>
-              <Link href={`/app/fleet/maintenance?vehicle=${assetId}`}>
+              <Link to={`/app/fleet/maintenance?vehicle=${assetId}`}>
                 <Button variant="outline" size="sm" data-testid="button-view-maintenance-history">
                   View All
                 </Button>
