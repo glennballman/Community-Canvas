@@ -244,12 +244,15 @@ export function TenantAppLayout(): React.ReactElement {
     
     sidebar: {
       width: sidebarWidth,
+      height: '100vh',
       flexShrink: 0,
       borderRight: '1px solid rgba(255,255,255,0.1)',
       display: 'flex',
       flexDirection: 'column',
       transition: 'width 0.2s ease',
       backgroundColor: '#060b15',
+      position: 'sticky',
+      top: 0,
     } as React.CSSProperties,
     
     logo: {
@@ -266,10 +269,15 @@ export function TenantAppLayout(): React.ReactElement {
       borderBottom: '1px solid rgba(255,255,255,0.1)',
     } as React.CSSProperties,
     
+    sidebarTop: {
+      flexShrink: 0,
+    } as React.CSSProperties,
+    
     nav: {
       flex: 1,
       padding: '8px',
       overflowY: 'auto',
+      minHeight: 0,
     } as React.CSSProperties,
     
     navItem: {
@@ -292,6 +300,7 @@ export function TenantAppLayout(): React.ReactElement {
     } as React.CSSProperties,
     
     bottomSection: {
+      flexShrink: 0,
       borderTop: '1px solid rgba(255,255,255,0.1)',
     } as React.CSSProperties,
     
@@ -310,133 +319,64 @@ export function TenantAppLayout(): React.ReactElement {
       {/* ====== LEFT SIDEBAR ====== */}
       <aside style={styles.sidebar}>
         
-        {/* Logo */}
-        <div style={styles.logo}>
-          <Link 
-            to="/app" 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              textDecoration: 'none',
-              color: 'white',
-            }}
-          >
-            <span style={{ fontSize: '20px' }}>🌐</span>
-            {!sidebarCollapsed && (
-              <span style={{ fontWeight: 600, fontSize: '14px' }}>
-                Community Canvas
-              </span>
-            )}
-          </Link>
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#9ca3af',
-              cursor: 'pointer',
-              padding: '4px',
-            }}
-          >
-            {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
-        </div>
+        {/* Top Section - Always Visible */}
+        <div style={styles.sidebarTop}>
+          {/* Logo */}
+          <div style={styles.logo}>
+            <Link 
+              to="/app" 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                textDecoration: 'none',
+                color: 'white',
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>🌐</span>
+              {!sidebarCollapsed && (
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>
+                  Community Canvas
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#9ca3af',
+                cursor: 'pointer',
+                padding: '4px',
+              }}
+            >
+              {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </button>
+          </div>
 
-        {/* Tenant Switcher */}
-        {currentTenant && (
-          <div style={styles.tenantSwitcher}>
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  backgroundColor: 'rgba(255,255,255,0.05)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>
-                    {TYPE_ICONS[currentTenant.tenant_type] || '📁'}
-                  </span>
-                  {!sidebarCollapsed && (
-                    <>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ 
-                          fontWeight: 500, 
-                          fontSize: '14px',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}>
-                          {currentTenant.tenant_name}
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: '#6b7280',
-                          textTransform: 'capitalize',
-                        }}>
-                          {currentTenant.tenant_type}
-                        </div>
-                      </div>
-                      <ChevronDown size={16} style={{ color: '#9ca3af' }} />
-                    </>
-                  )}
-                </div>
-              </button>
-
-              {/* Dropdown */}
-              {tenantDropdownOpen && !sidebarCollapsed && (
-                <>
-                  {/* Backdrop */}
-                  <div 
-                    style={{
-                      position: 'fixed',
-                      inset: 0,
-                      zIndex: 40,
-                    }}
-                    onClick={() => setTenantDropdownOpen(false)} 
-                  />
-                  {/* Menu */}
-                  <div style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: '100%',
-                    marginTop: '4px',
-                    backgroundColor: '#1a2744',
-                    border: '1px solid rgba(255,255,255,0.1)',
+          {/* Tenant Switcher */}
+          {currentTenant && (
+            <div style={styles.tenantSwitcher}>
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    border: 'none',
                     borderRadius: '8px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                    zIndex: 50,
-                    maxHeight: '320px',
-                    overflowY: 'auto',
-                  }}>
-                    {memberships.map((m) => (
-                      <button
-                        key={m.tenant_id}
-                        onClick={() => handleSwitchTenant(m.tenant_id)}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          border: 'none',
-                          backgroundColor: m.tenant_id === currentTenant.tenant_id 
-                            ? 'rgba(59, 130, 246, 0.2)' 
-                            : 'transparent',
-                          color: 'white',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                        }}
-                      >
-                        <span>{TYPE_ICONS[m.tenant_type] || '📁'}</span>
+                    color: 'white',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>
+                      {TYPE_ICONS[currentTenant.tenant_type] || '📁'}
+                    </span>
+                    {!sidebarCollapsed && (
+                      <>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ 
                             fontWeight: 500, 
@@ -445,27 +385,99 @@ export function TenantAppLayout(): React.ReactElement {
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                           }}>
-                            {m.tenant_name}
+                            {currentTenant.tenant_name}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                            {m.tenant_type} • {m.role}
+                          <div style={{ 
+                            fontSize: '12px', 
+                            color: '#6b7280',
+                            textTransform: 'capitalize',
+                          }}>
+                            {currentTenant.tenant_type}
                           </div>
                         </div>
-                      </button>
-                    ))}
+                        <ChevronDown size={16} style={{ color: '#9ca3af' }} />
+                      </>
+                    )}
                   </div>
-                </>
-              )}
+                </button>
+
+                {/* Dropdown */}
+                {tenantDropdownOpen && !sidebarCollapsed && (
+                  <>
+                    {/* Backdrop */}
+                    <div 
+                      style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 40,
+                      }}
+                      onClick={() => setTenantDropdownOpen(false)} 
+                    />
+                    {/* Menu */}
+                    <div style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: '100%',
+                      marginTop: '4px',
+                      backgroundColor: '#1a2744',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                      zIndex: 50,
+                      maxHeight: '320px',
+                      overflowY: 'auto',
+                    }}>
+                      {memberships.map((m) => (
+                        <button
+                          key={m.tenant_id}
+                          onClick={() => handleSwitchTenant(m.tenant_id)}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            border: 'none',
+                            backgroundColor: m.tenant_id === currentTenant.tenant_id 
+                              ? 'rgba(59, 130, 246, 0.2)' 
+                              : 'transparent',
+                            color: 'white',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span>{TYPE_ICONS[m.tenant_type] || '📁'}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ 
+                              fontWeight: 500, 
+                              fontSize: '14px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}>
+                              {m.tenant_name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                              {m.tenant_type} • {m.role}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Portal Selector - for multi-portal tenants */}
-        {currentTenant && !sidebarCollapsed && (
-          <PortalSelector />
-        )}
+          {/* Portal Selector - for multi-portal tenants */}
+          {currentTenant && !sidebarCollapsed && (
+            <PortalSelector />
+          )}
+        </div>
 
-        {/* Navigation - V3_NAV with sections */}
+        {/* Navigation - V3_NAV with sections (Scrollable) */}
         <nav style={styles.nav}>
           {navSections.map((section, sectionIndex) => (
             <div key={section.title} style={{ marginBottom: sectionIndex < navSections.length - 1 ? '16px' : 0 }}>
