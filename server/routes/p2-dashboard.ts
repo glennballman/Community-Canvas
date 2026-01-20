@@ -101,9 +101,27 @@ p2DashboardRouter.get("/jobs/summary", async (req, res) => {
 p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
   try {
     const userId = (req as any).user?.id as string | undefined;
+    const tenantId = getTenantId(req);
     
     // If no authenticated user, return 0
     if (!userId) {
+      return res.json({ ok: true, count: 0 });
+    }
+
+    // Look up party_id for tenant-based participation (owner/contractor)
+    let partyId: string | null = null;
+    if (tenantId) {
+      const partyResult = await pool.query(`
+        SELECT id FROM cc_parties
+        WHERE tenant_id = $1 AND party_kind = 'organization'
+        ORDER BY created_at ASC
+        LIMIT 1
+      `, [tenantId]);
+      partyId = partyResult.rows[0]?.id || null;
+    }
+
+    // If neither individual_id nor party_id available, return 0
+    if (!userId && !partyId) {
       return res.json({ ok: true, count: 0 });
     }
 
@@ -114,16 +132,24 @@ p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
     // - message was not sent by the user (sender_participant_id != user's participant)
     // - message was created after user joined the conversation
     // 
-    // User participates via individual_id = user_id (user.id == individual.id in this system)
+    // User participates via:
+    // - individual_id = user_id (direct individual participation)
+    // - party_id = tenant's party (owner/contractor participation)
+    // 
+    // DISTINCT prevents double-counting if user matches both conditions
     const result = await pool.query(`
       WITH user_participations AS (
-        SELECT 
+        SELECT DISTINCT
           p.id as participant_id,
           p.conversation_id,
           p.joined_at
         FROM cc_conversation_participants p
         WHERE p.is_active = true
-          AND p.individual_id = $1
+          AND (
+            (p.individual_id IS NOT NULL AND p.individual_id = $1)
+            OR
+            (p.party_id IS NOT NULL AND p.party_id = $2)
+          )
       )
       SELECT COUNT(*)::int as unread
       FROM cc_messages m
@@ -132,7 +158,7 @@ p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
         AND m.deleted_at IS NULL
         AND m.sender_participant_id IS DISTINCT FROM up.participant_id
         AND m.created_at >= COALESCE(up.joined_at, '1970-01-01'::timestamptz)
-    `, [userId]);
+    `, [userId, partyId]);
 
     res.json({ ok: true, count: result.rows[0]?.unread || 0 });
   } catch (e: any) {

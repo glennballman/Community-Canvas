@@ -1,0 +1,73 @@
+Extend /api/p2/dashboard/messages/unread-count to support party-based participation
+(additive-only, no schema changes, no behavior regression).
+
+Context:
+Unread count currently works for individual participants via:
+  cc_conversation_participants.individual_id
+
+We now want unread counts to also include conversations where the user
+participates via party_id (e.g. owners / contractors tied to a party),
+without double-counting.
+
+Do NOT add unread_count columns or migrations.
+
+Steps:
+
+1) Open server/routes/p2-dashboard.ts
+   Locate GET /api/p2/dashboard/messages/unread-count.
+
+2) Identify how the current handler resolves:
+   - individual_id (already present)
+   - party_id (use existing resolver if available; otherwise derive from session context exactly as messaging routes do)
+
+3) Update the CTE `user_participations` to include BOTH participation modes:
+
+   - individual participation:
+       p.individual_id = $individualId
+   - party participation:
+       p.party_id = $partyId
+
+   Ensure:
+   - p.is_active = true
+   - Either condition may match
+   - Use DISTINCT ON (p.id) or equivalent to avoid duplicates if both match
+
+   Example shape (do not copy blindly; adapt to existing parameter binding):
+
+   WITH user_participations AS (
+     SELECT DISTINCT
+       p.id AS participant_id,
+       p.conversation_id,
+       p.joined_at
+     FROM cc_conversation_participants p
+     WHERE p.is_active = true
+       AND (
+         (p.individual_id IS NOT NULL AND p.individual_id = $1)
+         OR
+         (p.party_id IS NOT NULL AND p.party_id = $2)
+       )
+   )
+
+4) Keep the unread logic EXACTLY as-is:
+   - m.read_at IS NULL
+   - m.deleted_at IS NULL
+   - m.sender_participant_id IS DISTINCT FROM up.participant_id
+   - m.created_at >= COALESCE(up.joined_at, '1970-01-01'::timestamptz)
+
+5) Guardrails:
+   - If neither individual_id nor party_id is available, return { ok: true, count: 0 }
+   - Preserve tenant scoping exactly as current route enforces
+   - Do NOT introduce double-counting across individual + party matches
+
+6) Verification:
+   - Run tsx scripts/v35-cert.ts (must pass)
+   - Test unread count for:
+     a) individual-only conversation
+     b) party-based conversation (owner/contractor)
+     c) mixed environment (both exist)
+   - Confirm badge increments and clears correctly on mark-read
+
+7) Return:
+   - final SQL query
+   - file(s) changed
+   - brief explanation of how duplicate counting is prevented
