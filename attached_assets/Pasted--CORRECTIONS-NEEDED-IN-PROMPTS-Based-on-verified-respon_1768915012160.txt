@@ -1,0 +1,90 @@
+✅ CORRECTIONS NEEDED IN PROMPTS
+Based on verified response structure, here are the exact fixes to ChatGPT's prompts:
+PROMPT 1 — Update usePortalSite.ts Return Shape
+The response structure is:
+typescript{
+  success: boolean;
+  portal: { id, slug, name, ... };
+  site: { /* site_config JSONB */ };
+  theme: { primaryColor?, ... };  // ← Separate from site!
+  initial_data: { ... };
+  json_ld: { ... };
+}
+Corrected hook:
+typescriptexport function usePortalSite(portalSlug?: string) {
+  const query = useQuery({
+    queryKey: portalSlug
+      ? [`/api/public/cc_portals/${portalSlug}/site`]
+      : ['portal-site', 'none'],
+    queryFn: async () => {
+      if (!portalSlug) return null;
+      const res = await fetch(`/api/public/cc_portals/${portalSlug}/site`);
+      if (!res.ok) throw new Error('Failed to load portal site');
+      return res.json();
+    },
+    enabled: !!portalSlug,
+  });
+
+  return {
+    ...query,
+    portal: query.data?.portal,
+    theme: query.data?.theme,
+    site: query.data?.site,
+  };
+}
+
+PROMPT 1 — Update PortalBrandedShell.tsx Field Paths
+Corrected shell:
+tsximport React from 'react';
+import { usePortalSite } from '../hooks/usePortalSite';
+
+type Props = {
+  portalSlug?: string;
+  preloadedData?: {
+    portal?: { name?: string; slug?: string };
+    theme?: { primaryColor?: string };
+  };
+  backHref?: string;
+  backLabel?: string;
+  children: React.ReactNode;
+};
+
+export function PortalBrandedShell({
+  portalSlug,
+  preloadedData,
+  backHref,
+  backLabel,
+  children,
+}: Props) {
+  const { portal, theme, isLoading } = usePortalSite(
+    preloadedData ? undefined : portalSlug
+  );
+
+  const resolvedPortal = preloadedData?.portal ?? portal;
+  const resolvedTheme = preloadedData?.theme ?? theme;
+  const portalName = resolvedPortal?.name || portalSlug || 'Portal';
+
+  if (portalSlug && !resolvedPortal && isLoading) {
+    return <div className="p-6">Loading…</div>;
+  }
+
+  return (
+    <div
+      className="min-h-screen"
+      style={{
+        '--portal-primary': resolvedTheme?.primaryColor,
+      } as React.CSSProperties}
+    >
+      <header className="border-b px-6 py-4 flex items-center justify-between">
+        <div className="font-semibold text-lg">{portalName}</div>
+        {backHref && (
+          <a href={backHref} className="text-sm underline">
+            {backLabel ?? 'Back'}
+          </a>
+        )}
+      </header>
+
+      <main className="p-6">{children}</main>
+    </div>
+  );
+}
