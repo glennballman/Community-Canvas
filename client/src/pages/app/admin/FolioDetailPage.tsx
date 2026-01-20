@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Wallet, ArrowLeft, Receipt, CreditCard, User, Calendar, DollarSign, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
+import { getAuthHeaders } from '@/lib/api';
 
 interface FolioDetail {
   id: string;
@@ -94,7 +95,8 @@ export default function FolioDetailPage() {
   const limit = 50;
 
   const { data: folioData, isLoading: folioLoading, error: folioError } = useQuery<{ ok: boolean; folio: FolioDetail; summary: FolioSummary }>({
-    queryKey: ['/api/p2/folios', folioId],
+    queryKey: [`/api/p2/folios/${folioId}`],
+    enabled: !!folioId,
   });
 
   const { data: entriesData, isLoading: entriesLoading } = useQuery<{ ok: boolean; entries: LedgerEntry[]; total: number }>({
@@ -103,7 +105,10 @@ export default function FolioDetailPage() {
       const params = new URLSearchParams();
       params.set('limit', limit.toString());
       params.set('offset', ((page - 1) * limit).toString());
-      const res = await fetch(`/api/p2/folios/${folioId}/ledger?${params.toString()}`);
+      const res = await fetch(`/api/p2/folios/${folioId}/ledger?${params.toString()}`, {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch ledger');
       return res.json();
     },

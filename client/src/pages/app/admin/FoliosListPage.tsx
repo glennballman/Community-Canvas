@@ -14,14 +14,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Wallet, Search, ChevronRight, DollarSign, FileText, Clock } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { getAuthHeaders } from '@/lib/api';
 
 interface FolioSummary {
   id: string;
   folio_number: string;
   status: string;
-  guest_name: string;
-  guest_email: string;
+  guest_name: string | null;
+  guest_email: string | null;
   total_charges_cents: number;
   total_payments_cents: number;
   balance_due_cents: number;
@@ -63,7 +63,10 @@ export default function FoliosListPage() {
       if (searchTerm) params.set('search', searchTerm);
       params.set('limit', limit.toString());
       params.set('offset', ((page - 1) * limit).toString());
-      const res = await fetch(`/api/p2/folios?${params.toString()}`);
+      const res = await fetch(`/api/p2/folios?${params.toString()}`, {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error('Failed to fetch folios');
       return res.json();
     },

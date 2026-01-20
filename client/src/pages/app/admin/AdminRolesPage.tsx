@@ -56,8 +56,8 @@ export default function AdminRolesPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: rolesData } = useQuery<{ ok: boolean; roles: RoleCatalog }>({
-    queryKey: ['/api/p2/admin/roles'],
+  const { data: rolesData } = useQuery<{ ok: boolean; catalog: RoleCatalog }>({
+    queryKey: ['/api/p2/admin/roles/catalog'],
   });
 
   const { data: usersData, isLoading, error } = useQuery<{ ok: boolean; users: TenantUser[]; total: number }>({
@@ -78,7 +78,7 @@ export default function AdminRolesPage() {
   });
 
   const users = usersData?.users ?? [];
-  const tenantRoles = rolesData?.roles?.tenant_roles ?? ['owner', 'admin', 'manager', 'staff', 'viewer'];
+  const tenantRoles = rolesData?.catalog?.tenant_roles ?? ['owner', 'admin', 'manager', 'staff', 'viewer'];
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = searchTerm === '' || 
