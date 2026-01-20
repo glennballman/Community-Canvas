@@ -1,0 +1,105 @@
+✅ REPLIT PROMPT 1 (FINAL, CORRECTED) — Shared Portal Site Hook + Branded Shell
+
+Goal: Reuse the existing portal site endpoint to apply branding to public pages with correct field paths:
+
+Portal name: data.portal.name
+
+Theme primary color: data.theme.primaryColor
+
+Site config: data.site.*
+
+Create: client/src/pages/public/hooks/usePortalSite.ts
+import { useQuery } from '@tanstack/react-query';
+
+export function usePortalSite(portalSlug?: string) {
+  const query = useQuery({
+    queryKey: portalSlug
+      ? [`/api/public/cc_portals/${portalSlug}/site`]
+      : ['portal-site', 'none'],
+    queryFn: async () => {
+      if (!portalSlug) return null;
+      const res = await fetch(`/api/public/cc_portals/${portalSlug}/site`);
+      if (!res.ok) throw new Error('Failed to load portal site');
+      return res.json();
+    },
+    enabled: !!portalSlug,
+  });
+
+  return {
+    ...query,
+    portal: query.data?.portal,
+    theme: query.data?.theme,
+    site: query.data?.site,
+  };
+}
+
+Create: client/src/pages/public/components/PortalBrandedShell.tsx
+import React from 'react';
+import { usePortalSite } from '../hooks/usePortalSite';
+
+type PreloadedData = {
+  portal?: { id?: string; slug?: string; name?: string };
+  theme?: { primaryColor?: string; [k: string]: any };
+  site?: any;
+};
+
+type Props = {
+  portalSlug?: string;
+  preloadedData?: PreloadedData;
+  backHref?: string;
+  backLabel?: string;
+  children: React.ReactNode;
+};
+
+export function PortalBrandedShell({
+  portalSlug,
+  preloadedData,
+  backHref,
+  backLabel,
+  children,
+}: Props) {
+  const query = usePortalSite(preloadedData ? undefined : portalSlug);
+
+  const resolvedPortal = preloadedData?.portal ?? query.portal;
+  const resolvedTheme = preloadedData?.theme ?? query.theme;
+
+  const portalName = resolvedPortal?.name || portalSlug || 'Portal';
+
+  if (portalSlug && !resolvedPortal && query.isLoading) {
+    return <div className="p-6">Loading…</div>;
+  }
+
+  return (
+    <div
+      className="min-h-screen"
+      style={
+        {
+          '--portal-primary': resolvedTheme?.primaryColor,
+        } as React.CSSProperties
+      }
+    >
+      <header className="border-b px-6 py-4 flex items-center justify-between">
+        <div className="font-semibold text-lg">{portalName}</div>
+
+        {backHref && (
+          <a href={backHref} className="text-sm underline">
+            {backLabel ?? 'Back'}
+          </a>
+        )}
+      </header>
+
+      <main className="p-6">{children}</main>
+    </div>
+  );
+}
+
+
+Acceptance
+
+Compiles
+
+Uses existing endpoint
+
+Correct field paths (data.portal, data.theme, data.site)
+
+Terminology clean
