@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Briefcase, Upload, Send, Check, File, X
 } from 'lucide-react';
+import { PortalBrandedShell } from './components/PortalBrandedShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -146,42 +147,37 @@ export default function PortalJobApplyPage() {
 
   if (jobLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <PortalBrandedShell
+        portalSlug={portalSlug}
+        backHref={`/b/${portalSlug}/jobs/${postingId}`}
+        backLabel="Back to Job"
+      >
         <div className="container mx-auto max-w-2xl space-y-6">
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-64 w-full" />
         </div>
-      </div>
+      </PortalBrandedShell>
     );
   }
 
   const job = (jobData as any)?.job;
 
   return (
-    <div className="min-h-screen bg-background" data-testid="page-job-apply">
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigate(`/b/${portalSlug}/jobs/${postingId}`)}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Briefcase className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-lg font-bold">Apply for {job?.title || 'Job'}</h1>
-              <p className="text-sm text-muted-foreground">
-                {job?.brand_name_snapshot || 'Employer'}
-              </p>
-            </div>
+    <PortalBrandedShell
+      portalSlug={portalSlug}
+      backHref={`/b/${portalSlug}/jobs/${postingId}`}
+      backLabel="Back to Job"
+    >
+      <div data-testid="page-job-apply" className="container mx-auto max-w-2xl">
+        <div className="flex items-center gap-3 mb-6">
+          <Briefcase className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-lg font-bold">Apply for {job?.title || 'Job'}</h1>
+            <p className="text-sm text-muted-foreground">
+              {job?.brand_name_snapshot || 'Employer'}
+            </p>
           </div>
         </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-6 max-w-2xl">
         <form onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
@@ -306,13 +302,7 @@ export default function PortalJobApplyPage() {
             </CardContent>
           </Card>
         </form>
-      </main>
-
-      <footer className="border-t py-4 mt-8">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          Powered by Community Canvas
-        </div>
-      </footer>
-    </div>
+      </div>
+    </PortalBrandedShell>
   );
 }

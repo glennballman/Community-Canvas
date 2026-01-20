@@ -5,6 +5,7 @@ import {
   MapPin, DollarSign, Briefcase, Building2, Home, ArrowLeft,
   Calendar, Clock, Share2, ExternalLink
 } from 'lucide-react';
+import { PortalBrandedShell } from './components/PortalBrandedShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -161,20 +162,28 @@ export default function PortalJobDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <PortalBrandedShell
+        portalSlug={portalSlug}
+        backHref={`/b/${portalSlug}/jobs`}
+        backLabel="Back to Jobs"
+      >
         <div className="container mx-auto max-w-3xl space-y-6">
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-64 w-full" />
         </div>
-      </div>
+      </PortalBrandedShell>
     );
   }
 
   if (error || !job) {
     return (
-      <div className="min-h-screen bg-background p-6" data-testid="page-job-not-found">
-        <div className="container mx-auto max-w-3xl text-center py-12">
+      <PortalBrandedShell
+        portalSlug={portalSlug}
+        backHref={`/b/${portalSlug}/jobs`}
+        backLabel="Back to Jobs"
+      >
+        <div className="text-center py-12" data-testid="page-job-not-found">
           <Briefcase className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-xl font-bold mb-2">Job Not Found</h1>
           <p className="text-muted-foreground mb-4">
@@ -184,30 +193,17 @@ export default function PortalJobDetailPage() {
             View All Jobs
           </Button>
         </div>
-      </div>
+      </PortalBrandedShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" data-testid="page-job-detail">
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigate(`/b/${portalSlug}/jobs`)}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Briefcase className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold capitalize">{portalSlug} Jobs</h1>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-6 max-w-3xl">
+    <PortalBrandedShell
+      portalSlug={portalSlug}
+      backHref={`/b/${portalSlug}/jobs`}
+      backLabel="Back to Jobs"
+    >
+      <div data-testid="page-job-detail" className="container mx-auto max-w-3xl">
         <Card>
           <CardContent className="p-6 space-y-6">
             <div>
@@ -344,13 +340,7 @@ export default function PortalJobDetailPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-
-      <footer className="border-t py-4 mt-8">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          Powered by Community Canvas
-        </div>
-      </footer>
-    </div>
+      </div>
+    </PortalBrandedShell>
   );
 }

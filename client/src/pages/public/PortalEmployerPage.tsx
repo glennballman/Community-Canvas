@@ -4,6 +4,7 @@ import {
   Building2, MapPin, DollarSign, Briefcase, Home, ExternalLink, 
   ArrowLeft, Globe, Clock
 } from 'lucide-react';
+import { PortalBrandedShell } from './components/PortalBrandedShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -132,38 +133,31 @@ export default function PortalEmployerPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background" data-testid="page-employer-loading">
-        <header className="border-b">
-          <div className="container mx-auto px-4 py-4">
-            <Skeleton className="h-8 w-48" />
+      <PortalBrandedShell
+        portalSlug={portalSlug}
+        backHref={`/b/${portalSlug}/jobs`}
+        backLabel="Back to Jobs"
+      >
+        <div data-testid="page-employer-loading" className="max-w-4xl mx-auto">
+          <Skeleton className="h-48 w-full mb-8" />
+          <div className="grid gap-4">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
           </div>
-        </header>
-        <main className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <Skeleton className="h-48 w-full mb-8" />
-            <div className="grid gap-4">
-              {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          </div>
-        </main>
-      </div>
+        </div>
+      </PortalBrandedShell>
     );
   }
 
   if (error || !employer) {
     return (
-      <div className="min-h-screen bg-background" data-testid="page-employer-error">
-        <header className="border-b">
-          <div className="container mx-auto px-4 py-4">
-            <Link to={`/b/${portalSlug}/jobs`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Jobs
-            </Link>
-          </div>
-        </header>
-        <main className="container mx-auto px-4 py-12 text-center">
+      <PortalBrandedShell
+        portalSlug={portalSlug}
+        backHref={`/b/${portalSlug}/jobs`}
+        backLabel="Back to Jobs"
+      >
+        <div className="text-center py-12" data-testid="page-employer-error">
           <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">Employer Not Found</h1>
           <p className="text-muted-foreground mb-6">
@@ -172,34 +166,18 @@ export default function PortalEmployerPage() {
           <Button asChild>
             <Link to={`/b/${portalSlug}/jobs`}>View All Jobs</Link>
           </Button>
-        </main>
-      </div>
+        </div>
+      </PortalBrandedShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" data-testid="page-employer">
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link 
-              to={`/b/${portalSlug}/jobs`} 
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              data-testid="link-back-jobs"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Jobs
-            </Link>
-            <div className="flex items-center gap-3">
-              <Briefcase className="h-5 w-5 text-primary" />
-              <span className="font-medium capitalize">{portalSlug?.replace(/-/g, ' ')}</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+    <PortalBrandedShell
+      portalSlug={portalSlug}
+      backHref={`/b/${portalSlug}/jobs`}
+      backLabel="Back to Jobs"
+    >
+      <div data-testid="page-employer" className="max-w-4xl mx-auto">
           <Card className="mb-8" data-testid="employer-profile-card">
             <CardContent className="p-6">
               <div className="flex items-start gap-6">
@@ -283,13 +261,6 @@ export default function PortalEmployerPage() {
             </div>
           )}
         </div>
-      </main>
-
-      <footer className="border-t py-4 mt-8">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          Powered by Community Canvas
-        </div>
-      </footer>
-    </div>
+      </PortalBrandedShell>
   );
 }

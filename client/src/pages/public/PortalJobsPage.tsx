@@ -5,6 +5,7 @@ import {
   Search, MapPin, DollarSign, Clock, Briefcase, Building2, Home,
   ChevronLeft, Filter, X, Calendar, ArrowUpDown, ExternalLink, Users
 } from 'lucide-react';
+import { PortalBrandedShell } from './components/PortalBrandedShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -519,15 +520,20 @@ export default function PortalJobsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background" data-testid="page-portal-jobs">
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <Briefcase className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold capitalize">{portalSlug?.replace(/-/g, ' ')} Jobs</h1>
+    <PortalBrandedShell
+      portalSlug={portalSlug}
+      backHref={`/p/${portalSlug}`}
+      backLabel="Back to Portal"
+    >
+      <div data-testid="page-portal-jobs">
+        <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-40 -mx-6 -mt-6 px-6 pt-4 pb-4">
+          <div className="container mx-auto">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <Briefcase className="h-6 w-6 text-primary" />
+                <h1 className="text-xl font-bold capitalize">{portalSlug?.replace(/-/g, ' ')} Jobs</h1>
+              </div>
             </div>
-          </div>
           
           <div className="flex flex-col md:flex-row gap-3">
             <form onSubmit={handleSearch} className="flex flex-1 gap-2">
@@ -824,13 +830,8 @@ export default function PortalJobsPage() {
             </div>
           </div>
         )}
-      </main>
-
-      <footer className="border-t py-4 mt-8">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          Powered by Community Canvas
-        </div>
-      </footer>
-    </div>
+        </main>
+      </div>
+    </PortalBrandedShell>
   );
 }
