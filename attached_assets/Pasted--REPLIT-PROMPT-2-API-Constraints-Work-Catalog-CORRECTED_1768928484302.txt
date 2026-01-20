@@ -1,0 +1,122 @@
+✅ REPLIT PROMPT 2 — API (Constraints + Work Catalog) — CORRECTED
+
+Paste verbatim into Replit
+
+Add tenant-scoped APIs for property access constraints and work catalog.
+IMPORTANT: “Job” means employment in this platform. Maintenance items are Work Requests (cc_maintenance_requests). Do not use “job” terminology in these APIs.
+
+A) Access Constraints CRUD
+
+Endpoints:
+
+GET /api/p2/app/access-constraints/:entityType/:entityId
+
+PUT /api/p2/app/access-constraints/:entityType/:entityId
+
+Rules:
+
+entityType='property' maps to cc_properties
+
+entityType='work_request' maps to cc_maintenance_requests
+
+enforce permission by verifying the entity belongs to the current tenant (and for property, use the existing Host Properties access logic)
+
+Payload:
+
+{ "access": { ... } }
+
+B) Resolve Effective Constraints
+
+Endpoint:
+
+GET /api/p2/app/access-constraints/resolve
+
+Query params:
+
+propertyId (required)
+
+workRequestId (optional)
+
+portalId (optional)
+
+Merge order (deterministic):
+
+portal
+
+property
+
+work_request
+
+Merge rules:
+
+booleans → OR
+
+access.last_mile.distance_m, access.last_mile.elevation_gain_m → MAX
+
+access.environment.max_wind_kts → MIN
+
+access.vertical.elevator.door_width_cm → MIN
+
+access.vertical.elevator.load_kg → MIN
+
+arrays → union unique
+
+strings/enums → work_request overrides property overrides portal
+
+Return:
+
+{
+  "ok": true,
+  "effective": { ... },
+  "sources": { "portal":..., "property":..., "work_request":... }
+}
+
+C) Work Areas
+
+Endpoints:
+
+GET /api/p2/app/properties/:propertyId/work-areas
+
+POST /api/p2/app/properties/:propertyId/work-areas
+
+PUT /api/p2/app/work-areas/:workAreaId
+
+DELETE /api/p2/app/work-areas/:workAreaId
+
+D) Work Media
+
+Endpoints:
+
+GET /api/p2/app/work-media?propertyId=&workAreaId=&portalId=
+
+POST /api/p2/app/work-media
+
+PUT /api/p2/app/work-media/:id
+
+DELETE /api/p2/app/work-media/:id
+
+Notes:
+
+cc_work_media is for maintenance/contractor context photos, not marketing.
+
+Use existing media upload flows; media_id references the existing media system.
+
+E) Work Request linkage (NO schema change)
+
+When saving a maintenance work request, allow storing:
+
+cc_maintenance_requests.details.work_area_id = "<uuid>"
+
+Do NOT touch employment job tables.
+
+Acceptance:
+
+Property constraints persist (entity_type='property')
+
+Work request constraints persist (entity_type='work_request')
+
+Effective constraints resolve correctly
+
+Work areas + photos CRUD works
+
+No “job” terminology used for maintenance flows
