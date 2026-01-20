@@ -1,0 +1,76 @@
+You are validating Community Canvas / CivOS V3.5 for platform completion.
+Do NOT implement features. Proof + verification only.
+
+Goal: Produce a final completion artifact at:
+proof/v3.5/final-completion.md
+and ensure certification outputs are current.
+
+PART A — RUN CERTIFICATION SUITE
+1) Run the existing V3.5 certification script (the one that generates proof bundles).
+2) Confirm:
+- terminology scan = 0 violations (no “book/booking” anywhere)
+- invariants: ledger immutability assumptions hold
+- portal scoping checks pass
+- route inventory generation succeeds
+Write the exact command used and the PASS/FAIL results.
+
+PART B — UI COVERAGE MAP (Role → Routes)
+Generate an explicit matrix:
+Roles:
+- Guest/Public
+- Participant
+- Host
+- Operator
+- Crew
+- Fleet Manager
+- Tenant Admin
+- Platform Admin
+
+For each role:
+- list visible nav sections
+- list registered routes/pages under /app and public routes
+- mark each as ✅ implemented with file path
+
+PART C — API COVERAGE MAP (Subsystem → Endpoints)
+Group endpoints by subsystem and list:
+- Reservations / Holds / Risk
+- Folios / Ledger
+- Messaging / Conversations
+- Notifications
+- Jobs + Applicant messaging
+- Circles
+- Fleet
+- Housekeeping
+- Admin
+- Platform
+
+For each group:
+- list routes + methods
+- identify auth model (session/tenant/platform)
+- identify scoping primitive (tenant_id/portal_id/circle_id)
+
+PART D — WORKFLOW COMPLETION CHECKLIST (Shippable Flows)
+Create a checklist (✅/⚠️) for these flows, referencing UI routes + endpoints:
+1) Public: Availability → Proposal → Hold → Invite → Split Pay → Confirm
+2) Participant: My Trips → Trip detail
+3) Messaging: /app/messages + notifications + unread badges + mark-read
+4) Jobs: Applicant applies → My Applications → Threaded messaging with operator
+5) Circles: create → add member → delegate → revoke
+6) Fleet: dashboard → asset detail → maintenance create
+7) Housekeeping: task detail → before/after/issue photos upload
+8) Admin: roles → settings → folios list/detail
+9) Platform: tenants list/detail → analytics → cert status card
+
+PART E — OUTPUT ARTIFACTS
+Write final-completion.md with:
+- Build identifier (git SHA if available)
+- Certification results summary
+- Role/Route matrix
+- Subsystem/API matrix
+- Workflow checklist
+- Known limitations (only if evidence-based; no speculation)
+- Links/paths to supporting proof files in ./proof/v3.5/
+
+Do not add new code. Only generate the proof doc and ensure existing proof outputs are up to date.
+
+END.
