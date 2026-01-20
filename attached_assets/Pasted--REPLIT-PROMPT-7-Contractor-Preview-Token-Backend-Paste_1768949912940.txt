@@ -1,0 +1,77 @@
+✅ REPLIT PROMPT 7 — Contractor Preview Token (Backend)
+
+Paste verbatim:
+
+Implement a safe "Preview as Contractor" feature for Work Requests without weakening security.
+
+Constraints:
+- Contractor disclosure endpoint currently rejects owner/admin. Keep that behavior for normal auth.
+- Preview must NOT expose undisclosed data.
+- Preview must be single-use and short-lived.
+
+A) Create preview token table
+
+Migration: create cc_work_disclosure_preview_tokens
+
+Columns:
+- id uuid PK default random
+- tenant_id uuid not null
+- work_request_id uuid not null references cc_maintenance_requests(id) on delete cascade
+- contractor_person_id uuid not null references cc_people(id) on delete cascade
+- token text not null unique
+- expires_at timestamptz not null
+- used_at timestamptz null
+- created_by_user_id uuid not null
+- created_at timestamptz not null default now()
+
+Indexes:
+- (tenant_id, work_request_id, contractor_person_id)
+- (token)
+
+RLS:
+- tenant isolation with is_service_mode() bypass
+
+B) API to mint preview token (owner/admin only)
+
+POST /api/p2/app/work-disclosures/preview-token
+Body:
+{ workRequestId: uuid, contractorPersonId: uuid }
+
+Rules:
+- requireOwnerOrAdmin()
+- validate work request belongs to tenant
+- validate contractorPersonId belongs to tenant and is entity_type='contractor'
+- expires_at = now() + 15 minutes
+- token should be cryptographically random (e.g. 32+ bytes base64url)
+- mark used_at null on create
+
+Return:
+{ ok: true, token, expiresAt }
+
+Write audit row:
+action='preview_token_created' payload includes workRequestId, contractorPersonId, expiresAt
+
+C) Update contractor disclosure endpoint to accept preview token
+
+Route: GET /api/p2/app/work-disclosures/contractor/:workRequestId
+Add optional query param: ?previewToken=...
+
+Behavior:
+- If previewToken provided:
+  - validate token exists, tenant_id matches, work_request_id matches, expires_at > now, used_at is null
+  - set "acting contractorPersonId" = token.contractor_person_id
+  - mark token.used_at = now() (single-use)
+  - return the same disclosed-only response as contractor would see for that contractorPersonId
+  - write audit action='preview_token_used'
+- If no previewToken:
+  - keep existing contractor-auth logic exactly
+
+Important:
+- Preview token must not grant access beyond what disclosures allow.
+- If token invalid/expired/used, return 403 with reason and audit action='view_denied' reason='invalid_preview_token'
+
+Acceptance:
+- Owner/admin can generate preview token for a selected contractor
+- Opening contractor view with previewToken shows only disclosed items
+- Token can be used once and expires
+- Contractor endpoint remains contractor-only unless previewToken is present

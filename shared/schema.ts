@@ -2468,6 +2468,30 @@ export const insertWorkDisclosureAuditSchema = createInsertSchema(ccWorkDisclosu
 export type WorkDisclosureAudit = typeof ccWorkDisclosureAudit.$inferSelect;
 export type InsertWorkDisclosureAudit = z.infer<typeof insertWorkDisclosureAuditSchema>;
 
+// ============ WORK DISCLOSURE PREVIEW TOKENS ============
+// Note: Foreign key to cc_people is omitted as table is not in Drizzle schema
+// Validation is done at API level via validateContractorPersonId()
+export const ccWorkDisclosurePreviewTokens = pgTable('cc_work_disclosure_preview_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  workRequestId: uuid('work_request_id').notNull(),
+  contractorPersonId: uuid('contractor_person_id').notNull(),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdByUserId: uuid('created_by_user_id').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  tenantWorkRequestIdx: index('cc_work_disclosure_preview_tokens_tenant_work_request_idx').on(table.tenantId, table.workRequestId, table.contractorPersonId),
+  tokenIdx: index('cc_work_disclosure_preview_tokens_token_idx').on(table.token),
+}));
+
+export const insertWorkDisclosurePreviewTokenSchema = createInsertSchema(ccWorkDisclosurePreviewTokens).omit({
+  id: true, createdAt: true, usedAt: true
+});
+export type WorkDisclosurePreviewToken = typeof ccWorkDisclosurePreviewTokens.$inferSelect;
+export type InsertWorkDisclosurePreviewToken = z.infer<typeof insertWorkDisclosurePreviewTokenSchema>;
+
 // ============ SUBSYSTEM CATALOG (GLOBAL) ============
 export const ccSubsystemCatalog = pgTable('cc_subsystem_catalog', {
   id: uuid('id').primaryKey().defaultRandom(),

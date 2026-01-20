@@ -11,6 +11,7 @@
 import { Router } from 'express';
 import { pool } from '../db';
 import { z } from 'zod';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -975,96 +976,193 @@ router.delete('/work-disclosures/:id', async (req: any, res) => {
  * GET /api/p2/app/work-disclosures/contractor/:workRequestId
  * Get disclosed items for a contractor (read-only view)
  * 
- * PROMPT 5 COMPLIANCE: This endpoint is for contractors ONLY.
+ * PROMPT 5 COMPLIANCE: This endpoint is for contractors ONLY (unless previewToken provided).
  * Owners/admins should use full-access endpoints (GET /work-disclosures/work-request/:id)
  * 
+ * PROMPT 7: Accepts optional ?previewToken query param for owner/admin preview
+ * 
  * AUTHORIZATION:
- * 1. Get the requester's cc_people contractor record (validates entity_type='contractor')
- * 2. If none exists, return 403
- * 3. Allow access only if EITHER:
- *    (a) workRequest.assigned_contractor_person_id == requester contractorPersonId
- *    OR
- *    (b) there exists a disclosure row with visibility='specific_contractor' 
- *        and specific_contractor_id == requester contractorPersonId
+ * If previewToken provided:
+ *   - Validate token exists, matches work_request_id, not expired, not used
+ *   - Mark token used (single-use)
+ *   - Return disclosed items for the token's contractorPersonId
+ * 
+ * If no previewToken:
+ *   1. Get the requester's cc_people contractor record (validates entity_type='contractor')
+ *   2. If none exists, return 403
+ *   3. Allow access only if EITHER:
+ *      (a) workRequest.assigned_contractor_person_id == requester contractorPersonId
+ *      OR
+ *      (b) there exists a disclosure row with visibility='specific_contractor' 
+ *          and specific_contractor_id == requester contractorPersonId
  */
 router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) => {
   try {
-    const auth = await requireTenantMember(req, res);
-    if (!auth) return;
-
     const { workRequestId } = req.params;
+    const { previewToken } = req.query;
 
-    // PROMPT 5: This endpoint is contractor-only. Owners/admins should use full-access endpoints.
-    const allowedRoles = ['owner', 'admin', 'manager'];
-    const isOwnerOrAdmin = allowedRoles.includes(auth.role);
-    if (isOwnerOrAdmin) {
-      return res.status(403).json({ 
-        ok: false, 
-        error: 'This endpoint is for contractors only. Use /work-disclosures/work-request/:id for full access.' 
-      });
-    }
+    let tenantId: string;
+    let actingContractorId: string;
+    let actorUserId: string | null = null;
+    let isPreviewMode = false;
 
-    // Verify the work request belongs to the tenant
-    const wrCheck = await pool.query(`
-      SELECT wr.id, wr.assigned_contractor_person_id
-      FROM cc_maintenance_requests wr
-      JOIN cc_portals p ON wr.portal_id = p.id
-      WHERE wr.id = $1 AND p.owning_tenant_id = $2
-    `, [workRequestId, auth.tenantId]);
-
-    if (wrCheck.rows.length === 0) {
-      return res.status(404).json({ ok: false, error: 'Work request not found' });
-    }
-    
-    // Step 1: Get the requester's cc_people contractor record (validates entity_type='contractor')
-    const userPerson = await getUserContractorRecord(auth.tenantId, auth.userId);
-    
-    if (!userPerson) {
-      // No person record - log and deny
-      await pool.query(`
-        INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
-        VALUES ($1, $2, $3, NULL, 'view_denied', $4)
-      `, [auth.tenantId, workRequestId, auth.userId, JSON.stringify({ reason: 'no_contractor_record' })]);
+    // PROMPT 7: Handle preview token flow
+    if (previewToken && typeof previewToken === 'string') {
+      isPreviewMode = true;
       
-      return res.status(403).json({ ok: false, error: 'No contractor profile linked to your account' });
-    }
-    
-    const requesterContractorId = userPerson.id;
-    const assignedContractorId = wrCheck.rows[0].assigned_contractor_person_id;
-    
-    // Step 2: Check authorization - assignment OR specific disclosure
-    const isAssigned = assignedContractorId === requesterContractorId;
-    
-    // Check for specific_contractor disclosure
-    const specificDisclosureCheck = await pool.query(`
-      SELECT 1 FROM cc_work_disclosures
-      WHERE work_request_id = $1 AND tenant_id = $2 
-        AND visibility = 'specific_contractor' AND specific_contractor_id = $3
-      LIMIT 1
-    `, [workRequestId, auth.tenantId, requesterContractorId]);
-    
-    const hasSpecificDisclosure = specificDisclosureCheck.rows.length > 0;
-    
-    if (!isAssigned && !hasSpecificDisclosure) {
-      // Log denied access attempt with requester's contractor ID
+      // Validate token
+      const tokenResult = await pool.query(`
+        SELECT t.*, p.owning_tenant_id as tenant_id
+        FROM cc_work_disclosure_preview_tokens t
+        JOIN cc_maintenance_requests wr ON t.work_request_id = wr.id
+        JOIN cc_portals p ON wr.portal_id = p.id
+        WHERE t.token = $1 AND t.work_request_id = $2
+      `, [previewToken, workRequestId]);
+
+      if (tokenResult.rows.length === 0) {
+        // Try to get tenant for audit logging
+        const wrCheck = await pool.query(`
+          SELECT p.owning_tenant_id FROM cc_maintenance_requests wr
+          JOIN cc_portals p ON wr.portal_id = p.id
+          WHERE wr.id = $1
+        `, [workRequestId]);
+        
+        if (wrCheck.rows.length > 0) {
+          await pool.query(`
+            INSERT INTO cc_work_disclosure_audit 
+              (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+            VALUES ($1, $2, NULL, NULL, 'view_denied', $3)
+          `, [wrCheck.rows[0].owning_tenant_id, workRequestId, JSON.stringify({ reason: 'invalid_preview_token' })]);
+        }
+        
+        return res.status(403).json({ ok: false, error: 'Invalid preview token' });
+      }
+
+      const tokenRow = tokenResult.rows[0];
+      tenantId = tokenRow.tenant_id;
+      actorUserId = tokenRow.created_by_user_id;
+
+      // Check if token is expired
+      if (new Date(tokenRow.expires_at) < new Date()) {
+        await pool.query(`
+          INSERT INTO cc_work_disclosure_audit 
+            (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+          VALUES ($1, $2, $3, $4, 'view_denied', $5)
+        `, [tenantId, workRequestId, actorUserId, tokenRow.contractor_person_id, 
+            JSON.stringify({ reason: 'preview_token_expired' })]);
+        
+        return res.status(403).json({ ok: false, error: 'Preview token expired' });
+      }
+
+      // Check if token already used
+      if (tokenRow.used_at) {
+        await pool.query(`
+          INSERT INTO cc_work_disclosure_audit 
+            (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+          VALUES ($1, $2, $3, $4, 'view_denied', $5)
+        `, [tenantId, workRequestId, actorUserId, tokenRow.contractor_person_id,
+            JSON.stringify({ reason: 'preview_token_already_used' })]);
+        
+        return res.status(403).json({ ok: false, error: 'Preview token already used' });
+      }
+
+      // Mark token as used (single-use)
       await pool.query(`
-        INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
-        VALUES ($1, $2, $3, $4, 'view_denied', $5)
-      `, [
-        auth.tenantId, workRequestId, auth.userId, requesterContractorId, 
-        JSON.stringify({ 
-          reason: 'not_authorized', 
-          requesterContractorId, 
-          assignedContractorId,
-          hasSpecificDisclosure: false
-        })
-      ]);
+        UPDATE cc_work_disclosure_preview_tokens SET used_at = NOW() WHERE id = $1
+      `, [tokenRow.id]);
+
+      // Log successful preview
+      await pool.query(`
+        INSERT INTO cc_work_disclosure_audit 
+          (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+        VALUES ($1, $2, $3, $4, 'preview_token_used', $5)
+      `, [tenantId, workRequestId, actorUserId, tokenRow.contractor_person_id,
+          JSON.stringify({ tokenId: tokenRow.id })]);
+
+      actingContractorId = tokenRow.contractor_person_id;
       
-      return res.status(403).json({ ok: false, error: 'You are not authorized to access this work request' });
+    } else {
+      // Standard contractor auth flow (no preview token)
+      const auth = await requireTenantMember(req, res);
+      if (!auth) return;
+
+      // PROMPT 5: This endpoint is contractor-only. Owners/admins should use full-access endpoints.
+      const allowedRoles = ['owner', 'admin', 'manager'];
+      const isOwnerOrAdmin = allowedRoles.includes(auth.role);
+      if (isOwnerOrAdmin) {
+        return res.status(403).json({ 
+          ok: false, 
+          error: 'This endpoint is for contractors only. Use /work-disclosures/work-request/:id for full access.' 
+        });
+      }
+
+      tenantId = auth.tenantId;
+      actorUserId = auth.userId;
+
+      // Verify the work request belongs to the tenant
+      const wrCheck = await pool.query(`
+        SELECT wr.id, wr.assigned_contractor_person_id
+        FROM cc_maintenance_requests wr
+        JOIN cc_portals p ON wr.portal_id = p.id
+        WHERE wr.id = $1 AND p.owning_tenant_id = $2
+      `, [workRequestId, tenantId]);
+
+      if (wrCheck.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'Work request not found' });
+      }
+      
+      // Step 1: Get the requester's cc_people contractor record (validates entity_type='contractor')
+      const userPerson = await getUserContractorRecord(tenantId, auth.userId);
+      
+      if (!userPerson) {
+        // No person record - log and deny
+        await pool.query(`
+          INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+          VALUES ($1, $2, $3, NULL, 'view_denied', $4)
+        `, [tenantId, workRequestId, auth.userId, JSON.stringify({ reason: 'no_contractor_record' })]);
+        
+        return res.status(403).json({ ok: false, error: 'No contractor profile linked to your account' });
+      }
+      
+      const requesterContractorId = userPerson.id;
+      const assignedContractorId = wrCheck.rows[0].assigned_contractor_person_id;
+      
+      // Step 2: Check authorization - assignment OR specific disclosure
+      const isAssigned = assignedContractorId === requesterContractorId;
+      
+      // Check for specific_contractor disclosure
+      const specificDisclosureCheck = await pool.query(`
+        SELECT 1 FROM cc_work_disclosures
+        WHERE work_request_id = $1 AND tenant_id = $2 
+          AND visibility = 'specific_contractor' AND specific_contractor_id = $3
+        LIMIT 1
+      `, [workRequestId, tenantId, requesterContractorId]);
+      
+      const hasSpecificDisclosure = specificDisclosureCheck.rows.length > 0;
+      
+      if (!isAssigned && !hasSpecificDisclosure) {
+        // Log denied access attempt with requester's contractor ID
+        await pool.query(`
+          INSERT INTO cc_work_disclosure_audit (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+          VALUES ($1, $2, $3, $4, 'view_denied', $5)
+        `, [
+          tenantId, workRequestId, auth.userId, requesterContractorId, 
+          JSON.stringify({ 
+            reason: 'not_authorized', 
+            requesterContractorId, 
+            assignedContractorId,
+            hasSpecificDisclosure: false
+          })
+        ]);
+        
+        return res.status(403).json({ ok: false, error: 'You are not authorized to access this work request' });
+      }
+
+      actingContractorId = requesterContractorId;
     }
 
-    // Get disclosed items only - includes work_areas, work_media, access_constraints,
-    // subsystems, and on_site_resources
+    // Get disclosed items for the acting contractor (either real contractor or preview)
+    // Filter by visibility: 'contractor' (all contractors) or 'specific_contractor' matching this contractor
     const result = await pool.query(`
       SELECT d.item_type, d.item_id,
              wa.title as work_area_title, wa.description as work_area_description, wa.tags as work_area_tags,
@@ -1080,8 +1178,12 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
       LEFT JOIN cc_property_subsystems ps ON d.item_type = 'subsystem' AND d.item_id = ps.id
       LEFT JOIN cc_on_site_resources osr ON d.item_type = 'on_site_resource' AND d.item_id = osr.id
       WHERE d.work_request_id = $1 AND d.tenant_id = $2
+        AND (
+          d.visibility = 'contractor' 
+          OR (d.visibility = 'specific_contractor' AND d.specific_contractor_id = $3)
+        )
       ORDER BY d.item_type, d.created_at
-    `, [workRequestId, auth.tenantId]);
+    `, [workRequestId, tenantId, actingContractorId]);
 
     // Group by type
     const grouped: Record<string, any[]> = {};
@@ -1090,9 +1192,94 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
       grouped[row.item_type].push(row);
     }
 
-    res.json({ ok: true, disclosedItems: grouped });
+    const response: any = { ok: true, disclosedItems: grouped };
+    if (isPreviewMode) {
+      response.previewFor = { contractorPersonId: actingContractorId, workRequestId };
+    }
+
+    res.json(response);
   } catch (error: any) {
     console.error('[WorkCatalog] GET contractor disclosures error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// PROMPT 7: PREVIEW TOKEN SYSTEM
+// ============================================================================
+
+const previewTokenSchema = z.object({
+  workRequestId: z.string().uuid(),
+  contractorPersonId: z.string().uuid()
+});
+
+/**
+ * POST /api/p2/app/work-disclosures/preview-token
+ * Mint a single-use, short-lived preview token for viewing disclosed items as contractor
+ * 
+ * PROMPT 7: Only owner/admin can mint preview tokens.
+ * Token expires in 15 minutes and is single-use.
+ */
+router.post('/work-disclosures/preview-token', async (req: any, res) => {
+  try {
+    const auth = await requireOwnerOrAdmin(req, res);
+    if (!auth) return;
+
+    const parsed = previewTokenSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: 'Invalid request body', details: parsed.error.flatten() });
+    }
+
+    const { workRequestId, contractorPersonId } = parsed.data;
+
+    // Validate work request belongs to tenant
+    const wrCheck = await pool.query(`
+      SELECT wr.id FROM cc_maintenance_requests wr
+      JOIN cc_portals p ON wr.portal_id = p.id
+      WHERE wr.id = $1 AND p.owning_tenant_id = $2
+    `, [workRequestId, auth.tenantId]);
+
+    if (wrCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Work request not found' });
+    }
+
+    // Validate contractor person belongs to tenant and is contractor type
+    const isValidContractor = await validateContractorPersonId(auth.tenantId, contractorPersonId);
+    if (!isValidContractor) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Invalid contractor: must belong to tenant and have entity_type=contractor' 
+      });
+    }
+
+    // Generate cryptographically random token (32 bytes = 256 bits)
+    const token = crypto.randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Insert token
+    await pool.query(`
+      INSERT INTO cc_work_disclosure_preview_tokens 
+        (tenant_id, work_request_id, contractor_person_id, token, expires_at, created_by_user_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [auth.tenantId, workRequestId, contractorPersonId, token, expiresAt, auth.userId]);
+
+    // Audit log with full details per PROMPT 7 spec
+    await pool.query(`
+      INSERT INTO cc_work_disclosure_audit 
+        (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+      VALUES ($1, $2, $3, $4, 'preview_token_created', $5)
+    `, [
+      auth.tenantId, workRequestId, auth.userId, contractorPersonId,
+      JSON.stringify({ 
+        workRequestId, 
+        contractorPersonId, 
+        expiresAt: expiresAt.toISOString() 
+      })
+    ]);
+
+    res.json({ ok: true, token, expiresAt: expiresAt.toISOString() });
+  } catch (error: any) {
+    console.error('[WorkCatalog] POST preview-token error:', error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
