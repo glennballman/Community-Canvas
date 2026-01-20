@@ -103,22 +103,20 @@ p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
     const userId = (req as any).user?.id as string | undefined;
     const tenantId = getTenantId(req);
     
-    // If no authenticated user, return 0 (circle participation also requires individual_id)
-    if (!userId) {
+    // Require both user and tenant context for security
+    // This prevents cross-tenant data leakage
+    if (!userId || !tenantId) {
       return res.json({ ok: true, count: 0 });
     }
 
     // Look up party_id for tenant-based participation (owner/contractor)
-    let partyId: string | null = null;
-    if (tenantId) {
-      const partyResult = await pool.query(`
-        SELECT id FROM cc_parties
-        WHERE tenant_id = $1 AND party_kind = 'organization'
-        ORDER BY created_at ASC
-        LIMIT 1
-      `, [tenantId]);
-      partyId = partyResult.rows[0]?.id || null;
-    }
+    const partyResult = await pool.query(`
+      SELECT id FROM cc_parties
+      WHERE tenant_id = $1 AND party_kind = 'organization'
+      ORDER BY created_at ASC
+      LIMIT 1
+    `, [tenantId]);
+    const partyId: string | null = partyResult.rows[0]?.id || null;
 
     // Count unread messages for conversations the user participates in
     // A message is unread if:
@@ -133,7 +131,7 @@ p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
     // C) circle_id where user is an active member of that circle
     // 
     // UNION (not UNION ALL) + DISTINCT prevents double-counting
-    // Tenant scoping: cc_circle_members.tenant_id enforces circle membership is tenant-scoped
+    // Tenant scoping: cm.tenant_id = $3 enforces circle membership is tenant-scoped (non-optional)
     const result = await pool.query(`
       WITH user_participations AS (
         -- Direct participation (individual or party)
@@ -151,7 +149,7 @@ p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
 
         UNION
 
-        -- Circle-derived participation
+        -- Circle-derived participation (tenant-scoped, non-optional)
         SELECT DISTINCT
           p.id AS participant_id,
           p.conversation_id,
@@ -161,7 +159,7 @@ p2DashboardRouter.get("/messages/unread-count", async (req, res) => {
           ON cm.circle_id = p.circle_id
          AND cm.individual_id = $1
          AND cm.is_active = true
-         AND ($3::uuid IS NULL OR cm.tenant_id = $3::uuid)
+         AND cm.tenant_id = $3::uuid
         WHERE p.is_active = true
           AND p.circle_id IS NOT NULL
       )
