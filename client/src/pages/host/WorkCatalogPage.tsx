@@ -17,8 +17,9 @@ import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, Plus, Trash2, Edit, Save, X, Image, FileText, 
   Loader2, Mountain, Wind, Sun, Footprints, Building, Users,
-  ChevronRight, Upload, Camera
+  ChevronRight, Upload, Camera, Settings, Package, Wrench, Lock
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface WorkArea {
   id: string;
@@ -51,6 +52,41 @@ interface AccessConstraints {
   windThresholdKts?: number;
 }
 
+interface SubsystemCatalogItem {
+  id: string;
+  key: string;
+  title: string;
+  description: string | null;
+  tags: string[];
+  isSensitive: boolean;
+}
+
+interface PropertySubsystem {
+  id: string;
+  catalogKey: string | null;
+  customKey: string | null;
+  title: string;
+  description: string | null;
+  tags: string[];
+  visibility: 'private' | 'contractor';
+  isSensitive: boolean;
+}
+
+interface OnSiteResource {
+  id: string;
+  resourceType: 'tool' | 'material';
+  name: string;
+  description: string | null;
+  quantity: number | null;
+  unit: string | null;
+  condition: string | null;
+  tags: string[];
+  storageLocation: string | null;
+  sharePolicy: 'private' | 'disclosable' | 'offerable';
+  suggestedPriceAmount: number | null;
+  suggestedPriceCurrency: string | null;
+}
+
 function getAuthHeaders() {
   const token = localStorage.getItem('hostToken');
   return { 'Authorization': `Bearer ${token}` };
@@ -76,6 +112,19 @@ export default function WorkCatalogPage({ propertyId, portalId, onBack }: WorkCa
   const [communityMediaForm, setCommunityMediaForm] = useState({ url: '', title: '', notes: '', tags: '' });
   const [constraints, setConstraints] = useState<AccessConstraints>({});
   const [constraintsDirty, setConstraintsDirty] = useState(false);
+  
+  // Subsystems state
+  const [showSubsystemModal, setShowSubsystemModal] = useState(false);
+  const [subsystemForm, setSubsystemForm] = useState({ catalogKey: '', customKey: '', title: '', description: '' });
+  
+  // Resources state
+  const [showResourceModal, setShowResourceModal] = useState(false);
+  const [resourceForm, setResourceForm] = useState({
+    resourceType: 'tool' as 'tool' | 'material',
+    name: '', description: '', quantity: '', unit: '', condition: '', 
+    storageLocation: '', sharePolicy: 'private' as 'private' | 'disclosable' | 'offerable',
+    suggestedPriceAmount: ''
+  });
 
   // Fetch access constraints
   const { data: constraintsData, isLoading: loadingConstraints } = useQuery({
@@ -135,6 +184,38 @@ export default function WorkCatalogPage({ propertyId, portalId, onBack }: WorkCa
       return res.json();
     },
     enabled: !!portalId
+  });
+
+  // Fetch subsystem catalog (global)
+  const { data: catalogData } = useQuery<{ catalog: SubsystemCatalogItem[] }>({
+    queryKey: ['/api/p2/app/subsystem-catalog'],
+    queryFn: async () => {
+      const res = await fetch('/api/p2/app/subsystem-catalog', { headers: getAuthHeaders() });
+      if (!res.ok) return { catalog: [] };
+      return res.json();
+    }
+  });
+
+  // Fetch property subsystems
+  const { data: subsystemsData, isLoading: loadingSubsystems } = useQuery<{ subsystems: PropertySubsystem[] }>({
+    queryKey: ['/api/p2/app/properties', propertyId, 'subsystems'],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/app/properties/${propertyId}/subsystems`, { headers: getAuthHeaders() });
+      if (!res.ok) return { subsystems: [] };
+      return res.json();
+    },
+    enabled: !!propertyId
+  });
+
+  // Fetch on-site resources
+  const { data: resourcesData, isLoading: loadingResources } = useQuery<{ resources: OnSiteResource[] }>({
+    queryKey: ['/api/p2/app/properties', propertyId, 'on-site-resources'],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/app/properties/${propertyId}/on-site-resources`, { headers: getAuthHeaders() });
+      if (!res.ok) return { resources: [] };
+      return res.json();
+    },
+    enabled: !!propertyId
   });
 
   // Mutations
@@ -286,6 +367,77 @@ export default function WorkCatalogPage({ propertyId, portalId, onBack }: WorkCa
     }
   });
 
+  // Subsystem mutations
+  const createSubsystemMutation = useMutation({
+    mutationFn: async (data: { catalogKey?: string; customKey?: string; title?: string; description?: string }) => {
+      const res = await fetch(`/api/p2/app/properties/${propertyId}/subsystems`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to add subsystem');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/app/properties', propertyId, 'subsystems'] });
+      setShowSubsystemModal(false);
+      setSubsystemForm({ catalogKey: '', customKey: '', title: '', description: '' });
+      toast({ title: 'Subsystem added' });
+    }
+  });
+
+  const deleteSubsystemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/p2/app/subsystems/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) throw new Error('Failed to delete subsystem');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/app/properties', propertyId, 'subsystems'] });
+      toast({ title: 'Subsystem removed' });
+    }
+  });
+
+  // Resource mutations
+  const createResourceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`/api/p2/app/properties/${propertyId}/on-site-resources`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to add resource');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/app/properties', propertyId, 'on-site-resources'] });
+      setShowResourceModal(false);
+      setResourceForm({
+        resourceType: 'tool', name: '', description: '', quantity: '', unit: '', condition: '',
+        storageLocation: '', sharePolicy: 'private', suggestedPriceAmount: ''
+      });
+      toast({ title: 'Resource added' });
+    }
+  });
+
+  const deleteResourceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/p2/app/on-site-resources/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) throw new Error('Failed to delete resource');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/app/properties', propertyId, 'on-site-resources'] });
+      toast({ title: 'Resource removed' });
+    }
+  });
+
   const resetAreaForm = () => {
     setAreaForm({ title: '', description: '', tags: '' });
     setEditingArea(null);
@@ -361,6 +513,38 @@ export default function WorkCatalogPage({ propertyId, portalId, onBack }: WorkCa
   const workMedia = mediaData?.workMedia || [];
   const communityMedia = communityMediaData?.workMedia || [];
   const selectedArea = workAreas.find(a => a.id === selectedAreaId);
+  
+  const subsystemCatalog = catalogData?.catalog || [];
+  const propertySubsystems = subsystemsData?.subsystems || [];
+  const onSiteResources = resourcesData?.resources || [];
+  const tools = onSiteResources.filter(r => r.resourceType === 'tool');
+  const materials = onSiteResources.filter(r => r.resourceType === 'material');
+
+  const handleAddSubsystem = () => {
+    if (subsystemForm.catalogKey) {
+      createSubsystemMutation.mutate({ catalogKey: subsystemForm.catalogKey });
+    } else if (subsystemForm.customKey && subsystemForm.title) {
+      createSubsystemMutation.mutate({
+        customKey: subsystemForm.customKey,
+        title: subsystemForm.title,
+        description: subsystemForm.description
+      });
+    }
+  };
+
+  const handleAddResource = () => {
+    createResourceMutation.mutate({
+      resourceType: resourceForm.resourceType,
+      name: resourceForm.name,
+      description: resourceForm.description || undefined,
+      quantity: resourceForm.quantity ? parseFloat(resourceForm.quantity) : undefined,
+      unit: resourceForm.unit || undefined,
+      condition: resourceForm.condition || undefined,
+      storageLocation: resourceForm.storageLocation || undefined,
+      sharePolicy: resourceForm.sharePolicy,
+      suggestedPriceAmount: resourceForm.suggestedPriceAmount ? parseFloat(resourceForm.suggestedPriceAmount) : undefined
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -378,9 +562,11 @@ export default function WorkCatalogPage({ propertyId, portalId, onBack }: WorkCa
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex-wrap">
           <TabsTrigger value="access" data-testid="tab-access">Access Constraints</TabsTrigger>
           <TabsTrigger value="areas" data-testid="tab-areas">Work Areas</TabsTrigger>
+          <TabsTrigger value="subsystems" data-testid="tab-subsystems">Subsystems</TabsTrigger>
+          <TabsTrigger value="resources" data-testid="tab-resources">On-Site Resources</TabsTrigger>
           <TabsTrigger value="community" data-testid="tab-community">Community Use</TabsTrigger>
         </TabsList>
 
@@ -710,6 +896,165 @@ export default function WorkCatalogPage({ propertyId, portalId, onBack }: WorkCa
           </div>
         </TabsContent>
 
+        {/* Subsystems Tab */}
+        <TabsContent value="subsystems">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Property Subsystems
+                  </CardTitle>
+                  <CardDescription>
+                    Track building systems and equipment (HVAC, plumbing, electrical, etc.)
+                  </CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setShowSubsystemModal(true)} data-testid="button-add-subsystem">
+                  <Plus className="h-4 w-4 mr-1" /> Add Subsystem
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingSubsystems ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : propertySubsystems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Settings className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                  <p>No subsystems tracked yet</p>
+                  <p className="text-sm">Add subsystems to track their maintenance history</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {propertySubsystems.map(sub => (
+                    <div key={sub.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md" data-testid={`subsystem-item-${sub.id}`}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{sub.title}</span>
+                          {sub.isSensitive && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Sensitive
+                            </Badge>
+                          )}
+                          <Badge variant={sub.visibility === 'contractor' ? 'default' : 'outline'} className="text-xs">
+                            {sub.visibility === 'contractor' ? 'Shareable' : 'Private'}
+                          </Badge>
+                        </div>
+                        {sub.description && <p className="text-sm text-muted-foreground">{sub.description}</p>}
+                        {(sub.tags?.length ?? 0) > 0 && (
+                          <div className="flex gap-1 mt-1">
+                            {(sub.tags || []).map(tag => (
+                              <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => deleteSubsystemMutation.mutate(sub.id)} data-testid={`button-delete-subsystem-${sub.id}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* On-Site Resources Tab */}
+        <TabsContent value="resources">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    On-Site Resources
+                  </CardTitle>
+                  <CardDescription>
+                    Tools and materials available on the property
+                  </CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setShowResourceModal(true)} data-testid="button-add-resource">
+                  <Plus className="h-4 w-4 mr-1" /> Add Resource
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingResources ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : onSiteResources.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                  <p>No on-site resources tracked</p>
+                  <p className="text-sm">Add tools or materials available at the property</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {tools.length > 0 && (
+                    <div>
+                      <h3 className="font-medium mb-2 flex items-center gap-2">
+                        <Wrench className="h-4 w-4" /> Tools
+                      </h3>
+                      <div className="space-y-2">
+                        {tools.map(resource => (
+                          <div key={resource.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md" data-testid={`resource-item-${resource.id}`}>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{resource.name}</span>
+                                {resource.quantity && <Badge variant="outline" className="text-xs">{resource.quantity} {resource.unit}</Badge>}
+                                <Badge variant={resource.sharePolicy === 'private' ? 'outline' : resource.sharePolicy === 'offerable' ? 'default' : 'secondary'} className="text-xs">
+                                  {resource.sharePolicy === 'offerable' ? 'For Rent' : resource.sharePolicy === 'disclosable' ? 'Shareable' : 'Private'}
+                                </Badge>
+                              </div>
+                              {resource.description && <p className="text-sm text-muted-foreground">{resource.description}</p>}
+                              {resource.storageLocation && <p className="text-xs text-muted-foreground">Location: {resource.storageLocation}</p>}
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => deleteResourceMutation.mutate(resource.id)} data-testid={`button-delete-resource-${resource.id}`}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {materials.length > 0 && (
+                    <div>
+                      <h3 className="font-medium mb-2 flex items-center gap-2">
+                        <Package className="h-4 w-4" /> Materials
+                      </h3>
+                      <div className="space-y-2">
+                        {materials.map(resource => (
+                          <div key={resource.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md" data-testid={`resource-item-${resource.id}`}>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{resource.name}</span>
+                                {resource.quantity && <Badge variant="outline" className="text-xs">{resource.quantity} {resource.unit}</Badge>}
+                                <Badge variant={resource.sharePolicy === 'private' ? 'outline' : resource.sharePolicy === 'offerable' ? 'default' : 'secondary'} className="text-xs">
+                                  {resource.sharePolicy === 'offerable' ? 'For Rent' : resource.sharePolicy === 'disclosable' ? 'Shareable' : 'Private'}
+                                </Badge>
+                              </div>
+                              {resource.description && <p className="text-sm text-muted-foreground">{resource.description}</p>}
+                              {resource.storageLocation && <p className="text-xs text-muted-foreground">Location: {resource.storageLocation}</p>}
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => deleteResourceMutation.mutate(resource.id)} data-testid={`button-delete-resource-${resource.id}`}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Community Use Tab */}
         <TabsContent value="community">
           <Card>
@@ -964,6 +1309,217 @@ export default function WorkCatalogPage({ propertyId, portalId, onBack }: WorkCa
             >
               {createCommunityMediaMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Subsystem Modal */}
+      <Dialog open={showSubsystemModal} onOpenChange={setShowSubsystemModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Subsystem</DialogTitle>
+            <DialogDescription>
+              Add a building system or equipment to track for this property
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Select from Catalog</Label>
+              <Select 
+                value={subsystemForm.catalogKey} 
+                onValueChange={(val) => setSubsystemForm({ catalogKey: val, customKey: '', title: '', description: '' })}
+                disabled={!!subsystemForm.customKey || !!subsystemForm.title}
+              >
+                <SelectTrigger data-testid="select-subsystem-catalog">
+                  <SelectValue placeholder="Choose a subsystem..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {subsystemCatalog.map(item => (
+                    <SelectItem key={item.key} value={item.key}>
+                      <span className="flex items-center gap-2">
+                        {item.title} {item.isSensitive && <Lock className="h-3 w-3 text-muted-foreground" />}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Separator className="flex-1" />
+              <span>or add custom</span>
+              <Separator className="flex-1" />
+            </div>
+
+            <div>
+              <Label>Custom Key</Label>
+              <Input
+                value={subsystemForm.customKey}
+                onChange={(e) => setSubsystemForm(f => ({ ...f, customKey: e.target.value, catalogKey: '' }))}
+                placeholder="e.g., custom:generator"
+                disabled={!!subsystemForm.catalogKey}
+                data-testid="input-subsystem-custom-key"
+              />
+            </div>
+            <div>
+              <Label>Custom Title</Label>
+              <Input
+                value={subsystemForm.title}
+                onChange={(e) => setSubsystemForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="e.g., Backup Generator"
+                disabled={!!subsystemForm.catalogKey}
+                data-testid="input-subsystem-title"
+              />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea
+                value={subsystemForm.description}
+                onChange={(e) => setSubsystemForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Optional description..."
+                rows={2}
+                disabled={!!subsystemForm.catalogKey}
+                data-testid="input-subsystem-description"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSubsystemModal(false)}>Cancel</Button>
+            <Button 
+              onClick={handleAddSubsystem} 
+              disabled={(!subsystemForm.catalogKey && (!subsystemForm.customKey || !subsystemForm.title)) || createSubsystemMutation.isPending}
+              data-testid="button-save-subsystem"
+            >
+              {createSubsystemMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Add Subsystem
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Resource Modal */}
+      <Dialog open={showResourceModal} onOpenChange={setShowResourceModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add On-Site Resource</DialogTitle>
+            <DialogDescription>
+              Add a tool or material available at this property
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Resource Type</Label>
+              <Select 
+                value={resourceForm.resourceType} 
+                onValueChange={(val: 'tool' | 'material') => setResourceForm(f => ({ ...f, resourceType: val }))}
+              >
+                <SelectTrigger data-testid="select-resource-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tool">Tool</SelectItem>
+                  <SelectItem value="material">Material</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={resourceForm.name}
+                onChange={(e) => setResourceForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="e.g., Extension Ladder, Marine Paint"
+                data-testid="input-resource-name"
+              />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea
+                value={resourceForm.description}
+                onChange={(e) => setResourceForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Optional description..."
+                rows={2}
+                data-testid="input-resource-description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={resourceForm.quantity}
+                  onChange={(e) => setResourceForm(f => ({ ...f, quantity: e.target.value }))}
+                  placeholder="e.g., 2"
+                  data-testid="input-resource-quantity"
+                />
+              </div>
+              <div>
+                <Label>Unit</Label>
+                <Input
+                  value={resourceForm.unit}
+                  onChange={(e) => setResourceForm(f => ({ ...f, unit: e.target.value }))}
+                  placeholder="e.g., gallons, ft"
+                  data-testid="input-resource-unit"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Condition</Label>
+              <Input
+                value={resourceForm.condition}
+                onChange={(e) => setResourceForm(f => ({ ...f, condition: e.target.value }))}
+                placeholder="e.g., Good, Needs repair"
+                data-testid="input-resource-condition"
+              />
+            </div>
+            <div>
+              <Label>Storage Location</Label>
+              <Input
+                value={resourceForm.storageLocation}
+                onChange={(e) => setResourceForm(f => ({ ...f, storageLocation: e.target.value }))}
+                placeholder="e.g., Shed, Garage"
+                data-testid="input-resource-storage"
+              />
+            </div>
+            <div>
+              <Label>Share Policy</Label>
+              <Select 
+                value={resourceForm.sharePolicy} 
+                onValueChange={(val: 'private' | 'disclosable' | 'offerable') => setResourceForm(f => ({ ...f, sharePolicy: val }))}
+              >
+                <SelectTrigger data-testid="select-resource-share-policy">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private - Not shared</SelectItem>
+                  <SelectItem value="disclosable">Disclosable - Can show to contractors</SelectItem>
+                  <SelectItem value="offerable">Offerable - Available for rent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {resourceForm.sharePolicy === 'offerable' && (
+              <div>
+                <Label>Suggested Price (CAD)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={resourceForm.suggestedPriceAmount}
+                  onChange={(e) => setResourceForm(f => ({ ...f, suggestedPriceAmount: e.target.value }))}
+                  placeholder="e.g., 25.00"
+                  data-testid="input-resource-price"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowResourceModal(false)}>Cancel</Button>
+            <Button 
+              onClick={handleAddResource} 
+              disabled={!resourceForm.name || createResourceMutation.isPending}
+              data-testid="button-save-resource"
+            >
+              {createResourceMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Add Resource
             </Button>
           </DialogFooter>
         </DialogContent>

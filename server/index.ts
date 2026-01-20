@@ -7,6 +7,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startPipelineScheduler } from "./pipelines";
 import { ensurePortalsExist } from "./seeds/ensure-portals";
+import { initSubsystems } from "./seed-subsystems";
 import { tenantContext } from "./middleware/tenantContext";
 import { attachTenantDb } from "./db/tenantDb";
 import { optionalAuth } from "./middleware/auth";
@@ -175,6 +176,7 @@ app.use('/api', (req, res, next) => {
 
 (async () => {
   await ensurePortalsExist();
+  await initSubsystems();
   
   await registerRoutes(httpServer, app);
 

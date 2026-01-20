@@ -690,16 +690,19 @@ export const insertAssetGroupSchema = createInsertSchema(cc_asset_groups).omit({
 export type AssetGroup = typeof cc_asset_groups.$inferSelect;
 export type InsertAssetGroup = z.infer<typeof insertAssetGroupSchema>;
 
-// Asset Group Members - many-to-many link
+// Asset Group Members - many-to-many link (polymorphic via member_type)
 export const cc_asset_group_members = pgTable('cc_asset_group_members', {
   groupId: uuid('group_id').notNull(),
   assetId: uuid('asset_id').notNull(),
+  memberType: text('member_type').notNull().default('asset'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
-  pk: primaryKey({ columns: [t.groupId, t.assetId] }),
+  pk: primaryKey({ columns: [t.groupId, t.assetId, t.memberType] }),
 }));
 
 export type AssetGroupMember = typeof cc_asset_group_members.$inferSelect;
+export const insertAssetGroupMemberSchema = createInsertSchema(cc_asset_group_members).omit({ createdAt: true });
+export type InsertAssetGroupMember = z.infer<typeof insertAssetGroupMemberSchema>;
 
 // Asset Visibility Rules - per-asset/group/type overrides
 export const cc_asset_visibility_rules = pgTable('cc_asset_visibility_rules', {
@@ -2398,6 +2401,7 @@ export const ccWorkMedia = pgTable('cc_work_media', {
   portalId: uuid('portal_id'),
   propertyId: uuid('property_id').references(() => ccProperties.id, { onDelete: 'cascade' }),
   workAreaId: uuid('work_area_id').references(() => ccWorkAreas.id, { onDelete: 'cascade' }),
+  subsystemId: uuid('subsystem_id'),
   entityType: text('entity_type'),
   entityId: uuid('entity_id'),
   mediaId: uuid('media_id').notNull(),
@@ -2412,6 +2416,7 @@ export const ccWorkMedia = pgTable('cc_work_media', {
   tenantIdx: index('cc_work_media_tenant_idx').on(table.tenantId),
   areaIdx: index('cc_work_media_area_idx').on(table.tenantId, table.workAreaId),
   portalIdx: index('cc_work_media_portal_idx').on(table.tenantId, table.portalId),
+  subsystemIdx: index('cc_work_media_subsystem_idx').on(table.tenantId, table.subsystemId),
 }));
 
 export const insertWorkMediaSchema = createInsertSchema(ccWorkMedia).omit({
@@ -2441,6 +2446,105 @@ export const insertWorkDisclosureSchema = createInsertSchema(ccWorkDisclosures).
 });
 export type WorkDisclosure = typeof ccWorkDisclosures.$inferSelect;
 export type InsertWorkDisclosure = z.infer<typeof insertWorkDisclosureSchema>;
+
+// ============ SUBSYSTEM CATALOG (GLOBAL) ============
+export const ccSubsystemCatalog = pgTable('cc_subsystem_catalog', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  title: text('title').notNull(),
+  description: text('description'),
+  tags: text('tags').array().notNull().default([]),
+  isSensitive: boolean('is_sensitive').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  tagsIdx: index('cc_subsystem_catalog_tags_idx').using('gin', table.tags),
+}));
+
+export const insertSubsystemCatalogSchema = createInsertSchema(ccSubsystemCatalog).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type SubsystemCatalog = typeof ccSubsystemCatalog.$inferSelect;
+export type InsertSubsystemCatalog = z.infer<typeof insertSubsystemCatalogSchema>;
+
+// ============ PROPERTY SUBSYSTEMS (TENANT SCOPED) ============
+export const ccPropertySubsystems = pgTable('cc_property_subsystems', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  propertyId: uuid('property_id').notNull().references(() => ccProperties.id, { onDelete: 'cascade' }),
+  catalogKey: text('catalog_key').references(() => ccSubsystemCatalog.key, { onDelete: 'set null' }),
+  customKey: text('custom_key'),
+  title: text('title').notNull(),
+  description: text('description'),
+  tags: text('tags').array().notNull().default([]),
+  visibility: text('visibility').notNull().default('private'),
+  isSensitive: boolean('is_sensitive').notNull().default(false),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  tenantPropertyIdx: index('cc_property_subsystems_tenant_property_idx').on(table.tenantId, table.propertyId),
+  tagsIdx: index('cc_property_subsystems_tags_idx').using('gin', table.tags),
+}));
+
+export const insertPropertySubsystemSchema = createInsertSchema(ccPropertySubsystems).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type PropertySubsystem = typeof ccPropertySubsystems.$inferSelect;
+export type InsertPropertySubsystem = z.infer<typeof insertPropertySubsystemSchema>;
+
+// ============ ON-SITE RESOURCES (TENANT + PROPERTY SCOPED) ============
+export const ccOnSiteResources = pgTable('cc_on_site_resources', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  propertyId: uuid('property_id').notNull().references(() => ccProperties.id, { onDelete: 'cascade' }),
+  resourceType: text('resource_type').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  quantity: numeric('quantity', { precision: 10, scale: 2 }),
+  unit: text('unit'),
+  condition: text('condition'),
+  tags: text('tags').array().notNull().default([]),
+  unspscCode: text('unspsc_code'),
+  storageLocation: text('storage_location'),
+  sharePolicy: text('share_policy').notNull().default('private'),
+  suggestedPriceAmount: numeric('suggested_price_amount', { precision: 10, scale: 2 }),
+  suggestedPriceCurrency: text('suggested_price_currency').default('CAD'),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  tenantPropertyIdx: index('cc_on_site_resources_tenant_property_idx').on(table.tenantId, table.propertyId),
+  tagsIdx: index('cc_on_site_resources_tags_idx').using('gin', table.tags),
+}));
+
+export const insertOnSiteResourceSchema = createInsertSchema(ccOnSiteResources).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type OnSiteResource = typeof ccOnSiteResources.$inferSelect;
+export type InsertOnSiteResource = z.infer<typeof insertOnSiteResourceSchema>;
+
+// ============ ON-SITE RESOURCE MEDIA ============
+export const ccOnSiteResourceMedia = pgTable('cc_on_site_resource_media', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  resourceId: uuid('resource_id').notNull().references(() => ccOnSiteResources.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  mediaType: varchar('media_type', { length: 50 }).default('photo'),
+  caption: text('caption'),
+  tags: text('tags').array().notNull().default([]),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  resourceIdx: index('cc_on_site_resource_media_resource_idx').on(table.tenantId, table.resourceId),
+}));
+
+export const insertOnSiteResourceMediaSchema = createInsertSchema(ccOnSiteResourceMedia).omit({
+  id: true, createdAt: true
+});
+export type OnSiteResourceMedia = typeof ccOnSiteResourceMedia.$inferSelect;
+export type InsertOnSiteResourceMedia = z.infer<typeof insertOnSiteResourceMediaSchema>;
 
 // ============ UNITS ============
 export const ccUnits = pgTable('cc_units', {

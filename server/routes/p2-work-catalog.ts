@@ -397,6 +397,7 @@ const workMediaSchema = z.object({
   portalId: z.string().uuid().optional().nullable(),
   propertyId: z.string().uuid().optional().nullable(),
   workAreaId: z.string().uuid().optional().nullable(),
+  subsystemId: z.string().uuid().optional().nullable(),
   entityType: z.enum(['property', 'asset', 'work_request', 'zone', 'route_edge', 'portal']).optional().nullable(),
   entityId: z.string().uuid().optional().nullable(),
   mediaId: z.string().uuid(),
@@ -415,10 +416,10 @@ router.get('/work-media', async (req: any, res) => {
     const auth = await requireTenantMember(req, res);
     if (!auth) return;
 
-    const { propertyId, workAreaId, portalId } = req.query;
+    const { propertyId, workAreaId, portalId, subsystemId } = req.query;
 
     let query = `
-      SELECT id, portal_id, property_id, work_area_id, entity_type, entity_id,
+      SELECT id, portal_id, property_id, work_area_id, subsystem_id, entity_type, entity_id,
              media_id, title, notes, tags, sort_order, created_by, created_at, updated_at
       FROM cc_work_media
       WHERE tenant_id = $1
@@ -437,6 +438,10 @@ router.get('/work-media', async (req: any, res) => {
     if (portalId) {
       query += ` AND portal_id = $${paramIndex++}`;
       params.push(portalId);
+    }
+    if (subsystemId) {
+      query += ` AND subsystem_id = $${paramIndex++}`;
+      params.push(subsystemId);
     }
 
     query += ` ORDER BY sort_order ASC, created_at DESC LIMIT 100`;
@@ -466,17 +471,18 @@ router.post('/work-media', async (req: any, res) => {
 
     const result = await pool.query(`
       INSERT INTO cc_work_media (
-        tenant_id, portal_id, property_id, work_area_id, entity_type, entity_id,
+        tenant_id, portal_id, property_id, work_area_id, subsystem_id, entity_type, entity_id,
         media_id, title, notes, tags, sort_order, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING id, portal_id, property_id, work_area_id, entity_type, entity_id,
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING id, portal_id, property_id, work_area_id, subsystem_id, entity_type, entity_id,
                 media_id, title, notes, tags, sort_order, created_by, created_at, updated_at
     `, [
       auth.tenantId,
       parsed.data.portalId || null,
       parsed.data.propertyId || null,
       parsed.data.workAreaId || null,
+      parsed.data.subsystemId || null,
       parsed.data.entityType || null,
       parsed.data.entityId || null,
       parsed.data.mediaId,

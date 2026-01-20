@@ -83,6 +83,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Marina Plan View**: Visual operations map showing marina slip layout, real-time occupancy, and amenities.
 - **P-UI-17 Admin & Folios**: Admin pages for role management (users list, role updates), portal settings (branding, moderation, features), notification preferences, and read-only folio/ledger views with financial summaries.
 - **P-UI-17 Platform Console**: Platform-level administrative interface for platform admins including tenant management, platform-wide analytics, and V3.5 certification status. API endpoints at `/api/p2/platform/*` secured with `authenticateToken + requirePlatformAdmin`. UI pages at `/app/platform/*` with TenantsListPage, TenantDetailPage, and AnalyticsPage. V3_NAV updated with Platform section using `platformAdminOnly` gating flags.
+- **Work Catalog System**: Comprehensive property reference information system for contractors. Includes: Access Constraints (physical access parameters), Work Areas with media attachments, Property Subsystems (32 canonical + custom subsystems from cc_subsystem_catalog), On-Site Resources (tools/materials with share policies), and Community Use media. UI in WorkCatalogPage.tsx with 5 tabs. APIs in server/routes/p2-work-catalog.ts and server/routes/p2-subsystems.ts.
 
 ## V3.5 Certification Suite
 

@@ -1,0 +1,428 @@
+✅ REPLIT PROMPT 3B — Subsystems + On-Site Resources + Asset Group Bridge (Authoritative)
+
+Paste verbatim into Replit
+
+Implement Property Subsystems (canonical + custom) AND add structured On-Site Resources (tools/materials) that can be selectively disclosed with Work Requests and optionally promoted into the existing Asset Group backbone for rentals/loans later.
+
+CRITICAL RULES
+
+“Job” means employment only. Maintenance uses Work Requests (cc_maintenance_requests).
+
+These are reference knowledge (editable/deletable), not contemporaneous/evidentiary notes.
+
+Sensitive subsystems default Private visibility.
+
+Nothing is shared by default. Sharing only happens via Work Request disclosures.
+
+Keep cc_work_media separate; do NOT consolidate into cc_media_assets in this prompt.
+
+A) DB — Canonical Subsystem Catalog + Property Subsystems
+A1) Create cc_subsystem_catalog (global)
+
+Columns:
+
+id uuid PK default gen_random_uuid()
+
+key text UNIQUE NOT NULL
+
+title text NOT NULL
+
+description text NULL
+
+tags text[] default '{}'
+
+is_sensitive boolean default false
+
+created_at/updated_at + updated_at trigger
+Indexes: unique key + tags GIN
+
+Seed FULL canonical keys (idempotent by key), plus the two new resource subsystems:
+
+Electrical/Comms
+
+electrical_overhead
+
+electrical_underground
+
+electrical_distribution
+
+generator_backup_power
+
+lighting_exterior
+
+low_voltage_network
+
+Water/Waste/Drainage
+
+water_supply
+
+hot_water
+
+sewer_wastewater
+
+stormwater_drainage
+
+HVAC/Combustion
+
+hvac_heating
+
+hvac_cooling
+
+ventilation_ducting
+
+chimney_fireplace
+
+Gas/Fuel
+
+propane_gas
+
+fuel_storage
+
+Structure/Envelope
+
+foundation_structure
+
+roof_envelope
+
+exterior_cladding
+
+windows_doors
+
+Site/Movement/Marine
+
+site_access_last_mile
+
+stairs_elevators_lifts
+
+docks_moorage_marine_access
+
+transport_logistics
+
+Safety/Compliance (is_sensitive=true)
+
+fire_safety
+
+electrical_safety_compliance
+
+hazards_environmental
+
+Specialty/Operations
+
+kitchen_commercial
+
+laundry
+
+waterfront_infrastructure
+
+On-Site Resources (non-sensitive)
+
+tools_on_site
+
+materials_on_site
+
+A2) Create cc_property_subsystems (tenant scoped)
+
+Columns:
+
+id uuid PK default gen_random_uuid()
+
+tenant_id uuid NOT NULL
+
+property_id uuid NOT NULL REFERENCES cc_properties(id) ON DELETE CASCADE
+
+catalog_key text NULL REFERENCES cc_subsystem_catalog(key)
+
+custom_key text NULL (must start with custom:)
+
+title text NOT NULL
+
+description text NULL
+
+tags text[] default '{}'
+
+visibility text NOT NULL default 'private' CHECK (visibility IN ('private','contractor'))
+
+is_sensitive boolean NOT NULL default false
+
+created_by uuid NULL
+
+created_at/updated_at + trigger
+
+Constraints:
+
+exactly one of (catalog_key, custom_key) present
+
+if custom_key present, must begin with custom:
+
+UNIQUE (tenant_id, property_id, catalog_key) WHERE catalog_key IS NOT NULL
+
+UNIQUE (tenant_id, property_id, custom_key) WHERE custom_key IS NOT NULL
+
+Indexes:
+
+(tenant_id, property_id)
+
+tags GIN
+
+RLS: tenant isolation + is_service_mode bypass.
+
+On create:
+
+if catalog_key set: default title/description/is_sensitive from catalog
+
+if is_sensitive true: force visibility='private'
+
+B) DB — Extend cc_work_media for subsystem media + enforce exactly-one target
+
+Your cc_work_media currently supports:
+
+work_area_id nullable
+
+portal_id nullable
+
+url, media_type, caption, tags
+
+Modify:
+
+Add subsystem_id uuid NULL REFERENCES cc_property_subsystems(id) ON DELETE CASCADE
+
+Add CHECK constraint: exactly one of (work_area_id, portal_id, subsystem_id) is non-null
+
+Add indexes:
+
+(tenant_id, subsystem_id)
+
+keep/ensure (tenant_id, work_area_id) and (tenant_id, portal_id)
+
+Update work-media API to accept subsystemId filter and allow POST/PUT setting subsystem_id.
+Keep response field naming consistent with existing UI (workMedia).
+
+C) DB — On-Site Resources (Tools / Materials) as first-class objects
+
+Create cc_on_site_resources (tenant scoped, property scoped):
+
+Columns:
+
+id uuid PK default gen_random_uuid()
+
+tenant_id uuid NOT NULL
+
+property_id uuid NOT NULL REFERENCES cc_properties(id) ON DELETE CASCADE
+
+resource_type text NOT NULL CHECK (resource_type IN ('tool','material'))
+
+name text NOT NULL
+
+description text NULL
+
+quantity numeric NULL
+
+unit text NULL -- e.g. 'pcs', 'ft', 'boxes'
+
+condition text NULL -- e.g. 'new','good','worn'
+
+tags text[] default '{}'
+
+unspsc_code text NULL -- optional future taxonomy support
+
+storage_location text NULL -- “workshop wall”, “boatshed loft”
+
+share_policy text NOT NULL default 'private'
+CHECK (share_policy IN ('private','disclosable','offerable'))
+
+suggested_price_amount numeric NULL -- allow 0.00 for “loan”
+
+suggested_price_currency text NULL default 'CAD'
+
+created_by uuid NULL
+
+created_at/updated_at + trigger
+
+Indexes:
+
+(tenant_id, property_id)
+
+tags GIN
+
+RLS: tenant isolation + is_service_mode bypass.
+
+Media for resources:
+
+Do NOT reuse cc_media_assets
+
+Add optional resource_id uuid NULL column to cc_work_media
+OR create cc_on_site_resource_media table.
+Preferred: add resource_id to cc_work_media ONLY if you can maintain “exactly one target” rule cleanly.
+If adding resource_id complicates the “exactly one” constraint, create:
+
+cc_on_site_resource_media(id, tenant_id, resource_id FK, url, media_type, caption, tags, timestamps).
+
+(Choose the safer implementation; correctness over cleverness.)
+
+Notes for resources:
+
+Use existing work notes system if present, or create cc_on_site_resource_notes minimal table.
+
+D) Bridge to “Assets” / Rentals backbone without a unified cc_assets table
+
+Because there is no unified assets registry table, use the existing grouping system.
+
+Create cc_asset_group_members support for a new polymorphic member type:
+
+Add/extend enum/check constraint to allow:
+
+member_type = 'on_site_resource'
+
+Store:
+
+asset_group_id = existing group
+
+asset_id = cc_on_site_resources.id (uuid)
+
+member_type = 'on_site_resource'
+
+If cc_asset_group_members already has a flexible type field, use it.
+If it doesn’t, minimally extend it without breaking existing rows.
+
+Create/ensure a group per property:
+
+On-Site Tools — <property name>
+
+On-Site Materials — <property name>
+
+These groups are the future bridge for “offerable” rentals/loans, but NOT required to build full commerce now.
+
+E) APIs
+E1) Catalog + Subsystems APIs
+
+GET /api/p2/app/subsystem-catalog
+
+GET /api/p2/app/properties/:propertyId/subsystems
+
+POST /api/p2/app/properties/:propertyId/subsystems (catalog_key or custom_key)
+
+PUT /api/p2/app/subsystems/:subsystemId
+
+DELETE /api/p2/app/subsystems/:subsystemId
+
+E2) On-Site Resources APIs
+
+GET /api/p2/app/properties/:propertyId/on-site-resources?resourceType=tool|material
+
+POST /api/p2/app/properties/:propertyId/on-site-resources
+
+PUT /api/p2/app/on-site-resources/:id
+
+DELETE /api/p2/app/on-site-resources/:id
+
+E3) People contractors list (for specific disclosure scope)
+
+GET /api/p2/app/people?entityType=contractor
+Return id + displayName.
+
+F) Disclosure Integration (Work Requests)
+
+Update WorkDisclosureSelector:
+
+Add “Share with” control:
+
+all invited contractors
+
+specific contractor (dropdown from People where entityType='contractor')
+
+Unchecking an item + Save = silent revocation (label this clearly)
+
+Allow disclosing:
+
+subsystems
+
+work areas
+
+community use media
+
+on-site resources (tools/materials)
+
+Disclosing on-site resources should include:
+
+resource details (name, qty, location notes)
+
+attached media (photos)
+
+share_policy shown (private/disclosable/offerable)
+
+No auto-share. Even if share_policy=offerable, must still be disclosed per work request.
+
+G) Contractor Boundary Hardening
+
+Ensure contractor-facing disclosure endpoint returns ONLY disclosed items:
+
+Media must be returned only by joining disclosed IDs/scopes.
+
+No tenant-wide media fetch by propertyId is allowed for contractors.
+
+H) UI Updates
+H1) Work Catalog: “Subsystems” tab
+
+As specified, with private-by-default and sensitive badges.
+
+H2) Work Catalog: new tab “On-Site Resources”
+
+Two sections:
+
+Tools
+
+Materials
+
+Each resource shows:
+
+name, qty/unit, condition
+
+storage location
+
+share policy:
+
+Private (default)
+
+Disclosable (can be shared with work requests)
+
+Offerable (future rental/loan vector; allow $0.00)
+
+Add “Promote to Group” behavior:
+
+When a resource is created/updated, ensure it is placed into the appropriate asset group (tools/materials) using member_type='on_site_resource'.
+
+H3) Work Request “Share” step
+
+Include checkboxes:
+
+☐ Tools available on site
+
+☐ Materials available on site
+And allow selecting specific items (not just all-or-nothing).
+
+Acceptance
+
+Full canonical subsystem catalog seeded (no subsets)
+
+Custom subsystems supported with custom:<slug>
+
+Sensitive subsystems forced private by default
+
+Subsystem media supported with subsystem_id and exactly-one target constraint
+
+On-site resources are first-class with media/notes
+
+Resources can be disclosed per work request and scoped to specific contractor
+
+Resources are bridged into existing asset group backbone via member_type='on_site_resource'
+
+Contractor endpoints cannot access undisclosed tenant media/resources
+
+No “job” terminology used for maintenance flows
+
+If Replit asks “proceed?”, proceed.
+
+Answer to Replit’s “Should we consolidate cc_work_media into cc_media_assets?”
+
+No. Keep cc_work_media separate.
+Reason: different privacy model + selective disclosure + silent revocation; mixing with portal marketing media risks leakage and future refactors.
