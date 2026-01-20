@@ -31,6 +31,7 @@ interface QaData {
     title: string;
     status: string;
   }>;
+  campaignsTotal: number;
   trips: Array<{
     id: string;
     accessCode: string;
@@ -38,12 +39,14 @@ interface QaData {
     groupName: string | null;
     startDate: string | null;
   }>;
+  tripsTotal: number;
   proposals: Array<{
     id: string;
     title: string;
     status: string;
     payToken: string | null;
   }>;
+  proposalsTotal: number;
 }
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -256,6 +259,9 @@ export default function PortalQaLaunchpadPage() {
             </CardTitle>
             <CardDescription>
               {data.campaigns.length} campaign{data.campaigns.length !== 1 ? 's' : ''} enabled
+              {data.campaignsTotal > data.campaigns.length && (
+                <span className="text-muted-foreground ml-1">(showing {data.campaigns.length} of {data.campaignsTotal})</span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
@@ -286,6 +292,9 @@ export default function PortalQaLaunchpadPage() {
             </CardTitle>
             <CardDescription>
               {data.trips.length} trip{data.trips.length !== 1 ? 's' : ''} with access codes
+              {data.tripsTotal > data.trips.length && (
+                <span className="text-muted-foreground ml-1">(showing {data.trips.length} of {data.tripsTotal})</span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1 max-h-64 overflow-y-auto">
@@ -316,6 +325,9 @@ export default function PortalQaLaunchpadPage() {
             </CardTitle>
             <CardDescription>
               {data.proposals.length} proposal{data.proposals.length !== 1 ? 's' : ''}
+              {data.proposalsTotal > data.proposals.length && (
+                <span className="text-muted-foreground ml-1">(showing {data.proposals.length} of {data.proposalsTotal})</span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1 max-h-64 overflow-y-auto">

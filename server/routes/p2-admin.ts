@@ -55,9 +55,13 @@ async function requireTenantAdmin(req: any, res: any): Promise<{ tenantId: strin
 /**
  * GET /api/p2/admin/portals
  * List portals for the current tenant (or all for platform admin)
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin (enforced by requireTenantAdmin)
+ * Tenant scoping: Only returns tenant's portals unless platform_admin
  */
 router.get('/portals', async (req: any, res) => {
   try {
+    // Enforces: platform_admin OR tenant_owner/tenant_admin + tenant scoping
     const auth = await requireTenantAdmin(req, res);
     if (!auth) return;
 
@@ -68,6 +72,7 @@ router.get('/portals', async (req: any, res) => {
       FROM cc_portals
       WHERE owning_tenant_id = $1 OR $2 = true
       ORDER BY name ASC
+      LIMIT 100
     `, [auth.tenantId, isPlatformAdmin]);
 
     const portals = result.rows.map((row: any) => ({
@@ -660,9 +665,14 @@ router.patch('/settings/notifications', async (req, res) => {
  * GET /api/p2/admin/portals/:portalId/qa
  * QA Launchpad - Returns portal info with all testable links
  * (campaigns, trips, proposals with pay tokens)
+ * 
+ * Role gating: platform_admin OR tenant_owner/tenant_admin (enforced by requireTenantAdmin)
+ * Tenant scoping: Only returns portal if owned by tenant unless platform_admin
+ * Limits: campaigns 50, trips 50, proposals 50 (with total counts)
  */
 router.get('/portals/:portalId/qa', async (req: any, res) => {
   try {
+    // Enforces: platform_admin OR tenant_owner/tenant_admin + tenant scoping
     const auth = await requireTenantAdmin(req, res);
     if (!auth) return;
 
@@ -684,22 +694,32 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
     const portal = portalResult.rows[0];
     const settings = portal.settings || {};
     
-    // Get enabled campaigns from portal settings
-    const enabledCampaignKeys = settings.enabled_campaigns || ['hospitality_all', 'trades_all', 'crew_all', 'all_roles'];
+    // Get enabled campaigns from portal settings (limited to 50)
+    const enabledCampaignKeys = (settings.enabled_campaigns || ['hospitality_all', 'trades_all', 'crew_all', 'all_roles']).slice(0, 50);
+    const campaignsTotal = (settings.enabled_campaigns || ['hospitality_all', 'trades_all', 'crew_all', 'all_roles']).length;
     const campaigns = enabledCampaignKeys.map((key: string) => ({
       key,
       title: key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
       status: 'active',
     }));
 
-    // Get recent trips for this portal
+    // Count total trips for this portal
+    const tripsCountResult = await pool.query(`
+      SELECT COUNT(*) as total
+      FROM cc_trips
+      WHERE portal_id = $1
+        AND access_code IS NOT NULL
+    `, [portalId]);
+    const tripsTotal = parseInt(tripsCountResult.rows[0]?.total || '0', 10);
+
+    // Get recent trips for this portal (limited to 50, ordered deterministically)
     const tripsResult = await pool.query(`
       SELECT id, access_code, status, group_name, start_date, created_at
       FROM cc_trips
       WHERE portal_id = $1
         AND access_code IS NOT NULL
-      ORDER BY created_at DESC
-      LIMIT 20
+      ORDER BY created_at DESC, id ASC
+      LIMIT 50
     `, [portalId]);
 
     const trips = tripsResult.rows.map((t: any) => ({
@@ -710,19 +730,33 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
       startDate: t.start_date,
     }));
 
-    // Get proposals (trips that have invitation tokens for payment)
+    // Count total proposals (trips with invitations)
+    const proposalsCountResult = await pool.query(`
+      SELECT COUNT(DISTINCT t.id) as total
+      FROM cc_trips t
+      WHERE t.portal_id = $1
+        AND EXISTS (
+          SELECT 1 FROM cc_trip_invitations ti 
+          WHERE ti.trip_id = t.id 
+            AND ti.invitation_type IN ('pay', 'forward', 'approve')
+        )
+    `, [portalId]);
+    const proposalsTotal = parseInt(proposalsCountResult.rows[0]?.total || '0', 10);
+
+    // Get proposals (trips that have invitation tokens for payment) - limited to 50
     const proposalsResult = await pool.query(`
       SELECT 
         t.id,
         t.group_name as title,
         t.status,
+        t.created_at,
         ti.token as pay_token,
         ti.invitation_type
       FROM cc_trips t
       LEFT JOIN cc_trip_invitations ti ON ti.trip_id = t.id AND ti.invitation_type IN ('pay', 'forward', 'approve')
       WHERE t.portal_id = $1
-      ORDER BY t.created_at DESC
-      LIMIT 20
+      ORDER BY t.created_at DESC, t.id ASC
+      LIMIT 50
     `, [portalId]);
 
     // Dedupe proposals by trip id, keeping first token found
@@ -750,8 +784,11 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
         name: portal.name,
       },
       campaigns,
+      campaignsTotal,
       trips,
+      tripsTotal,
       proposals,
+      proposalsTotal,
     });
   } catch (error: any) {
     console.error('[Admin] GET portals/:portalId/qa error:', error);
