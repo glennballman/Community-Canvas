@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Send, Check, Users, MapPin, Building2, FileText, Upload, X
 } from 'lucide-react';
+import { PortalBrandedShell } from './components/PortalBrandedShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -114,28 +115,27 @@ export default function PortalCampaignApplyPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <PortalBrandedShell
+        portalSlug={portalSlug}
+        backHref={`/b/${portalSlug}/jobs`}
+        backLabel="Back to Jobs"
+      >
         <div className="container mx-auto max-w-2xl space-y-6">
           <Skeleton className="h-10 w-40" />
           <Skeleton className="h-64 w-full" />
         </div>
-      </div>
+      </PortalBrandedShell>
     );
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background" data-testid="page-campaign-apply-success">
-        <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-3">
-              <Users className="h-6 w-6 text-primary" />
-              <h1 className="text-lg font-bold">Application Sent</h1>
-            </div>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <PortalBrandedShell
+        portalSlug={portalSlug}
+        backHref={`/b/${portalSlug}/jobs`}
+        backLabel="Back to Jobs"
+      >
+        <div data-testid="page-campaign-apply-success" className="container mx-auto max-w-2xl">
           <Card>
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -168,43 +168,34 @@ export default function PortalCampaignApplyPage() {
                   <Link to={`/b/${portalSlug}/jobs`}>View Other Roles</Link>
                 </Button>
                 <Button variant="outline" asChild data-testid="button-home">
-                  <Link to={`/b/${portalSlug}`}>Back to Portal</Link>
+                  <Link to={`/p/${portalSlug}`}>Back to Portal</Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </PortalBrandedShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" data-testid="page-campaign-apply">
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigate(`/b/${portalSlug}/jobs`)}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Users className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-lg font-bold">{campaign?.name || 'Apply to Multiple Roles'}</h1>
-              {campaign?.jobCount && (
-                <p className="text-sm text-muted-foreground">
-                  Apply to {campaign.jobCount} position{campaign.jobCount !== 1 ? 's' : ''} at once
-                </p>
-              )}
-            </div>
+    <PortalBrandedShell
+      portalSlug={portalSlug}
+      backHref={`/b/${portalSlug}/jobs`}
+      backLabel="Back to Jobs"
+    >
+      <div data-testid="page-campaign-apply" className="container mx-auto max-w-2xl">
+        <div className="flex items-center gap-3 mb-6">
+          <Users className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-lg font-bold">{campaign?.name || 'Apply to Multiple Roles'}</h1>
+            {campaign?.jobCount && (
+              <p className="text-sm text-muted-foreground">
+                Apply to {campaign.jobCount} position{campaign.jobCount !== 1 ? 's' : ''} at once
+              </p>
+            )}
           </div>
         </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
@@ -349,7 +340,7 @@ export default function PortalCampaignApplyPage() {
             )}
           </Button>
         </form>
-      </main>
-    </div>
+      </div>
+    </PortalBrandedShell>
   );
 }
