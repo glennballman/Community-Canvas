@@ -1,0 +1,264 @@
+✅ REPLIT PROMPT 25 — Create Draft N3 Service Run from Suggested Window (Explicit, Admin-Only)
+Purpose
+
+Allow tenant owners/admins to convert a Suggested Coordination Window (Prompt 24) into a Draft N3 Service Run, with zero automatic execution.
+
+This is the first irreversible object creation in the coordination flow — therefore it must be:
+
+explicit
+
+admin-only
+
+auditable
+
+reversible (draft state)
+
+This prompt does NOT:
+
+assign contractors
+
+notify users
+
+create bundles
+
+schedule execution
+
+affect pricing, billing, or ledgers
+
+High-Level Behavior
+
+From the Suggested Windows modal (Prompt 24):
+
+Admin clicks “Create Draft Service Run” on a suggested window
+→ A new cc_n3_runs record is created
+→ Status = draft
+→ Window data + coordination context stored in metadata
+→ Operator is redirected to the Service Run Monitor page for that draft
+
+Nothing runs. Nothing notifies. Nothing commits beyond draft creation.
+
+A) Backend — Draft Creation Endpoint
+Endpoint
+POST /api/n3/runs/draft-from-window
+
+Access Control (MANDATORY)
+
+Apply all:
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner
+
+❌ Contractors forbidden (403)
+❌ Residents forbidden (403)
+
+Request Body (Zod)
+{
+  portal_id: string;                 // required
+  zone_id?: string | null;           // optional (null allowed)
+  category?: string | null;          // optional
+  starts_at: string;                 // ISO timestamp
+  ends_at: string;                   // ISO timestamp
+
+  // advisory context (copied from Prompt 24 output)
+  coordination_metrics: {
+    coord_ready_count: number;
+    total_active_count: number;
+    readiness_ratio: number;
+    confidence_score: number;        // 0–100
+    window_source: 'suggested';      // fixed value
+    parameters: {
+      lookahead_days: number;
+      window_size_days: number;
+      desired_windows: number;
+    };
+  };
+}
+
+Validation Rules
+
+portal_id must belong to tenant
+
+zone_id (if provided) must belong to portal
+
+starts_at < ends_at
+
+window length ≤ 14 days
+
+confidence_score ∈ 0–100
+
+DB Write (cc_n3_runs)
+
+Create one row:
+
+{
+  tenant_id,
+  portal_id,
+  zone_id,
+  name: `Draft Service Run (${Zone Label})`,
+  status: 'draft',
+  starts_at,
+  ends_at,
+  metadata: {
+    source: 'coordination_window',
+    category,
+    coordination: coordination_metrics,
+    created_by_user_id,
+    created_at
+  }
+}
+
+
+⚠️ No segments created
+⚠️ No bundles created
+⚠️ No evaluation triggered
+
+Response
+{
+  "success": true,
+  "run_id": "uuid",
+  "status": "draft",
+  "redirect": "/app/n3/runs/{run_id}/monitor"
+}
+
+Audit Log (Required)
+
+Emit an audit event:
+
+n3_run_draft_created_from_coordination_window
+
+
+Include:
+
+tenant_id
+
+portal_id
+
+zone_id
+
+run_id
+
+confidence_score
+
+user_id
+
+B) Frontend — Modal Action
+UI Placement
+
+In SuggestWindowsModal (Prompt 24):
+
+Each suggested window card gets a button:
+
+Create Draft Service Run
+
+Button Rules
+
+Visible only to admin/owner
+
+Disabled while request is pending
+
+Requires confirmation click:
+
+“This will create a draft service run. Nothing will be scheduled.”
+
+Client Action
+
+On click:
+
+Call POST /api/n3/runs/draft-from-window
+
+On success:
+
+Close modal
+
+Navigate to returned monitor URL
+
+On error:
+
+Inline error banner (no toast spam)
+
+C) Hooks
+
+Create mutation hook:
+
+useCreateDraftRunFromWindow()
+
+
+Responsibilities:
+
+wraps POST call
+
+handles 403 with “Admin access required”
+
+invalidates:
+
+/api/n3/runs
+
+/api/n3/attention
+
+D) Service Run Monitor (Draft State UX)
+
+Ensure existing ServiceRunMonitorPage handles:
+
+status === 'draft':
+
+Show banner: “Draft — not scheduled”
+
+Disable evaluation / bundle actions
+
+Allow:
+
+zone reassignment
+
+portal reassignment
+
+manual promotion later (future prompt)
+
+No new UI beyond banner is required in this prompt.
+
+E) Hard Invariants (Do Not Violate)
+
+❌ No contractor visibility
+❌ No notifications
+❌ No pricing enforcement
+❌ No service execution
+❌ No auto-promotion
+❌ No background jobs triggered
+
+This is object creation only.
+
+F) Acceptance Checklist
+
+ Admin can create draft run from suggested window
+
+ Draft appears in N3 runs list with status draft
+
+ Metadata contains coordination context
+
+ Contractors cannot access endpoint
+
+ Residents cannot access endpoint
+
+ No evaluation/bundles triggered
+
+ Audit log emitted
+
+ Redirect works
+
+Why This Matters
+
+This prompt completes the coordination funnel:
+
+Signal (Prompt 21)
+
+Intent (Prompt 22)
+
+Readiness (Prompt 23)
+
+Windows (Prompt 24)
+
+Draft Execution Object (Prompt 25) ← you are here
+
+Everything after this becomes operator-driven, not inferred.

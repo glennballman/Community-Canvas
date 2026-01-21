@@ -894,6 +894,167 @@ n3Router.post('/runs/:runId/evaluate', requireAuth, requireTenant, async (req, r
 });
 
 /**
+ * POST /api/n3/runs/draft-from-window - Create a draft N3 Service Run from suggested window
+ * PROMPT 25: Explicit, admin-only draft creation
+ * 
+ * No auto-execution, no contractor visibility, no notifications, no bundles.
+ * This is object creation only.
+ */
+const draftFromWindowSchema = z.object({
+  portal_id: z.string().uuid(),
+  zone_id: z.string().uuid().nullable().optional(),
+  category: z.string().nullable().optional(),
+  starts_at: z.string(),
+  ends_at: z.string(),
+  coordination_metrics: z.object({
+    coord_ready_count: z.number(),
+    total_active_count: z.number(),
+    readiness_ratio: z.number(),
+    confidence_score: z.number().min(0).max(100),
+    window_source: z.literal('suggested'),
+    parameters: z.object({
+      lookahead_days: z.number(),
+      window_size_days: z.number(),
+      desired_windows: z.number(),
+    }),
+  }),
+});
+
+n3Router.post('/runs/draft-from-window', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  
+  try {
+    const parseResult = draftFromWindowSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ 
+        error: 'Invalid request body',
+        details: parseResult.error.flatten(),
+      });
+    }
+    
+    const { 
+      portal_id, 
+      zone_id, 
+      category,
+      starts_at, 
+      ends_at, 
+      coordination_metrics,
+    } = parseResult.data;
+    
+    const tenantId = tenantReq.ctx.tenant_id;
+    const userId = tenantReq.user?.id;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Validate portal belongs to tenant
+    const portalCheck = await db
+      .select({ id: ccPortals.id })
+      .from(ccPortals)
+      .where(and(
+        eq(ccPortals.id, portal_id),
+        eq(ccPortals.owningTenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (portalCheck.length === 0) {
+      return res.status(400).json({ error: 'Portal not found or does not belong to tenant' });
+    }
+    
+    // Validate zone if provided
+    if (zone_id) {
+      const zoneCheck = await db
+        .select({ id: ccZones.id })
+        .from(ccZones)
+        .where(and(
+          eq(ccZones.id, zone_id),
+          eq(ccZones.portalId, portal_id)
+        ))
+        .limit(1);
+      
+      if (zoneCheck.length === 0) {
+        return res.status(400).json({ error: 'Zone not found or does not belong to portal' });
+      }
+    }
+    
+    // Validate time window
+    const startsAtDate = new Date(starts_at);
+    const endsAtDate = new Date(ends_at);
+    
+    if (isNaN(startsAtDate.getTime()) || isNaN(endsAtDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format for starts_at or ends_at' });
+    }
+    
+    if (startsAtDate >= endsAtDate) {
+      return res.status(400).json({ error: 'starts_at must be before ends_at' });
+    }
+    
+    const windowLengthDays = (endsAtDate.getTime() - startsAtDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (windowLengthDays > 14) {
+      return res.status(400).json({ error: 'Window length must not exceed 14 days' });
+    }
+    
+    // Get zone label for naming
+    let zoneName = 'Unzoned';
+    if (zone_id) {
+      const zoneRow = await db
+        .select({ name: ccZones.name, key: ccZones.key })
+        .from(ccZones)
+        .where(eq(ccZones.id, zone_id))
+        .limit(1);
+      
+      if (zoneRow.length > 0) {
+        zoneName = zoneRow[0].name || zoneRow[0].key || 'Zone';
+      }
+    }
+    
+    // Create draft run
+    const now = new Date();
+    const [newRun] = await db
+      .insert(ccN3Runs)
+      .values({
+        tenantId,
+        portalId: portal_id,
+        zoneId: zone_id || null,
+        name: `Draft Service Run (${zoneName})`,
+        status: 'draft',
+        startsAt: startsAtDate,
+        endsAt: endsAtDate,
+        metadata: {
+          source: 'coordination_window',
+          category: category || null,
+          coordination: coordination_metrics,
+          created_by_user_id: userId,
+          created_at: now.toISOString(),
+        },
+      })
+      .returning({ id: ccN3Runs.id });
+    
+    // Emit audit event (log for now, can be extended to audit table)
+    console.log('[N3 AUDIT] n3_run_draft_created_from_coordination_window', {
+      tenant_id: tenantId,
+      portal_id,
+      zone_id: zone_id || null,
+      run_id: newRun.id,
+      confidence_score: coordination_metrics.confidence_score,
+      user_id: userId,
+      created_at: now.toISOString(),
+    });
+    
+    res.json({
+      success: true,
+      run_id: newRun.id,
+      status: 'draft',
+      redirect: `/app/n3/runs/${newRun.id}/monitor`,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error creating draft run from window:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/n3/health - Unauthenticated healthcheck (returns only { ok: true })
  */
 n3Router.get('/health', async (_req, res) => {
