@@ -3163,6 +3163,34 @@ export const ccN3ExecutionReceipts = pgTable('cc_n3_execution_receipts', {
 
 export type N3ExecutionReceipt = typeof ccN3ExecutionReceipts.$inferSelect;
 
+// ============ N3 EXECUTION VERIFICATIONS ============
+// Advisory confidence scoring for execution receipts
+// One verification per run (re-evaluation overwrites prior record)
+// Advisory only - does not affect run status, billing, or notifications
+export const ccN3ExecutionVerifications = pgTable('cc_n3_execution_verifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  runId: uuid('run_id').notNull(),
+  executionContractId: uuid('execution_contract_id').notNull(),
+  
+  // Confidence assessment (advisory only)
+  confidenceScore: integer('confidence_score').notNull(), // 0-100
+  confidenceBand: text('confidence_band').notNull(), // low | medium | high
+  
+  // Counts-only verification signals
+  signals: jsonb('signals').notNull(),
+  notes: text('notes'),
+  
+  evaluatedAt: timestamp('evaluated_at', { withTimezone: true }).notNull().defaultNow(),
+  evaluatedBy: uuid('evaluated_by'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  uniqueIndex('uniq_verification_run').on(table.runId),
+]);
+
+export type N3ExecutionVerification = typeof ccN3ExecutionVerifications.$inferSelect;
+
 // ============ HOUSEKEEPING CHECKLISTS ============
 export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -1,0 +1,275 @@
+✅ REPLIT PROMPT 35 — Execution Receipt Verification & Confidence Scoring (Advisory Only)
+Purpose
+
+Add a post-execution verification layer that evaluates execution receipts without trusting them, producing an advisory confidence assessment for operators.
+
+This prompt does NOT:
+
+change run status
+
+affect billing
+
+trigger notifications
+
+block execution
+
+assert factual completion
+
+It only answers:
+
+“Based on the receipts received so far, how confident should an operator be that execution aligned with the contract?”
+
+HARD INVARIANTS (NON-NEGOTIABLE)
+
+❌ No execution authority
+
+❌ No billing / ledger effects
+
+❌ No notifications
+
+❌ No contractor exposure
+
+❌ No mutation of prior records
+
+❌ No PII, IDs, or request details
+
+❌ No blocking logic
+
+✅ Advisory only
+✅ Counts-only
+✅ Zero-trust consumer model
+✅ Append-only data
+✅ Admin/owner visibility only
+
+A) DATA MODEL
+New Table: cc_n3_execution_verifications
+CREATE TABLE cc_n3_execution_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  run_id UUID NOT NULL,
+  execution_contract_id UUID NOT NULL,
+  
+  confidence_score INTEGER NOT NULL, -- 0–100
+  confidence_band TEXT NOT NULL,      -- low | medium | high
+  
+  signals JSONB NOT NULL,             -- structured advisory signals
+  notes TEXT,
+  
+  evaluated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  evaluated_by UUID,
+  
+  UNIQUE (run_id),
+  
+  CONSTRAINT fk_verification_run
+    FOREIGN KEY (run_id) REFERENCES cc_n3_runs(id) ON DELETE CASCADE,
+    
+  CONSTRAINT fk_verification_contract
+    FOREIGN KEY (execution_contract_id)
+    REFERENCES cc_n3_execution_contracts(id) ON DELETE CASCADE
+);
+
+
+Rules
+
+One verification per run (re-evaluation overwrites prior record)
+
+Verification is derived, not authoritative
+
+Snapshot + contract + receipts are inputs
+
+B) VERIFICATION SIGNALS (COUNTS-ONLY)
+Signals to Compute
+
+All signals must be numeric, boolean, or categorical — never IDs.
+
+Signal	Description
+receipt_count	Total receipts received
+time_alignment	% of receipts within contract window
+hash_consistency	% of receipts matching contract hash
+status_distribution	Counts of reported_done / attempted / pending
+receipt_spacing	Variance of reported_at timestamps
+duplicate_payload_rate	% of identical payload hashes
+unexpected_fields	Count of rejected/trimmed fields
+window_overrun	Boolean if receipts exceed window
+coverage_ratio	receipt_count vs expected attempts
+
+All stored in:
+
+signals: {
+  receipt_count: number;
+  hash_consistency_ratio: number;
+  time_alignment_ratio: number;
+  status_distribution: {
+    done: number;
+    attempted: number;
+    pending: number;
+  };
+  duplicate_payload_rate: number;
+  window_overrun: boolean;
+  coverage_ratio: number;
+}
+
+C) CONFIDENCE SCORING (HEURISTIC)
+Score Calculation (Example)
+
+Start at 50, then apply modifiers:
+
+Positive
+
++20 if hash_consistency_ratio ≥ 0.95
+
++15 if time_alignment_ratio ≥ 0.9
+
++10 if done ≥ attempted + pending
+
++5 if duplicate_payload_rate < 0.1
+
+Negative
+
+−20 if window_overrun = true
+
+−15 if duplicate_payload_rate ≥ 0.3
+
+−10 if attempted + pending > done
+
+−10 if receipt_count = 0
+
+Clamp to 0–100
+
+Confidence Bands
+Score	Band
+0–39	Low
+40–69	Medium
+70–100	High
+D) BACKEND API
+1️⃣ Evaluate / Re-Evaluate Verification
+POST /api/n3/runs/:runId/execution-verification
+
+
+Guards
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner
+
+requires execution contract
+
+requires ≥ 1 receipt
+
+Behavior
+
+Computes signals
+
+Computes confidence_score + band
+
+Upserts verification record
+
+Emits audit log
+
+console.log('[N3 AUDIT] n3_execution_verified', {
+  run_id,
+  confidence_score,
+  confidence_band,
+  receipt_count,
+  evaluated_by,
+  evaluated_at
+});
+
+2️⃣ Fetch Verification
+GET /api/n3/runs/:runId/execution-verification
+
+
+Returns
+
+{
+  "run_id": "uuid",
+  "confidence_score": 78,
+  "confidence_band": "high",
+  "signals": { ... },
+  "evaluated_at": "ISO8601",
+  "notes": null
+}
+
+E) FRONTEND
+Hooks
+useN3ExecutionVerification(runId)
+useEvaluateN3ExecutionVerification()
+
+UI — Execution Verification Card
+
+Location
+
+ServiceRunMonitorPage
+
+Appears only if:
+
+execution contract exists
+
+≥1 receipt exists
+
+UI Elements
+
+Confidence badge (Low / Medium / High)
+
+Numeric score (0–100)
+
+Expandable “Signals” list
+
+Advisory disclaimer:
+
+“This assessment is advisory only. Execution receipts are untrusted inputs.”
+
+Controls
+
+“Re-evaluate Verification” button
+
+Optional note field (280 chars)
+
+Visual Language
+
+Green / Amber / Gray only
+
+No red (non-blocking)
+
+ShieldCheck icon
+
+F) SECURITY & PRIVACY
+
+❌ No PII
+
+❌ No maintenance request IDs
+
+❌ No contractor identifiers
+
+❌ No raw receipt payloads exposed
+
+❌ No execution authority implied
+
+Admin/Owner only.
+
+G) ACCEPTANCE CHECKLIST
+
+ Verification does not alter run state
+
+ Verification is recomputable and overwrite-safe
+
+ Signals are counts-only
+
+ Confidence is advisory
+
+ Execution engine remains zero-trust
+
+ Audit logs emitted
+
+ UI language is neutral and non-authoritative
+
+FINAL NOTE
+
+This prompt closes the execution feedback loop without collapsing sovereignty boundaries.
+
+After Prompt 35, the system has:
+
+Intent → Coordination → Planning → Snapshot → Contract → Evidence → Verification
+
+…with zero trust at every boundary.
