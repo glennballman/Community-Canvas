@@ -117,14 +117,28 @@ router.get('/zones', requireAuth, requireTenant, async (req: Request, res: Respo
     }
 
     const result = await tenantReq.tenantQuery!(
-      `SELECT id, key, name, kind, badge_label_resident, badge_label_contractor 
+      `SELECT id, key, name, kind, 
+              badge_label_resident, badge_label_contractor, badge_label_visitor,
+              pricing_modifiers
        FROM cc_zones 
        WHERE portal_id = $1 
        ORDER BY name ASC`,
       [portalId]
     );
 
-    res.json({ ok: true, zones: result.rows });
+    // Map snake_case to camelCase for frontend
+    const zones = result.rows.map((row: any) => ({
+      id: row.id,
+      key: row.key,
+      name: row.name,
+      kind: row.kind,
+      badge_label_resident: row.badge_label_resident,
+      badge_label_contractor: row.badge_label_contractor,
+      badge_label_visitor: row.badge_label_visitor,
+      pricingModifiers: row.pricing_modifiers || {},
+    }));
+
+    res.json({ ok: true, zones });
   } catch (error) {
     console.error('Error fetching zones:', error);
     res.status(500).json({ error: 'Failed to fetch zones' });

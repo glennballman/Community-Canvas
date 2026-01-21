@@ -31,6 +31,8 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { ContractorAssignmentPicker } from '@/components/ContractorAssignmentPicker';
 import { WorkDisclosureSelector, getDefaultDisclosureSelection, type DisclosureSelection } from '@/components/WorkDisclosureSelector';
+import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
+import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 interface WorkRequest {
   id: string;
@@ -66,6 +68,10 @@ interface Zone {
   key: string;
   name: string;
   kind: string;
+  badge_label_resident?: string | null;
+  badge_label_contractor?: string | null;
+  badge_label_visitor?: string | null;
+  pricingModifiers?: ZonePricingModifiers | null;
 }
 
 interface WorkRequestNote {
@@ -545,6 +551,25 @@ export default function WorkRequestDetail() {
                     </SelectContent>
                   </Select>
                 </div>
+                {request.zone_id && zonesData?.zones && (
+                  <ZoneImpactSummary
+                    zone={(() => {
+                      const z = zonesData.zones.find(zn => zn.id === request.zone_id);
+                      if (!z) return null;
+                      return {
+                        id: z.id,
+                        key: z.key,
+                        name: z.name,
+                        badge_label_resident: z.badge_label_resident,
+                        badge_label_contractor: z.badge_label_contractor,
+                        badge_label_visitor: z.badge_label_visitor,
+                        pricingModifiers: z.pricingModifiers,
+                      };
+                    })()}
+                    baseEstimate={request.estimated_value || 0}
+                    viewerContext="resident"
+                  />
+                )}
               </>
             )}
 
