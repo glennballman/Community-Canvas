@@ -138,6 +138,13 @@ export const cc_media = pgTable("cc_media", {
   processingStatus: text("processing_status").notNull().default('complete'),
   variants: jsonb("variants").$type<z.infer<typeof mediaVariantsSchema>>().default({}),
   uploadedBy: uuid("uploaded_by"),
+  // A2.3: EXIF/metadata extraction
+  exifJson: jsonb("exif_json"),
+  geoLat: numeric("geo_lat", { precision: 10, scale: 7 }),
+  geoLng: numeric("geo_lng", { precision: 10, scale: 7 }),
+  capturedAt: timestamp("captured_at", { withTimezone: true }),
+  deviceModel: text("device_model"),
+  orientation: integer("orientation"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -7652,6 +7659,20 @@ export const ccAiIngestions = pgTable("cc_ai_ingestions", {
   proposedServiceAreas: jsonb("proposed_service_areas").notNull().default([]),
   serviceAreaStatus: varchar("service_area_status", { length: 20 }).notNull().default('none'),
   
+  // A2.3: Unified classification output
+  // Primary/secondary classifications with confidence
+  classification: jsonb("classification").notNull().default({}),
+  // Extracted entities (text, plates, phones, addresses, materials, etc.)
+  extractedEntities: jsonb("extracted_entities").notNull().default({}),
+  // Geo inference from EXIF or reverse geocoding
+  geoInference: jsonb("geo_inference").notNull().default({}),
+  // Proposed auto-links to fleet/tool/jobsite/customer/service_run
+  proposedLinks: jsonb("proposed_links").notNull().default({}),
+  // Source context hint: onboarding | job | fleet | unknown
+  contextHint: varchar("context_hint", { length: 20 }),
+  // Batch source: camera | upload | bulk
+  batchSource: varchar("batch_source", { length: 20 }),
+  
   // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -7730,3 +7751,285 @@ export const insertContractorServiceAreaSchema = createInsertSchema(ccContractor
 });
 export type ContractorServiceArea = typeof ccContractorServiceAreas.$inferSelect;
 export type InsertContractorServiceArea = z.infer<typeof insertContractorServiceAreaSchema>;
+
+// ============================================================================
+// A2.3: Contractor Fleet - Vehicles & Trailers from Photo Classification
+// ============================================================================
+
+export const ccContractorFleet = pgTable("cc_contractor_fleet", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Vehicle type: truck | trailer | van | suv | other
+  assetType: varchar("asset_type", { length: 30 }).notNull(),
+  
+  // Vehicle details (proposed or confirmed)
+  make: text("make"),
+  model: text("model"),
+  year: integer("year"),
+  color: text("color"),
+  
+  // License plate (contractor-owned, can be stored)
+  licensePlate: text("license_plate"),
+  licensePlateRegion: text("license_plate_region"),
+  unitNumber: text("unit_number"),
+  
+  // Capabilities (derived from asset type)
+  // e.g., { snow_blade: true, trailer_hitch: true, enclosed: false }
+  capabilities: jsonb("capabilities").notNull().default({}),
+  
+  // Link to source ingestion
+  sourceIngestionId: uuid("source_ingestion_id"),
+  
+  // Linked media
+  primaryMediaId: uuid("primary_media_id"),
+  
+  // Confirmation state
+  isConfirmed: boolean("is_confirmed").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+}, (table) => ({
+  contractorIdx: index("idx_contractor_fleet_contractor").on(table.contractorProfileId),
+  tenantIdx: index("idx_contractor_fleet_tenant").on(table.tenantId),
+}));
+
+export const insertContractorFleetSchema = createInsertSchema(ccContractorFleet).omit({ 
+  id: true, createdAt: true 
+});
+export type ContractorFleet = typeof ccContractorFleet.$inferSelect;
+export type InsertContractorFleet = z.infer<typeof insertContractorFleetSchema>;
+
+// ============================================================================
+// A2.3: Contractor Tools & Materials - Assets from Photo Classification
+// ============================================================================
+
+export const ccContractorTools = pgTable("cc_contractor_tools", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Asset type: tool | material | equipment
+  assetType: varchar("asset_type", { length: 30 }).notNull(),
+  
+  // Item details
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+  
+  // For materials: quantity info
+  quantity: text("quantity"),
+  unit: text("unit"),
+  
+  // Capabilities (for tools/equipment)
+  capabilities: jsonb("capabilities").notNull().default({}),
+  
+  // Link to source ingestion
+  sourceIngestionId: uuid("source_ingestion_id"),
+  
+  // Linked media
+  primaryMediaId: uuid("primary_media_id"),
+  
+  // Confirmation state
+  isConfirmed: boolean("is_confirmed").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+}, (table) => ({
+  contractorIdx: index("idx_contractor_tools_contractor").on(table.contractorProfileId),
+  tenantIdx: index("idx_contractor_tools_tenant").on(table.tenantId),
+}));
+
+export const insertContractorToolSchema = createInsertSchema(ccContractorTools).omit({ 
+  id: true, createdAt: true 
+});
+export type ContractorTool = typeof ccContractorTools.$inferSelect;
+export type InsertContractorTool = z.infer<typeof insertContractorToolSchema>;
+
+// ============================================================================
+// A2.3: Contractor Jobsites - GPS-Clustered Provisional Jobsites
+// ============================================================================
+
+export const ccContractorJobsites = pgTable("cc_contractor_jobsites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Proposed/confirmed address
+  proposedAddress: text("proposed_address"),
+  confirmedAddress: text("confirmed_address"),
+  
+  // Geo coordinates (cluster centroid)
+  geoLat: numeric("geo_lat", { precision: 10, scale: 7 }),
+  geoLng: numeric("geo_lng", { precision: 10, scale: 7 }),
+  
+  // Confidence of address inference
+  addressConfidence: numeric("address_confidence", { precision: 3, scale: 2 }),
+  
+  // Link to customer if matched
+  customerId: uuid("customer_id"),
+  
+  // Linked media (before/after/jobsite photos)
+  mediaIds: jsonb("media_ids").notNull().default([]),
+  
+  // Photo stages present
+  hasBeforePhotos: boolean("has_before_photos").notNull().default(false),
+  hasAfterPhotos: boolean("has_after_photos").notNull().default(false),
+  
+  // Link to source ingestions (first ingestion that created this)
+  sourceIngestionIds: jsonb("source_ingestion_ids").notNull().default([]),
+  
+  // Confirmation state
+  isConfirmed: boolean("is_confirmed").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // First/last photo timestamps
+  firstPhotoAt: timestamp("first_photo_at", { withTimezone: true }),
+  lastPhotoAt: timestamp("last_photo_at", { withTimezone: true }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+}, (table) => ({
+  contractorIdx: index("idx_contractor_jobsites_contractor").on(table.contractorProfileId),
+  tenantIdx: index("idx_contractor_jobsites_tenant").on(table.tenantId),
+  customerIdx: index("idx_contractor_jobsites_customer").on(table.customerId),
+}));
+
+export const insertContractorJobsiteSchema = createInsertSchema(ccContractorJobsites).omit({ 
+  id: true, createdAt: true 
+});
+export type ContractorJobsite = typeof ccContractorJobsites.$inferSelect;
+export type InsertContractorJobsite = z.infer<typeof insertContractorJobsiteSchema>;
+
+// ============================================================================
+// A2.3: Contractor Customers - Provisional Customers from Sticky Notes
+// ============================================================================
+
+export const ccContractorCustomers = pgTable("cc_contractor_customers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Customer details (extracted from sticky notes, etc.)
+  name: text("name"),
+  phone: text("phone"),
+  email: text("email"),
+  address: text("address"),
+  notes: text("notes"),
+  
+  // Extraction confidence
+  nameConfidence: numeric("name_confidence", { precision: 3, scale: 2 }),
+  phoneConfidence: numeric("phone_confidence", { precision: 3, scale: 2 }),
+  
+  // Link to source ingestion
+  sourceIngestionId: uuid("source_ingestion_id"),
+  
+  // Confirmation state
+  isConfirmed: boolean("is_confirmed").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+}, (table) => ({
+  contractorIdx: index("idx_contractor_customers_contractor").on(table.contractorProfileId),
+  tenantIdx: index("idx_contractor_customers_tenant").on(table.tenantId),
+}));
+
+export const insertContractorCustomerSchema = createInsertSchema(ccContractorCustomers).omit({ 
+  id: true, createdAt: true 
+});
+export type ContractorCustomer = typeof ccContractorCustomers.$inferSelect;
+export type InsertContractorCustomer = z.infer<typeof insertContractorCustomerSchema>;
+
+// ============================================================================
+// A2.3 / Patent CC-11: Contractor Opportunities - Route & Zone Expansion
+// ============================================================================
+
+export const ccContractorOpportunities = pgTable("cc_contractor_opportunities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Opportunity type: zone_expansion | asset_upsell | route_corridor | seasonal
+  opportunityType: varchar("opportunity_type", { length: 30 }).notNull(),
+  
+  // Target portal/zone
+  portalId: uuid("portal_id"),
+  zoneId: uuid("zone_id"),
+  
+  // Reason for opportunity
+  reason: text("reason").notNull(),
+  
+  // Confidence score (0.00-1.00)
+  confidence: numeric("confidence", { precision: 3, scale: 2 }).default('0.00'),
+  
+  // Details payload (varies by type)
+  // For asset_upsell: { suggested_asset, fits_with, open_requests_count }
+  // For zone_expansion: { distance_from_current, demand_level }
+  details: jsonb("details").notNull().default({}),
+  
+  // Status: proposed | accepted | dismissed | expired
+  status: varchar("status", { length: 20 }).notNull().default('proposed'),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+}, (table) => ({
+  contractorIdx: index("idx_contractor_opportunities_contractor").on(table.contractorProfileId),
+  tenantIdx: index("idx_contractor_opportunities_tenant").on(table.tenantId),
+  statusIdx: index("idx_contractor_opportunities_status").on(table.status),
+}));
+
+export const insertContractorOpportunitySchema = createInsertSchema(ccContractorOpportunities).omit({ 
+  id: true, createdAt: true 
+});
+export type ContractorOpportunity = typeof ccContractorOpportunities.$inferSelect;
+export type InsertContractorOpportunity = z.infer<typeof insertContractorOpportunitySchema>;
+
+// ============================================================================
+// A2.3: Before/After Photo Bundles - Paired Evidence
+// ============================================================================
+
+export const ccContractorPhotoBundles = pgTable("cc_contractor_photo_bundles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Bundle type: before_after | progress_series
+  bundleType: varchar("bundle_type", { length: 30 }).notNull().default('before_after'),
+  
+  // Link to jobsite
+  jobsiteId: uuid("jobsite_id"),
+  
+  // Before media IDs
+  beforeMediaIds: jsonb("before_media_ids").notNull().default([]),
+  // After media IDs
+  afterMediaIds: jsonb("after_media_ids").notNull().default([]),
+  
+  // Bundle status: incomplete | complete | confirmed
+  status: varchar("status", { length: 20 }).notNull().default('incomplete'),
+  
+  // Missing stage hint for UI
+  missingStage: varchar("missing_stage", { length: 20 }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (table) => ({
+  contractorIdx: index("idx_contractor_bundles_contractor").on(table.contractorProfileId),
+  jobsiteIdx: index("idx_contractor_bundles_jobsite").on(table.jobsiteId),
+}));
+
+export const insertContractorPhotoBundleSchema = createInsertSchema(ccContractorPhotoBundles).omit({ 
+  id: true, createdAt: true 
+});
+export type ContractorPhotoBundle = typeof ccContractorPhotoBundles.$inferSelect;
+export type InsertContractorPhotoBundle = z.infer<typeof insertContractorPhotoBundleSchema>;

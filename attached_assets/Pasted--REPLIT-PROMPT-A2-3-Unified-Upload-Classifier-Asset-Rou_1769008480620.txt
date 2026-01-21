@@ -1,0 +1,404 @@
+✅ REPLIT PROMPT A2.3
+Unified Upload Classifier + Asset → Route → Opportunity Inference Engine
+
+(Contractor Business Graph Core | PATENT CC-11)
+
+PURPOSE (NON-NEGOTIABLE)
+
+Any upload from a contractor — any photo, any order, any mess — must:
+
+Be classified correctly (truck / trailer / tool / jobsite / before / after / sticky note / whiteboard / document / receipt / unknown)
+
+Be fully extracted (text, EXIF, GPS, visual entities, logos, license plates, materials)
+
+Be linked into the contractor’s business graph
+
+Trigger immediate operational outcomes:
+
+service runs
+
+customer/jobs
+
+fleet/assets
+
+before/after bundles
+
+service coverage expansion opportunities
+
+Propose revenue-expanding actions without typing
+
+This is the spine that enables:
+
+contractor onboarding
+
+CompanyCam replacement
+
+CRM auto-creation
+
+service run discovery
+
+community calendar participation
+
+asset-driven upsells (snow blade example)
+
+negotiation + messaging
+
+HARD RULES
+
+❌ No linear onboarding assumptions
+
+❌ No “start with truck” flows
+
+❌ No discard of “uncertain” data
+
+❌ No waiting for confirmation to store data
+
+✅ Always ingest first
+
+✅ Always classify with confidence
+
+✅ Always store provenance + confidence
+
+✅ Always propose next actions
+
+A) INGESTION ENTRY POINT (SINGLE PIPE)
+Route (already exists — extend it)
+
+POST /api/contractor/ingestions
+
+This route now becomes canonical for ALL contractor uploads.
+
+Payload:
+
+{
+  media_ids: string[],
+  source: 'camera' | 'upload' | 'bulk',
+  context_hint?: 'onboarding' | 'job' | 'fleet' | 'unknown'
+}
+
+B) CLASSIFICATION ENGINE (CORE OF A2.3)
+
+Create:
+
+server/services/contractorUploadClassifier.ts
+
+For EACH media item, run ALL of the following classifiers in parallel:
+1. Visual Classifier (image)
+
+Detect with confidence scores:
+
+vehicle_truck
+
+vehicle_trailer
+
+tool
+
+material
+
+jobsite
+
+before_photo
+
+after_photo
+
+whiteboard
+
+sticky_note
+
+document
+
+receipt
+
+unknown
+
+A photo may match multiple classes (e.g. jobsite + after_photo + material).
+
+2. OCR + NLP Extractor
+
+From text in image:
+
+names (customers, companies)
+
+phone numbers
+
+emails
+
+addresses / partial addresses
+
+towns / landmarks
+
+dates / times
+
+quantities
+
+materials (treated as assets)
+
+scope phrases (“patch driveway”, “replace flashing”)
+
+3. EXIF / Metadata Extractor (NEW — MUST BUILD)
+
+Extract and store:
+
+GPS lat/lng
+
+captured_at
+
+device model
+
+orientation
+
+Write to:
+
+cc_media.exif_json
+
+cc_media.geo_lat / geo_lng
+
+cc_media.captured_at
+
+4. License Plate + Branding Extractor
+
+From vehicle images:
+
+license plate number
+
+province/state
+
+unit numbers
+
+company name
+
+phone
+
+website
+
+logo colors
+
+Store raw + normalized.
+
+C) CANONICAL OUTPUT SHAPE (DO NOT SKIP)
+
+Write results into cc_ai_ingestions:
+
+classification: {
+  primary: 'vehicle_truck',
+  secondary: ['trailer'],
+  confidence: 0.91
+}
+
+extracted_entities: {
+  license_plate: { value: 'SK1234', confidence: 0.88 },
+  website: { value: 'urbanscapedesigns.ca', confidence: 0.72 },
+  phone: { value: '306-555-1212', confidence: 0.81 },
+  materials: [
+    { name: '3/4 crush', qty: '20 yards', confidence: 0.76 }
+  ]
+}
+
+geo_inference: {
+  lat: 52.201,
+  lng: -105.125,
+  proposed_address: '124 Main Dr, Humboldt, SK',
+  confidence: 0.83
+}
+
+proposed_links: {
+  vehicle: true,
+  tool: false,
+  material: true,
+  jobsite: true,
+  service_run: true,
+  customer: true
+}
+
+D) AUTO-LINKING RULES (CRITICAL)
+1. Vehicle / Trailer
+
+If classified as vehicle:
+
+Create or update fleet asset
+
+Store license plate permanently (contractor-owned)
+
+Link media → vehicle
+
+Queue follow-up: “Confirm make/model/year”
+
+2. Tools / Materials
+
+If tool/material:
+
+Create asset record
+
+Materials treated as assets
+
+Attach to:
+
+estimates
+
+quotes
+
+service runs later
+
+3. Jobsite Photos
+
+If jobsite:
+
+Cluster by GPS + time
+
+Reverse geocode → proposed address
+
+Match to:
+
+existing customer
+
+existing job
+
+existing service run
+
+If no match → create provisional job site
+
+4. Before / After Bundling
+
+If before or after:
+
+Search for opposite stage at same site
+
+Propose bundle
+
+Ask once:
+
+“Looks like AFTER — do you have BEFORE photos?”
+
+5. Sticky Notes / Whiteboards
+
+If sticky note or whiteboard:
+
+Create:
+
+draft customer
+
+draft service run
+
+draft quote shell
+
+Attach source photo
+
+Immediately open message thread (see section G)
+
+E) CC-11: ROUTE + COVERAGE + OPPORTUNITY INFERENCE
+Build:
+
+server/services/contractorRouteOpportunityEngine.ts
+
+Inputs:
+
+jobsite photo clusters
+
+before/after locations
+
+sticky note locations
+
+confirmed customers
+
+online profile (website if found)
+
+fleet capability (truck, trailer)
+
+Infer:
+
+Common travel corridors
+
+Under-served community portals
+
+Zones where:
+
+contractor type demand exists
+
+nearest provider >30 min away
+
+Output:
+opportunities: [
+  {
+    portal_id: 'humboldt',
+    zone_id: 'zone_4',
+    reason: 'No chimney sweep within 30 min',
+    confidence: 0.79
+  }
+]
+
+F) ASSET-DRIVEN SERVICE EXPANSION (PATENT CC-11 CORE)
+
+If fleet includes:
+
+truck → propose snow blade
+
+trailer → propose equipment transport
+
+chainsaw → propose storm cleanup
+
+Match against:
+
+unmet work requests
+
+seasonal demand
+
+asset compatibility
+
+Example message:
+
+“You already have a truck. You could offer snow removal.
+Zone 236 has 14 open requests and no providers.
+These blades fit your truck.”
+
+G) IMMEDIATE MESSAGE THREAD (WOW #4)
+
+When a service run is auto-created, open a message:
+
+“I see you’re doing a job for Bill Smith in Humboldt.
+Would you like this service run to appear on the Humboldt Community Calendar and accept more work requests?”
+
+Options:
+
+Keep private
+
+Accept from:
+
+Zone
+
+All zones in portal
+
+Route corridor (X miles)
+
+H) UI REQUIREMENTS
+
+Upload screen: one button
+
+Results screen:
+
+“Here’s what I found” cards
+
+Accept / Edit / Dismiss
+
+Zero mandatory forms
+
+Everything skippable
+
+I) ACCEPTANCE CRITERIA
+
+✅ Upload 20 messy photos → system classifies all
+✅ Upload truck photo → fleet record created
+✅ Upload jobsite photo → address proposed
+✅ Upload sticky note → service run + message thread
+✅ Upload after photo → before requested
+✅ System proposes new zones + asset upsells
+✅ Contractor never types unless correcting AI
+
+J) WHAT THIS ENABLES NEXT
+
+A2.4 — Address + CRM Deep Matching
+
+A2.5 — Negotiation UI (full parity)
+
+A2.6 — Contractor Portfolio & Website Generator
+
+B-series — Bidding + Scheduling + Execution
