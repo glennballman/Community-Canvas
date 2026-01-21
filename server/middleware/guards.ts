@@ -108,6 +108,69 @@ export const requireTenant: RequestHandler = (req: Request, res: Response, next:
   next();
 };
 
+/**
+ * Session-based platform admin check.
+ * Requires user to be authenticated AND have is_platform_admin = true in cc_users.
+ * Uses the same session auth as the rest of the app (not JWT).
+ */
+export const requirePlatformAdmin: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+  const tenantReq = req as TenantRequest;
+  const session = (req as any).session;
+  
+  // Check for individual_id from context (session-based auth)
+  const userId = tenantReq.ctx?.individual_id || session?.userId;
+  
+  if (!userId) {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Authentication required',
+      code: 'AUTH_REQUIRED'
+    });
+  }
+  
+  try {
+    // Import pool dynamically to avoid circular dependency
+    const { pool } = await import('../db');
+    
+    // Check if user is platform admin in cc_users
+    const result = await pool.query(
+      'SELECT is_platform_admin FROM cc_users WHERE id = $1',
+      [userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+    
+    if (!result.rows[0].is_platform_admin) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Platform admin access required',
+        code: 'FORBIDDEN'
+      });
+    }
+    
+    // Set user info on request for downstream handlers
+    (req as any).platformUser = {
+      id: userId,
+      isPlatformAdmin: true
+    };
+    
+    next();
+  } catch (error) {
+    console.error('[requirePlatformAdmin] Error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+};
+
 export const requirePortal: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   const tenantReq = req as TenantRequest;
   if (!tenantReq.ctx?.portal_id) {

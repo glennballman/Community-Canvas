@@ -10,9 +10,10 @@
  * - GET /api/p2/platform/tenants/:tenantId - Enhanced tenant detail with portals
  * 
  * All endpoints require platform admin access.
+ * Uses JWT auth via Authorization header (client sends cc_token from localStorage).
  */
 
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { authenticateToken, requirePlatformAdmin, AuthRequest } from './foundation';
 import * as fs from 'fs';

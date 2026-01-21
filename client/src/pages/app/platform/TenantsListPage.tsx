@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Building2, Search, Users, Globe, Calendar, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getAuthHeaders } from '@/lib/api';
 
 interface Tenant {
   id: string;
@@ -48,7 +49,10 @@ export default function TenantsListPage() {
   const { data, isLoading, error } = useQuery<{ success: boolean; tenants: Tenant[] }>({
     queryKey: ['/api/p2/platform/tenants'],
     queryFn: async () => {
-      const res = await fetch('/api/p2/platform/tenants', { credentials: 'include' });
+      const res = await fetch('/api/p2/platform/tenants', { 
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
       if (!res.ok) throw new Error('Failed to fetch tenants');
       return res.json();
     },

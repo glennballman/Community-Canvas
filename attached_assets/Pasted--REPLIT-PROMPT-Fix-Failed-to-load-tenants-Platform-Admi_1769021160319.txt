@@ -1,0 +1,117 @@
+✅ REPLIT PROMPT — Fix “Failed to load tenants” (Platform Admin /app/platform/tenants)
+
+Context: Platform Admin routing/nav refactor is complete. UI loads /app/platform/tenants but the Tenants list fails with “Failed to load tenants” and shows 0 metrics. Stop inventing solutions. Diagnose with Network + server logs, then fix the real failing API path.
+
+1) Identify the exact API request that the Tenants page is making
+
+In the Tenants page component (client):
+
+Find the fetch call used to load tenants + metrics.
+
+Print/log the URL and response error once.
+
+Also, open DevTools Network:
+
+Click the tenants page and capture the failing request:
+
+URL
+
+status code
+
+response body
+
+request headers (especially cookies/auth)
+
+Do not proceed until you know the exact endpoint path (example: /api/p2/platform/tenants, /api/platform/tenants, /api/p2/app/mod/tenants, etc).
+
+2) Confirm the server route exists and is registered
+
+Search server for the route handler matching the endpoint:
+
+server/routes*
+
+server/routes.ts
+
+any p2PlatformRouter, platformRouter, etc.
+
+Verify it is mounted under the same prefix used by the client.
+Common failure: client calls /api/p2/platform/tenants but server mounted /api/platform/tenants (or vice versa).
+
+✅ Fix mismatch by aligning either the client path or the router mount so they match exactly.
+
+3) Fix authentication correctly (NO NEW AUTH SYSTEMS)
+
+Rule: The web app uses session cookies already. Platform Admin API must use the same middleware as the rest of the app (whatever requireAuth / ensureAuthenticated is), not JWT.
+
+Do this deterministically:
+
+Find the middleware used by working authenticated endpoints (e.g. /api/contractor/* or any tenant pages that load successfully).
+
+Apply the SAME middleware to the platform tenants endpoint.
+
+Also require platform-admin authorization:
+
+Use existing role check (whatever your codebase uses: isPlatformAdmin, hasRole('platform_admin'), etc).
+
+Return 403 if user is authenticated but not platform admin (not a redirect).
+
+Do NOT add new auth tokens, foundation JWT, or parallel guards. Reuse the current session auth.
+
+4) Make the handler return the API envelope the UI expects
+
+Check the Tenants page expected response shape.
+
+Ensure the endpoint returns:
+
+{ "ok": true, "tenants": [...], "stats": {...} }
+
+
+(or whatever shape the UI expects)
+
+Common failure:
+
+server returns { tenants: [...] } but UI expects { ok: true, data: ... }
+
+server returns HTML redirect → UI fails
+
+If the UI uses the standard envelope { ok, error?, ...data }, return it consistently.
+
+5) Add minimal logging (temporary) to prove the fix
+
+In the platform tenants route handler:
+
+console.log('[PLATFORM]', 'tenants:list', { userId, isPlatformAdmin, tenantCount })
+
+Log errors with status + message
+
+6) Validate DB query + RLS assumptions
+
+If the endpoint returns 0 tenants:
+
+Confirm which table is “tenants” (likely cc_tenants)
+
+Ensure platform admin query bypasses tenant scoping correctly (platform admin should be able to read all tenants)
+
+If RLS/ABAC applies, ensure platform admin context sets the correct “platform scope” (do not hack by disabling RLS; use existing privileged query path if present)
+
+7) Acceptance criteria (must pass)
+
+Visiting /app/platform/tenants loads without “Failed to load tenants”
+
+Network request returns 200 with { ok: true, tenants: [...] }
+
+If user lacks platform admin role → 403 with { ok:false, error:"..." }
+
+No redirects to /app/platform on API errors
+
+Sidebar navigation continues to work
+
+Deliverables
+
+The exact failing endpoint you found
+
+Status code + error before fix
+
+Files changed + why
+
+Proof: screenshot of Tenants list populated (even if empty DB, it should show “0 tenants” without error)

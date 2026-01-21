@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Building2, Globe, Users, ArrowLeft, Calendar, Shield, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { getAuthHeaders } from '@/lib/api';
 
 interface Portal {
   id: string;
@@ -73,7 +74,10 @@ export default function TenantDetailPage() {
   const { data, isLoading, error } = useQuery<TenantDetailResponse>({
     queryKey: ['/api/p2/platform/tenants', tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/p2/platform/tenants/${tenantId}`, { credentials: 'include' });
+      const res = await fetch(`/api/p2/platform/tenants/${tenantId}`, { 
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
       if (!res.ok) throw new Error('Failed to fetch tenant');
       return res.json();
     },
