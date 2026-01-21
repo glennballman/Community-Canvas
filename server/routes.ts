@@ -132,6 +132,7 @@ import aiRouter from "./routes/ai";
 import { createParticipantTripsRouter } from "./routes/participant-trips";
 import participantRouter from "./routes/participant";
 import contractorRouter from "./routes/contractor";
+import contractorIngestionsRouter from "./routes/contractor-ingestions";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -532,6 +533,9 @@ export async function registerRoutes(
 
   // Contractor Onboarding (Prompt A1)
   app.use('/api/contractor', contractorRouter);
+  
+  // Contractor Ingestions (Prompt A2)
+  app.use('/api/contractor/ingestions', contractorIngestionsRouter);
 
   // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {
