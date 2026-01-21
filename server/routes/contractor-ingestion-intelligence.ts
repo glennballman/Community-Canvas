@@ -19,7 +19,9 @@ import {
   ccIngestionThreads,
   ccIngestionQuoteLinks,
   ccContractorFleet,
-  ccContractorTools
+  ccContractorTools,
+  ccIngestionZoneLinks,
+  ccZones
 } from '@shared/schema';
 import { authenticateToken } from '../middleware/auth';
 import { z } from 'zod';
@@ -69,7 +71,8 @@ const editPayloadSchema = z.object({
   prompts: z.array(z.string()).optional(),
   todos: z.array(z.string()).optional(),
   category: z.string().optional(),
-  address: z.string().optional()
+  address: z.string().optional(),
+  selectedZoneId: z.string().uuid().optional()
 });
 
 const draftWorkRequestSchema = z.object({
@@ -386,36 +389,60 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
       }
 
       case 'attach_to_zone': {
-        // Attach ingestion to zone using geo resolution
-        const zoneId = actionPayload.zoneId || geoInference.proposedZoneId;
+        // Attach ingestion to zone using selectedZoneId from payload
+        const selectedZoneId = payload?.selectedZoneId || actionPayload.selectedZoneId;
         
-        if (!zoneId && geoInference.lat && geoInference.lng) {
-          // Need user to pick zone - return edit flow
+        if (!selectedZoneId) {
+          // Need user to select a zone first
+          const zoneCandidates = actionPayload.zoneCandidates || [];
           return res.json({
-            ok: true,
-            action: existingAction,
-            requiresEdit: true,
-            message: 'GPS available but zone ambiguous. Please select a zone.',
-            geoData: { lat: geoInference.lat, lng: geoInference.lng }
+            ok: false,
+            error: 'Zone selection required',
+            requiresZoneSelection: true,
+            message: 'Please select a zone to attach this ingestion to.',
+            zoneCandidates,
+            geo: actionPayload.geo
           });
         }
         
-        if (zoneId) {
-          // Update ingestion with zone reference (using geoInference field)
-          await db.update(ccAiIngestions)
-            .set({ 
-              geoInference: { ...geoInference, attachedZoneId: zoneId }
-            })
-            .where(eq(ccAiIngestions.id, id));
-          
-          await postThreadMessage(threadId, tenantId,
-            `Attached to Zone: ${actionPayload.zoneLabel || zoneId}`,
-            { type: 'zone_attached', zoneId }
-          );
-          
-          linkedEntity = { type: 'zone', id: zoneId };
-          executionResult = { zoneAttached: true, zoneId };
+        // Look up zone label
+        const zone = await db.query.ccZones.findFirst({
+          where: and(
+            eq(ccZones.id, selectedZoneId),
+            eq(ccZones.tenantId, tenantId)
+          )
+        });
+        
+        if (!zone) {
+          return res.status(400).json({ ok: false, error: 'Zone not found' });
         }
+        
+        // Create ingestion→zone link in cc_ingestion_zone_links
+        await db.insert(ccIngestionZoneLinks)
+          .values({
+            tenantId,
+            ingestionId: id,
+            zoneId: selectedZoneId
+          })
+          .onConflictDoUpdate({
+            target: ccIngestionZoneLinks.ingestionId,
+            set: { zoneId: selectedZoneId }
+          });
+        
+        // Also update ingestion geoInference for backward compatibility
+        await db.update(ccAiIngestions)
+          .set({ 
+            geoInference: { ...geoInference, attachedZoneId: selectedZoneId }
+          })
+          .where(eq(ccAiIngestions.id, id));
+        
+        await postThreadMessage(threadId, tenantId,
+          `Attached ingestion to zone: ${zone.name}`,
+          { type: 'zone_attached', zoneId: selectedZoneId, zoneLabel: zone.name }
+        );
+        
+        linkedEntity = { type: 'zone', id: selectedZoneId, label: zone.name };
+        executionResult = { zoneAttached: true, zoneId: selectedZoneId, zoneLabel: zone.name };
         break;
       }
 
