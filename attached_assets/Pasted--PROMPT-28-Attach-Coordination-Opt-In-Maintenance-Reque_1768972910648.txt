@@ -1,0 +1,411 @@
+✅ PROMPT 28 — Attach Coordination-Opt-In Maintenance Requests to Draft N3 Runs (Internal Only)
+NON-NEGOTIABLES
+
+❌ Never use: booking / bookings / booked → ✅ use reservation / reserved / scheduled
+
+Admin/Owner only. Contractors forbidden (403). Residents forbidden (403).
+
+Internal only: no notifications, no disclosure, no billing, no execution.
+
+No status changes on maintenance requests.
+
+Reversible attachments (attach/detach).
+
+Tenant scoped everywhere; no spoofable headers.
+
+Use Prompt 14 label logic for zone display (ZoneBadge / getZoneBadgeLabel).
+
+GOAL
+
+Let admin/owner operators attach coordination-opt-in maintenance requests to draft N3 runs for planning.
+
+Attachments are purely planning metadata:
+
+does not assign anyone
+
+does not schedule work
+
+does not change request status
+
+does not reveal identities across requests
+
+PART A — Data Model
+A1) Add Coordination Opt-In fields to cc_maintenance_requests
+
+Create a migration:
+
+server/migrations/XXX_maintenance_coordination_opt_in.sql
+
+Add fields:
+
+coordination_opt_in boolean NOT NULL default false
+
+coordination_opt_in_set_at timestamptz null
+
+coordination_opt_in_set_by uuid null
+
+coordination_opt_in_note text null
+
+Constraints:
+
+note max length enforced in API (280 chars)
+
+Indexes:
+
+Partial index for fast lookups:
+
+(portal_id, zone_id) where coordination_opt_in = true
+
+SQL example:
+
+ALTER TABLE cc_maintenance_requests
+  ADD COLUMN IF NOT EXISTS coordination_opt_in boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS coordination_opt_in_set_at timestamptz,
+  ADD COLUMN IF NOT EXISTS coordination_opt_in_set_by uuid,
+  ADD COLUMN IF NOT EXISTS coordination_opt_in_note text;
+
+CREATE INDEX IF NOT EXISTS idx_maint_coord_opt_in_portal_zone
+  ON cc_maintenance_requests(portal_id, zone_id)
+  WHERE coordination_opt_in = true;
+
+
+Update Drizzle schema in shared/schema.ts for ccMaintenanceRequests to include these columns.
+
+A2) Create join table: cc_n3_run_maintenance_requests
+
+Create a migration:
+
+server/migrations/XXX_n3_run_maintenance_requests.sql
+
+Table:
+
+id uuid pk default gen_random_uuid()
+
+tenant_id uuid not null
+
+run_id uuid not null references cc_n3_runs(id) on delete cascade
+
+maintenance_request_id uuid not null references cc_maintenance_requests(id) on delete cascade
+
+attached_at timestamptz not null default now()
+
+attached_by uuid null
+
+Constraints:
+
+unique (run_id, maintenance_request_id)
+
+Indexes:
+
+(tenant_id, run_id)
+
+(tenant_id, maintenance_request_id)
+
+SQL:
+
+CREATE TABLE IF NOT EXISTS cc_n3_run_maintenance_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  run_id uuid NOT NULL REFERENCES cc_n3_runs(id) ON DELETE CASCADE,
+  maintenance_request_id uuid NOT NULL REFERENCES cc_maintenance_requests(id) ON DELETE CASCADE,
+  attached_at timestamptz NOT NULL DEFAULT now(),
+  attached_by uuid
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_n3_run_maint_req
+  ON cc_n3_run_maintenance_requests(run_id, maintenance_request_id);
+
+CREATE INDEX IF NOT EXISTS idx_n3_run_maint_req_tenant_run
+  ON cc_n3_run_maintenance_requests(tenant_id, run_id);
+
+CREATE INDEX IF NOT EXISTS idx_n3_run_maint_req_tenant_req
+  ON cc_n3_run_maintenance_requests(tenant_id, maintenance_request_id);
+
+
+Add Drizzle table to shared/schema.ts.
+
+PART B — Backend APIs (N3)
+
+All endpoints below must use:
+
+requireAuth + requireTenant + requireTenantAdminOrOwner
+
+Tenant ID comes from TenantRequest.ctx.tenant_id.
+
+B1) List eligible coordination-opt-in requests (for selection)
+
+Endpoint:
+
+GET /api/n3/runs/:runId/eligible-maintenance-requests
+
+Query params:
+
+category optional
+
+limit default 50 clamp 10–200
+
+include_unzoned optional boolean (default false)
+
+Rules:
+
+run must exist + tenant scoped
+
+run must be draft
+
+run must have portal_id set (required)
+
+eligible requests:
+
+portal_id == run.portal_id
+
+if run.zone_id set → request.zone_id must match
+
+if run.zone_id null:
+
+include only unzoned when include_unzoned=true
+
+otherwise return empty list with warning
+
+Return minimal metadata only (no names, no contact fields, no descriptions):
+
+For each request:
+
+id
+
+request_number
+
+category
+
+status
+
+zone_id
+
+portal_id
+
+coordination_opt_in_set_at
+
+created_at
+
+updated_at
+
+Response:
+
+{
+  "ok": true,
+  "run": { "id": "...", "portal_id": "...", "zone_id": "...", "status": "draft" },
+  "items": [...],
+  "warnings": ["ZONE_NOT_ASSIGNED"] // optional
+}
+
+B2) Attach maintenance requests to draft run
+
+POST /api/n3/runs/:runId/attach-maintenance-requests
+
+Body:
+
+{ "maintenance_request_ids": ["uuid", "..."] }
+
+
+Validation:
+
+run exists, tenant scoped
+
+run.status === 'draft'
+
+run.portal_id is required
+
+for each request:
+
+belongs to same tenant (by property/portal relationship; at minimum enforce portal_id match + propertyId tenant ownership if available — if not available, enforce portal_id match as the scoping key for now)
+
+portal_id == run.portal_id
+
+if run.zone_id set: zone_id == run.zone_id
+
+coordination_opt_in = true
+
+ignore duplicates (unique index makes it idempotent)
+
+Write:
+
+insert into cc_n3_run_maintenance_requests with tenant_id, run_id, maintenance_request_id, attached_by
+
+Audit (console.log pattern):
+
+console.log('[N3 AUDIT] n3_run_maintenance_requests_attached', {
+  event: 'n3_run_maintenance_requests_attached',
+  run_id: runId,
+  attached_count,
+  actor_id: userId,
+  tenant_id: tenantId,
+  occurred_at: now.toISOString(),
+});
+
+
+Return:
+
+{ "success": true, "attached_count": 5 }
+
+B3) Detach maintenance requests from run
+
+POST /api/n3/runs/:runId/detach-maintenance-requests
+
+Body:
+
+{ "maintenance_request_ids": ["uuid", "..."] }
+
+
+Delete rows matching tenant_id + run_id + ids.
+
+Audit:
+n3_run_maintenance_requests_detached
+
+Return:
+
+{ "success": true, "detached_count": 3 }
+
+B4) List attached maintenance requests for run
+
+GET /api/n3/runs/:runId/maintenance-requests
+
+Return minimal fields only:
+
+maintenance_request_id (id)
+
+request_number
+
+category
+
+status
+
+zone_id
+
+coordination_opt_in_set_at
+
+attached_at
+
+Plus rollups:
+
+total_attached
+
+counts by category
+
+counts by status
+
+PART C — Frontend (ServiceRunMonitorPage)
+C1) Draft-only panel
+
+Show only when:
+
+admin/owner
+
+run.status === 'draft'
+
+Panel title:
+“Coordination-Opt-In Requests (Internal)”
+
+Badge:
+internal only
+
+Helper copy:
+
+“Attached for planning only. No one is notified.”
+
+C2) Attached list
+
+Show table of attached requests:
+
+request_number
+
+category
+
+status
+
+zone badge (Prompt 14)
+
+attached_at
+
+Remove button (detach)
+
+No titles/descriptions, no PII.
+
+C3) Attach flow modal
+
+Button:
+“Attach requests”
+
+Modal controls:
+
+Category filter dropdown (from distinct categories in eligible list response or local derived)
+
+Toggle: “Include unzoned” (only enabled when run.zone_id is null)
+
+Multi-select list of eligible items
+
+Confirm attaches and closes.
+
+C4) Hooks
+
+Add hooks in client/src/hooks/n3/useN3.ts:
+
+useN3EligibleMaintenanceRequests(runId, params)
+
+useN3AttachedMaintenanceRequests(runId)
+
+useN3AttachMaintenanceRequests()
+
+useN3DetachMaintenanceRequests()
+
+Invalidate:
+
+/api/n3/runs/:runId/maintenance-requests
+
+/api/n3/runs/:runId/monitor
+
+PART D — Coordination Opt-In Toggle (Admin Only)
+
+Since you currently don’t have coordination opt-in UI for maintenance requests, add a minimal internal control:
+
+Endpoint (admin/owner only)
+
+PUT /api/maintenance-requests/:id/coordination-opt-in
+
+Body:
+
+{ "coordination_opt_in": true|false, "note": "optional" }
+
+
+Rules:
+
+admin/owner only
+
+note max 280
+
+sets timestamps/by fields appropriately
+
+audit console.log: maintenance_coordination_opt_in_set / _cleared
+
+UI
+
+On the Maintenance Request detail page (or wherever requests are viewed by admin):
+
+Card: “Coordination”
+
+Toggle + optional note
+
+“Internal only” badge
+
+This enables Prompt 28 selection list to exist meaningfully.
+
+ACCEPTANCE CRITERIA
+
+✅ Join table exists and is tenant-scoped
+✅ Admin can opt-in a maintenance request
+✅ Eligible list returns minimal metadata only
+✅ Attach/detach works and is idempotent
+✅ Attached list shows minimal data + zone badge
+✅ Draft runs only; scheduled runs hide the panel
+✅ Contractors have no access to any of this
+✅ No notifications, billing, execution, or status changes
+
+END PROMPT 28

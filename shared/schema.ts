@@ -3035,15 +3035,39 @@ export const ccMaintenanceRequests = pgTable('cc_maintenance_requests', {
   
   detailsJson: jsonb('details_json').notNull().default({}),
   
+  // Coordination opt-in fields (Prompt 28)
+  coordinationOptIn: boolean('coordination_opt_in').notNull().default(false),
+  coordinationOptInSetAt: timestamp('coordination_opt_in_set_at', { withTimezone: true }),
+  coordinationOptInSetBy: uuid('coordination_opt_in_set_by'),
+  coordinationOptInNote: text('coordination_opt_in_note'),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
+}, (table) => [
+  index('idx_maint_coord_opt_in_portal_zone').on(table.portalId, table.zoneId),
+]);
 
 export const insertMaintenanceRequestSchema = createInsertSchema(ccMaintenanceRequests).omit({ 
-  id: true, createdAt: true, updatedAt: true 
+  id: true, createdAt: true, updatedAt: true, coordinationOptInSetAt: true, coordinationOptInSetBy: true
 });
 export type MaintenanceRequest = typeof ccMaintenanceRequests.$inferSelect;
 export type InsertMaintenanceRequest = z.infer<typeof insertMaintenanceRequestSchema>;
+
+// ============ N3 RUN MAINTENANCE REQUEST ATTACHMENTS (Prompt 28) ============
+export const ccN3RunMaintenanceRequests = pgTable('cc_n3_run_maintenance_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  runId: uuid('run_id').notNull(),
+  maintenanceRequestId: uuid('maintenance_request_id').notNull(),
+  attachedAt: timestamp('attached_at', { withTimezone: true }).notNull().defaultNow(),
+  attachedBy: uuid('attached_by'),
+}, (table) => [
+  uniqueIndex('uq_n3_run_maint_req').on(table.runId, table.maintenanceRequestId),
+  index('idx_n3_run_maint_req_tenant_run').on(table.tenantId, table.runId),
+  index('idx_n3_run_maint_req_tenant_req').on(table.tenantId, table.maintenanceRequestId),
+]);
+
+export type N3RunMaintenanceRequest = typeof ccN3RunMaintenanceRequests.$inferSelect;
 
 // ============ HOUSEKEEPING CHECKLISTS ============
 export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
