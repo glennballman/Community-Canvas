@@ -1,0 +1,105 @@
+✅ REPLIT PROMPT — A2.6 Patch #7: LocationResolutionBlock ↔ attach_to_zone Action
+PURPOSE
+
+Make attach_to_zone a “real” action that is resolved via the existing A2.4 geo confirm flow and zone selection UI, not a dead-end suggestion.
+
+REQUIREMENTS
+
+Reuse LocationResolutionBlock (A2.4)
+
+attach_to_zone action remains your existing action type (do not rename)
+
+Confirming/changing location should:
+
+update geo entity link (A2.4)
+
+then allow zone selection
+
+then resolve/dismiss the attach_to_zone action accordingly
+
+Messaging thread must be used (ensure-thread + message on confirm)
+
+SERVER
+1) Add helper: inferZoneCandidatesFromGeo(tenantId, contractorProfileId, lat, lng)
+
+If you already have portal/zone inference utilities, reuse them.
+
+Return list of candidates: { zoneId, zoneLabel, confidence }
+
+This is a proposal list only.
+
+2) Extend next-actions payload for attach_to_zone
+
+When proposing attach_to_zone, ensure payload has:
+
+{
+  "key": "attach_to_zone",
+  "geo": { "lat": 0, "lng": 0, "confidence": 0 },
+  "zoneCandidates": [{ "zoneId":"...", "label":"...", "confidence": 0 }],
+  "selectedZoneId": null
+}
+
+3) Resolve endpoint behavior
+
+POST /api/contractor/ingestions/:id/next-actions/:actionId/resolve
+
+If actionType === 'attach_to_zone' and resolution === 'confirm':
+
+Require payload.selectedZoneId
+
+Persist zone attachment:
+
+If there is an existing ingestion→zone link table, use it
+
+Otherwise create cc_ingestion_zone_links (additive):
+
+id, tenant_id, ingestion_id unique, zone_id, created_at
+
+Ensure thread and post message:
+
+“Attached ingestion to zone: {label}”
+
+Mark action confirmed
+
+If resolution === 'edit':
+
+Update payload only (no status change), allow setting selectedZoneId
+
+UI
+1) UploadResultsPage changes
+
+For each ingestion card:
+
+Render LocationResolutionBlock
+
+Under it, render the attach_to_zone action card as a “Zone Attach” section:
+
+If location not confirmed → show “Confirm location first” helper text
+
+Show zoneCandidates as selectable radio list
+
+Save selection via edit resolution
+
+Confirm executes confirm resolution
+
+2) Success state
+
+Once confirmed:
+
+show selected zone badge/label
+
+show “Open Thread” button
+
+do not re-propose unless force recompute
+
+ACCEPTANCE
+
+Confirm location → zone candidates populate
+
+Select candidate → edit action payload persists
+
+Confirm → creates ingestion→zone link and marks action confirmed
+
+Thread message posted
+
+Proceed.

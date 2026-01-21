@@ -7720,6 +7720,34 @@ export type IngestionNextAction = typeof ccIngestionNextActions.$inferSelect;
 export type InsertIngestionNextAction = z.infer<typeof insertIngestionNextActionSchema>;
 
 // ============================================================================
+// A2.6: Ingestion Zone Links - Links ingestions to zones
+// ============================================================================
+
+/**
+ * Ingestion Zone Links
+ * 
+ * Links cc_ai_ingestions to cc_zones via attach_to_zone action.
+ * Created when contractor confirms zone attachment.
+ * One ingestion can only be linked to one zone (unique constraint).
+ */
+export const ccIngestionZoneLinks = pgTable("cc_ingestion_zone_links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  ingestionId: uuid("ingestion_id").notNull(),
+  zoneId: uuid("zone_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_cc_ingestion_zone_links_unique").on(table.ingestionId),
+  index("idx_cc_ingestion_zone_links_zone").on(table.zoneId),
+]);
+
+export const insertIngestionZoneLinkSchema = createInsertSchema(ccIngestionZoneLinks).omit({
+  id: true, createdAt: true
+});
+export type IngestionZoneLink = typeof ccIngestionZoneLinks.$inferSelect;
+export type InsertIngestionZoneLink = z.infer<typeof insertIngestionZoneLinkSchema>;
+
+// ============================================================================
 // A2.6: Sticky Note Extractions - Persisted OCR Outputs
 // ============================================================================
 
