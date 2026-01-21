@@ -1,0 +1,277 @@
+✅ REPLIT PROMPT 22 — Work Request “Coordination Intent” (Opt-In, Privacy-Safe, No Auto Actions)
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+Jobs = employment. Work Requests = maintenance/contractor work.
+
+No billing/ledger/folio/payment changes.
+
+No auto-grouping, no auto-creation of Service Runs, no persistence of bundles beyond the intent flag.
+
+No disclosure scope bypass: never reveal neighbor identities or work request lists.
+
+Contractors do not gain any new visibility.
+
+Default is private/off. Explicit opt-in only.
+
+All changes must be tenant-scoped, portal-scoped, auditable.
+
+GOAL
+
+Let a resident/admin explicitly express:
+
+“I’m open to coordinating this work request with similar requests.”
+
+This is a signal only:
+
+visible to owner/admin and resident context
+
+not visible to contractors
+
+does not create a bundle entity
+
+does not change any estimates or scheduling automatically
+
+PART A — Data Model (Minimal, Additive)
+A1) Add coordination intent fields to Work Requests table
+
+Create a migration to add:
+
+coordination_intent boolean NOT NULL DEFAULT false
+
+coordination_intent_set_at timestamptz NULL
+
+coordination_intent_set_by uuid NULL (actor/individual id, whichever is canonical in your schema)
+
+coordination_intent_note text NULL (optional, max 280 chars)
+
+Index:
+
+(portal_id, zone_id, coordination_intent) partial index where true, to support future “coordination-ready” filtering.
+
+IMPORTANT: Do not invent table name. Use the existing Work Requests table (likely cc_work_requests).
+
+Example (adapt names to actual columns):
+
+ALTER TABLE cc_work_requests
+  ADD COLUMN IF NOT EXISTS coordination_intent boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS coordination_intent_set_at timestamptz NULL,
+  ADD COLUMN IF NOT EXISTS coordination_intent_set_by uuid NULL,
+  ADD COLUMN IF NOT EXISTS coordination_intent_note text NULL;
+
+CREATE INDEX IF NOT EXISTS idx_work_requests_coord_intent_true
+  ON cc_work_requests(portal_id, zone_id)
+  WHERE coordination_intent = true;
+
+
+If portal_id / zone_id columns differ, use the actual names.
+
+PART B — Backend API (Work Requests)
+B1) Add endpoint: set/clear coordination intent
+
+Route:
+PUT /api/work-requests/:id/coordination-intent
+
+Middleware:
+
+requireAuth
+
+requireTenant
+
+Role gating: allow resident/admin/owner; deny contractors and public preview routes.
+
+Request body:
+
+{
+  coordination_intent: boolean,
+  note?: string | null
+}
+
+
+Validation:
+
+note max length 280 (trim whitespace)
+
+if coordination_intent=false → clear note (optional) and clear set_at/by
+
+Behavior:
+
+Load work request tenant-scoped and portal-scoped
+
+If portal_id is null: allow setting intent but return a warning field portal_required_for_matching: true (do not block)
+
+Update fields:
+
+if setting true:
+
+coordination_intent = true
+
+coordination_intent_set_at = now()
+
+coordination_intent_set_by = tenantReq.ctx.individual_id OR tenantReq.user.id (use whichever is canonical and available)
+
+coordination_intent_note = note || null
+
+if clearing:
+
+coordination_intent = false
+
+coordination_intent_set_at = null
+
+coordination_intent_set_by = null
+
+coordination_intent_note = null (or keep last note if you prefer; default is clear)
+
+Audit log:
+
+coordination_intent_set
+
+coordination_intent_cleared
+Include work_request_id, portal_id, zone_id, actor id, timestamp.
+
+Response:
+
+{
+  ok: true,
+  work_request_id: string,
+  coordination_intent: boolean,
+  coordination_intent_set_at: string | null,
+  coordination_intent_note: string | null
+}
+
+B2) Ensure Work Request detail payload includes the intent fields
+
+Where Work Request detail is returned (existing endpoint), include:
+
+coordination_intent
+
+coordination_intent_set_at
+
+coordination_intent_note (optional)
+Do not include “set_by” unless it is already safe and visible in resident/admin context.
+
+B3) Add counts-only enhancement to coordination endpoint (optional but useful)
+
+Update:
+GET /api/work-requests/:id/coordination
+
+Add a field:
+
+coordination_ready_similar_count = count of similar active work requests where coordination_intent = true
+
+Still counts-only, no IDs.
+
+PART C — Frontend UI (WorkRequestDetail)
+C1) Add “Coordination Intent” card
+
+In WorkRequestDetail.tsx, add below the existing CoordinationSignalCard:
+
+Card title: “Coordination intent”
+Badge: “opt-in”
+
+Elements:
+
+Toggle switch:
+
+Label: “I’m open to coordinating this with similar requests”
+
+Optional note input (only visible when toggled on):
+
+Placeholder: “Optional note (e.g., flexible timing)”
+
+Max 280
+
+Helper text:
+
+“This shares no personal details. It only signals coordination readiness.”
+
+Behavior:
+
+When toggle changes:
+
+call mutation PUT /coordination-intent
+
+optimistic UI ok, but must rollback on error
+
+When note changes:
+
+either save on blur, or save with an explicit “Save note” button
+
+do not spam saves on every keystroke unless debounced
+
+Visibility:
+
+Only show for resident/admin/owner contexts (same as CoordinationSignalCard).
+
+Do not show in contractor preview or public routes.
+
+C2) Show “coordination-ready similar count”
+
+If you implemented B3, display under the nudge:
+
+“Coordination-ready requests nearby: X”
+If X >= 2 show a stronger nudge:
+
+“Consider a coordinated schedule window to reduce travel overhead.”
+
+PART D — Hooks
+
+Add hooks:
+
+useWorkRequestCoordinationIntent(workRequestId) mutation
+
+Update useWorkRequestDetail query invalidation on success
+
+If coordination endpoint enhanced, invalidate that query too
+
+PART E — Security & Privacy Guardrails
+
+Must confirm:
+
+Contractors cannot access PUT endpoint (403)
+
+Contractor preview does not show intent card or intent fields
+
+No endpoint returns a list of work requests based on intent (counts only)
+
+No cross-portal leakage (portal_id, tenant_id scoping always enforced)
+
+PART F — Acceptance Criteria / QA
+
+Resident/admin toggles intent ON:
+
+DB fields set correctly ✅
+
+audit log event emitted ✅
+
+UI shows opt-in badge + optional note ✅
+
+Toggling OFF clears fields ✅
+
+Contractor preview:
+
+cannot see UI card ✅
+
+cannot call endpoint (403) ✅
+
+Coordination endpoint (if enhanced):
+
+returns coordination_ready_similar_count counts-only ✅
+
+No billing changes, no scheduling changes ✅
+
+DELIVERABLES
+
+Migration adding coordination intent fields + partial index
+
+New PUT endpoint + role gating + audit logs
+
+Work Request detail payload includes intent fields (resident/admin only)
+
+UI card + hooks + cache invalidation
+
+Optional enhancement to coordination counts endpoint
+
+END PROMPT 22
