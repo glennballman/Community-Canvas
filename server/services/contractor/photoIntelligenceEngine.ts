@@ -178,13 +178,18 @@ export async function buildOrUpdateTimelineForBundle(
     return { ok: false, error: 'Unauthorized: bundle belongs to different tenant' };
   }
   
-  // Skip recompute if already confirmed (unless forced)
-  if (bundle.status === 'confirmed' && !force) {
-    return { ok: true, bundle, error: 'Bundle already confirmed, use force=true to recompute' };
-  }
+  // For confirmed bundles without force, only refresh timeline/proof JSON, never modify arrays
+  const isConfirmedNoForce = bundle.status === 'confirmed' && !force;
   
   // Resolve all media items
-  const { beforeItems, afterItems, duringItems } = await normalizeBundleArraysToMediaIds(bundle);
+  const { 
+    beforeItems, 
+    afterItems, 
+    duringItems,
+    normalizedBeforeIds,
+    normalizedAfterIds,
+    normalizedDuringIds
+  } = await normalizeBundleArraysToMediaIds(bundle);
   
   // Build timeline items
   const allItems: TimelineItem[] = [
@@ -236,7 +241,7 @@ export async function buildOrUpdateTimelineForBundle(
   // Determine new status
   let newStatus = complete ? 'complete' : 'incomplete';
   // Don't downgrade confirmed bundles unless forced
-  if (bundle.status === 'confirmed' && !force) {
+  if (isConfirmedNoForce) {
     newStatus = 'confirmed';
   }
   
@@ -248,20 +253,30 @@ export async function buildOrUpdateTimelineForBundle(
     else if (bundle.bundleType === 'progress_series' && duringItems.length < 3) missingStage = 'during';
   }
   
+  // Build the update set - PATCH A: only update arrays if not confirmed (or force=true)
+  const updateSet: Record<string, any> = {
+    timelineJson,
+    proofJson,
+    coversFrom: timeRange.from,
+    coversTo: timeRange.to,
+    centroidLat: centroid.lat?.toString() ?? null,
+    centroidLng: centroid.lng?.toString() ?? null,
+    status: newStatus,
+    missingStage,
+    updatedAt: new Date(),
+    completedAt: complete ? new Date() : null
+  };
+  
+  // PATCH B: Normalize arrays to canonical IDs (only when not confirmed or force=true)
+  if (!isConfirmedNoForce) {
+    updateSet.beforeMediaIds = normalizedBeforeIds;
+    updateSet.afterMediaIds = normalizedAfterIds;
+    updateSet.duringMediaIds = normalizedDuringIds;
+  }
+  
   // Update the bundle
   const [updatedBundle] = await db.update(ccContractorPhotoBundles)
-    .set({
-      timelineJson,
-      proofJson,
-      coversFrom: timeRange.from,
-      coversTo: timeRange.to,
-      centroidLat: centroid.lat?.toString() ?? null,
-      centroidLng: centroid.lng?.toString() ?? null,
-      status: newStatus,
-      missingStage,
-      updatedAt: new Date(),
-      completedAt: complete ? new Date() : null
-    })
+    .set(updateSet)
     .where(eq(ccContractorPhotoBundles.id, bundleId))
     .returning();
   

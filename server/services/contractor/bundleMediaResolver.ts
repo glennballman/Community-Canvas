@@ -119,6 +119,9 @@ export async function normalizeBundleArraysToMediaIds(bundle: {
   beforeItems: ResolvedMediaItem[];
   afterItems: ResolvedMediaItem[];
   duringItems: ResolvedMediaItem[];
+  normalizedBeforeIds: string[];
+  normalizedAfterIds: string[];
+  normalizedDuringIds: string[];
 }> {
   const beforeIds = Array.isArray(bundle.beforeMediaIds) ? bundle.beforeMediaIds : [];
   const afterIds = Array.isArray(bundle.afterMediaIds) ? bundle.afterMediaIds : [];
@@ -130,5 +133,21 @@ export async function normalizeBundleArraysToMediaIds(bundle: {
     resolveBundleItemsToMedia(duringIds.map(String))
   ]);
   
-  return { beforeItems, afterItems, duringItems };
+  // Extract canonical IDs: prefer mediaId, fall back to ingestionId
+  const extractCanonicalId = (item: ResolvedMediaItem, originalId: string): string => {
+    return item.mediaId || item.ingestionId || originalId;
+  };
+  
+  const normalizedBeforeIds = beforeItems.map((item, i) => extractCanonicalId(item, beforeIds[i]));
+  const normalizedAfterIds = afterItems.map((item, i) => extractCanonicalId(item, afterIds[i]));
+  const normalizedDuringIds = duringItems.map((item, i) => extractCanonicalId(item, duringIds[i]));
+  
+  return { 
+    beforeItems, 
+    afterItems, 
+    duringItems,
+    normalizedBeforeIds,
+    normalizedAfterIds,
+    normalizedDuringIds
+  };
 }

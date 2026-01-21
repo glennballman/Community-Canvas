@@ -1,0 +1,149 @@
+A2.7 Production QA Checklist (run these in order)
+1) Backwards-compatibility test (ingestion IDs in arrays)
+
+Goal: old bundles that stored cc_ai_ingestions.id still work.
+
+Pick an existing bundle created before the “media id compatibility layer” change
+
+Open /app/contractor/photo-bundles/:id
+
+Click Recompute
+
+Confirm:
+
+thumbnails render
+
+timeline orders correctly
+
+no “missing media” errors
+
+after recompute, IDs in beforeMediaIds/afterMediaIds/duringMediaIds are either:
+
+still ingestion IDs (allowed), OR
+
+safely normalized to media IDs (allowed)
+
+but never a mixed broken state (e.g., strings that match neither table)
+
+✅ Pass condition: bundle renders + recompute succeeds.
+
+2) Completeness state machine correctness
+
+Goal: status changes predictably.
+
+Test these cases:
+
+Case A — before_after incomplete
+
+1 before, 0 after → status stays incomplete, missingStage = after
+
+Case B — before_after complete
+
+1 before, 1 after → status becomes complete
+
+Case C — confirm requires complete
+
+Try confirm while incomplete → must be blocked (UI + server)
+
+Case D — confirmed is stable
+
+Confirm a complete bundle → status becomes confirmed
+
+Recompute must not downgrade it back to complete/incomplete unless force=true (decide and enforce one rule)
+
+✅ Pass condition: confirm gating works + no accidental downgrade.
+
+3) Move endpoint integrity
+
+Goal: no duplicates, no loss.
+
+Move the same item:
+
+before → during → after
+
+Verify:
+
+it appears only once across arrays
+
+recompute does not reintroduce duplicates
+
+Also test moving an “ingestionId item” and ensure it resolves correctly.
+
+✅ Pass condition: exactly one occurrence in arrays.
+
+4) Messaging invariant check (mandatory)
+
+You said A2.7 includes proof/missing items. That must flow through threads.
+
+Run:
+
+recompute bundle
+
+confirm bundle
+
+request missing items (from proofJson list)
+
+✅ Expected:
+
+each action posts a message to the same thread
+
+messages include bundleId/status/missing prompts
+
+no external channels
+
+If any of these do not message, that’s a fail.
+
+5) Proof JSON is stable + minimal
+
+Spot-check proofJson:
+
+claims exist and reference evidence IDs
+
+missing items include:
+
+prompt
+
+stage
+
+priority
+
+risk flags set on missing timestamps etc.
+
+✅ Pass condition: proofJson contains no user PII and no “final legal wording”.
+
+6) Quality score sanity
+
+Verify the weighting behaves:
+
+no timestamp + no geo should score low
+
+timestamp+geo should score meaningfully higher
+
+resolution/size shouldn’t dominate
+
+✅ Pass condition: scores “feel” right across test photos.
+
+Two “must do” hardening patches (small but important)
+Patch A — Freeze confirmed bundles unless force=true
+
+Right now recompute could accidentally change a confirmed bundle’s grouping. That’s dangerous for disputes.
+
+Rule:
+
+If status = confirmed and force !== true:
+
+recompute updates timelineJson/proofJson (optional)
+
+but does not modify before/during/after arrays
+
+does not downgrade status
+
+Patch B — Strong ID normalization rule
+
+After recompute, pick one:
+
+Option 1: Keep arrays as media IDs always going forward (recommended)
+
+Option 2: Keep arrays as ingestion IDs always
+
+Mixed-mode is where bugs breed. Since you built a compatibility layer, normalize to media IDs on recompute is the cleanest.
