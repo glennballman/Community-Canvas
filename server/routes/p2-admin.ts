@@ -193,11 +193,11 @@ router.patch('/portals/:portalId/default-zone', async (req: any, res) => {
       return res.status(404).json({ ok: false, error: 'Portal not found' });
     }
     
-    // If zone_id provided, verify it belongs to this portal
+    // If zone_id provided, verify it belongs to this portal AND tenant (cross-tenant protection)
     if (default_zone_id) {
       const zoneCheck = await pool.query(`
-        SELECT id FROM cc_zones WHERE id = $1 AND portal_id = $2
-      `, [default_zone_id, portalId]);
+        SELECT id FROM cc_zones WHERE id = $1 AND portal_id = $2 AND tenant_id = $3
+      `, [default_zone_id, portalId, auth.tenantId]);
       
       if (zoneCheck.rows.length === 0) {
         return res.status(400).json({ ok: false, error: 'Zone not found or does not belong to this portal' });

@@ -658,7 +658,11 @@ n3Router.get('/status', requireAuth, async (req, res) => {
 
 /**
  * POST /api/n3/trigger-cycle - Trigger monitor cycle (protected: platform admin only)
+ * Rate limited: 60 second cooldown between manual triggers
  */
+let lastTriggerCycleTime = 0;
+const TRIGGER_CYCLE_COOLDOWN_MS = 60000; // 60 seconds
+
 n3Router.post('/trigger-cycle', requireAuth, async (req, res) => {
   try {
     const tenantReq = req as TenantRequest;
@@ -668,6 +672,18 @@ n3Router.post('/trigger-cycle', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Platform admin access required' });
     }
     
+    // Rate limit check
+    const now = Date.now();
+    const timeSinceLastTrigger = now - lastTriggerCycleTime;
+    if (timeSinceLastTrigger < TRIGGER_CYCLE_COOLDOWN_MS) {
+      const waitSeconds = Math.ceil((TRIGGER_CYCLE_COOLDOWN_MS - timeSinceLastTrigger) / 1000);
+      return res.status(429).json({ 
+        error: `Rate limited. Please wait ${waitSeconds} seconds before triggering another cycle.`,
+        retry_after_seconds: waitSeconds,
+      });
+    }
+    
+    lastTriggerCycleTime = now;
     const stats = await runMonitorCycle();
     res.json({ success: true, stats });
   } catch (err) {
