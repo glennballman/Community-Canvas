@@ -1,0 +1,256 @@
+✅ REPLIT PROMPT 21 — Coordination Signals (Pre-Incentive)
+
+(Zone + “similar work” counts, advisory only, no persistence, no auto actions)
+
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+Jobs = employment. Work Requests = maintenance/contractor work.
+
+No billing/ledger/folio/payment changes.
+
+No auto-grouping, no auto-creation of Service Runs, no side effects.
+
+No “shared by default” data.
+
+Contractors must not gain new visibility beyond disclosures.
+Coordination signals are resident/admin internal unless explicitly safe.
+
+Use Prompt 14 label logic for zone display (getZoneBadgeLabel / ZoneBadge).
+
+GOAL
+
+Create pre-incentive coordination signals so residents/operators see that coordination is possible:
+
+“There are X similar work requests in your zone in the last N days.”
+
+Show counts only (no titles, no addresses, no media) unless the viewer already has access.
+
+Works now for Work Requests; designed to feed Service Runs later.
+
+PART A — Define “Similar” (Deterministic, No New Taxonomy)
+A1) Similarity key (v1)
+
+A Work Request is “similar” to another if it matches:
+
+Same portal_id
+
+Same zone_id (or both unzoned when zone_id is null)
+
+Same subsystem (preferred), else fallback to same work area, else fallback to same category/kind (whichever fields exist)
+
+Implementation rule:
+
+Use the best available existing fields in order:
+
+subsystem_id (or subsystemId)
+
+work_area_id (or workAreaId)
+
+kind / category / type (whichever exists in schema)
+
+Do not introduce new classification columns in this prompt.
+
+A2) Eligible statuses/time window
+
+Count only “active” work requests (choose the canonical active statuses used in your system, e.g.):
+
+new, open, intake, triage (exclude closed, completed, cancelled)
+Time windows:
+
+default 14 days
+
+selectable: 7 / 14 / 30 days
+Clamp 1–60 days.
+
+PART B — Backend API (Counts-Only)
+B1) Add endpoint: Similarity summary for a single Work Request
+
+Route (in the Work Requests routes file, not N3):
+GET /api/work-requests/:id/coordination
+
+Middleware:
+
+requireAuth, requireTenant
+
+plus requireOwnerOrAdmin OR resident role (do not allow contractor preview)
+
+If your roles are admin/owner/tenant_admin, allow those.
+
+If you have a resident role concept, allow it only within portal context.
+
+Response (counts only, no PII):
+
+{
+  ok: true,
+  window_days: number,
+  portal_id: string,
+  zone_id: string | null,
+  similarity_key: {
+    subsystem_id?: string | null,
+    work_area_id?: string | null,
+    kind?: string | null
+  },
+  totals: {
+    similar_active_count: number,
+    similar_new_count: number,
+    unzoned_similar_count?: number
+  }
+}
+
+
+Rules:
+
+Validate the request belongs to tenant and portal.
+
+If requester lacks permission → 403.
+
+Never include list of matching work request IDs in v1.
+
+B2) Add endpoint: Zone coordination rollups (counts-only)
+
+Route:
+GET /api/work-requests/coordination/zone-rollup
+
+Query params:
+
+portalId (required)
+
+zoneId optional (none = unzoned)
+
+windowDays optional
+
+Returns counts per “similarity bucket” in the zone:
+
+{
+  ok: true,
+  window_days: number,
+  portal_id: string,
+  zone_id: string | null,
+  buckets: Array<{
+    label: string,             // derived display label like subsystem name or kind
+    key: { subsystem_id?: string|null, work_area_id?: string|null, kind?: string|null },
+    active_count: number,
+    new_count: number
+  }>
+}
+
+
+Notes:
+
+Label should be derived from existing joins if you have them (e.g., subsystem name). If not, label can be “Subsystem” + short id, or kind string.
+
+This endpoint is for resident/admin ops UI only.
+
+B3) Implementation detail: similarity key builder
+
+Create a shared helper (server-side) e.g. server/lib/coordination.ts:
+
+buildSimilarityKey(workRequestRow) returns the key object using the priority rules.
+
+applySimilarityWhere(q, key) applies conditions.
+
+PART C — Frontend UI (Pre-Incentive Signals)
+C1) Work Request detail page signal card
+
+File: client/src/pages/intake/WorkRequestDetail.tsx (or wherever the detail view lives)
+
+Add a card below Zone section (and below ZoneImpactSummary / BundleSimulationSlider if present):
+
+Title: “Coordination signal”
+Badge: “advisory”
+Content:
+
+Dropdown “Window: 7 / 14 / 30 days”
+
+Line: “Similar requests in this zone: X”
+
+If X >= 2 show a gentle nudge:
+
+“Coordination can reduce travel overhead and shorten scheduling time.”
+
+If unzoned: show:
+
+“Assign a zone to improve coordination.”
+
+Hard rules:
+
+Do not show other work request titles, people, media, addresses.
+
+Do not create any new entities.
+
+Do not persist the selected window (state only).
+
+C2) Optional: Zone rollup mini-panel (only when viewing a portal/zone context)
+
+If you have a portal-level Work Requests list page with filters:
+
+Add a small “Top coordination opportunities” widget:
+
+Shows top 3 buckets by active_count
+
+Uses ZoneBadge label logic for the zone header
+
+Clicking does not navigate to lists of private items (counts only)
+
+PART D — Hooks (React Query)
+
+Add hooks:
+
+useWorkRequestCoordination(workRequestId, windowDays, tenantCtx)
+
+useZoneCoordinationRollup(portalId, zoneId, windowDays, tenantCtx)
+
+Query rules:
+
+Disabled until tenant context is available.
+
+Query keys include windowDays and zone/portal.
+
+PART E — Security / Privacy Guardrails
+
+Endpoints require auth + tenant context ✅
+
+No contractor preview access ✅
+
+Counts only; no IDs returned ✅
+
+No cross-portal leakage ✅
+
+No disclosure scope bypass ✅
+
+If later you want “invite neighbors” flows, that is a separate prompt and must use explicit disclosure + opt-in.
+
+PART F — Acceptance Criteria / QA
+
+With a work request having zone + subsystem:
+
+coordination endpoint returns counts in 7/14/30 windows ✅
+
+If work request has zone but no subsystem/work area:
+
+falls back to kind/category similarity key ✅
+
+If unzoned:
+
+shows unzoned counts and nudges to assign zone ✅
+
+A non-admin non-resident user (or contractor preview) gets 403 ✅
+
+UI shows only counts and advisory language ✅
+
+DELIVERABLES
+
+Backend: 2 new endpoints (work request coordination + zone rollup)
+
+Shared helper for similarity key
+
+UI: Coordination signal card on Work Request detail
+
+Hooks + query wiring
+
+QA notes
+
+END PROMPT 21

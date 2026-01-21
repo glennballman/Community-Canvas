@@ -16,6 +16,13 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireTenant } from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
+import { 
+  buildSimilarityKey, 
+  ACTIVE_STATUSES, 
+  NEW_STATUSES, 
+  clampWindowDays,
+  type SimilarityKey 
+} from '../lib/coordination';
 
 const router = Router();
 
@@ -145,6 +152,96 @@ router.get('/zones', requireAuth, requireTenant, async (req: Request, res: Respo
   }
 });
 
+/**
+ * GET /api/work-requests/coordination/zone-rollup
+ * Zone coordination rollups (counts-only) - for resident/admin ops UI
+ * 
+ * Query params:
+ * - portalId (required)
+ * - zoneId (optional, 'none' for unzoned)
+ * - windowDays (optional, default 14, range 1-60)
+ */
+router.get('/coordination/zone-rollup', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { portalId, zoneId, windowDays: windowDaysParam } = req.query;
+    
+    if (!portalId) {
+      return res.status(400).json({ error: 'portalId is required' });
+    }
+
+    const roles = tenantReq.ctx?.roles || [];
+    const isAdminOrOwner = 
+      roles.includes('owner') || 
+      roles.includes('admin') || 
+      roles.includes('tenant_admin') ||
+      roles.includes('resident') ||
+      !!tenantReq.user?.isPlatformAdmin;
+    
+    if (!isAdminOrOwner) {
+      return res.status(403).json({ 
+        error: 'Coordination signals require resident or admin access',
+        code: 'COORDINATION_ACCESS_DENIED'
+      });
+    }
+
+    const windowDays = clampWindowDays(windowDaysParam as string);
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - windowDays);
+
+    const isUnzoned = zoneId === 'none';
+    const zoneFilter = isUnzoned ? null : (zoneId as string | undefined);
+
+    const activeStatusList = ACTIVE_STATUSES.join("','");
+    const newStatusList = NEW_STATUSES.join("','");
+
+    let zoneCondition = '';
+    const params: any[] = [portalId, windowStart];
+    let paramIndex = 3;
+
+    if (isUnzoned) {
+      zoneCondition = 'AND wr.zone_id IS NULL';
+    } else if (zoneFilter) {
+      zoneCondition = `AND wr.zone_id = $${paramIndex}`;
+      params.push(zoneFilter);
+      paramIndex++;
+    }
+
+    const result = await tenantReq.tenantQuery!(
+      `SELECT 
+        wr.category,
+        COUNT(*) FILTER (WHERE wr.status IN ('${activeStatusList}')) as active_count,
+        COUNT(*) FILTER (WHERE wr.status IN ('${newStatusList}')) as new_count
+      FROM cc_work_requests wr
+      WHERE wr.portal_id = $1
+        AND wr.created_at >= $2
+        AND wr.status IN ('${activeStatusList}')
+        ${zoneCondition}
+      GROUP BY wr.category
+      ORDER BY active_count DESC`,
+      params
+    );
+
+    const buckets = result.rows.map((row: any) => ({
+      label: row.category || 'Uncategorized',
+      key: { category: row.category || null } as SimilarityKey,
+      active_count: parseInt(row.active_count, 10),
+      new_count: parseInt(row.new_count, 10),
+    }));
+
+    res.json({
+      ok: true,
+      window_days: windowDays,
+      portal_id: portalId,
+      zone_id: isUnzoned ? null : (zoneFilter || null),
+      buckets,
+    });
+  } catch (error) {
+    console.error('Error fetching zone coordination rollup:', error);
+    res.status(500).json({ error: 'Failed to fetch coordination rollup' });
+  }
+});
+
 // Get single work request
 router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
@@ -184,6 +281,147 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
   } catch (error) {
     console.error('Error fetching work request:', error);
     res.status(500).json({ error: 'Failed to fetch work request' });
+  }
+});
+
+/**
+ * GET /api/work-requests/:id/coordination
+ * Similarity summary for a single work request (counts only, no PII)
+ * 
+ * Query params:
+ * - windowDays (optional, default 14, range 1-60)
+ */
+router.get('/:id/coordination', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { id } = req.params;
+    const { windowDays: windowDaysParam } = req.query;
+
+    const roles = tenantReq.ctx?.roles || [];
+    const isAdminOrOwner = 
+      roles.includes('owner') || 
+      roles.includes('admin') || 
+      roles.includes('tenant_admin') ||
+      roles.includes('resident') ||
+      !!tenantReq.user?.isPlatformAdmin;
+    
+    if (!isAdminOrOwner) {
+      return res.status(403).json({ 
+        error: 'Coordination signals require resident or admin access',
+        code: 'COORDINATION_ACCESS_DENIED'
+      });
+    }
+
+    const wrResult = await tenantReq.tenantQuery!(
+      `SELECT id, portal_id, zone_id, category FROM cc_work_requests WHERE id = $1`,
+      [id]
+    );
+
+    if (wrResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Work request not found' });
+    }
+
+    const wr = wrResult.rows[0];
+    
+    if (!wr.portal_id) {
+      return res.json({
+        ok: true,
+        window_days: 14,
+        portal_id: null,
+        zone_id: wr.zone_id,
+        similarity_key: buildSimilarityKey(wr),
+        totals: {
+          similar_active_count: 0,
+          similar_new_count: 0,
+          unzoned_similar_count: 0,
+        },
+        message: 'No portal assigned - coordination signals unavailable',
+      });
+    }
+
+    const windowDays = clampWindowDays(windowDaysParam as string);
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - windowDays);
+
+    const similarityKey = buildSimilarityKey(wr);
+    const activeStatusList = ACTIVE_STATUSES.join("','");
+    const newStatusList = NEW_STATUSES.join("','");
+
+    const params: any[] = [wr.portal_id, windowStart, id];
+    let paramIndex = 4;
+    
+    let categoryCondition = '';
+    if (similarityKey.category) {
+      categoryCondition = `AND wr.category = $${paramIndex}`;
+      params.push(similarityKey.category);
+      paramIndex++;
+    } else {
+      categoryCondition = 'AND wr.category IS NULL';
+    }
+
+    let zoneCondition = '';
+    if (wr.zone_id) {
+      zoneCondition = `AND wr.zone_id = $${paramIndex}`;
+      params.push(wr.zone_id);
+      paramIndex++;
+    } else {
+      zoneCondition = 'AND wr.zone_id IS NULL';
+    }
+
+    const countResult = await tenantReq.tenantQuery!(
+      `SELECT 
+        COUNT(*) FILTER (WHERE wr.status IN ('${activeStatusList}')) as similar_active_count,
+        COUNT(*) FILTER (WHERE wr.status IN ('${newStatusList}')) as similar_new_count
+      FROM cc_work_requests wr
+      WHERE wr.portal_id = $1
+        AND wr.created_at >= $2
+        AND wr.id != $3
+        ${categoryCondition}
+        ${zoneCondition}`,
+      params
+    );
+
+    let unzonedSimilarCount = 0;
+    if (wr.zone_id) {
+      const unzonedParams = [wr.portal_id, windowStart, id];
+      let unzonedParamIndex = 4;
+      let unzonedCategoryCondition = '';
+      if (similarityKey.category) {
+        unzonedCategoryCondition = `AND wr.category = $${unzonedParamIndex}`;
+        unzonedParams.push(similarityKey.category);
+      } else {
+        unzonedCategoryCondition = 'AND wr.category IS NULL';
+      }
+
+      const unzonedResult = await tenantReq.tenantQuery!(
+        `SELECT COUNT(*) as cnt
+         FROM cc_work_requests wr
+         WHERE wr.portal_id = $1
+           AND wr.created_at >= $2
+           AND wr.id != $3
+           ${unzonedCategoryCondition}
+           AND wr.zone_id IS NULL
+           AND wr.status IN ('${activeStatusList}')`,
+        unzonedParams
+      );
+      unzonedSimilarCount = parseInt(unzonedResult.rows[0]?.cnt || '0', 10);
+    }
+
+    res.json({
+      ok: true,
+      window_days: windowDays,
+      portal_id: wr.portal_id,
+      zone_id: wr.zone_id,
+      similarity_key: similarityKey,
+      totals: {
+        similar_active_count: parseInt(countResult.rows[0]?.similar_active_count || '0', 10),
+        similar_new_count: parseInt(countResult.rows[0]?.similar_new_count || '0', 10),
+        unzoned_similar_count: unzonedSimilarCount,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching work request coordination:', error);
+    res.status(500).json({ error: 'Failed to fetch coordination data' });
   }
 });
 
