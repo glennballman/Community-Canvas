@@ -75,11 +75,13 @@ import {
 export const n3Router = Router();
 
 // List all runs for a tenant
-n3Router.get('/runs', async (req, res) => {
+n3Router.get('/runs', requireAuth, requireTenant, async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    
     if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenant ID' });
+      return res.status(400).json({ error: 'Missing tenant context' });
     }
 
     const runs = await db
@@ -96,11 +98,13 @@ n3Router.get('/runs', async (req, res) => {
   }
 });
 
-n3Router.get('/attention', async (req, res) => {
+n3Router.get('/attention', requireAuth, requireTenant, async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    
     if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenant ID' });
+      return res.status(400).json({ error: 'Missing tenant context' });
     }
 
     const allBundles = await db
@@ -363,16 +367,21 @@ const dismissSchema = z.object({
   reason: z.string().optional(),
 });
 
-n3Router.post('/bundles/:bundleId/dismiss', async (req, res) => {
+n3Router.post('/bundles/:bundleId/dismiss', requireAuth, requireTenant, async (req, res) => {
   try {
     const { bundleId } = req.params;
-    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
     const body = dismissSchema.parse(req.body);
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
 
     const bundle = await db.query.ccReplanBundles.findFirst({
       where: and(
         eq(ccReplanBundles.id, bundleId),
-        tenantId ? eq(ccReplanBundles.tenantId, tenantId) : undefined
+        eq(ccReplanBundles.tenantId, tenantId)
       ),
     });
 
@@ -402,16 +411,21 @@ const actionSchema = z.object({
   notes: z.string().optional(),
 });
 
-n3Router.post('/bundles/:bundleId/action', async (req, res) => {
+n3Router.post('/bundles/:bundleId/action', requireAuth, requireTenant, async (req, res) => {
   try {
     const { bundleId } = req.params;
-    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
     const body = actionSchema.parse(req.body);
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
 
     const bundle = await db.query.ccReplanBundles.findFirst({
       where: and(
         eq(ccReplanBundles.id, bundleId),
-        tenantId ? eq(ccReplanBundles.tenantId, tenantId) : undefined
+        eq(ccReplanBundles.tenantId, tenantId)
       ),
     });
 
@@ -458,16 +472,21 @@ n3Router.post('/bundles/:bundleId/action', async (req, res) => {
   }
 });
 
-n3Router.post('/runs/:runId/evaluate', async (req, res) => {
+n3Router.post('/runs/:runId/evaluate', requireAuth, requireTenant, async (req, res) => {
   try {
     const { runId } = req.params;
-    const tenantId = req.headers['x-tenant-id'] as string;
-    const portalId = req.headers['x-portal-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const portalId = tenantReq.ctx.portal_id || req.headers['x-portal-id'] as string;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
 
     const run = await db.query.ccN3Runs.findFirst({
       where: and(
         eq(ccN3Runs.id, runId),
-        tenantId ? eq(ccN3Runs.tenantId, tenantId) : undefined
+        eq(ccN3Runs.tenantId, tenantId)
       ),
     });
 
