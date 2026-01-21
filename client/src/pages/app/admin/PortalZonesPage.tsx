@@ -2,12 +2,18 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, Plus, Trash2, Edit2, MapPin, Save, X
+  ArrowLeft, Plus, Trash2, Edit2, MapPin, Save, X, ChevronDown, DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -38,6 +44,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
+interface PricingModifiers {
+  contractor_multiplier?: number;
+  logistics_surcharge_flat?: number;
+  time_risk_multiplier?: number;
+  notes?: string;
+}
+
 interface Zone {
   id: string;
   tenantId: string;
@@ -50,6 +63,7 @@ interface Zone {
   badgeLabelVisitor: string | null;
   theme: Record<string, any>;
   accessProfile: Record<string, any>;
+  pricingModifiers: PricingModifiers;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +80,7 @@ interface ZoneFormData {
   badgeLabelResident: string;
   badgeLabelContractor: string;
   badgeLabelVisitor: string;
+  pricingModifiers: PricingModifiers;
 }
 
 const ZONE_KINDS = [
@@ -84,6 +99,7 @@ const emptyFormData: ZoneFormData = {
   badgeLabelResident: '',
   badgeLabelContractor: '',
   badgeLabelVisitor: '',
+  pricingModifiers: {},
 };
 
 export default function PortalZonesPage() {
@@ -110,10 +126,13 @@ export default function PortalZonesPage() {
     mutationFn: async (data: ZoneFormData) => {
       const res = await apiRequest('POST', '/api/p2/app/zones', {
         portalId,
-        ...data,
+        key: data.key,
+        name: data.name,
+        kind: data.kind,
         badgeLabelResident: data.badgeLabelResident || null,
         badgeLabelContractor: data.badgeLabelContractor || null,
         badgeLabelVisitor: data.badgeLabelVisitor || null,
+        pricingModifiers: data.pricingModifiers || {},
       });
       return res.json();
     },
@@ -131,10 +150,13 @@ export default function PortalZonesPage() {
   const updateMutation = useMutation({
     mutationFn: async ({ zoneId, data }: { zoneId: string; data: ZoneFormData }) => {
       const res = await apiRequest('PUT', `/api/p2/app/zones/${zoneId}`, {
-        ...data,
+        key: data.key,
+        name: data.name,
+        kind: data.kind,
         badgeLabelResident: data.badgeLabelResident || null,
         badgeLabelContractor: data.badgeLabelContractor || null,
         badgeLabelVisitor: data.badgeLabelVisitor || null,
+        pricingModifiers: data.pricingModifiers || {},
       });
       return res.json();
     },
@@ -180,8 +202,39 @@ export default function PortalZonesPage() {
       badgeLabelResident: zone.badgeLabelResident || '',
       badgeLabelContractor: zone.badgeLabelContractor || '',
       badgeLabelVisitor: zone.badgeLabelVisitor || '',
+      pricingModifiers: zone.pricingModifiers || {},
     });
     setIsDialogOpen(true);
+  };
+
+  const [pricingOpen, setPricingOpen] = useState(false);
+
+  const updatePricingModifier = (key: keyof PricingModifiers, value: string) => {
+    setFormData(prev => {
+      const numericKeys = ['contractor_multiplier', 'logistics_surcharge_flat', 'time_risk_multiplier'];
+      let parsedValue: number | string | undefined = undefined;
+      
+      if (key === 'notes') {
+        parsedValue = value || undefined;
+      } else if (numericKeys.includes(key)) {
+        const num = parseFloat(value);
+        parsedValue = !isNaN(num) ? num : undefined;
+      }
+
+      const newModifiers = { ...prev.pricingModifiers };
+      if (parsedValue !== undefined) {
+        newModifiers[key] = parsedValue as any;
+      } else {
+        delete newModifiers[key];
+      }
+
+      return { ...prev, pricingModifiers: newModifiers };
+    });
+  };
+
+  const hasPricingModifiers = (modifiers: PricingModifiers) => {
+    const { notes, ...numeric } = modifiers;
+    return Object.values(numeric).some(v => typeof v === 'number' && v !== 0 && v !== 1);
   };
 
   const handleSubmit = () => {
@@ -261,6 +314,12 @@ export default function PortalZonesPage() {
                       <Badge variant="secondary" data-testid={`badge-zone-kind-${zone.key}`}>
                         {ZONE_KINDS.find(k => k.value === zone.kind)?.label || zone.kind}
                       </Badge>
+                      {hasPricingModifiers(zone.pricingModifiers || {}) && (
+                        <Badge variant="outline" className="text-xs" data-testid={`badge-zone-pricing-${zone.key}`}>
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          pricing
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
                       Key: <code className="bg-muted px-1 rounded">{zone.key}</code>
@@ -390,6 +449,100 @@ export default function PortalZonesPage() {
                 </div>
               </div>
             </div>
+
+            <Collapsible open={pricingOpen} onOpenChange={setPricingOpen}>
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-between px-0 font-medium"
+                  data-testid="button-toggle-pricing"
+                >
+                  <span className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Pricing Modifiers (advisory)
+                    {hasPricingModifiers(formData.pricingModifiers) && (
+                      <Badge variant="secondary" className="ml-2">configured</Badge>
+                    )}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${pricingOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                <p className="text-xs text-muted-foreground">
+                  These modifiers affect cost estimates for work in this zone. 
+                  They are advisory only and do not trigger automatic charges.
+                </p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contractor_multiplier">Contractor Rate Multiplier</Label>
+                    <Input
+                      id="contractor_multiplier"
+                      type="number"
+                      step="0.05"
+                      min="0.1"
+                      max="10"
+                      placeholder="1.0 (no change)"
+                      value={formData.pricingModifiers.contractor_multiplier ?? ''}
+                      onChange={e => updatePricingModifier('contractor_multiplier', e.target.value)}
+                      data-testid="input-contractor-multiplier"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      e.g., 1.25 = +25% contractor rate
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="time_risk_multiplier">Time/Risk Multiplier</Label>
+                    <Input
+                      id="time_risk_multiplier"
+                      type="number"
+                      step="0.05"
+                      min="0.1"
+                      max="10"
+                      placeholder="1.0 (no change)"
+                      value={formData.pricingModifiers.time_risk_multiplier ?? ''}
+                      onChange={e => updatePricingModifier('time_risk_multiplier', e.target.value)}
+                      data-testid="input-time-risk-multiplier"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      e.g., 1.1 = +10% for time/risk
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="logistics_surcharge_flat">Logistics Surcharge ($)</Label>
+                  <Input
+                    id="logistics_surcharge_flat"
+                    type="number"
+                    step="10"
+                    min="0"
+                    max="100000"
+                    placeholder="0"
+                    value={formData.pricingModifiers.logistics_surcharge_flat ?? ''}
+                    onChange={e => updatePricingModifier('logistics_surcharge_flat', e.target.value)}
+                    data-testid="input-logistics-surcharge"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Flat fee added for logistics (e.g., water taxi, ferry)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pricing_notes">Notes</Label>
+                  <Textarea
+                    id="pricing_notes"
+                    placeholder="e.g., Water access + tide dependency"
+                    value={formData.pricingModifiers.notes ?? ''}
+                    onChange={e => updatePricingModifier('notes', e.target.value)}
+                    className="resize-none"
+                    rows={2}
+                    data-testid="input-pricing-notes"
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <DialogFooter>
