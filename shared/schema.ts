@@ -7688,6 +7688,66 @@ export type AiIngestion = typeof ccAiIngestions.$inferSelect;
 export type InsertAiIngestion = z.infer<typeof insertAiIngestionSchema>;
 
 // ============================================================================
+// A2.6: Ingestion Next Actions - Durable Action Tracking
+// ============================================================================
+
+export const ccIngestionNextActions = pgTable("cc_ingestion_next_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  ingestionId: uuid("ingestion_id").notNull(),
+  
+  actionType: varchar("action_type", { length: 50 }).notNull(),
+  actionPayload: jsonb("action_payload").notNull().default({}),
+  confidence: numeric("confidence"),
+  status: varchar("status", { length: 20 }).notNull().default('proposed'),
+  resolutionPayload: jsonb("resolution_payload"),
+  linkedEntityType: varchar("linked_entity_type", { length: 50 }),
+  linkedEntityId: uuid("linked_entity_id"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+}, (table) => [
+  index("idx_cc_ingestion_next_actions_ingestion").on(table.ingestionId),
+  index("idx_cc_ingestion_next_actions_contractor").on(table.contractorProfileId),
+  index("idx_cc_ingestion_next_actions_status").on(table.status),
+]);
+
+export const insertIngestionNextActionSchema = createInsertSchema(ccIngestionNextActions).omit({
+  id: true, createdAt: true, resolvedAt: true
+});
+export type IngestionNextAction = typeof ccIngestionNextActions.$inferSelect;
+export type InsertIngestionNextAction = z.infer<typeof insertIngestionNextActionSchema>;
+
+// ============================================================================
+// A2.6: Sticky Note Extractions - Persisted OCR Outputs
+// ============================================================================
+
+export const ccStickyNoteExtractions = pgTable("cc_sticky_note_extractions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  ingestionId: uuid("ingestion_id").notNull(),
+  
+  extractedText: text("extracted_text"),
+  extractedItems: jsonb("extracted_items").notNull().default({}),
+  proposedWorkRequest: jsonb("proposed_work_request").default({}),
+  proposedZoneId: uuid("proposed_zone_id"),
+  urgency: varchar("urgency", { length: 20 }),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_cc_sticky_note_extractions_ingestion").on(table.ingestionId),
+]);
+
+export const insertStickyNoteExtractionSchema = createInsertSchema(ccStickyNoteExtractions).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export type StickyNoteExtraction = typeof ccStickyNoteExtractions.$inferSelect;
+export type InsertStickyNoteExtraction = z.infer<typeof insertStickyNoteExtractionSchema>;
+
+// ============================================================================
 // A2.2: Contractor Service Areas - Where Contractors Work
 // ============================================================================
 

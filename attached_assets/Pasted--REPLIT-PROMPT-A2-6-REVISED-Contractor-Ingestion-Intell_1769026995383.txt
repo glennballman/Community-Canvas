@@ -1,0 +1,233 @@
+✅ REPLIT PROMPT A2.6 (REVISED) — Contractor Ingestion Intelligence Layer (Build 9 Mirror + N3 Binding)
+
+Title: Universal Ingestion Intelligence: Sticky Note → Zone → Work Request → Thread → N3 Draft (Contractor View Mirror of Resident)
+
+PURPOSE
+
+A2.3 already classifies uploads and creates proposals.
+A2.6 upgrades this into a production-grade contractor control surface that mirrors the Build 9 Resident sticky-note onboarding model, while binding contractor intelligence into:
+
+zones
+
+work requests
+
+messaging threads
+
+N3 run drafting (optional / proposal only)
+
+This is the “sticky note → execution” bridge.
+
+HARD RULES
+
+✅ Camera-first, zero-form
+
+✅ Non-linear uploads
+
+✅ AI proposes, human confirms
+
+✅ No auto-linking to customers/jobsites/runs
+
+✅ Contractor cannot override resident zone truth
+
+✅ Messaging is mandatory; no SMS fallbacks
+
+✅ Privacy-safe: no biometric person identification
+
+✅ No “book/booking” language
+
+A) MIRROR CONTRACT (BUILD 9 ALIGNMENT)
+
+Implement explicit parity rules:
+
+Zone primitives are shared
+
+Resident defines property zones (truth)
+
+Contractor defines service zones/capability zones (truth)
+
+Contractor may attach notes to a resident zone, but cannot redefine it
+
+Sticky Notes are a first-class shared primitive
+
+A sticky note can exist on either side
+
+Both produce Work Request suggestions, never execution
+
+Dual interpretation
+
+Resident: “this is my place / problem”
+
+Contractor: “this implies skills/tools/time/materials/logistics”
+
+B) DATA MODEL (ADDITIVE, MINIMAL)
+1) cc_ingestion_next_actions (if not present)
+
+If A2.3 stored next actions inside ai_proposed_payload only, add a table for durable actions:
+
+id uuid
+
+tenant_id uuid
+
+contractor_profile_id uuid
+
+ingestion_id uuid
+
+action_type text // 'create_work_request'|'attach_to_zone'|'request_more_photos'|'draft_n3_run'|'open_quote_draft'|'add_tool'|'add_fleet'
+
+action_payload jsonb
+
+confidence numeric 0–100
+
+status text default 'proposed' // proposed|confirmed|dismissed
+
+created_at
+
+2) cc_sticky_note_extractions (optional but recommended)
+
+If sticky note OCR outputs are currently only in JSON, persist extracted items for auditability:
+
+id uuid
+
+tenant_id
+
+contractor_profile_id
+
+ingestion_id
+
+extracted_text text
+
+extracted_items jsonb (todos, dates, quantities)
+
+created_at
+
+C) INTELLIGENCE EXPANSIONS (NO NEW ML REQUIRED)
+
+Enhance the existing classifier outputs to produce structured proposal bundles:
+
+1) Photo intelligence bundling
+
+Detect:
+
+before/after pairs
+
+sequences by time/location
+
+“proof bundle” candidate (useful for N3 execution proof)
+
+Write:
+
+propose photo bundle association + rationale
+
+2) Sticky note normalization → Work Request proposal
+
+From sticky note OCR:
+
+extract tasks → Proposed Work Request line items
+
+propose:
+
+zone (if location known)
+
+required surfaces (N3 surface requirements)
+
+required skills (D9)
+
+urgency
+
+3) Thread binding (mandatory)
+
+Every ingestion must:
+
+attach to an existing thread if uploaded inside one
+
+otherwise create a contractor-private “Ingestion Review” thread
+
+All confirmations and follow-up requests happen inside messaging.
+
+4) N3 draft run proposal (proposal only)
+
+If ingestion implies immediate execution:
+
+propose draft N3 run (unconfirmed)
+
+include segments, surface requirements, and evidence bundle pointer
+
+do not create a live run until confirm
+
+D) UI — CONTRACTOR INGESTION CONTROL SURFACE
+
+Upgrade UploadResultsPage into a real workspace:
+
+Per ingestion:
+
+Classification summary + confidence
+
+Location (A2.4 integration)
+
+Suggested entities (fleet/tool/jobsite/customer)
+
+Sticky note extracted tasks (editable)
+
+Proposed next actions list with:
+
+Confirm
+
+Dismiss
+
+Edit
+
+Actions must include:
+
+Create draft Work Request (proposal → confirm flow)
+
+Attach to zone
+
+Request missing info (sends message with prompts)
+
+Open draft quote (A2.5 integration)
+
+Draft N3 run (proposal → confirm)
+
+E) API
+
+POST /api/contractor/ingestions/:id/next-actions/recompute
+
+POST /api/contractor/ingestions/:id/next-actions/:actionId/resolve
+
+{ resolution: 'confirm'|'dismiss'|'edit', payload? }
+
+POST /api/contractor/work-requests/draft-from-ingestion
+
+creates draft work request (status='draft') only on confirm
+
+POST /api/contractor/n3/draft-from-ingestion
+
+returns a draft payload; only persists on confirm
+
+F) ACCEPTANCE
+
+Sticky note upload → extracted tasks visible → “Create draft Work Request” confirm works
+
+Upload inside a thread → proposals appear inside the same thread
+
+Location suggestions integrate with A2.4
+
+Draft quote creation path reachable (A2.5)
+
+Draft N3 run is proposal-only and confirm-gated
+
+No resident zone edits from contractor views
+
+No crashes on missing EXIF/OCR
+
+DELIVERABLES
+
+migrations (next actions + optional sticky extraction table)
+
+nextActionsEngine service (derive proposals from A2.3 outputs)
+
+API endpoints above
+
+UploadResultsPage workspace enhancements
+
+QA notes

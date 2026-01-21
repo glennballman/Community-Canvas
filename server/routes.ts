@@ -135,6 +135,7 @@ import contractorRouter from "./routes/contractor";
 import contractorIngestionsRouter from "./routes/contractor-ingestions";
 import contractorGeoRouter from "./routes/contractor-geo";
 import contractorEventRouter from "./routes/contractor-event";
+import contractorIntelligenceRouter from "./routes/contractor-ingestion-intelligence";
 import publicEventRouter from "./routes/public-event";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
@@ -548,6 +549,10 @@ export async function registerRoutes(
   
   // Contractor Ingestions (Prompt A2)
   app.use('/api/contractor/ingestions', contractorIngestionsRouter);
+  
+  // Contractor Ingestion Intelligence (Prompt A2.6)
+  app.use('/api/contractor/ingestions', contractorIntelligenceRouter);
+  app.use('/api/contractor', contractorIntelligenceRouter); // For work-requests/draft-from-ingestion and n3/draft-from-ingestion
   
   // Contractor Geo Resolution (Prompt A2.4)
   app.use('/api/contractor/geo', contractorGeoRouter);
