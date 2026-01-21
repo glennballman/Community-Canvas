@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -32,7 +40,9 @@ import { useQuery } from '@tanstack/react-query';
 import { 
   useCoordinationReadiness, 
   useCoordinationReadinessBuckets,
+  useSuggestCoordinationWindows,
   type CoordinationReadinessZone,
+  type SuggestedWindow,
 } from '@/hooks/useCoordination';
 import { getZoneBadgeLabel } from '@/components/ZoneBadge';
 import { 
@@ -42,6 +52,10 @@ import {
   TrendingUp,
   ChevronRight,
   Layers,
+  Calendar,
+  Sparkles,
+  Info,
+  Loader2,
 } from 'lucide-react';
 
 interface Portal {
@@ -180,6 +194,232 @@ function ZoneReadinessRow({
   );
 }
 
+function getConfidenceBadge(confidence: number) {
+  if (confidence >= 70) {
+    return <Badge variant="default" className="bg-emerald-600">High</Badge>;
+  }
+  if (confidence >= 40) {
+    return <Badge variant="secondary">Medium</Badge>;
+  }
+  return <Badge variant="outline">Low</Badge>;
+}
+
+function formatDateRange(startDate: string, endDate: string): string {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
+}
+
+interface SuggestWindowsModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  portalId: string;
+  zone: CoordinationReadinessZone | null;
+  zoneName: string;
+}
+
+function SuggestWindowsModal({ 
+  open, 
+  onOpenChange, 
+  portalId, 
+  zone, 
+  zoneName 
+}: SuggestWindowsModalProps) {
+  const [lookaheadDays, setLookaheadDays] = useState(21);
+  const [windowSizeDays, setWindowSizeDays] = useState(3);
+  const [desiredWindows, setDesiredWindows] = useState(3);
+
+  const suggestMutation = useSuggestCoordinationWindows();
+
+  const handleSuggest = () => {
+    suggestMutation.mutate({
+      portal_id: portalId,
+      zone_id: zone?.zone_id ?? null,
+      lookahead_days: lookaheadDays,
+      window_size_days: windowSizeDays,
+      desired_windows: desiredWindows,
+    });
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      suggestMutation.reset();
+    }
+    onOpenChange(newOpen);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            Suggested Schedule Windows
+          </DialogTitle>
+          <DialogDescription>
+            Advisory schedule windows for {zoneName}. No service runs are created.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Lookahead</label>
+              <Select
+                value={lookaheadDays.toString()}
+                onValueChange={(v) => setLookaheadDays(parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-[100px]" data-testid="select-lookahead">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="14">14 days</SelectItem>
+                  <SelectItem value="21">21 days</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Window Size</label>
+              <Select
+                value={windowSizeDays.toString()}
+                onValueChange={(v) => setWindowSizeDays(parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-[100px]" data-testid="select-window-size">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 days</SelectItem>
+                  <SelectItem value="3">3 days</SelectItem>
+                  <SelectItem value="5">5 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Windows</label>
+              <Select
+                value={desiredWindows.toString()}
+                onValueChange={(v) => setDesiredWindows(parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-[80px]" data-testid="select-desired-windows">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button 
+                onClick={handleSuggest}
+                disabled={suggestMutation.isPending}
+                data-testid="button-suggest-windows"
+              >
+                {suggestMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Suggest
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {suggestMutation.data && (
+            <div className="space-y-4">
+              {suggestMutation.data.windows.length === 0 ? (
+                <Card>
+                  <CardContent className="py-6 text-center">
+                    <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No active work requests found for this selection.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {suggestMutation.data.windows.map((window, index) => (
+                      <Card key={index}>
+                        <CardContent className="py-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">
+                                  {formatDateRange(window.start_date, window.end_date)}
+                                </span>
+                                {getConfidenceBadge(window.confidence)}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {window.explanation}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm">
+                              <div className="text-center">
+                                <p className="font-semibold text-emerald-600">
+                                  {window.coord_ready_count}
+                                </p>
+                                <p className="text-xs text-muted-foreground">Ready</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="font-semibold">{window.active_count}</p>
+                                <p className="text-xs text-muted-foreground">Active</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="font-semibold">
+                                  {Math.round(window.readiness_ratio * 100)}%
+                                </p>
+                                <p className="text-xs text-muted-foreground">Ratio</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                    {suggestMutation.data.notes.map((note, i) => (
+                      <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                        <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        {note}
+                      </p>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {suggestMutation.error && (
+            <div className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm">
+              Failed to generate suggestions. Please try again.
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CategoryBucketsPanel({
   portalId,
   zoneId,
@@ -274,6 +514,7 @@ export default function CoordinationReadinessPage() {
   const [selectedPortalId, setSelectedPortalId] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<CoordinationReadinessZone | null>(null);
   const [windowDays, setWindowDays] = useState(14);
+  const [suggestModalOpen, setSuggestModalOpen] = useState(false);
 
   const { data: portalsData, isLoading: portalsLoading } = useQuery<{ portals: Portal[] }>({
     queryKey: ['/api/portals'],
@@ -352,8 +593,37 @@ export default function CoordinationReadinessPage() {
               <SelectItem value="30">30 days</SelectItem>
             </SelectContent>
           </Select>
+
+          {selectedPortalId && selectedZone && (
+            <Button 
+              onClick={() => setSuggestModalOpen(true)}
+              data-testid="button-open-suggest-windows"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Suggest Windows
+            </Button>
+          )}
         </div>
       </div>
+
+      {selectedPortalId && (
+        <SuggestWindowsModal
+          open={suggestModalOpen}
+          onOpenChange={setSuggestModalOpen}
+          portalId={selectedPortalId}
+          zone={selectedZone}
+          zoneName={selectedZone 
+            ? (selectedZone.zone_id 
+              ? getZoneBadgeLabel({
+                  id: selectedZone.zone_id,
+                  key: selectedZone.zone_key || '',
+                  name: selectedZone.zone_name || '',
+                  badge_label_resident: selectedZone.badge_label_resident,
+                }, 'resident')
+              : 'Unzoned')
+            : 'All Zones'}
+        />
+      )}
 
       {!selectedPortalId ? (
         <Card>
