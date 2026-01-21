@@ -137,3 +137,102 @@ export function hasZonePricingModifiers(modifiers: ZonePricingModifiers | null |
   const { notes, ...numericModifiers } = modifiers;
   return Object.values(numericModifiers).some(v => typeof v === 'number' && v !== 0 && v !== 1);
 }
+
+/**
+ * Bundle Simulation Input
+ * 
+ * Used by UI slider to simulate bundling economics.
+ * This is pure simulation - no persistence, no side effects.
+ */
+export interface BundleSimulationInput {
+  baseEstimate: number;
+  zoneModifiers?: ZonePricingModifiers | null;
+  bundleSize: number;
+  assumedTravelCostPerTrip?: number;
+}
+
+/**
+ * Bundle Simulation Result
+ * 
+ * Output structure designed to feed future Service Run bundling.
+ * All values are estimates/simulations only.
+ */
+export interface BundleSimulationResult {
+  bundleSize: number;
+  soloPerRequestCost: number;
+  bundledPerRequestCost: number;
+  totalSoloCost: number;
+  totalBundledCost: number;
+  estimatedSavings: number;
+  savingsPercentage: number;
+  travelCostAssumption: number;
+  breakdown: {
+    baseWorkCost: number;
+    zoneAdjustedCost: number;
+    travelCostSolo: number;
+    travelCostBundled: number;
+  };
+}
+
+const DEFAULT_TRAVEL_COST_PER_TRIP = 75;
+
+/**
+ * Simulate bundling economics for Work Requests.
+ * 
+ * IMPORTANT: This is pure simulation - advisory only.
+ * Savings model based on travel-cost amortization assumption.
+ * Does NOT persist bundle size or auto-create grouped requests.
+ * Does NOT affect billing.
+ * 
+ * Model:
+ * - Solo: Each request pays full travel cost + work cost
+ * - Bundled: Travel cost split across bundled requests
+ * 
+ * Designed to feed future Service Run bundling system.
+ * 
+ * @param input Simulation parameters
+ * @returns Simulation result with savings breakdown
+ */
+export function simulateBundling(input: BundleSimulationInput): BundleSimulationResult {
+  const {
+    baseEstimate,
+    zoneModifiers,
+    bundleSize,
+    assumedTravelCostPerTrip = DEFAULT_TRAVEL_COST_PER_TRIP,
+  } = input;
+
+  const clampedBundleSize = Math.max(1, Math.min(10, Math.round(bundleSize)));
+  
+  const zoneEstimate = computeZonePricingEstimate(baseEstimate, zoneModifiers);
+  const zoneAdjustedCost = zoneEstimate.final_estimate;
+
+  const soloPerRequestCost = zoneAdjustedCost + assumedTravelCostPerTrip;
+  
+  const travelCostPerBundledRequest = assumedTravelCostPerTrip / clampedBundleSize;
+  const bundledPerRequestCost = zoneAdjustedCost + travelCostPerBundledRequest;
+
+  const totalSoloCost = soloPerRequestCost * clampedBundleSize;
+  const totalBundledCost = (zoneAdjustedCost * clampedBundleSize) + assumedTravelCostPerTrip;
+
+  const estimatedSavings = totalSoloCost - totalBundledCost;
+  const savingsPercentage = totalSoloCost > 0 
+    ? Math.round((estimatedSavings / totalSoloCost) * 100) 
+    : 0;
+
+  return {
+    bundleSize: clampedBundleSize,
+    soloPerRequestCost: Math.round(soloPerRequestCost * 100) / 100,
+    bundledPerRequestCost: Math.round(bundledPerRequestCost * 100) / 100,
+    totalSoloCost: Math.round(totalSoloCost * 100) / 100,
+    totalBundledCost: Math.round(totalBundledCost * 100) / 100,
+    estimatedSavings: Math.round(estimatedSavings * 100) / 100,
+    savingsPercentage,
+    travelCostAssumption: assumedTravelCostPerTrip,
+    breakdown: {
+      baseWorkCost: baseEstimate,
+      zoneAdjustedCost: Math.round(zoneAdjustedCost * 100) / 100,
+      travelCostSolo: assumedTravelCostPerTrip,
+      travelCostBundled: Math.round(travelCostPerBundledRequest * 100) / 100,
+    },
+  };
+}
