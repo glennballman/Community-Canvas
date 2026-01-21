@@ -1826,3 +1826,193 @@ n3Router.get('/runs/:runId/maintenance-requests', requireAuth, requireTenant, re
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/**
+ * GET /api/n3/runs/:runId/readiness-drift
+ * 
+ * Evaluate readiness drift for a draft or scheduled N3 Service Run.
+ * Returns advisory warnings (counts only) when attached maintenance requests
+ * have drifted from planning assumptions.
+ * 
+ * Admin/owner only. No PII or IDs returned.
+ * 
+ * Query params:
+ * - age_days: optional (default 30, clamp 7-90)
+ * 
+ * Drift types:
+ * - coordination_opt_out: requests that have opted out since attachment
+ * - zone_mismatch: requests with no zone or different zone than run
+ * - inactive_status: requests no longer in active status (reported/triaged/scheduled)
+ * - age_exceeded: coordination opt-in older than threshold
+ */
+n3Router.get('/runs/:runId/readiness-drift', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const actorId = tenantReq.user?.id || 'system';
+  
+  // Parse and clamp age_days parameter
+  let ageDays = 30;
+  if (req.query.age_days) {
+    const parsed = parseInt(req.query.age_days as string, 10);
+    if (!isNaN(parsed)) {
+      ageDays = Math.max(7, Math.min(90, parsed));
+    }
+  }
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Fetch the run
+    const runRows = await db
+      .select({
+        id: ccN3Runs.id,
+        status: ccN3Runs.status,
+        zoneId: ccN3Runs.zoneId,
+        portalId: ccN3Runs.portalId,
+      })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Only draft and scheduled runs can have drift evaluated
+    if (run.status !== 'draft' && run.status !== 'scheduled') {
+      return res.status(400).json({ 
+        error: 'Drift evaluation only applies to draft or scheduled runs',
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    // Fetch attached maintenance requests with relevant fields for drift detection
+    const attachedRequests = await db
+      .select({
+        maintenanceRequestId: ccN3RunMaintenanceRequests.maintenanceRequestId,
+        coordinationOptIn: ccMaintenanceRequests.coordinationOptIn,
+        coordinationOptInSetAt: ccMaintenanceRequests.coordinationOptInSetAt,
+        zoneId: ccMaintenanceRequests.zoneId,
+        status: ccMaintenanceRequests.status,
+      })
+      .from(ccN3RunMaintenanceRequests)
+      .innerJoin(
+        ccMaintenanceRequests,
+        eq(ccN3RunMaintenanceRequests.maintenanceRequestId, ccMaintenanceRequests.id)
+      )
+      .where(and(
+        eq(ccN3RunMaintenanceRequests.tenantId, tenantId),
+        eq(ccN3RunMaintenanceRequests.runId, runId)
+      ));
+    
+    const evaluatedAt = new Date().toISOString();
+    const ageThresholdDate = new Date();
+    ageThresholdDate.setDate(ageThresholdDate.getDate() - ageDays);
+    
+    // Active statuses for maintenance requests
+    const activeStatuses = ['reported', 'triaged', 'scheduled'];
+    
+    // Drift counters
+    let coordinationOptOutCount = 0;
+    let zoneMismatchCount = 0;
+    let inactiveStatusCount = 0;
+    let ageExceededCount = 0;
+    
+    for (const mReq of attachedRequests) {
+      // D1: Coordination opt-in drift - request opted out
+      if (!mReq.coordinationOptIn) {
+        coordinationOptOutCount++;
+      }
+      
+      // D2: Zone drift - run has zone but request doesn't match
+      if (run.zoneId) {
+        if (!mReq.zoneId || mReq.zoneId !== run.zoneId) {
+          zoneMismatchCount++;
+        }
+      }
+      
+      // D3: Status drift - request no longer active
+      if (mReq.status && !activeStatuses.includes(mReq.status)) {
+        inactiveStatusCount++;
+      }
+      
+      // D4: Age drift - opt-in older than threshold
+      if (mReq.coordinationOptInSetAt) {
+        const optInDate = new Date(mReq.coordinationOptInSetAt);
+        if (optInDate < ageThresholdDate) {
+          ageExceededCount++;
+        }
+      }
+    }
+    
+    const withDrift = new Set<string>();
+    
+    // Compute unique drift count (a request can have multiple drift types)
+    for (const mReq of attachedRequests) {
+      let hasDrift = false;
+      
+      if (!mReq.coordinationOptIn) hasDrift = true;
+      if (run.zoneId && (!mReq.zoneId || mReq.zoneId !== run.zoneId)) hasDrift = true;
+      if (mReq.status && !activeStatuses.includes(mReq.status)) hasDrift = true;
+      if (mReq.coordinationOptInSetAt) {
+        const optInDate = new Date(mReq.coordinationOptInSetAt);
+        if (optInDate < ageThresholdDate) hasDrift = true;
+      }
+      
+      if (hasDrift) {
+        withDrift.add(mReq.maintenanceRequestId);
+      }
+    }
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_run_readiness_drift_evaluated', {
+      event: 'n3_run_readiness_drift_evaluated',
+      run_id: runId,
+      actor_id: actorId,
+      tenant_id: tenantId,
+      evaluated_at: evaluatedAt,
+    });
+    
+    // Build response - counts only, no PII or IDs
+    const response: any = {
+      run_id: runId,
+      status: run.status,
+      evaluated_at: evaluatedAt,
+      totals: {
+        attached: attachedRequests.length,
+        with_drift: withDrift.size,
+      },
+      drift: {},
+    };
+    
+    // Only include drift types with count > 0
+    if (coordinationOptOutCount > 0) {
+      response.drift.coordination_opt_out = { count: coordinationOptOutCount };
+    }
+    if (zoneMismatchCount > 0) {
+      response.drift.zone_mismatch = { count: zoneMismatchCount };
+    }
+    if (inactiveStatusCount > 0) {
+      response.drift.inactive_status = { count: inactiveStatusCount };
+    }
+    if (ageExceededCount > 0) {
+      response.drift.age_exceeded = { 
+        count: ageExceededCount,
+        threshold_days: ageDays,
+      };
+    }
+    
+    res.json(response);
+  } catch (err) {
+    console.error('[N3 API] Error evaluating readiness drift:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});

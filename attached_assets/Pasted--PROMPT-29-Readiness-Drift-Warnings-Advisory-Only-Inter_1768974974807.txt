@@ -1,0 +1,250 @@
+✅ PROMPT 29 — Readiness Drift Warnings (Advisory Only, Internal)
+PURPOSE
+
+Provide early-warning signals to admin/owner operators when a draft or scheduled N3 Service Run’s planning assumptions drift from live coordination reality.
+
+This prompt introduces advisory warnings only — no blocking, no auto-detach, no execution impact.
+
+The goal is to preserve operator trust by surfacing why a run may no longer be “ready” before it turns into friction downstream.
+
+HARD INVARIANTS (NON-NEGOTIABLE)
+
+❌ No contractor access
+
+❌ No resident notifications
+
+❌ No auto-detach, auto-demote, or auto-schedule
+
+❌ No billing / ledger / folio impact
+
+❌ No identity disclosure between requests
+
+✅ Admin/owner only
+
+✅ Counts + reason codes only
+
+✅ Advisory language everywhere
+
+✅ Non-blocking UI
+
+DRIFT TYPES TO DETECT
+
+Drift is evaluated only for maintenance requests attached to an N3 run (cc_n3_run_maintenance_requests).
+
+D1) Coordination Opt-In Drift
+
+A request attached to the run now has:
+
+coordination_opt_in = false
+
+D2) Zone Drift
+
+Run has a zone_id
+
+Attached request has:
+
+zone_id IS NULL, or
+
+zone_id != run.zone_id
+
+D3) Status Drift
+
+Attached request status is no longer active.
+
+Active statuses (canonical for now):
+
+reported
+triaged
+scheduled
+
+
+Non-active (examples):
+
+work_started
+work_completed
+verified
+cancelled
+
+D4) Age Drift
+
+coordination_opt_in_set_at older than configurable window
+
+Default threshold: 30 days
+
+Clamp allowed range: 7–90 days
+
+PART A — Backend
+A1) Drift Evaluation Endpoint
+GET /api/n3/runs/:runId/readiness-drift
+
+
+Access
+
+requireAuth
+requireTenant
+requireTenantAdminOrOwner
+
+
+Query Params
+
+age_days optional (default 30, clamp 7–90)
+
+A2) Evaluation Rules
+
+Run must exist and belong to tenant
+
+Applies to:
+
+draft
+
+scheduled
+
+If no attached maintenance requests → return empty drift set
+
+A3) Response Shape (Counts + Reasons Only)
+{
+  "run_id": "uuid",
+  "status": "draft",
+  "evaluated_at": "timestamp",
+  "totals": {
+    "attached": 12,
+    "with_drift": 4
+  },
+  "drift": {
+    "coordination_opt_out": {
+      "count": 1
+    },
+    "zone_mismatch": {
+      "count": 2
+    },
+    "inactive_status": {
+      "count": 1
+    },
+    "age_exceeded": {
+      "count": 3,
+      "threshold_days": 30
+    }
+  }
+}
+
+
+❌ No maintenance_request_ids
+❌ No titles, descriptions, or identities
+
+A4) Audit (Optional, Non-Blocking)
+
+Log evaluation when endpoint is called:
+
+console.log('[N3 AUDIT] n3_run_readiness_drift_evaluated', {
+  event: 'n3_run_readiness_drift_evaluated',
+  run_id,
+  actor_id,
+  tenant_id,
+  evaluated_at,
+});
+
+
+This is informational only.
+
+PART B — Frontend (ServiceRunMonitorPage)
+B1) Readiness Drift Card
+
+Visible when:
+
+admin/owner
+
+run.status ∈ { draft, scheduled }
+
+attached maintenance requests > 0
+
+Card Title
+
+“Readiness Drift (Advisory)”
+
+Badge:
+advisory only
+
+Helper text:
+
+“These signals indicate changes since this run was planned. No action is required.”
+
+B2) Drift Indicators
+
+Render only drift types with count > 0.
+
+Each item shows:
+
+Icon (warning / info)
+
+Short label
+
+Count badge
+
+Example rows:
+
+⚠️ “Requests opted out of coordination” — 1
+
+⚠️ “Zone mismatch or unzoned” — 2
+
+ℹ️ “Requests no longer active” — 1
+
+⏱️ “Opt-in older than 30 days” — 3
+
+Color rules:
+
+Amber for coordination / zone drift
+
+Gray for age drift
+
+Red never used (this is advisory)
+
+B3) Optional Operator Hints (Static Copy)
+
+Below the list:
+
+“You may want to review attachments, update zones, or revert this run to draft.”
+
+No buttons. No automation.
+
+PART C — Hooks
+
+Add to client/src/hooks/n3/useN3.ts:
+
+useN3ReadinessDrift(runId, ageDays?)
+
+
+Disabled if runId or tenant context missing
+
+Cache key includes ageDays
+
+Invalidate drift query when:
+
+attachments change
+
+coordination opt-in toggled
+
+run promoted/demoted
+
+PART D — UX & LANGUAGE RULES
+
+Never say “invalid”
+
+Never say “must fix”
+
+Use:
+
+“may want to review”
+
+“signals indicate”
+
+Always show advisory only
+
+ACCEPTANCE CHECKLIST
+
+✅ Admin/owner only
+✅ Draft + scheduled runs supported
+✅ Counts + reason codes only
+✅ No PII or IDs returned
+✅ No side effects
+✅ Advisory language only
+✅ Uses existing attachments + opt-in data
