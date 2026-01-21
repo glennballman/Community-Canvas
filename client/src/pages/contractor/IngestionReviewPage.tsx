@@ -26,6 +26,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { IdentityProposalCard } from '@/components/contractor/IdentityProposalCard';
 
 interface MediaItem {
   url: string;
@@ -211,6 +212,14 @@ export default function IngestionReviewPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Identity Proposal Card - Only for vehicle photos */}
+        {ingestion.sourceType === 'vehicle_photo' && (
+          <IdentityProposalCard
+            ingestionId={ingestion.id}
+            sourceType={ingestion.sourceType}
+          />
+        )}
 
         {/* AI Proposal */}
         <Card>
