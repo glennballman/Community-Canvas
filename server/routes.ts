@@ -131,6 +131,7 @@ import p2ZonesRouter from "./routes/p2-zones";
 import aiRouter from "./routes/ai";
 import { createParticipantTripsRouter } from "./routes/participant-trips";
 import participantRouter from "./routes/participant";
+import contractorRouter from "./routes/contractor";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -528,6 +529,9 @@ export async function registerRoutes(
 
   // Participant Applications (M-1B)
   app.use('/api/participant', participantRouter);
+
+  // Contractor Onboarding (Prompt A1)
+  app.use('/api/contractor', contractorRouter);
 
   // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {
