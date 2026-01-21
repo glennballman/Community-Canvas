@@ -268,22 +268,32 @@ export default function ServiceRunMonitorPage() {
               </Select>
               {data?.zone_id && data?.zone_name && (
                 <ZoneBadge
-                  zoneName={data.zone_name}
-                  zoneKey={data.zone_key || ''}
-                  badgeLabelResident={data.badge_label_resident || null}
-                  badgeLabelContractor={data.badge_label_contractor || null}
-                  badgeLabelVisitor={data.badge_label_visitor || null}
-                  viewer="resident"
+                  zone={{
+                    id: data.zone_id,
+                    name: data.zone_name,
+                    key: data.zone_key || '',
+                    badgeLabelResident: data.badge_label_resident || null,
+                    badgeLabelContractor: data.badge_label_contractor || null,
+                    badgeLabelVisitor: data.badge_label_visitor || null,
+                    pricingModifiers: data.pricing_modifiers || {},
+                  } as any}
+                  viewerContext="resident"
                 />
               )}
             </div>
-            {data?.zone_pricing_estimate && (
+            {data?.zone_id && data?.zone_name && data?.pricing_modifiers && (
               <ZoneImpactSummary
-                baseEstimate={data.zone_pricing_estimate.base_estimate}
-                zoneName={data.zone_name || ''}
-                breakdown={data.zone_pricing_estimate.zone_modifier_breakdown}
-                finalEstimate={data.zone_pricing_estimate.final_estimate}
-                notes={data.zone_pricing_estimate.notes}
+                zone={{
+                  id: data.zone_id,
+                  name: data.zone_name,
+                  key: data.zone_key || '',
+                  badgeLabelResident: data.badge_label_resident || null,
+                  badgeLabelContractor: data.badge_label_contractor || null,
+                  badgeLabelVisitor: data.badge_label_visitor || null,
+                  pricingModifiers: data.pricing_modifiers || {},
+                } as any}
+                baseEstimate={data.zone_pricing_estimate?.base_estimate}
+                viewerContext="resident"
               />
             )}
           </CardContent>
