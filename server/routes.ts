@@ -134,6 +134,8 @@ import participantRouter from "./routes/participant";
 import contractorRouter from "./routes/contractor";
 import contractorIngestionsRouter from "./routes/contractor-ingestions";
 import contractorGeoRouter from "./routes/contractor-geo";
+import contractorEventRouter from "./routes/contractor-event";
+import publicEventRouter from "./routes/public-event";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -549,6 +551,12 @@ export async function registerRoutes(
   
   // Contractor Geo Resolution (Prompt A2.4)
   app.use('/api/contractor/geo', contractorGeoRouter);
+  
+  // Contractor Event Mode (Prompt A2.5)
+  app.use('/api/contractor/event', contractorEventRouter);
+  
+  // Public Event Lead Capture (Prompt A2.5)
+  app.use('/api/public/event', publicEventRouter);
 
   // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {
