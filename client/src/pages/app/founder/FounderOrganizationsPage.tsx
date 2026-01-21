@@ -10,13 +10,14 @@ import { useTenant } from '@/contexts/TenantContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, ArrowRight, Users } from 'lucide-react';
+import { Building2, ArrowRight, Users, Mountain, Landmark, Briefcase, User } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const TYPE_ICONS: Record<string, string> = {
-  community: '🏔️',
-  government: '🏛️',
-  business: '🏢',
-  individual: '👤',
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  community: Mountain,
+  government: Landmark,
+  business: Briefcase,
+  individual: User,
 };
 
 export default function FounderOrganizationsPage() {
@@ -92,7 +93,14 @@ export default function FounderOrganizationsPage() {
               data-testid={`button-org-${m.tenant_id}`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{TYPE_ICONS[m.tenant_type] || '🏢'}</span>
+                {(() => {
+                  const IconComponent = TYPE_ICONS[m.tenant_type] || Building2;
+                  return (
+                    <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+                      <IconComponent className="h-5 w-5 text-accent-foreground" />
+                    </div>
+                  );
+                })()}
                 <div>
                   <div className="font-medium">{m.tenant_name}</div>
                   <div className="text-sm text-muted-foreground flex items-center gap-2">

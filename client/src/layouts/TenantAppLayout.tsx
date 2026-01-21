@@ -24,8 +24,6 @@ import {
   LogOut,
   User,
   Shield,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
 import { PortalSelector } from '../components/PortalSelector';
@@ -34,32 +32,17 @@ import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getFilteredNavSections, NavSection, NavItem } from '../lib/routes/v3Nav';
 
 // ============================================================================
-// FOUNDER NAV TOGGLE (localStorage persistence)
+// TENANT TYPE ICONS (using lucide-react icons, not emojis)
 // ============================================================================
 
-const FOUNDER_NAV_KEY = 'cc_founder_nav_enabled';
+import { Mountain, Landmark, Briefcase as BriefcaseIcon, User as UserIcon, Building2 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-function getFounderNavEnabled(): boolean {
-  try {
-    return localStorage.getItem(FOUNDER_NAV_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-function setFounderNavEnabled(enabled: boolean): void {
-  try {
-    localStorage.setItem(FOUNDER_NAV_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // Ignore localStorage errors
-  }
-}
-
-const TYPE_ICONS: Record<string, string> = {
-  community: '🏔️',
-  government: '🏛️',
-  business: '🏢',
-  individual: '👤',
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  community: Mountain,
+  government: Landmark,
+  business: BriefcaseIcon,
+  individual: UserIcon,
 };
 
 // ============================================================================
@@ -82,7 +65,6 @@ export function TenantAppLayout(): React.ReactElement {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [founderNavEnabled, setFounderNavState] = useState(getFounderNavEnabled);
 
   // Messages unread count query (global badge)
   const { data: unreadData } = useQuery<{ ok: boolean; count: number }>({
@@ -100,7 +82,8 @@ export function TenantAppLayout(): React.ReactElement {
   const isAtRoot = location.pathname === '/app' || location.pathname === '/app/';
   
   // Routes that can be accessed without a tenant selected
-  const noTenantRoutes = ['/app/places', '/app/founder', '/app/platform'];
+  // Note: /app/founder/* and /app/platform/* now have their own layouts
+  const noTenantRoutes = ['/app/places'];
   const isNoTenantRoute = noTenantRoutes.some(r => location.pathname.startsWith(r));
   
   const needsRedirectToRoot = !isAtRoot && !isNoTenantRoute && !currentTenant && initialized && !loading;
@@ -193,12 +176,6 @@ export function TenantAppLayout(): React.ReactElement {
   // Navigation using V3_NAV (filtered by user context)
   // --------------------------------------------------------------------------
   
-  function toggleFounderNav() {
-    const newValue = !founderNavEnabled;
-    setFounderNavEnabled(newValue);
-    setFounderNavState(newValue);
-  }
-
   // Normalize role strings to match V3_NAV tenantRolesAny values
   // API returns: 'owner', 'admin', 'operator', 'staff', 'member'
   // V3_NAV expects: 'tenant_owner', 'tenant_admin', 'operator', 'staff', 'member'
@@ -216,10 +193,8 @@ export function TenantAppLayout(): React.ReactElement {
     isPlatformAdmin: user?.is_platform_admin || false,
     tenantRole: normalizeRole(currentTenant?.role),
     portalRole: undefined,
-    founderNavEnabled: founderNavEnabled && (user?.is_platform_admin || false),
+    founderNavEnabled: false, // Founder mode now has its own layout
   });
-  
-  const canToggleFounderNav = user?.is_platform_admin || false;
 
   // --------------------------------------------------------------------------
   // Handlers
@@ -379,9 +354,10 @@ export function TenantAppLayout(): React.ReactElement {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '18px' }}>
-                      {TYPE_ICONS[currentTenant.tenant_type] || '📁'}
-                    </span>
+                    {(() => {
+                      const IconComponent = TYPE_ICONS[currentTenant.tenant_type] || Building2;
+                      return <IconComponent size={18} className="flex-shrink-0" />;
+                    })()}
                     {!sidebarCollapsed && (
                       <>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -454,7 +430,10 @@ export function TenantAppLayout(): React.ReactElement {
                             gap: '8px',
                           }}
                         >
-                          <span>{TYPE_ICONS[m.tenant_type] || '📁'}</span>
+                          {(() => {
+                            const IconComponent = TYPE_ICONS[m.tenant_type] || Building2;
+                            return <IconComponent size={16} className="flex-shrink-0" />;
+                          })()}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ 
                               fontWeight: 500, 
@@ -582,31 +561,6 @@ export function TenantAppLayout(): React.ReactElement {
             {!sidebarCollapsed && <span>My Places</span>}
           </Link>
 
-          {/* Founder Nav Toggle (platform admin only) */}
-          {canToggleFounderNav && !sidebarCollapsed && (
-            <button
-              onClick={toggleFounderNav}
-              data-testid="button-founder-nav-toggle"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 20px',
-                width: '100%',
-                backgroundColor: founderNavEnabled ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
-                border: 'none',
-                borderTop: '1px solid rgba(255,255,255,0.1)',
-                color: founderNavEnabled ? '#a855f7' : '#6b7280',
-                textDecoration: 'none',
-                fontSize: '14px',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              {founderNavEnabled ? <Eye size={18} /> : <EyeOff size={18} />}
-              <span>{founderNavEnabled ? 'Founder Nav: ON' : 'Founder Nav: OFF'}</span>
-            </button>
-          )}
 
           {/* Platform Admin Link (if admin) */}
           {user.is_platform_admin && !impersonation.is_impersonating && (

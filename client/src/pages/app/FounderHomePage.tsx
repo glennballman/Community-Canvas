@@ -18,13 +18,16 @@ import {
   BarChart3,
   ArrowRight,
   Sparkles,
+  Mountain,
+  Landmark,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const TYPE_ICONS: Record<string, string> = {
-  community: '🏔️',
-  government: '🏛️',
-  business: '🏢',
-  individual: '👤',
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  community: Mountain,
+  government: Landmark,
+  business: Briefcase,
+  individual: Users,
 };
 
 export default function FounderHomePage() {
@@ -128,7 +131,14 @@ export default function FounderHomePage() {
                 data-testid={`link-tenant-${m.tenant_id}`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{TYPE_ICONS[m.tenant_type] || '🏢'}</span>
+                  {(() => {
+                    const IconComponent = TYPE_ICONS[m.tenant_type] || Building2;
+                    return (
+                      <div className="h-8 w-8 rounded bg-accent flex items-center justify-center flex-shrink-0">
+                        <IconComponent className="h-4 w-4 text-accent-foreground" />
+                      </div>
+                    );
+                  })()}
                   <div>
                     <div className="font-medium">{m.tenant_name}</div>
                     <div className="text-xs text-muted-foreground capitalize">{m.role}</div>
