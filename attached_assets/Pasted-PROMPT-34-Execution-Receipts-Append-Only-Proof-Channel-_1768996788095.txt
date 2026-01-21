@@ -1,0 +1,283 @@
+PROMPT 34 — Execution Receipts (Append-Only Proof Channel)
+Objective
+
+Introduce an append-only Execution Receipt system that allows zero-trust execution engines (or simulators) to submit verifiable evidence of what occurred after consuming an Execution Contract.
+
+This system:
+
+Does not trigger execution
+
+Does not mutate planning state
+
+Does not affect billing, payments, or notifications
+
+Does not expose PII or contractor identities
+
+Preserves strict separation between planning authority (N3) and execution actors
+
+Execution Receipts are evidence artifacts, not control signals.
+
+Core Principles (Hard Invariants)
+
+Append-only
+
+No UPDATE or DELETE routes
+
+Receipts are immutable once written
+
+Zero-trust
+
+Execution engine is treated as an untrusted reporter
+
+Receipts are validated, not trusted
+
+Counts-only
+
+No work request IDs
+
+No contractor IDs
+
+No personal or operational PII
+
+Non-authoritative
+
+Receipts do NOT:
+
+Change run status
+
+Change readiness
+
+Affect eligibility
+
+Affect billing or scheduling
+
+Cryptographically bound
+
+Every receipt references:
+
+execution_contract_id
+
+payload_hash (from Prompt 33)
+
+Database (Part A)
+New Table: cc_n3_execution_receipts
+export const ccN3ExecutionReceipts = pgTable('cc_n3_execution_receipts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+
+  runId: uuid('run_id').notNull(),
+  executionContractId: uuid('execution_contract_id').notNull(),
+
+  payloadHash: text('payload_hash').notNull(), // must match contract
+  receiptVersion: integer('receipt_version').notNull().default(1),
+
+  receiptPayload: jsonb('receipt_payload').notNull(), // counts-only evidence
+
+  reportedBy: text('reported_by').notNull(), // execution engine identifier
+  reportedAt: timestamp('reported_at', { withTimezone: true }).defaultNow(),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  uniqueContractReceipt: uniqueIndex('uniq_execution_contract_receipt')
+    .on(table.executionContractId, table.reportedAt),
+  runIdx: index('idx_execution_receipts_run').on(table.runId),
+}));
+
+Notes
+
+Multiple receipts per run allowed
+
+Multiple receipts per contract allowed
+
+Ordering is temporal, not authoritative
+
+Receipt Payload Schema (Counts-Only)
+
+Example receipt_payload:
+
+{
+  "window": {
+    "start": "2026-02-01",
+    "end": "2026-02-03"
+  },
+  "summary": {
+    "tasks_attempted": 12,
+    "tasks_completed": 9,
+    "tasks_deferred": 3
+  },
+  "coordination": {
+    "coordination_intent_present": 7,
+    "coordination_utilized": 5
+  },
+  "exceptions": {
+    "access_blocked": 1,
+    "weather": 1,
+    "no_show": 1
+  }
+}
+
+
+❌ No IDs
+❌ No names
+❌ No prices
+❌ No contractors
+❌ No addresses
+
+Backend API (Part B)
+POST /api/n3/runs/:runId/execution-receipts
+
+Purpose:
+Allow an execution engine to submit a receipt for a previously issued Execution Contract.
+
+Guards
+
+requireExecutionConsumer (read-only execution identity)
+
+Tenant + portal scoping enforced
+
+Contract must exist
+
+Validation Rules
+
+execution_contract_id must belong to runId
+
+payload_hash must match contract’s stored hash
+
+Receipt payload must:
+
+Be JSON
+
+Pass schema validation
+
+Contain no forbidden keys (IDs, prices, identities)
+
+Behavior
+
+Insert new receipt row
+
+Log audit event:
+
+console.log('[N3 AUDIT] n3_execution_receipt_recorded', {
+  run_id,
+  execution_contract_id,
+  reported_by,
+  reported_at
+});
+
+Response
+{
+  "ok": true,
+  "receipt_id": "uuid",
+  "reported_at": "ISO8601"
+}
+
+GET /api/n3/runs/:runId/execution-receipts
+
+Purpose:
+Allow admins/owners to review execution evidence.
+
+Guards
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner
+
+Response
+{
+  "run_id": "uuid",
+  "receipts": [
+    {
+      "id": "uuid",
+      "execution_contract_id": "uuid",
+      "payload_hash": "sha256",
+      "receipt_version": 1,
+      "receipt_payload": { ... },
+      "reported_by": "engine_name",
+      "reported_at": "ISO8601"
+    }
+  ]
+}
+
+Frontend (Part C)
+Hooks
+
+useN3ExecutionReceipts(runId)
+
+useCreateExecutionReceipt() (execution consumer only)
+
+UI: Execution Receipts Card
+
+Location: ServiceRunMonitorPage
+
+Behavior
+
+Visible to admin/owner only
+
+Appears after Execution Contract exists
+
+Read-only timeline view
+
+Display
+
+Receipt timestamp
+
+Reporting engine
+
+Window covered
+
+Summary counts
+
+Exception counts
+
+Badge: “Evidence Only”
+
+Language (Important)
+
+“Reported outcome”
+
+“Execution-reported”
+
+“Non-authoritative”
+
+“For review only”
+
+❌ No “completed”
+❌ No “success/failure”
+❌ No implied correctness
+
+Explicit Non-Goals (Do NOT Build)
+
+❌ No reconciliation logic
+
+❌ No billing linkage
+
+❌ No automatic status changes
+
+❌ No alerts or notifications
+
+❌ No overwrite of readiness snapshots
+
+❌ No execution triggering
+
+Completion Criteria
+
+Prompt 34 is complete when:
+
+✅ Receipts are append-only and immutable
+
+✅ Cryptographically tied to Execution Contracts
+
+✅ Execution engine cannot mutate planning state
+
+✅ Admins can review evidence safely
+
+✅ All invariants from Prompts 30–33 remain intact
+
+Naming / Audit Consistency
+
+All logs must use:
+
+[N3 AUDIT] n3_execution_receipt_recorded
+
+End of Prompt 34

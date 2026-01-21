@@ -3134,6 +3134,35 @@ export const ccN3ExecutionContracts = pgTable('cc_n3_execution_contracts', {
 
 export type N3ExecutionContract = typeof ccN3ExecutionContracts.$inferSelect;
 
+// ============ N3 EXECUTION RECEIPTS ============
+// Append-only evidence channel for execution engines to report outcomes
+// No UPDATE/DELETE - immutable once written
+// Counts-only payload - no PII, no IDs, no contractors
+export const ccN3ExecutionReceipts = pgTable('cc_n3_execution_receipts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  runId: uuid('run_id').notNull(),
+  executionContractId: uuid('execution_contract_id').notNull(),
+  
+  // Must match the contract's payload_hash for cryptographic binding
+  payloadHash: text('payload_hash').notNull(),
+  receiptVersion: integer('receipt_version').notNull().default(1),
+  
+  // Counts-only evidence payload - no PII
+  receiptPayload: jsonb('receipt_payload').notNull(),
+  
+  // Execution engine identifier (not a user ID)
+  reportedBy: text('reported_by').notNull(),
+  reportedAt: timestamp('reported_at', { withTimezone: true }).defaultNow(),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  uniqueIndex('uniq_execution_contract_receipt').on(table.executionContractId, table.reportedAt),
+  index('idx_execution_receipts_run').on(table.runId),
+]);
+
+export type N3ExecutionReceipt = typeof ccN3ExecutionReceipts.$inferSelect;
+
 // ============ HOUSEKEEPING CHECKLISTS ============
 export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
   id: uuid('id').primaryKey().defaultRandom(),
