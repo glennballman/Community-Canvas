@@ -287,3 +287,50 @@ export function useN3AssignZone(tenantId: string) {
     },
   });
 }
+
+export interface N3Portal {
+  id: string;
+  name: string;
+  slug: string;
+  default_zone_id: string | null;
+}
+
+export function useN3Portals(tenantId: string) {
+  return useQuery<{ portals: N3Portal[] }>({
+    queryKey: ['/api/n3/portals', tenantId],
+    queryFn: async () => {
+      const res = await fetch('/api/n3/portals', {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) throw new Error('Failed to fetch portals');
+      return res.json();
+    },
+    enabled: !!tenantId,
+  });
+}
+
+export function useN3AssignPortal(tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ runId, portalId }: { runId: string; portalId: string }) => {
+      const res = await fetch(`/api/n3/runs/${runId}/portal`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId 
+        },
+        body: JSON.stringify({ portal_id: portalId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to assign portal');
+      }
+      return res.json();
+    },
+    onSuccess: (_, { runId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/zones'] });
+    },
+  });
+}

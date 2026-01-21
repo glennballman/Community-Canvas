@@ -32,7 +32,9 @@ import {
   useN3TriggerEvaluation,
   useN3DismissBundle,
   useN3Zones,
-  useN3AssignZone
+  useN3AssignZone,
+  useN3Portals,
+  useN3AssignPortal
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -60,10 +62,30 @@ export default function ServiceRunMonitorPage() {
   const evaluateMutation = useN3TriggerEvaluation(TEST_TENANT_ID);
   const dismissMutation = useN3DismissBundle(TEST_TENANT_ID);
   const assignZoneMutation = useN3AssignZone(TEST_TENANT_ID);
+  const assignPortalMutation = useN3AssignPortal(TEST_TENANT_ID);
   
   const portalId = data?.run?.portal_id || null;
+  const { data: portalsData } = useN3Portals(TEST_TENANT_ID);
+  const portals = portalsData?.portals || [];
   const { data: zonesData } = useN3Zones(portalId, TEST_TENANT_ID);
   const zones = zonesData?.zones || [];
+
+  const handlePortalChange = async (selectedPortalId: string) => {
+    if (!runId || selectedPortalId === 'none') return;
+    try {
+      await assignPortalMutation.mutateAsync({ runId, portalId: selectedPortalId });
+      toast({
+        title: 'Portal assigned',
+        description: 'Portal and zone defaulting applied successfully.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Failed to assign portal',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleZoneChange = async (zoneId: string) => {
     if (!runId) return;
@@ -239,6 +261,42 @@ export default function ServiceRunMonitorPage() {
           </CardContent>
         </Card>
       </div>
+
+      {!portalId && portals.length > 0 && (
+        <Card data-testid="portal-assignment-card" className="border-amber-500 border-2 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Portal Required for Zone Assignment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select a portal to enable zone assignment and pricing estimates.
+            </p>
+            <div className="flex items-center gap-4">
+              <Select 
+                onValueChange={handlePortalChange}
+                disabled={assignPortalMutation.isPending}
+              >
+                <SelectTrigger className="w-64" data-testid="select-portal">
+                  <SelectValue placeholder="Select portal..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {portals.map(portal => (
+                    <SelectItem key={portal.id} value={portal.id}>
+                      {portal.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {assignPortalMutation.isPending && (
+                <span className="text-sm text-muted-foreground">Assigning...</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {portalId && (
         <Card data-testid="zone-assignment-card">

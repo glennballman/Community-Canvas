@@ -245,6 +245,33 @@ n3Router.get('/runs/:runId/monitor', requireAuth, requireTenant, async (req, res
   }
 });
 
+n3Router.get('/portals', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+
+    const portals = await db
+      .select({
+        id: ccPortals.id,
+        name: ccPortals.name,
+        slug: ccPortals.slug,
+        default_zone_id: ccPortals.defaultZoneId,
+      })
+      .from(ccPortals)
+      .where(eq(ccPortals.owningTenantId, tenantId))
+      .orderBy(ccPortals.name);
+
+    res.json({ portals });
+  } catch (err) {
+    console.error('[N3 API] Error fetching portals:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 n3Router.get('/zones', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
   try {
     const tenantReq = req as TenantRequest;
