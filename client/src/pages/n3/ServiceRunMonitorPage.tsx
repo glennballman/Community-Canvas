@@ -23,7 +23,8 @@ import {
   Calendar, 
   MapPin,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { 
@@ -200,6 +201,23 @@ export default function ServiceRunMonitorPage() {
           </Button>
         </div>
       </div>
+
+      {run.status === 'draft' && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4" data-testid="banner-draft-status">
+          <div className="flex items-start gap-3">
+            <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-medium text-amber-800 dark:text-amber-200">
+                Draft Service Run
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                This Service Run is in draft status. Configure the run details, then schedule it to make it active. 
+                Draft runs are not visible to contractors and do not trigger notifications.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
