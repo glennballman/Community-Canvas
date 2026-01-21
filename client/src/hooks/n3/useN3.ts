@@ -590,6 +590,7 @@ export function useN3AttachMaintenanceRequests(tenantId: string) {
       queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'maintenance-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
       queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'eligible-maintenance-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'readiness-drift'] });
     },
   });
 }
@@ -616,6 +617,56 @@ export function useN3DetachMaintenanceRequests(tenantId: string) {
     onSuccess: (_, { runId }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'maintenance-requests'] });
       queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'readiness-drift'] });
     },
+  });
+}
+
+// ============ READINESS DRIFT (Prompt 29) ============
+
+export interface ReadinessDriftResponse {
+  run_id: string;
+  status: string;
+  evaluated_at: string;
+  totals: {
+    attached: number;
+    with_drift: number;
+  };
+  drift: {
+    coordination_opt_out?: { count: number };
+    zone_mismatch?: { count: number };
+    inactive_status?: { count: number };
+    age_exceeded?: { count: number; threshold_days: number };
+  };
+}
+
+/**
+ * Hook to fetch readiness drift for an N3 Service Run.
+ * Returns advisory warnings (counts only) when attached maintenance requests
+ * have drifted from planning assumptions.
+ * 
+ * Admin/owner only. Only applies to draft or scheduled runs.
+ */
+export function useN3ReadinessDrift(runId: string | undefined, tenantId: string, ageDays?: number) {
+  return useQuery<ReadinessDriftResponse>({
+    queryKey: ['/api/n3/runs', runId, 'readiness-drift', ageDays || 30],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (ageDays) {
+        params.set('age_days', String(ageDays));
+      }
+      const url = `/api/n3/runs/${runId}/readiness-drift${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await fetch(url, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch readiness drift');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+    staleTime: 60 * 1000, // 1 minute
+    refetchOnWindowFocus: false,
   });
 }
