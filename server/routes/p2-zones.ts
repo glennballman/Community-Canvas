@@ -45,6 +45,14 @@ async function requireTenantAdmin(req: any, res: any): Promise<{ tenantId: strin
 // ZONES CRUD
 // ============================================================================
 
+// Pricing modifier validation with sane bounds
+const pricingModifiersSchema = z.object({
+  contractor_multiplier: z.number().min(0.1).max(10).optional(),
+  logistics_surcharge_flat: z.number().min(0).max(100000).optional(),
+  time_risk_multiplier: z.number().min(0.1).max(10).optional(),
+  notes: z.string().max(500).optional(),
+}).passthrough(); // Allow additional fields for future extensibility
+
 const createZoneSchema = z.object({
   portalId: z.string().uuid(),
   key: z.string().min(1).max(100),
@@ -55,6 +63,7 @@ const createZoneSchema = z.object({
   badgeLabelVisitor: z.string().max(50).nullable().optional(),
   theme: z.record(z.any()).optional().default({}),
   accessProfile: z.record(z.any()).optional().default({}),
+  pricingModifiers: pricingModifiersSchema.optional().default({}),
 });
 
 const updateZoneSchema = createZoneSchema.partial().omit({ portalId: true });
@@ -88,7 +97,7 @@ router.get('/zones', async (req: any, res) => {
       SELECT 
         id, tenant_id, portal_id, key, name, kind,
         badge_label_resident, badge_label_contractor, badge_label_visitor,
-        theme, access_profile, created_at, updated_at
+        theme, access_profile, pricing_modifiers, created_at, updated_at
       FROM cc_zones
       WHERE portal_id = $1 AND tenant_id = $2
       ORDER BY name ASC
@@ -106,6 +115,7 @@ router.get('/zones', async (req: any, res) => {
       badgeLabelVisitor: row.badge_label_visitor,
       theme: row.theme,
       accessProfile: row.access_profile,
+      pricingModifiers: row.pricing_modifiers || {},
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -155,11 +165,11 @@ router.post('/zones', async (req: any, res) => {
       INSERT INTO cc_zones (
         tenant_id, portal_id, key, name, kind,
         badge_label_resident, badge_label_contractor, badge_label_visitor,
-        theme, access_profile
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        theme, access_profile, pricing_modifiers
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id, tenant_id, portal_id, key, name, kind,
         badge_label_resident, badge_label_contractor, badge_label_visitor,
-        theme, access_profile, created_at, updated_at
+        theme, access_profile, pricing_modifiers, created_at, updated_at
     `, [
       auth.tenantId,
       data.portalId,
@@ -171,6 +181,7 @@ router.post('/zones', async (req: any, res) => {
       data.badgeLabelVisitor || null,
       JSON.stringify(data.theme || {}),
       JSON.stringify(data.accessProfile || {}),
+      JSON.stringify(data.pricingModifiers || {}),
     ]);
 
     const row = result.rows[0];
@@ -186,6 +197,7 @@ router.post('/zones', async (req: any, res) => {
       badgeLabelVisitor: row.badge_label_visitor,
       theme: row.theme,
       accessProfile: row.access_profile,
+      pricingModifiers: row.pricing_modifiers || {},
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -275,6 +287,10 @@ router.put('/zones/:zoneId', async (req: any, res) => {
       updates.push(`access_profile = $${paramIndex++}`);
       values.push(JSON.stringify(data.accessProfile));
     }
+    if (data.pricingModifiers !== undefined) {
+      updates.push(`pricing_modifiers = $${paramIndex++}`);
+      values.push(JSON.stringify(data.pricingModifiers));
+    }
 
     values.push(zoneId);
     values.push(auth.tenantId);
@@ -284,7 +300,7 @@ router.put('/zones/:zoneId', async (req: any, res) => {
       WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex++}
       RETURNING id, tenant_id, portal_id, key, name, kind,
         badge_label_resident, badge_label_contractor, badge_label_visitor,
-        theme, access_profile, created_at, updated_at
+        theme, access_profile, pricing_modifiers, created_at, updated_at
     `, values);
 
     if (result.rows.length === 0) {
@@ -304,6 +320,7 @@ router.put('/zones/:zoneId', async (req: any, res) => {
       badgeLabelVisitor: row.badge_label_visitor,
       theme: row.theme,
       accessProfile: row.access_profile,
+      pricingModifiers: row.pricing_modifiers || {},
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
