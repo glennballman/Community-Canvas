@@ -303,6 +303,17 @@ export async function recomputeNextActions(
       eq(ccIngestionNextActions.status, 'proposed')
     ));
   
+  // When force=true, resurrect dismissed actions by setting them back to proposed
+  if (force) {
+    const dismissedToResurrect = dismissedActions.filter(a => a.status === 'dismissed');
+    for (const action of dismissedToResurrect) {
+      await db.update(ccIngestionNextActions)
+        .set({ status: 'proposed', resolvedAt: null })
+        .where(eq(ccIngestionNextActions.id, action.id));
+      console.log(`[A2.6] Resurrected dismissed action: ${action.actionType} (${action.id})`);
+    }
+  }
+  
   // Derive new proposals
   const proposals = await deriveNextActions(ingestion);
   
@@ -367,9 +378,18 @@ export async function recomputeNextActions(
     }
   }
   
-  console.log(`[A2.6] Recomputed ${insertedActions.length} next actions for ingestion ${ingestionId}`);
+  console.log(`[A2.6] Recomputed ${insertedActions.length} next actions for ingestion ${ingestionId}, force: ${force}`);
   
-  return insertedActions;
+  // Return all proposed actions (newly inserted + resurrected)
+  const allProposedActions = await db.query.ccIngestionNextActions.findMany({
+    where: and(
+      eq(ccIngestionNextActions.ingestionId, ingestionId),
+      eq(ccIngestionNextActions.tenantId, tenantId),
+      eq(ccIngestionNextActions.status, 'proposed')
+    )
+  });
+  
+  return allProposedActions;
 }
 
 /**
@@ -388,10 +408,30 @@ export async function resolveNextAction(
     throw new Error('Action not found');
   }
   
-  if (action.status !== 'proposed') {
+  // Edit allows updating proposed actions; confirm/dismiss require proposed status
+  if (resolution !== 'edit' && action.status !== 'proposed') {
     throw new Error('Action already resolved');
   }
   
+  // Handle edit separately - it updates payload but keeps status as "proposed"
+  if (resolution === 'edit') {
+    // Merge payload into existing actionPayload
+    const existingPayload = action.actionPayload as Record<string, any> || {};
+    const mergedPayload = { ...existingPayload, ...payload };
+    
+    const [updated] = await db.update(ccIngestionNextActions)
+      .set({
+        actionPayload: mergedPayload
+        // Note: status stays 'proposed', no resolvedAt
+      })
+      .where(eq(ccIngestionNextActions.id, actionId))
+      .returning();
+    
+    console.log(`[A2.6] Edited action ${actionId} - status remains proposed`);
+    return updated;
+  }
+  
+  // Confirm or dismiss - set final status
   const [updated] = await db.update(ccIngestionNextActions)
     .set({
       status: resolution === 'dismiss' ? 'dismissed' : 'confirmed',

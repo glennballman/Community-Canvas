@@ -1,0 +1,110 @@
+✅ Copy/Paste Replit Prompt: “Unblock QA Login (Dev-only seed + impersonate)”
+
+Paste this to Replit exactly:
+
+REPLIT TASK: Unblock QA — Add DEV Test User + Debug Panel Auto-Login (No skipping)
+Problem
+
+In the dev QA run, login fails with 401 Invalid credentials against POST /foundation/auth/login. This blocks the ingestion intelligence test plan. We need deterministic, safe access.
+
+Requirements (strict)
+
+Must be DEV/TEST only (never enabled in production)
+
+Must not require knowing any real user password
+
+Must set auth using the same session cookie mechanism as normal login
+
+Must support contractor flows at /app/contractor/onboard
+
+Step 1 — Add deterministic seed user (dev/test only)
+
+Implement a seed that runs on server boot (or via a seed script) only when:
+
+NODE_ENV !== 'production' OR process.env.CC_DEV_SEED === 'true'
+
+Seed user:
+
+email: tester@example.com
+
+password: tester123! (hash it using the same hashing as production)
+
+roles: include contractor (and platform_admin if your tests need it)
+
+attach to a known tenant + portal context so contractor pages work
+
+If user exists, do nothing (idempotent).
+
+Output server log once:
+[DEV SEED] ensured tester@example.com
+
+Step 2 — Add DEV-only “login as tester” endpoint
+
+Create endpoint:
+POST /api/dev/login-as
+
+Body:
+
+{ "email": "tester@example.com" }
+
+
+Behavior:
+
+Only works when not production (guard hard)
+
+Finds user by email
+
+Creates a session the same way /foundation/auth/login does
+
+Sets the correct cookie
+
+Returns { ok:true, user:{id,email}, tenantId?, roles? }
+
+If your system uses session middleware, reuse the same helpers.
+
+Step 3 — Add DEV-only Debug Panel button
+
+In the Debug Panel UI, add buttons visible only in dev:
+
+“Login as tester@example.com
+”
+
+“Copy auth state”
+
+Clicking “Login as tester” should call /api/dev/login-as then reload or re-fetch auth state.
+After login, Debug Panel should show Cookie: Yes or Token: Yes and /app/* should load.
+
+Step 4 — Fix QA runner to use the dev login
+
+Update the automated QA flow (the “handoff control” test) to:
+
+Try normal login first
+
+If 401 and dev mode, automatically call /api/dev/login-as with tester@example.com
+
+Then proceed to /app/contractor/onboard
+
+This ensures tests never get stuck on login again.
+
+Acceptance Criteria
+
+Visiting the dev instance, clicking “Login as tester@example.com
+” successfully authenticates (cookie set)
+
+Contractor pages load without 401
+
+QA run no longer requires skipping
+
+Endpoint is impossible to use in production (returns 404 or 403)
+
+Deliverables
+
+Seed logic + logs
+
+/api/dev/login-as endpoint
+
+Debug panel UI button
+
+QA runner updated to use dev login fallback
+
+Proceed.

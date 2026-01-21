@@ -51,6 +51,24 @@ export async function ensureDevTestUser(): Promise<void> {
     );
 
     if (existing.rows.length > 0) {
+      const existingUserId = existing.rows[0].id;
+      
+      // Ensure contractor profile exists for existing user
+      const tenantResult = await serviceQuery(`
+        SELECT id FROM cc_tenants WHERE status = 'active' LIMIT 1
+      `);
+      
+      if (tenantResult.rows.length > 0) {
+        const tenantId = tenantResult.rows[0].id;
+        
+        // Ensure contractor profile exists
+        await serviceQuery(`
+          INSERT INTO cc_contractor_profiles (user_id, portal_id, tenant_id, onboarding_complete, contractor_role)
+          VALUES ($1, $2, $2, false, 'contractor_admin')
+          ON CONFLICT (user_id, portal_id) DO NOTHING
+        `, [existingUserId, tenantId]);
+      }
+      
       console.log('[DEV SEED] tester@example.com already exists');
       return;
     }
@@ -88,7 +106,15 @@ export async function ensureDevTestUser(): Promise<void> {
           ON CONFLICT (user_id, tenant_id) DO NOTHING
         `, [userId, tenantId]);
 
-        console.log(`[DEV SEED] ensured tester@example.com (tenant: ${tenantId})`);
+        // Create contractor profile for the test user (required for A2.6 testing)
+        // Use tenantId as portalId for dev testing
+        await serviceQuery(`
+          INSERT INTO cc_contractor_profiles (user_id, portal_id, tenant_id, onboarding_complete, contractor_role)
+          VALUES ($1, $2, $2, false, 'contractor_admin')
+          ON CONFLICT (user_id, portal_id) DO NOTHING
+        `, [userId, tenantId]);
+
+        console.log(`[DEV SEED] ensured tester@example.com (tenant: ${tenantId}, with contractor profile)`);
       } else {
         console.log('[DEV SEED] ensured tester@example.com (no tenant attached)');
       }

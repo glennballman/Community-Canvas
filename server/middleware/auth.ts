@@ -6,6 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'cc-dev-secret-change-in-prod';
 export interface AuthRequest extends Request {
     user?: {
         id: string;
+        userId: string; // Alias for backward compatibility
         email: string;
         userType?: string;
         isPlatformAdmin?: boolean;
@@ -22,8 +23,10 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const userId = decoded.userId || decoded.id;
         req.user = {
-            id: decoded.userId,
+            id: userId,
+            userId: userId, // Alias for backward compatibility with routes using .userId
             email: decoded.email,
             userType: decoded.userType,
             isPlatformAdmin: decoded.isPlatformAdmin
@@ -41,8 +44,10 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
     if (token) {
         try {
             const decoded = jwt.verify(token, JWT_SECRET) as any;
+            const userId = decoded.userId || decoded.id;
             req.user = {
-                id: decoded.userId,
+                id: userId,
+                userId: userId, // Alias for backward compatibility
                 email: decoded.email,
                 userType: decoded.userType
             };
