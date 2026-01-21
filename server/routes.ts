@@ -137,6 +137,7 @@ import contractorIngestionsRouter from "./routes/contractor-ingestions";
 import contractorGeoRouter from "./routes/contractor-geo";
 import contractorEventRouter from "./routes/contractor-event";
 import contractorIntelligenceRouter from "./routes/contractor-ingestion-intelligence";
+import contractorPhotoBundlesRouter from "./routes/contractor-photo-bundles";
 import publicEventRouter from "./routes/public-event";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
@@ -565,6 +566,9 @@ export async function registerRoutes(
   
   // Contractor Event Mode (Prompt A2.5)
   app.use('/api/contractor/event', contractorEventRouter);
+  
+  // Photo Bundles (A2.7)
+  app.use('/api/contractor/photo-bundles', contractorPhotoBundlesRouter);
   
   // Public Event Lead Capture (Prompt A2.5)
   app.use('/api/public/event', publicEventRouter);

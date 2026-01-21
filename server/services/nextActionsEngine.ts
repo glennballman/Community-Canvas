@@ -248,7 +248,7 @@ export async function deriveNextActions(
     });
   }
   
-  // Jobsite / before/after photo → Attach to zone + potential N3 run
+  // Jobsite / before/after photo → Attach to zone + potential N3 run + proof bundle
   if (primaryType === 'jobsite' || primaryType === 'before_photo' || primaryType === 'after_photo') {
     // Propose zone attachment if we have geo
     if (geoInference.lat && geoInference.lng) {
@@ -288,6 +288,22 @@ export async function deriveNextActions(
           proposedAddress: geoInference.proposedAddress
         },
         confidence: 50
+      });
+    }
+    
+    // A2.7: Propose proof bundle for before/after photos
+    if (primaryType === 'before_photo' || primaryType === 'after_photo') {
+      const missingStage = primaryType === 'before_photo' ? 'after' : 'before';
+      proposals.push({
+        actionType: 'create_or_update_proof_bundle',
+        actionPayload: {
+          key: 'proof_bundle',
+          bundleId: null, // Will be assigned when bundle is created/found
+          reason: `${primaryType === 'before_photo' ? 'Before' : 'After'} photo detected - proof bundle recommended`,
+          missingStage,
+          sourceIngestionId: ingestion.id
+        },
+        confidence: 65
       });
     }
   }

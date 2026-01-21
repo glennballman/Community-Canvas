@@ -21,8 +21,10 @@ import {
   ccContractorFleet,
   ccContractorTools,
   ccIngestionZoneLinks,
-  ccZones
+  ccZones,
+  ccContractorPhotoBundles
 } from '@shared/schema';
+import { buildOrUpdateTimelineForBundle } from '../services/contractor/photoIntelligenceEngine';
 import { authenticateToken } from '../middleware/auth';
 import { z } from 'zod';
 import nextActionsEngine from '../services/nextActionsEngine';
@@ -579,6 +581,95 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
         
         linkedEntity = { type: 'fleet', id: fleet.id };
         executionResult = { fleetCreated: true, fleetId: fleet.id };
+        break;
+      }
+
+      case 'create_or_update_proof_bundle': {
+        // A2.7: Create or update proof bundle
+        const classification = ingestion.classification as any || {};
+        const primaryType = classification.primary?.label || 'unknown';
+        
+        // Determine stage based on photo type
+        let stage: 'before' | 'after' | 'during' = 'during';
+        if (primaryType === 'before_photo') stage = 'before';
+        else if (primaryType === 'after_photo') stage = 'after';
+        
+        // Look for existing bundle to add to, or create new one
+        let bundle = actionPayload.bundleId 
+          ? await db.query.ccContractorPhotoBundles.findFirst({
+              where: and(
+                eq(ccContractorPhotoBundles.id, actionPayload.bundleId),
+                eq(ccContractorPhotoBundles.tenantId, tenantId)
+              )
+            })
+          : await db.query.ccContractorPhotoBundles.findFirst({
+              where: and(
+                eq(ccContractorPhotoBundles.tenantId, tenantId),
+                eq(ccContractorPhotoBundles.contractorProfileId, ingestion.contractorProfileId),
+                eq(ccContractorPhotoBundles.status, 'incomplete')
+              )
+            });
+        
+        if (!bundle) {
+          // Create new bundle
+          [bundle] = await db.insert(ccContractorPhotoBundles).values({
+            tenantId,
+            contractorProfileId: ingestion.contractorProfileId,
+            bundleType: 'before_after',
+            beforeMediaIds: stage === 'before' ? [id] : [],
+            afterMediaIds: stage === 'after' ? [id] : [],
+            duringMediaIds: stage === 'during' ? [id] : [],
+            status: 'incomplete'
+          }).returning();
+        } else {
+          // Add to existing bundle
+          const beforeIds = Array.isArray(bundle.beforeMediaIds) ? [...bundle.beforeMediaIds] : [];
+          const afterIds = Array.isArray(bundle.afterMediaIds) ? [...bundle.afterMediaIds] : [];
+          const duringIds = Array.isArray(bundle.duringMediaIds) ? [...bundle.duringMediaIds] : [];
+          
+          if (stage === 'before' && !beforeIds.includes(id)) beforeIds.push(id);
+          else if (stage === 'after' && !afterIds.includes(id)) afterIds.push(id);
+          else if (stage === 'during' && !duringIds.includes(id)) duringIds.push(id);
+          
+          await db.update(ccContractorPhotoBundles)
+            .set({
+              beforeMediaIds: beforeIds,
+              afterMediaIds: afterIds,
+              duringMediaIds: duringIds,
+              updatedAt: new Date()
+            })
+            .where(eq(ccContractorPhotoBundles.id, bundle.id));
+        }
+        
+        // Recompute timeline and proof
+        await buildOrUpdateTimelineForBundle({
+          tenantId,
+          contractorProfileId: ingestion.contractorProfileId,
+          bundleId: bundle.id,
+          force: false
+        });
+        
+        // Refetch bundle
+        const updatedBundle = await db.query.ccContractorPhotoBundles.findFirst({
+          where: eq(ccContractorPhotoBundles.id, bundle.id)
+        });
+        
+        const proofJson = (updatedBundle?.proofJson as any) || {};
+        const missingItems = proofJson.missingItems || [];
+        const missingPrompts = missingItems.map((m: any) => m.prompt).join('; ');
+        
+        await postThreadMessage(threadId, tenantId,
+          `Proof bundle ${actionPayload.bundleId ? 'updated' : 'created'}. Status: ${updatedBundle?.status}${missingPrompts ? `. Missing: ${missingPrompts}` : ''}`,
+          { type: 'proof_bundle', bundleId: bundle.id, status: updatedBundle?.status, missingItems }
+        );
+        
+        linkedEntity = { type: 'proof_bundle', id: bundle.id };
+        executionResult = { 
+          bundleCreated: !actionPayload.bundleId, 
+          bundleId: bundle.id,
+          status: updatedBundle?.status,
+          missingItems
+        };
         break;
       }
 
