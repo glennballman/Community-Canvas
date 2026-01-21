@@ -34,6 +34,7 @@ import {
   Lock,
   Unlock,
   Eye,
+  ShieldCheck,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -57,6 +58,8 @@ import {
   useN3ExecutionEligibility,
   useN3ExecutionHandoff,
   useCreateN3ExecutionHandoff,
+  useN3ExecutionContract,
+  useCreateN3ExecutionContract,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -169,6 +172,14 @@ export default function ServiceRunMonitorPage() {
     TEST_TENANT_ID
   );
   const createHandoffMutation = useCreateN3ExecutionHandoff(runId || '', TEST_TENANT_ID);
+
+  // Execution contract (Prompt 33) - zero-trust verifiable contract
+  const [contractNote, setContractNote] = useState('');
+  const { data: contractData, isError: contractNotFound } = useN3ExecutionContract(
+    runId,
+    TEST_TENANT_ID
+  );
+  const createContractMutation = useCreateN3ExecutionContract(runId || '', TEST_TENANT_ID);
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -1190,6 +1201,130 @@ export default function ServiceRunMonitorPage() {
                     <FileCheck className="h-4 w-4 mr-2" />
                   )}
                   Create Execution Handoff
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Execution Contract Card (Prompt 33) - Zero-trust verifiable contract */}
+      {(run.status === 'draft' || run.status === 'scheduled') && 
+       handoffData && (
+        <Card data-testid="card-execution-contract">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                Execution Contract
+              </CardTitle>
+              {contractData && (
+                <Badge 
+                  variant="outline" 
+                  className="text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400"
+                  data-testid="badge-contract-issued"
+                >
+                  Read-Only
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {contractData ? (
+              <>
+                {/* Contract issued - read-only state */}
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Issued:</span>
+                    <span className="font-medium" data-testid="text-contract-issued-at">
+                      {format(new Date(contractData.issued_at), 'PPpp')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Version:</span>
+                    <span className="font-mono text-xs" data-testid="text-contract-version">
+                      {contractData.payload_version}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Hash (SHA256):</span>
+                    <div 
+                      className="font-mono text-xs p-2 bg-muted rounded break-all cursor-pointer hover:bg-muted/80"
+                      onClick={() => {
+                        navigator.clipboard.writeText(contractData.payload_hash);
+                        toast({ title: 'Hash copied to clipboard' });
+                      }}
+                      title="Click to copy"
+                      data-testid="text-contract-hash"
+                    >
+                      {contractData.payload_hash}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Contract Payload:</span>
+                    <pre 
+                      className="text-xs p-3 bg-muted rounded overflow-auto max-h-40"
+                      data-testid="text-contract-payload"
+                    >
+                      {JSON.stringify(contractData.contract, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground italic pt-2 border-t">
+                  Immutable execution contract. Verify hash to ensure integrity.
+                </p>
+              </>
+            ) : !contractNotFound ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                {/* Create contract form */}
+                <p className="text-sm text-muted-foreground">
+                  Issue a cryptographically verifiable contract for external execution systems.
+                  No execution, billing, or notifications will occur.
+                </p>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Note (optional, 280 chars max)</label>
+                  <Textarea
+                    placeholder="Add an optional note for this contract..."
+                    value={contractNote}
+                    onChange={(e) => setContractNote(e.target.value.slice(0, 280))}
+                    maxLength={280}
+                    className="resize-none"
+                    data-testid="input-contract-note"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {contractNote.length}/280
+                  </p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await createContractMutation.mutateAsync(contractNote || undefined);
+                      toast({
+                        title: 'Contract issued',
+                        description: 'Execution contract has been issued for verification.',
+                      });
+                      setContractNote('');
+                    } catch (err: any) {
+                      toast({
+                        title: 'Failed to issue contract',
+                        description: err.message,
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  disabled={createContractMutation.isPending}
+                  data-testid="button-create-contract"
+                >
+                  {createContractMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-4 w-4 mr-2" />
+                  )}
+                  Issue Execution Contract
                 </Button>
               </>
             )}

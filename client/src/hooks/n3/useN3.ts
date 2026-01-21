@@ -951,3 +951,107 @@ export function useCreateN3ExecutionHandoff(runId: string, tenantId: string) {
     },
   });
 }
+
+// ============ EXECUTION CONTRACTS (Prompt 33) ============
+
+export interface ExecutionContractResponse {
+  contract: {
+    run: {
+      id: string;
+      status: string;
+      starts_at: string | null;
+      ends_at: string | null;
+    };
+    scope: {
+      portal_id: string | null;
+      zone_id: string | null;
+    };
+    planning_state: {
+      attached_requests: number;
+      coordination_opt_in: number;
+      unassigned: number;
+    };
+    eligibility: {
+      status: string;
+      evaluated_at: string;
+    };
+    readiness_snapshot: {
+      locked_at: string | null;
+      counts: {
+        attached: number;
+        coord_ready: number;
+        drift: number;
+      };
+    };
+    advisory_only: boolean;
+  };
+  payload_hash: string;
+  payload_version: string;
+  issued_at: string;
+}
+
+export interface ExecutionContractCreateResponse {
+  id: string;
+  run_id: string;
+  payload_hash: string;
+  payload_version: string;
+  issued_at: string;
+  issued_by: string;
+  note: string | null;
+}
+
+/**
+ * Hook to fetch the execution contract for a run.
+ * Execution consumer guard applied on backend.
+ */
+export function useN3ExecutionContract(runId: string | undefined, tenantId: string) {
+  return useQuery<ExecutionContractResponse>({
+    queryKey: ['/api/n3/runs', runId, 'execution-contract'],
+    queryFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-contract`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch execution contract');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+    retry: false, // Don't retry 404s
+    staleTime: 60 * 1000, // 1 minute
+  });
+}
+
+/**
+ * Hook to create an execution contract for a run.
+ * Requires: readiness snapshot, execution eligibility, execution handoff.
+ * Admin/owner only.
+ */
+export function useCreateN3ExecutionContract(runId: string, tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (note?: string) => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-contract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify({ note }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create execution contract');
+      }
+      return res.json() as Promise<ExecutionContractCreateResponse>;
+    },
+    onSuccess: () => {
+      // Invalidate contract query and related monitor queries
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'execution-contract'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId] });
+    },
+  });
+}
