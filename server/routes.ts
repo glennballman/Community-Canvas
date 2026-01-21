@@ -103,6 +103,7 @@ import { surfacesRouter } from "./routes/surfaces";
 import devSeedN3Router from "./routes/dev-seed-n3";
 import devSeedSurfacesRouter from "./routes/dev-seed-surfaces";
 import devSeedWeddingRouter from "./routes/dev-seed-wedding";
+import devLoginRouter, { ensureDevTestUser } from "./routes/dev-login";
 import proposalsRouter from "./routes/proposals";
 import opsRouter from "./routes/ops";
 import publicJobsRouter from "./routes/public-jobs";
@@ -410,11 +411,16 @@ export async function registerRoutes(
   // Register cc_media storage routes
   app.use('/api/cc_media', mediaRouter);
 
-  // Register QA seed/test routes (dev only)
-  if (process.env.NODE_ENV === 'development') {
+  // Register QA seed/test routes (dev only or CC_DEV_SEED=true)
+  const isDevMode = process.env.NODE_ENV === 'development' || process.env.CC_DEV_SEED === 'true';
+  if (isDevMode) {
     app.use('/api', qaSeedRouter);
     app.use('/api/dev/seed', devSeedParkingRouter);
     app.use('/api/dev/seed', devSeedMarinaRouter);
+    app.use('/api/dev', devLoginRouter);
+    
+    // Ensure dev test user exists
+    ensureDevTestUser().catch(err => console.error('[DEV SEED] Error:', err));
   }
 
   // Register operator routes (for community operators)

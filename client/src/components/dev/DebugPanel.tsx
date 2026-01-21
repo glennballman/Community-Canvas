@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Bug, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
+import { X, Bug, ChevronDown, ChevronUp, Copy, Check, LogIn, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -83,7 +83,39 @@ export function DebugPanel() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [calls, setCalls] = useState<ApiCall[]>([]);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const isDev = import.meta.env.DEV;
+
+  const loginAsTester = async () => {
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const res = await fetch('/api/dev/login-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'tester@example.com' })
+      });
+      const data = await res.json();
+      
+      if (data.ok && data.token) {
+        localStorage.setItem('cc_token', data.token);
+        if (data.tenantId) {
+          localStorage.setItem('cc_tenant_id', data.tenantId);
+        }
+        if (data.user) {
+          localStorage.setItem('cc_user', JSON.stringify(data.user));
+        }
+        window.location.reload();
+      } else {
+        setLoginError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
   useEffect(() => {
     const update = () => setCalls([...apiCalls]);
@@ -149,10 +181,30 @@ export function DebugPanel() {
             </Badge>
           </div>
         </div>
-        <Button size="sm" variant="outline" onClick={copyState} className="w-full h-6 text-xs">
-          {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-          Copy state
-        </Button>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={copyState} className="flex-1 h-6 text-xs">
+            {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+            Copy state
+          </Button>
+          <Button 
+            size="sm" 
+            variant="default" 
+            onClick={loginAsTester} 
+            disabled={loginLoading || authState.tokenPresent}
+            className="flex-1 h-6 text-xs"
+            data-testid="button-dev-login"
+          >
+            {loginLoading ? (
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            ) : (
+              <LogIn className="h-3 w-3 mr-1" />
+            )}
+            {authState.tokenPresent ? 'Logged in' : 'Login as tester'}
+          </Button>
+        </div>
+        {loginError && (
+          <div className="text-xs text-destructive">{loginError}</div>
+        )}
       </div>
 
       <ScrollArea className="h-64">
