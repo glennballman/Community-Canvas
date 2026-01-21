@@ -41,9 +41,12 @@ import {
   useCoordinationReadiness, 
   useCoordinationReadinessBuckets,
   useSuggestCoordinationWindows,
+  useCreateDraftRunFromWindow,
   type CoordinationReadinessZone,
   type SuggestedWindow,
 } from '@/hooks/useCoordination';
+import { useToast } from '@/hooks/use-toast';
+import { useLocation } from 'wouter';
 import { getZoneBadgeLabel } from '@/components/ZoneBadge';
 import { 
   Users, 
@@ -56,6 +59,8 @@ import {
   Sparkles,
   Info,
   Loader2,
+  Plus,
+  FileText,
 } from 'lucide-react';
 
 interface Portal {
@@ -229,8 +234,12 @@ function SuggestWindowsModal({
   const [lookaheadDays, setLookaheadDays] = useState(21);
   const [windowSizeDays, setWindowSizeDays] = useState(3);
   const [desiredWindows, setDesiredWindows] = useState(3);
+  const [confirmingWindowIndex, setConfirmingWindowIndex] = useState<number | null>(null);
 
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
   const suggestMutation = useSuggestCoordinationWindows();
+  const createDraftMutation = useCreateDraftRunFromWindow();
 
   const handleSuggest = () => {
     suggestMutation.mutate({
@@ -245,8 +254,49 @@ function SuggestWindowsModal({
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       suggestMutation.reset();
+      setConfirmingWindowIndex(null);
     }
     onOpenChange(newOpen);
+  };
+
+  const handleCreateDraft = (windowData: SuggestedWindow, index: number) => {
+    createDraftMutation.mutate({
+      portal_id: portalId,
+      zone_id: zone?.zone_id ?? null,
+      category: null,
+      starts_at: windowData.start_date,
+      ends_at: windowData.end_date,
+      coordination_metrics: {
+        coord_ready_count: windowData.coord_ready_count,
+        total_active_count: windowData.active_count,
+        readiness_ratio: windowData.readiness_ratio,
+        confidence_score: windowData.confidence,
+        window_source: 'suggested' as const,
+        parameters: {
+          lookahead_days: lookaheadDays,
+          window_size_days: windowSizeDays,
+          desired_windows: desiredWindows,
+        },
+      },
+    }, {
+      onSuccess: (data) => {
+        toast({
+          title: 'Draft Service Run Created',
+          description: 'You can now configure and schedule this run.',
+        });
+        setConfirmingWindowIndex(null);
+        handleOpenChange(false);
+        navigate(data.redirect);
+      },
+      onError: (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to create draft',
+          description: error.message,
+        });
+        setConfirmingWindowIndex(null);
+      },
+    });
   };
 
   return (
@@ -385,6 +435,55 @@ function SuggestWindowsModal({
                               </div>
                             </div>
                           </div>
+                          
+                          {confirmingWindowIndex === index ? (
+                            <div className="mt-3 pt-3 border-t space-y-2">
+                              <p className="text-sm text-muted-foreground">
+                                Create a draft Service Run for this window? You can configure and schedule it before it becomes active.
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleCreateDraft(window, index)}
+                                  disabled={createDraftMutation.isPending}
+                                  data-testid={`button-confirm-create-draft-${index}`}
+                                >
+                                  {createDraftMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                                      Creating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileText className="h-3 w-3 mr-1.5" />
+                                      Create Draft
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setConfirmingWindowIndex(null)}
+                                  disabled={createDraftMutation.isPending}
+                                  data-testid={`button-cancel-create-draft-${index}`}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-3 pt-3 border-t">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setConfirmingWindowIndex(index)}
+                                data-testid={`button-create-draft-${index}`}
+                              >
+                                <Plus className="h-3 w-3 mr-1.5" />
+                                Create Draft Service Run
+                              </Button>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
