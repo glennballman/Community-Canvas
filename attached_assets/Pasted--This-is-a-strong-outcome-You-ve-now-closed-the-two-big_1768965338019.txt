@@ -1,0 +1,90 @@
+✅ This is a strong outcome. You’ve now closed the two biggest risk classes for N3:
+
+Header-spoofable tenant context → eliminated (auth + TenantRequest everywhere)
+
+Zone + economics leakage → gated (admin/owner only)
+
+Portal-required friction → resolved (portal assignment + deterministic zone defaulting)
+
+A few things I want you to tighten before we call this “done-done” and move on.
+
+1) Diagnostic endpoints /status and /trigger-cycle must be protected
+
+Even if “internal,” these endpoints tend to become production attack surfaces.
+
+Minimum:
+
+requireAuth + requireTenant
+
+AND either:
+
+requireTenantAdminOrOwner, or
+
+allow isPlatformAdmin only
+
+If you truly need a healthcheck unauthenticated, make it a separate endpoint that returns only { ok: true } with no operational data.
+
+2) Portal default zone storage must be canonical and portal-scoped
+
+You introduced:
+
+PATCH /api/p2/admin/portals/:portalId/default-zone
+
+plus portal detail endpoint returns default_zone_id
+
+Two checks:
+
+Ensure the portal table column is exactly default_zone_id (snake_case in DB).
+
+Ensure server validation prevents setting a default zone that belongs to a different portal.
+
+That should be enforced in the PATCH handler:
+
+load zone by id
+
+confirm zone.portal_id === portalId
+
+confirm zone.tenant_id matches
+
+3) GET /api/n3/portals must return only portals the tenant can access
+
+Since portals are sovereign, make sure:
+
+it’s tenant-scoped (tenant_id)
+
+and if you have role-based portal membership, don’t return portals the actor shouldn’t see.
+If your system doesn’t have portal membership yet, tenant scope is acceptable for now.
+
+4) Zone defaulting: add one safety rule
+
+When assigning portal:
+
+if run already has a zone_id that belongs to the new portal, keep it
+
+only clear zone if it’s invalid for the new portal
+
+only apply default if zone is null after that
+
+This avoids “surprising overwrites.”
+
+(You may already do this—just make sure.)
+
+5) UI polish: keep wording consistent with our economics posture
+
+Where you added the portal warning card and operations tab:
+
+Make sure it never implies automatic charging
+
+Use “simulation” / “advisory only” language only where ZoneImpactSummary appears
+
+What I need from you to finalize verification (raw snippets)
+
+Paste the raw code for these pieces (no summaries):
+
+The two unprotected endpoints: /api/n3/status and /api/n3/trigger-cycle (or whatever exact paths)
+
+The portal default-zone PATCH handler
+
+The PUT /api/n3/runs/:runId/portal handler (the part that applies the defaulting rules)
+
+With those, I’ll give you a final PASS/FAIL and any last patch prompt (likely very small).

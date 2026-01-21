@@ -634,13 +634,40 @@ n3Router.post('/runs/:runId/evaluate', requireAuth, requireTenant, async (req, r
   }
 });
 
-n3Router.get('/status', async (_req, res) => {
+/**
+ * GET /api/n3/health - Unauthenticated healthcheck (returns only { ok: true })
+ */
+n3Router.get('/health', async (_req, res) => {
+  res.json({ ok: true });
+});
+
+/**
+ * GET /api/n3/status - Get monitor status (protected: platform admin only)
+ */
+n3Router.get('/status', requireAuth, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const isPlatformAdmin = tenantReq.user?.isPlatformAdmin === true;
+  
+  if (!isPlatformAdmin) {
+    return res.status(403).json({ error: 'Platform admin access required' });
+  }
+  
   const status = getMonitorStatus();
   res.json(status);
 });
 
-n3Router.post('/trigger-cycle', async (_req, res) => {
+/**
+ * POST /api/n3/trigger-cycle - Trigger monitor cycle (protected: platform admin only)
+ */
+n3Router.post('/trigger-cycle', requireAuth, async (req, res) => {
   try {
+    const tenantReq = req as TenantRequest;
+    const isPlatformAdmin = tenantReq.user?.isPlatformAdmin === true;
+    
+    if (!isPlatformAdmin) {
+      return res.status(403).json({ error: 'Platform admin access required' });
+    }
+    
     const stats = await runMonitorCycle();
     res.json({ success: true, stats });
   } catch (err) {
