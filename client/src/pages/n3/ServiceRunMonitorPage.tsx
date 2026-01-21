@@ -51,6 +51,7 @@ import {
   useN3ReadinessSnapshot,
   useLockN3Readiness,
   useUnlockN3Readiness,
+  useN3ExecutionEligibility,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -147,6 +148,14 @@ export default function ServiceRunMonitorPage() {
   );
   const lockMutation = useLockN3Readiness(runId || '', TEST_TENANT_ID);
   const unlockMutation = useUnlockN3Readiness(runId || '', TEST_TENANT_ID);
+  
+  // Execution eligibility (Prompt 31) - only fetch when snapshot is locked
+  const snapshotLockedAt = snapshotData?.locked ? snapshotData.snapshot?.locked_at : null;
+  const { data: eligibilityData } = useN3ExecutionEligibility(
+    snapshotLockedAt ? runId : undefined,
+    TEST_TENANT_ID,
+    snapshotLockedAt
+  );
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -903,6 +912,135 @@ export default function ServiceRunMonitorPage() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Execution Eligibility Gate Card (Prompt 31) - Advisory only */}
+      {(run.status === 'draft' || run.status === 'scheduled') && 
+       snapshotData?.locked && 
+       eligibilityData && (
+        <Card data-testid="card-execution-eligibility">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                Execution Eligibility (Advisory)
+              </CardTitle>
+              <Badge 
+                variant="outline" 
+                className={
+                  eligibilityData.eligibility.overall === 'degraded' 
+                    ? 'text-amber-600 border-amber-600' 
+                    : eligibilityData.eligibility.overall === 'improved'
+                      ? 'text-green-600 border-green-600'
+                      : 'text-muted-foreground'
+                }
+                data-testid="badge-eligibility-overall"
+              >
+                {eligibilityData.eligibility.overall}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Delta Summary - only show non-zero deltas */}
+            {Object.keys(eligibilityData.deltas).length > 0 ? (
+              <div className="space-y-3">
+                {eligibilityData.deltas.attachments && (
+                  <div 
+                    className="flex items-center gap-2 text-sm"
+                    data-testid="delta-attachments"
+                  >
+                    <span className={eligibilityData.deltas.attachments.attached_count_delta < 0 ? 'text-amber-600' : 'text-green-600'}>
+                      {eligibilityData.deltas.attachments.attached_count_delta > 0 ? '↑' : '↓'}
+                    </span>
+                    <span>
+                      {Math.abs(eligibilityData.deltas.attachments.attached_count_delta)} 
+                      {eligibilityData.deltas.attachments.attached_count_delta > 0 ? ' more' : ' fewer'} attached requests since snapshot
+                    </span>
+                  </div>
+                )}
+                
+                {eligibilityData.deltas.coordination && (
+                  <div 
+                    className="flex items-center gap-2 text-sm"
+                    data-testid="delta-coordination"
+                  >
+                    <span className={eligibilityData.deltas.coordination.coord_ready_count_delta < 0 ? 'text-amber-600' : 'text-green-600'}>
+                      {eligibilityData.deltas.coordination.coord_ready_count_delta >= 0 ? '↑' : '↓'}
+                    </span>
+                    <span>
+                      {Math.abs(eligibilityData.deltas.coordination.coord_ready_count_delta)} 
+                      {eligibilityData.deltas.coordination.coord_ready_count_delta >= 0 ? ' more' : ' fewer'} coordination-ready requests since snapshot
+                    </span>
+                  </div>
+                )}
+                
+                {eligibilityData.deltas.readiness_drift && (
+                  <div className="space-y-1" data-testid="delta-drift">
+                    {eligibilityData.deltas.readiness_drift.coordination_opt_out !== undefined && 
+                     eligibilityData.deltas.readiness_drift.coordination_opt_out !== 0 && (
+                      <div className="flex items-center gap-2 text-sm text-amber-600">
+                        <span>{eligibilityData.deltas.readiness_drift.coordination_opt_out > 0 ? '↑' : '↓'}</span>
+                        <span>
+                          {Math.abs(eligibilityData.deltas.readiness_drift.coordination_opt_out)} 
+                          {eligibilityData.deltas.readiness_drift.coordination_opt_out > 0 ? ' more' : ' fewer'} coordination opt-outs
+                        </span>
+                      </div>
+                    )}
+                    {eligibilityData.deltas.readiness_drift.zone_mismatch !== undefined && 
+                     eligibilityData.deltas.readiness_drift.zone_mismatch !== 0 && (
+                      <div className="flex items-center gap-2 text-sm text-amber-600">
+                        <span>{eligibilityData.deltas.readiness_drift.zone_mismatch > 0 ? '↑' : '↓'}</span>
+                        <span>
+                          {Math.abs(eligibilityData.deltas.readiness_drift.zone_mismatch)} 
+                          {eligibilityData.deltas.readiness_drift.zone_mismatch > 0 ? ' more' : ' fewer'} zone mismatches
+                        </span>
+                      </div>
+                    )}
+                    {eligibilityData.deltas.readiness_drift.inactive_status !== undefined && 
+                     eligibilityData.deltas.readiness_drift.inactive_status !== 0 && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{eligibilityData.deltas.readiness_drift.inactive_status > 0 ? '↑' : '↓'}</span>
+                        <span>
+                          {Math.abs(eligibilityData.deltas.readiness_drift.inactive_status)} 
+                          {eligibilityData.deltas.readiness_drift.inactive_status > 0 ? ' more' : ' fewer'} inactive statuses
+                        </span>
+                      </div>
+                    )}
+                    {eligibilityData.deltas.readiness_drift.age_exceeded !== undefined && 
+                     eligibilityData.deltas.readiness_drift.age_exceeded !== 0 && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{eligibilityData.deltas.readiness_drift.age_exceeded > 0 ? '↑' : '↓'}</span>
+                        <span>
+                          {Math.abs(eligibilityData.deltas.readiness_drift.age_exceeded)} 
+                          {eligibilityData.deltas.readiness_drift.age_exceeded > 0 ? ' more' : ' fewer'} age-exceeded signals
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No significant changes detected since snapshot.
+              </p>
+            )}
+            
+            {/* Operator Guidance */}
+            <div className="pt-2 border-t">
+              <p className="text-xs text-muted-foreground italic">
+                {eligibilityData.eligibility.overall === 'unchanged' && (
+                  "Conditions are consistent with the locked snapshot."
+                )}
+                {eligibilityData.eligibility.overall === 'improved' && (
+                  "Readiness has improved since the snapshot."
+                )}
+                {eligibilityData.eligibility.overall === 'degraded' && (
+                  "Some readiness signals have declined since the snapshot. You may want to review attachments or drift warnings."
+                )}
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
