@@ -37,9 +37,12 @@ import type { TenantRequest } from '../middleware/tenantContext';
 function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
   const tenantReq = req as TenantRequest;
   const roles = tenantReq.ctx?.roles || [];
-  const isPlatformAdmin = tenantReq.user?.isPlatformAdmin === true;
   
-  const isAdminOrOwner = roles.includes('admin') || roles.includes('owner') || isPlatformAdmin;
+  const isAdminOrOwner = 
+    roles.includes('owner') || 
+    roles.includes('admin') || 
+    roles.includes('tenant_admin') ||
+    !!tenantReq.user?.isPlatformAdmin;
   
   if (!isAdminOrOwner) {
     return res.status(403).json({ 
@@ -55,8 +58,12 @@ function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFuncti
  */
 function isAdminOrOwner(req: TenantRequest): boolean {
   const roles = req.ctx?.roles || [];
-  const isPlatformAdmin = req.user?.isPlatformAdmin === true;
-  return roles.includes('admin') || roles.includes('owner') || isPlatformAdmin;
+  return (
+    roles.includes('owner') || 
+    roles.includes('admin') || 
+    roles.includes('tenant_admin') ||
+    !!req.user?.isPlatformAdmin
+  );
 }
 import { 
   evaluateServiceRun, 
