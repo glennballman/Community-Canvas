@@ -25,7 +25,8 @@ import {
   ccZones,
   ccPortals,
   ccMaintenanceRequests,
-  ccN3RunMaintenanceRequests
+  ccN3RunMaintenanceRequests,
+  ccN3RunReadinessSnapshots
 } from '@shared/schema';
 import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -2014,6 +2015,318 @@ n3Router.get('/runs/:runId/readiness-drift', requireAuth, requireTenant, require
     res.json(response);
   } catch (err) {
     console.error('[N3 API] Error evaluating readiness drift:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * ============ PRE-EXECUTION LOCK / READINESS SNAPSHOT ============
+ * 
+ * Records what the operator believed was true at the moment they locked the run.
+ * This is a planning artifact, not a system guarantee.
+ */
+
+/**
+ * GET /api/n3/runs/:runId/readiness-lock
+ * 
+ * Check if a run has a readiness snapshot locked.
+ * Returns the snapshot if it exists, null otherwise.
+ * Admin/owner only.
+ */
+n3Router.get('/runs/:runId/readiness-lock', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id, status: ccN3Runs.status })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Get snapshot if exists
+    const snapshots = await db
+      .select()
+      .from(ccN3RunReadinessSnapshots)
+      .where(and(
+        eq(ccN3RunReadinessSnapshots.runId, runId),
+        eq(ccN3RunReadinessSnapshots.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (snapshots.length === 0) {
+      return res.json({ locked: false, snapshot: null });
+    }
+    
+    const snapshot = snapshots[0];
+    
+    res.json({
+      locked: true,
+      snapshot: {
+        id: snapshot.id,
+        run_id: snapshot.runId,
+        locked_at: snapshot.lockedAt,
+        locked_by: snapshot.lockedBy,
+        note: snapshot.note,
+        payload: snapshot.snapshotPayload,
+      }
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching readiness lock:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/n3/runs/:runId/readiness-lock
+ * 
+ * Lock the run's readiness state by creating a snapshot.
+ * Captures current state as planning artifact.
+ * Admin/owner only. Only draft or scheduled runs can be locked.
+ * 
+ * Body:
+ * - note: optional string
+ */
+const lockReadinessSchema = z.object({
+  note: z.string().max(500).optional(),
+});
+
+n3Router.post('/runs/:runId/readiness-lock', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const actorId = tenantReq.user?.id || 'system';
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    const parsed = lockReadinessSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid request body', details: parsed.error.errors });
+    }
+    
+    const { note } = parsed.data;
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({
+        id: ccN3Runs.id,
+        status: ccN3Runs.status,
+        name: ccN3Runs.name,
+        zoneId: ccN3Runs.zoneId,
+        portalId: ccN3Runs.portalId,
+        startsAt: ccN3Runs.startsAt,
+        endsAt: ccN3Runs.endsAt,
+      })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Only draft or scheduled runs can be locked
+    if (run.status !== 'draft' && run.status !== 'scheduled') {
+      return res.status(400).json({
+        error: 'Only draft or scheduled runs can be locked',
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    // Check if already locked
+    const existingSnapshots = await db
+      .select({ id: ccN3RunReadinessSnapshots.id })
+      .from(ccN3RunReadinessSnapshots)
+      .where(eq(ccN3RunReadinessSnapshots.runId, runId))
+      .limit(1);
+    
+    if (existingSnapshots.length > 0) {
+      return res.status(409).json({
+        error: 'Run is already locked',
+        code: 'ALREADY_LOCKED',
+      });
+    }
+    
+    // Fetch attached maintenance requests for snapshot
+    const attachedRequests = await db
+      .select({
+        maintenanceRequestId: ccN3RunMaintenanceRequests.maintenanceRequestId,
+        attachedAt: ccN3RunMaintenanceRequests.attachedAt,
+        status: ccMaintenanceRequests.status,
+        zoneId: ccMaintenanceRequests.zoneId,
+        coordinationOptIn: ccMaintenanceRequests.coordinationOptIn,
+        coordinationOptInSetAt: ccMaintenanceRequests.coordinationOptInSetAt,
+      })
+      .from(ccN3RunMaintenanceRequests)
+      .innerJoin(
+        ccMaintenanceRequests,
+        eq(ccN3RunMaintenanceRequests.maintenanceRequestId, ccMaintenanceRequests.id)
+      )
+      .where(and(
+        eq(ccN3RunMaintenanceRequests.runId, runId),
+        eq(ccN3RunMaintenanceRequests.tenantId, tenantId)
+      ));
+    
+    // Build snapshot payload
+    const snapshotPayload = {
+      run: {
+        id: run.id,
+        name: run.name,
+        status: run.status,
+        zone_id: run.zoneId,
+        portal_id: run.portalId,
+        starts_at: run.startsAt,
+        ends_at: run.endsAt,
+      },
+      attached_requests: attachedRequests.map(r => ({
+        maintenance_request_id: r.maintenanceRequestId,
+        attached_at: r.attachedAt,
+        status_at_lock: r.status,
+        zone_id_at_lock: r.zoneId,
+        coordination_opt_in_at_lock: r.coordinationOptIn,
+        coordination_opt_in_set_at: r.coordinationOptInSetAt,
+      })),
+      summary: {
+        total_attached: attachedRequests.length,
+        opted_in_count: attachedRequests.filter(r => r.coordinationOptIn).length,
+        opted_out_count: attachedRequests.filter(r => !r.coordinationOptIn).length,
+      },
+    };
+    
+    const lockedAt = new Date();
+    
+    // Create snapshot
+    const [newSnapshot] = await db
+      .insert(ccN3RunReadinessSnapshots)
+      .values({
+        tenantId,
+        runId,
+        lockedAt,
+        lockedBy: actorId,
+        note: note || null,
+        snapshotPayload,
+      })
+      .returning();
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_run_readiness_locked', {
+      event: 'n3_run_readiness_locked',
+      run_id: runId,
+      snapshot_id: newSnapshot.id,
+      actor_id: actorId,
+      tenant_id: tenantId,
+      locked_at: lockedAt.toISOString(),
+      attached_count: attachedRequests.length,
+    });
+    
+    res.json({
+      success: true,
+      snapshot: {
+        id: newSnapshot.id,
+        run_id: newSnapshot.runId,
+        locked_at: newSnapshot.lockedAt,
+        locked_by: newSnapshot.lockedBy,
+        note: newSnapshot.note,
+        payload: newSnapshot.snapshotPayload,
+      }
+    });
+  } catch (err) {
+    console.error('[N3 API] Error locking readiness:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/n3/runs/:runId/readiness-unlock
+ * 
+ * Unlock the run by deleting the readiness snapshot.
+ * Admin/owner only.
+ */
+n3Router.post('/runs/:runId/readiness-unlock', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const actorId = tenantReq.user?.id || 'system';
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id, status: ccN3Runs.status })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Check if locked
+    const existingSnapshots = await db
+      .select({ id: ccN3RunReadinessSnapshots.id, lockedAt: ccN3RunReadinessSnapshots.lockedAt })
+      .from(ccN3RunReadinessSnapshots)
+      .where(and(
+        eq(ccN3RunReadinessSnapshots.runId, runId),
+        eq(ccN3RunReadinessSnapshots.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (existingSnapshots.length === 0) {
+      return res.status(404).json({
+        error: 'Run is not locked',
+        code: 'NOT_LOCKED',
+      });
+    }
+    
+    const snapshotId = existingSnapshots[0].id;
+    const wasLockedAt = existingSnapshots[0].lockedAt;
+    
+    // Delete snapshot
+    await db
+      .delete(ccN3RunReadinessSnapshots)
+      .where(eq(ccN3RunReadinessSnapshots.id, snapshotId));
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_run_readiness_unlocked', {
+      event: 'n3_run_readiness_unlocked',
+      run_id: runId,
+      snapshot_id: snapshotId,
+      actor_id: actorId,
+      tenant_id: tenantId,
+      unlocked_at: new Date().toISOString(),
+      was_locked_at: wasLockedAt,
+    });
+    
+    res.json({ success: true, unlocked: true });
+  } catch (err) {
+    console.error('[N3 API] Error unlocking readiness:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
