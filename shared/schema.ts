@@ -8141,8 +8141,22 @@ export const ccContractorPhotoBundles = pgTable("cc_contractor_photo_bundles", {
   
   // Before media IDs
   beforeMediaIds: jsonb("before_media_ids").notNull().default([]),
-  // After media IDs
+  // After media IDs (A2.7 extension)
   afterMediaIds: jsonb("after_media_ids").notNull().default([]),
+  // During media IDs (A2.7 extension for progress_series)
+  duringMediaIds: jsonb("during_media_ids").notNull().default([]),
+  
+  // A2.7: Timeline and Proof Intelligence
+  timelineJson: jsonb("timeline_json").notNull().default({}),
+  proofJson: jsonb("proof_json").notNull().default({}),
+  
+  // A2.7: Time range covered by bundle
+  coversFrom: timestamp("covers_from", { withTimezone: true }),
+  coversTo: timestamp("covers_to", { withTimezone: true }),
+  
+  // A2.7: Geographic centroid of bundle
+  centroidLat: numeric("centroid_lat"),
+  centroidLng: numeric("centroid_lng"),
   
   // Bundle status: incomplete | complete | confirmed
   status: varchar("status", { length: 20 }).notNull().default('incomplete'),
@@ -8152,10 +8166,13 @@ export const ccContractorPhotoBundles = pgTable("cc_contractor_photo_bundles", {
   
   // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, (table) => ({
   contractorIdx: index("idx_contractor_bundles_contractor").on(table.contractorProfileId),
   jobsiteIdx: index("idx_contractor_bundles_jobsite").on(table.jobsiteId),
+  statusIdx: index("idx_contractor_bundles_status").on(table.tenantId, table.contractorProfileId, table.status),
+  coversIdx: index("idx_contractor_bundles_covers").on(table.coversFrom, table.coversTo),
 }));
 
 export const insertContractorPhotoBundleSchema = createInsertSchema(ccContractorPhotoBundles).omit({ 

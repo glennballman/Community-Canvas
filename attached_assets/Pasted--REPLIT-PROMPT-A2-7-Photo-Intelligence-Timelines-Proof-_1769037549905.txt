@@ -1,0 +1,341 @@
+✅ REPLIT PROMPT A2.7 — Photo Intelligence Timelines + Proof Bundles (Using Existing cc_contractor_photo_bundles)
+
+This is the final A2.7 prompt, adjusted to your exact bundle schema and the fact that the arrays currently store ingestion IDs in some places.
+
+A2.7 PURPOSE
+
+Turn messy uploads into usable evidence:
+
+Timelines (before / during / after / progress series)
+
+Proof Bundles (structured evidence packet suitable for N3 and disputes)
+
+Next Actions that request missing proof via messaging thread
+
+Must be deterministic + contractor-controlled:
+
+AI proposes bundling + roles
+
+Human confirms bundle
+
+HARD RULES
+
+Additive only (no refactor)
+
+Reuse cc_contractor_photo_bundles (do not create a second system)
+
+Use messaging threads (no SMS/email)
+
+Preserve existing bundle arrays & status values
+
+Backwards compatible with bundles that store cc_ai_ingestions.id instead of cc_media.id
+
+1) SCHEMA EXTENSIONS (Additive)
+1.1 Extend existing cc_contractor_photo_bundles
+
+Add columns:
+
+duringMediaIds jsonb not null default []
+
+timelineJson jsonb not null default '{}'::jsonb
+
+proofJson jsonb not null default '{}'::jsonb
+
+coversFrom timestamptz null
+
+coversTo timestamptz null
+
+centroidLat numeric null
+
+centroidLng numeric null
+
+updatedAt timestamptz default now()
+
+Keep existing:
+
+bundleType: before_after | progress_series
+
+status: incomplete | complete | confirmed
+
+beforeMediaIds / afterMediaIds
+
+Add indexes:
+
+(tenant_id, contractor_profile_id, status)
+
+(jobsite_id)
+
+(covers_from, covers_to)
+
+2) MEDIA ID COMPATIBILITY LAYER (CRITICAL)
+
+Right now arrays “reference cc_ai_ingestions.id (main ingestion table where uploaded media lives)”.
+
+Create helper:
+
+resolveBundleItemIdToMedia(itemId: string)
+
+If itemId matches a record in cc_media → treat as mediaId
+
+Else if itemId matches cc_ai_ingestions.id:
+
+find the primary media for that ingestion (whatever your ingestion→media linking is)
+
+return that mediaId
+
+Return { mediaId, ingestionId?, capturedAt?, lat?, lng? }
+
+Also create:
+
+normalizeBundleArraysToMediaIds(bundle)
+
+Convert before/after/during arrays to mediaIds for processing
+
+Do not overwrite DB arrays automatically unless explicitly recomputed (see below)
+
+This avoids breaking existing bundles.
+
+3) SERVICES
+3.1 photoIntelligenceEngine.ts
+
+Create: server/services/contractor/photoIntelligenceEngine.ts
+
+Functions:
+
+buildOrUpdateTimelineForBundle({ tenantId, contractorProfileId, bundleId, force })
+
+Loads bundle
+
+Resolves arrays to mediaIds via helpers
+
+Computes:
+
+timelineJson (items + ordering + completeness + reasoning)
+
+proofJson (via proof builder)
+
+coversFrom/coversTo
+
+centroidLat/centroidLng
+
+Heuristics (deterministic):
+
+capturedAt ordering (from EXIF if available, else ingestion createdAt)
+
+geo clustering if lat/lng available (prefer A2.4 confirmed candidate coords)
+
+bundleType:
+
+before_after: ensure before and after groups populated
+
+progress_series: favor duringMediaIds (>=3 items)
+
+Completeness rules:
+
+before_after is “complete” when:
+
+=1 before AND >=1 after
+
+progress_series is “complete” when:
+
+=3 during OR (>=1 before and >=1 after and >=1 during)
+
+Quality scoring (simple 0–100):
+
++25 if capturedAt present
+
++25 if geo present
+
++25 if resolution/size available and above threshold (optional)
+
++25 if not duplicate (simple hash compare if available; else skip)
+
+3.2 proofBundleBuilder.ts
+
+Create: server/services/contractor/proofBundleBuilder.ts
+
+buildProofJson(bundle, timelineJson) returns:
+
+{
+  "claims": ["Before/After evidence present"],
+  "missingItems": [
+    { "prompt": "Add a wide BEFORE photo from 10 steps back", "actionType": "request_more_photos", "stage": "before" }
+  ],
+  "riskFlags": ["no_timestamp_on_2_items"],
+  "exportReady": false
+}
+
+
+No legal text. Just structured.
+
+4) NEXT ACTIONS (A2.6 Integration)
+
+Add one new action type (recommended, additive):
+
+create_or_update_proof_bundle
+
+Trigger:
+
+ingestion contains worksite/jobsite photos OR belongs to a bundle
+
+bundle has no timelineJson/proofJson OR status incomplete
+
+Payload:
+
+{
+  "key": "proof_bundle",
+  "bundleId": "uuid",
+  "reason": "Before/after photos detected",
+  "missingStage": "before|after|during|null"
+}
+
+
+Confirm behavior:
+
+recompute bundle (timeline + proof)
+
+update bundle status
+
+post message to ingestion thread: “Proof bundle updated. Missing: X”
+
+resolve action confirmed
+
+Also reuse existing action:
+
+request_more_photos if proofJson.missingItems exists
+
+5) API ENDPOINTS
+5.1 Recompute bundle intelligence
+
+POST /api/contractor/photo-bundles/:id/recompute
+Body: { force?: boolean }
+Returns: { ok:true, bundle }
+
+Behavior:
+
+runs photoIntelligenceEngine
+
+updates bundle:
+
+sets duringMediaIds if needed
+
+sets timelineJson, proofJson, coversFrom/coversTo, centroidLat/Lng, updatedAt
+
+optionally normalize arrays to mediaIds only on recompute (OK)
+
+5.2 Manual role changes (move an item)
+
+POST /api/contractor/photo-bundles/:id/move
+Body:
+
+{ "itemId": "uuid", "to": "before|during|after" }
+
+
+Accepts either ingestionId or mediaId and resolves accordingly
+
+Moves item between arrays and recomputes timelineJson quickly (no full recompute required)
+
+5.3 Confirm bundle (human confirmation)
+
+POST /api/contractor/photo-bundles/:id/confirm
+
+requires status complete
+
+sets status confirmed
+
+ensures thread and posts message: “Proof bundle confirmed”
+
+6) UI
+6.1 UploadResultsPage (A2.6 workspace)
+
+Add a “Timeline / Proof” panel when:
+
+ingestion has photos OR bundle exists OR Next Action create_or_update_proof_bundle exists
+
+Panel shows:
+
+Before / During / After strips (thumbnails)
+
+Status badge: incomplete/complete/confirmed
+
+Missing prompts list (from proofJson.missingItems)
+
+Buttons:
+
+Recompute
+
+Review Bundle
+
+Confirm Bundle (only when complete)
+
+“Request missing items” → posts prompts into thread
+
+Also render new action card create_or_update_proof_bundle:
+
+Confirm → calls recompute endpoint and resolves action
+
+Dismiss works with your “dismiss stays dismissed” rule
+
+6.2 New Bundle Detail Page
+
+Route: /app/contractor/photo-bundles/:id
+
+Page:
+
+grouped galleries
+
+per-item dropdown: before/during/after/other (other keeps it in during or separate list if you add it later)
+
+“Open Thread”
+
+proof panel: claims + missingItems + riskFlags
+
+Confirm Bundle button
+
+7) MESSAGING (MANDATORY)
+
+Whenever:
+
+recompute runs
+
+missing items requested
+
+bundle confirmed
+
+Ensure ingestion thread (A2.6 ensure-thread) and post a message with metadata:
+
+bundleId
+
+status
+
+missingItems prompts (if any)
+
+No SMS/email.
+
+8) ACCEPTANCE CRITERIA (HARD)
+
+Existing bundles containing ingestion IDs still render and recompute correctly
+
+Upload 2 before + 2 after photos → bundle status becomes complete after recompute
+
+Missing stage generates request_more_photos prompts
+
+Manual move updates arrays and persists
+
+Confirm bundle only allowed when complete; sets confirmed
+
+Thread message posted for recompute + confirm + request missing
+
+9) DELIVERABLES
+
+migration (bundle extensions)
+
+engine services (photoIntelligenceEngine + proofBundleBuilder)
+
+endpoints
+
+UI panel + bundle detail page
+
+QA notes/screenshots
+
+Proceed.
