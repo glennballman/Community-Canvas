@@ -7,9 +7,19 @@
 
 import { Router, Request, Response } from 'express';
 import { eq, and } from 'drizzle-orm';
-import { db } from '../db';
-import { ccContractorProfiles } from '@shared/schema';
+import { db, pool } from '../db';
+import { ccContractorProfiles, ccAiIngestions } from '@shared/schema';
 import { authenticateToken } from '../middleware/auth';
+import {
+  extractIdentitySignalsFromMedia,
+  proposeIdentityCandidate,
+  enrichFromWeb,
+  confirmContractorIdentity,
+  updateEnrichmentState,
+  updateIngestionIdentityStatus,
+  type MediaItem,
+  type IdentityProposal
+} from '../services/contractorIdentityService.js';
 
 const router = Router();
 
@@ -241,6 +251,363 @@ router.post('/profile/start-onboarding', authenticateToken, async (req: Request,
   } catch (error) {
     console.error('[CONTRACTOR] Error starting onboarding:', error);
     return res.status(500).json({ success: false, error: 'Failed to start onboarding' });
+  }
+});
+
+// =============================================================================
+// A2.1: Identity Enrichment Routes
+// =============================================================================
+
+/**
+ * POST /api/contractor/profile/identity/propose
+ * Generate identity proposal from ingestion media
+ * 
+ * Privacy: Only uses visible content (OCR) by default.
+ * Web lookup requires explicit consent via allow_web_lookup flag.
+ */
+router.post('/profile/identity/propose', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    const { ingestion_id, allow_web_lookup = false } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    if (!ingestion_id) {
+      return res.status(400).json({ success: false, error: 'ingestion_id required' });
+    }
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    // Get ingestion and verify ownership
+    const ingestion = await db.query.ccAiIngestions.findFirst({
+      where: and(
+        eq(ccAiIngestions.id, ingestion_id),
+        eq(ccAiIngestions.contractorProfileId, profile.id)
+      )
+    });
+    
+    if (!ingestion) {
+      return res.status(404).json({ success: false, error: 'Ingestion not found' });
+    }
+    
+    // Only process vehicle photos for identity enrichment
+    if (ingestion.sourceType !== 'vehicle_photo') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Identity proposal only available for vehicle photos' 
+      });
+    }
+    
+    // Extract signals from media
+    const mediaItems = (ingestion.media as MediaItem[]) || [];
+    const signals = await extractIdentitySignalsFromMedia(mediaItems);
+    
+    // Generate proposal
+    const proposal = await proposeIdentityCandidate(signals, { allow_web_lookup });
+    
+    // Update ingestion with proposal
+    await updateIngestionIdentityStatus(ingestion_id, 'proposed', proposal);
+    
+    // Update profile state
+    await updateEnrichmentState(profile.id, 'proposed');
+    
+    console.log(`[CONTRACTOR IDENTITY] Proposal generated for user ${userId}, confidence=${proposal.confidence}`);
+    
+    return res.json({
+      success: true,
+      proposal,
+      message: proposal.evidence.length > 0 
+        ? 'Possible match found based on visible content'
+        : 'No identity signals detected. You can enter details manually.'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR IDENTITY] Error generating proposal:', error);
+    return res.status(500).json({ success: false, error: 'Failed to generate identity proposal' });
+  }
+});
+
+/**
+ * POST /api/contractor/profile/identity/enrich-web
+ * Fetch additional metadata from detected website (consent required)
+ */
+router.post('/profile/identity/enrich-web', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    const { ingestion_id, domain_or_website } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    if (!domain_or_website) {
+      return res.status(400).json({ success: false, error: 'domain_or_website required' });
+    }
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    // Fetch web enrichment (consent given by calling this endpoint)
+    const enrichment = await enrichFromWeb(domain_or_website);
+    
+    if (!enrichment) {
+      return res.json({
+        success: true,
+        enrichment: null,
+        message: 'Could not fetch website metadata. You can still enter details manually.'
+      });
+    }
+    
+    // If ingestion_id provided, update proposal with enrichment
+    if (ingestion_id) {
+      const ingestion = await db.query.ccAiIngestions.findFirst({
+        where: and(
+          eq(ccAiIngestions.id, ingestion_id),
+          eq(ccAiIngestions.contractorProfileId, profile.id)
+        )
+      });
+      
+      if (ingestion) {
+        const existingProposal = (ingestion.identityProposal as IdentityProposal) || {};
+        const updatedProposal: IdentityProposal = {
+          ...existingProposal,
+          web_enrichment: enrichment,
+          confidence: Math.min((existingProposal.confidence || 0) + 0.1, 0.95)
+        };
+        await updateIngestionIdentityStatus(ingestion_id, 'proposed', updatedProposal);
+      }
+    }
+    
+    console.log(`[CONTRACTOR IDENTITY] Web enrichment fetched for ${domain_or_website}`);
+    
+    return res.json({
+      success: true,
+      enrichment,
+      message: 'Website metadata retrieved'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR IDENTITY] Error enriching from web:', error);
+    return res.status(500).json({ success: false, error: 'Failed to enrich from web' });
+  }
+});
+
+/**
+ * POST /api/contractor/profile/identity/confirm
+ * Confirm identity proposal and update profile with contractor's confirmed identity
+ */
+router.post('/profile/identity/confirm', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    const { ingestion_id, company_name, phone, website, location_hint, person_name } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    // Update profile with confirmed identity
+    const confirmed = await confirmContractorIdentity(profile.id, {
+      company_name,
+      phone,
+      website,
+      location_hint,
+      person_name
+    });
+    
+    if (!confirmed) {
+      return res.status(500).json({ success: false, error: 'Failed to confirm identity' });
+    }
+    
+    // Update ingestion status if provided
+    if (ingestion_id) {
+      await updateIngestionIdentityStatus(ingestion_id, 'confirmed');
+    }
+    
+    console.log(`[CONTRACTOR IDENTITY] Identity confirmed for user ${userId}: ${company_name || 'unnamed'}`);
+    
+    return res.json({
+      success: true,
+      message: 'Identity confirmed successfully',
+      confirmed_identity: {
+        company_name,
+        phone,
+        website,
+        location_hint
+      }
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR IDENTITY] Error confirming identity:', error);
+    return res.status(500).json({ success: false, error: 'Failed to confirm identity' });
+  }
+});
+
+/**
+ * POST /api/contractor/profile/identity/deny
+ * Deny proposal - do not keep proposing automatically
+ */
+router.post('/profile/identity/deny', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    const { ingestion_id } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    // Update profile state
+    await updateEnrichmentState(profile.id, 'denied');
+    
+    // Update ingestion status if provided
+    if (ingestion_id) {
+      await updateIngestionIdentityStatus(ingestion_id, 'denied');
+    }
+    
+    console.log(`[CONTRACTOR IDENTITY] Identity proposal denied for user ${userId}`);
+    
+    return res.json({
+      success: true,
+      message: 'Identity proposal denied. We won\'t suggest this again unless you upload new photos.'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR IDENTITY] Error denying identity:', error);
+    return res.status(500).json({ success: false, error: 'Failed to deny identity' });
+  }
+});
+
+/**
+ * POST /api/contractor/profile/identity/dismiss
+ * Dismiss for now - contractor just wants to view work request
+ */
+router.post('/profile/identity/dismiss', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    const { ingestion_id } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    // Update profile state - dismissed means skip for now
+    await updateEnrichmentState(profile.id, 'dismissed');
+    
+    // Update ingestion status if provided
+    if (ingestion_id) {
+      await updateIngestionIdentityStatus(ingestion_id, 'dismissed');
+    }
+    
+    console.log(`[CONTRACTOR IDENTITY] Identity proposal dismissed for user ${userId}`);
+    
+    return res.json({
+      success: true,
+      message: 'Identity setup dismissed. You can complete this later.'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR IDENTITY] Error dismissing identity:', error);
+    return res.status(500).json({ success: false, error: 'Failed to dismiss identity' });
+  }
+});
+
+/**
+ * GET /api/contractor/profile/identity
+ * Get current identity enrichment state and confirmed identity
+ */
+router.get('/profile/identity', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    // Get contractor profile with identity fields
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    return res.json({
+      success: true,
+      identity: {
+        state: profile.identityEnrichmentState,
+        company_name: profile.companyName,
+        phone: profile.companyPhone,
+        website: profile.companyWebsite,
+        location_hint: profile.companyLocationHint,
+        brand_hints: profile.brandHints,
+        last_proposed_at: profile.identityEnrichmentLastProposedAt,
+        last_confirmed_at: profile.identityEnrichmentLastConfirmedAt
+      }
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR IDENTITY] Error fetching identity:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch identity' });
   }
 });
 
