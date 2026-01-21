@@ -8033,3 +8033,125 @@ export const insertContractorPhotoBundleSchema = createInsertSchema(ccContractor
 });
 export type ContractorPhotoBundle = typeof ccContractorPhotoBundles.$inferSelect;
 export type InsertContractorPhotoBundle = z.infer<typeof insertContractorPhotoBundleSchema>;
+
+// ============================================================================
+// A2.4: Geo Place Candidates - Geocoding Results
+// ============================================================================
+
+/**
+ * Place Candidates from Geocoding
+ * 
+ * Stores all geocoding results (reverse from EXIF, forward from OCR text).
+ * Never discarded - candidates persist for future matching and learning.
+ * 
+ * Sources:
+ * - exif: Reverse geocode from photo GPS
+ * - ocr: Forward geocode from address text in photos
+ * - manual: User-entered address search
+ * - inferred: Derived from other signals
+ */
+export const ccGeoPlaceCandidates = pgTable("cc_geo_place_candidates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Links to source (optional - at least one should be set)
+  ingestionId: uuid("ingestion_id"),
+  mediaId: uuid("media_id"),
+  photoBundleId: uuid("photo_bundle_id"),
+  
+  // Source type: exif | ocr | manual | inferred
+  source: varchar("source", { length: 20 }).notNull(),
+  
+  // Geocoded coordinates (null if forward geocode failed)
+  lat: numeric("lat", { precision: 10, scale: 7 }),
+  lng: numeric("lng", { precision: 10, scale: 7 }),
+  
+  // Address components
+  formattedAddress: text("formatted_address").notNull(),
+  addressComponents: jsonb("address_components").notNull().default({}),
+  
+  // Confidence score (0-100)
+  confidence: numeric("confidence", { precision: 5, scale: 2 }).notNull().default('0'),
+  
+  // Provider info
+  provider: varchar("provider", { length: 30 }),
+  providerPlaceId: text("provider_place_id"),
+  
+  // Normalized hash for matching
+  normalizedAddressHash: text("normalized_address_hash").notNull(),
+  
+  // User actions
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  acceptedBy: uuid("accepted_by"),
+  deniedAt: timestamp("denied_at", { withTimezone: true }),
+  deniedBy: uuid("denied_by"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantContractorIdx: index("idx_geo_candidates_tenant_contractor").on(table.tenantId, table.contractorProfileId),
+  ingestionIdx: index("idx_geo_candidates_ingestion").on(table.ingestionId),
+  bundleIdx: index("idx_geo_candidates_bundle").on(table.photoBundleId),
+  hashIdx: index("idx_geo_candidates_hash").on(table.normalizedAddressHash),
+  latLngIdx: index("idx_geo_candidates_latlng").on(table.lat, table.lng),
+}));
+
+export const insertGeoPlaceCandidateSchema = createInsertSchema(ccGeoPlaceCandidates).omit({ 
+  id: true, createdAt: true 
+});
+export type GeoPlaceCandidate = typeof ccGeoPlaceCandidates.$inferSelect;
+export type InsertGeoPlaceCandidate = z.infer<typeof insertGeoPlaceCandidateSchema>;
+
+// ============================================================================
+// A2.4: Geo Entity Links - Confirmed Address-to-Entity Bindings
+// ============================================================================
+
+/**
+ * Canonical Geo Entity Links
+ * 
+ * Links confirmed addresses to business graph entities.
+ * One entity can have one confirmed address link.
+ * 
+ * Entity types:
+ * - customer: Link to cc_contractor_customers
+ * - jobsite: Link to cc_contractor_jobsites
+ * - work_request: Link to cc_work_requests
+ * - n3_run: Link to N3 service run paths
+ */
+export const ccGeoEntityLinks = pgTable("cc_geo_entity_links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Entity reference
+  entityType: varchar("entity_type", { length: 30 }).notNull(),
+  entityId: uuid("entity_id").notNull(),
+  
+  // Normalized address for matching
+  normalizedAddressHash: text("normalized_address_hash").notNull(),
+  formattedAddress: text("formatted_address").notNull(),
+  
+  // Coordinates (for proximity matching)
+  lat: numeric("lat", { precision: 10, scale: 7 }),
+  lng: numeric("lng", { precision: 10, scale: 7 }),
+  
+  // Confirmation state
+  confirmed: boolean("confirmed").notNull().default(false),
+  confirmedBy: uuid("confirmed_by"),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantContractorIdx: index("idx_geo_entity_links_tenant_contractor").on(table.tenantId, table.contractorProfileId),
+  entityIdx: uniqueIndex("idx_geo_entity_links_entity").on(table.tenantId, table.contractorProfileId, table.entityType, table.entityId),
+  hashIdx: index("idx_geo_entity_links_hash").on(table.normalizedAddressHash),
+  latLngIdx: index("idx_geo_entity_links_latlng").on(table.lat, table.lng),
+}));
+
+export const insertGeoEntityLinkSchema = createInsertSchema(ccGeoEntityLinks).omit({ 
+  id: true, createdAt: true 
+});
+export type GeoEntityLink = typeof ccGeoEntityLinks.$inferSelect;
+export type InsertGeoEntityLink = z.infer<typeof insertGeoEntityLinkSchema>;

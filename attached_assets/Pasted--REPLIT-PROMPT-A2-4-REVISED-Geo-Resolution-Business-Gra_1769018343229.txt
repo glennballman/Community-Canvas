@@ -1,0 +1,333 @@
+✅ REPLIT PROMPT A2.4 (REVISED) — Geo Resolution + Business Graph Binding
+
+Title: EXIF/OCR → Place Candidates → Customer/Jobsite Resolution + Confirm UX (Contractor Business Graph Core)
+
+PURPOSE
+
+When any ingestion includes GPS (EXIF) or address-like OCR text, the system must:
+
+Generate multiple place candidates (reverse geocode + OCR-derived forward geocode)
+
+Persist candidates (never discard “medium confidence”)
+
+Resolve candidates against the contractor’s existing customers/jobsites/work requests (Business Graph)
+
+Propose draft entities (customer/jobsite/work request) but never auto-create without confirmation
+
+Bind the confirmed result to:
+
+the ingestion
+
+the photo bundle / cluster
+
+the jobsite
+
+(optionally) a Work Request and/or N3 run draft path
+
+This is what enables photo → quote-ready context with near-zero typing.
+
+HARD RULES (NON-NEGOTIABLE)
+
+✅ Never block ingestion if GPS/geocode fails
+
+✅ Always store all candidates (top N)
+
+✅ AI output stays proposal-only until user confirms
+
+✅ Never expose precise address anywhere public; contractor view is allowed
+
+✅ No auto-creation of customers/jobsites/work requests without confirm
+
+✅ Messaging is the notification channel (no SMS fallbacks)
+
+IMPORTANT: REUSE WHAT EXISTS
+
+A2.3 already stores EXIF signals and routes assets. For A2.4:
+
+Do not add duplicate geo fields if the media table already has them.
+
+Prefer storing geo as candidates, linked to ingestion/media/bundle, not as “truth”.
+
+Reuse existing cc_contractor_customers and cc_contractor_jobsites tables added in A2.3.
+
+A) DATA MODEL (ADDITIVE ONLY)
+1) Place Candidates Table
+
+Create cc_geo_place_candidates (or if one exists, extend to match):
+
+Columns:
+
+id uuid pk defaultRandom
+
+tenant_id uuid not null
+
+contractor_profile_id uuid not null
+
+ingestion_id uuid null (link to cc_ai_ingestions)
+
+media_id uuid null (if you have cc_media / cc_media_items)
+
+photo_bundle_id uuid null (cc_contractor_photo_bundles)
+
+source text not null // 'exif'|'ocr'|'manual'|'inferred'
+
+lat numeric null
+
+lng numeric null
+
+formatted_address text not null
+
+address_components jsonb not null default '{}'
+
+confidence numeric not null default 0 // 0–100
+
+provider text null
+
+provider_place_id text null
+
+normalized_address_hash text not null
+
+created_at timestamptz default now()
+
+Indexes:
+
+(tenant_id, contractor_profile_id)
+
+(ingestion_id)
+
+(photo_bundle_id)
+
+(normalized_address_hash)
+
+(lat, lng)
+
+2) Canonical Entity Geo Link Table
+
+Create cc_geo_entity_links:
+
+Columns:
+
+id uuid pk
+
+tenant_id uuid not null
+
+contractor_profile_id uuid not null
+
+entity_type text not null // 'customer'|'jobsite'|'work_request'|'n3_run'
+
+entity_id uuid not null
+
+normalized_address_hash text not null
+
+formatted_address text not null
+
+lat numeric null
+
+lng numeric null
+
+confirmed boolean not null default false
+
+confirmed_by uuid null
+
+confirmed_at timestamptz null
+
+created_at timestamptz default now()
+
+Constraints:
+
+unique (tenant_id, contractor_profile_id, entity_type, entity_id)
+
+B) SERVICES
+1) server/services/geocodeService.ts
+
+Implement:
+
+reverseGeocode(lat,lng) → candidates[]
+
+forwardGeocode(query) → candidates[]
+
+Provider:
+
+Implement Nominatim first (OSM).
+Add caching + gentle rate limiting (in-memory is fine to start; do not DDOS).
+
+Candidate shape:
+
+formatted_address
+
+components
+
+provider / provider_place_id
+
+confidence (deterministic heuristic)
+
+normalized_address_hash
+
+Confidence heuristic (deterministic):
+
+base 50 if any address
+
++15 house_number
+
++10 road
+
++10 locality/town
+
++5 postal_code
+
+-20 if only region/county-level
+Clamp 0–100
+
+2) server/services/normalizeAddress.ts
+
+Implement normalizeAddressForHash(text) and sha256 hash.
+
+3) server/services/jobsiteClusterService.ts (IF NOT ALREADY PRESENT)
+
+A2.3 had photo bundles; do not create a second competing cluster concept.
+
+Rule:
+
+Prefer cc_contractor_photo_bundles as the canonical grouping.
+
+Only create “cluster” service if you need automatic bundling:
+
+within 80m + within 12h + same contractor_profile_id
+
+Output:
+
+returns photo_bundle_id (existing or new “draft bundle” proposal)
+
+4) server/services/addressResolutionEngine.ts
+
+Input:
+
+tenantId, contractorProfileId
+
+ingestionId OR photo_bundle_id
+
+candidates[] (from exif reverse geocode + OCR forward geocode)
+
+Output:
+
+matches: { customer?, jobsite?, work_request? }
+
+proposals: { create_customer_draft?, create_jobsite_draft?, attach_unconfirmed_links[] }
+
+reasoning
+
+Match logic order:
+
+exact hash match to confirmed geo_entity_links → return that entity
+
+proximity match within 120m to confirmed link lat/lng
+
+OCR email/phone match to existing customer → propose attach
+
+else propose drafts:
+
+customer draft (minimal)
+
+jobsite draft (minimal, address unconfirmed)
+
+Do not auto-write drafts. Return proposals.
+
+C) API ENDPOINTS
+1) POST /api/contractor/geo/resolve
+
+Body:
+
+ingestion_id OR photo_bundle_id
+
+force_recompute?: boolean
+
+Response:
+
+ok
+
+candidates (top 10)
+
+matches (customer/jobsite/work_request)
+
+proposals (draft suggestions)
+
+reasoning
+
+2) POST /api/contractor/geo/confirm
+
+Body:
+
+entity_type, entity_id
+
+candidate_id OR manual_address_text
+
+lat/lng optional
+Effect:
+
+upsert geo_entity_links confirmed=true
+
+optionally mark candidate as “accepted” (add accepted_at)
+
+3) POST /api/contractor/geo/deny
+
+Body:
+
+ingestion_id OR photo_bundle_id
+
+candidate_id
+Effect:
+
+store denial event (can be in candidates table via denied_at/denied_by OR separate audit table)
+
+D) UI INTEGRATION (EXTEND A2.3 UploadResultsPage)
+
+Add an “Location” block per ingestion card:
+
+“Captured near: {formatted_address}” (advisory copy)
+Buttons:
+
+✅ Confirm
+
+✏️ Change
+
+❌ Deny
+
+⏭ Skip
+
+Change flow:
+
+forward geocode search input
+
+list candidate options
+
+After confirm:
+
+show resolved match:
+
+“Matches: {CustomerName} / {JobsiteLabel}”
+
+or “Create draft customer/jobsite?” (confirm-required)
+
+E) QA / ACCEPTANCE
+
+GPS photo → candidates stored → confirm → geo_entity_links persisted
+
+Subsequent uploads near same place auto-suggest match
+
+No GPS but OCR “123 Main St” → forwardGeocode works
+
+Deny does not block; candidates remain visible
+
+No public exposure of exact address outside contractor context
+
+DELIVERABLES
+
+migrations (2 tables)
+
+geocodeService.ts, normalizeAddress.ts, addressResolutionEngine.ts
+
+API routes under /api/contractor/geo/*
+
+UploadResultsPage UI enhancement
+
+QA notes
