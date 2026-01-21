@@ -192,6 +192,52 @@ export interface N3RunsFilters {
   zoneId?: string | null;
 }
 
+export interface ZoneHeatData {
+  zone_id: string | null;
+  zone_key: string | null;
+  zone_name: string | null;
+  badge_label_resident: string | null;
+  badge_label_contractor: string | null;
+  badge_label_visitor: string | null;
+  runs_count: number;
+  attention_bundles_count: number;
+  last_activity_at: string | null;
+}
+
+export interface ZoneHeatResponse {
+  zones: ZoneHeatData[];
+  rollups: {
+    total_runs: number;
+    total_attention_bundles: number;
+    unzoned_runs: number;
+    unzoned_attention_bundles: number;
+  };
+  window_days: number;
+}
+
+export function useN3ZoneHeat(
+  tenantId: string | null, 
+  portalId?: string | null, 
+  windowDays?: number
+) {
+  return useQuery<ZoneHeatResponse>({
+    queryKey: ['/api/n3/zone-heat', tenantId, portalId, windowDays],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (portalId) params.set('portalId', portalId);
+      if (windowDays) params.set('windowDays', windowDays.toString());
+      const url = `/api/n3/zone-heat${params.toString() ? `?${params}` : ''}`;
+      const res = await fetch(url, {
+        headers: { 'x-tenant-id': tenantId! },
+      });
+      if (!res.ok) throw new Error('Failed to fetch zone heat');
+      return res.json();
+    },
+    enabled: !!tenantId,
+    staleTime: 60000,
+  });
+}
+
 export function useN3Filters(tenantId: string | null, portalId?: string | null) {
   return useQuery<N3FiltersData>({
     queryKey: ['/api/n3/filters', tenantId, portalId],
