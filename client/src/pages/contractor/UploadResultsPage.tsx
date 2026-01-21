@@ -40,6 +40,7 @@ import {
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
+import { LocationResolutionBlock } from '@/components/contractor/LocationResolutionBlock';
 
 interface ClassificationResult {
   primary: string;
@@ -309,15 +310,14 @@ function ClassificationCard({
           </div>
         )}
         
-        {geoInference.proposedAddress && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Location (Advisory)</h4>
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="italic text-muted-foreground">Photo captured near: {geoInference.proposedAddress}</span>
-              <ConfidenceMeter confidence={geoInference.confidence} />
-            </div>
-          </div>
+        {(geoInference.proposedAddress || geoInference.lat) && (
+          <LocationResolutionBlock
+            ingestionId={result.ingestionId}
+            initialAddress={geoInference.proposedAddress}
+            initialLat={geoInference.lat}
+            initialLng={geoInference.lng}
+            source={geoInference.source}
+          />
         )}
         
         {Object.values(proposedLinks).some(Boolean) && (
