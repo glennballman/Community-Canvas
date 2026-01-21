@@ -22,7 +22,7 @@ import {
 } from '@shared/zonePricing';
 
 interface BundleSimulationSliderProps {
-  baseEstimate: number;
+  baseEstimate: number | null;
   zoneModifiers?: ZonePricingModifiers | null;
   className?: string;
 }
@@ -34,16 +34,18 @@ export function BundleSimulationSlider({
 }: BundleSimulationSliderProps) {
   const [bundleSize, setBundleSize] = useState(1);
 
-  const simulation: BundleSimulationResult = useMemo(() => {
+  const hasEstimate = typeof baseEstimate === 'number' && baseEstimate > 0;
+
+  const simulation: BundleSimulationResult | null = useMemo(() => {
+    if (!hasEstimate) return null;
     return simulateBundling({
-      baseEstimate,
+      baseEstimate: baseEstimate!,
       zoneModifiers,
       bundleSize,
     });
-  }, [baseEstimate, zoneModifiers, bundleSize]);
+  }, [baseEstimate, zoneModifiers, bundleSize, hasEstimate]);
 
-  const showSavings = bundleSize > 1 && baseEstimate > 0;
-  const hasEstimate = baseEstimate > 0;
+  const showSavings = bundleSize > 1 && hasEstimate && simulation !== null;
 
   return (
     <Card className={className} data-testid="card-bundle-simulation">
@@ -88,7 +90,7 @@ export function BundleSimulationSlider({
           </div>
         )}
 
-        {hasEstimate && showSavings && (
+        {showSavings && simulation && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-muted/50 p-3 rounded space-y-1">
@@ -142,15 +144,17 @@ export function BundleSimulationSlider({
           </div>
         )}
 
-        <div className="text-xs text-muted-foreground border-t pt-3 mt-2">
-          <div className="flex items-start gap-1">
-            <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            <span>
-              Savings based on assumed contractor travel cost of ${simulation.travelCostAssumption}/trip 
-              being shared across bundled requests. Actual savings may vary.
-            </span>
+        {simulation && (
+          <div className="text-xs text-muted-foreground border-t pt-3 mt-2">
+            <div className="flex items-start gap-1">
+              <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+              <span>
+                Savings based on assumed contractor travel cost of ${simulation.travelCostAssumption}/trip 
+                being shared across bundled requests. Actual savings may vary.
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -33,6 +33,7 @@ import { ContractorAssignmentPicker } from '@/components/ContractorAssignmentPic
 import { WorkDisclosureSelector, getDefaultDisclosureSelection, type DisclosureSelection } from '@/components/WorkDisclosureSelector';
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { BundleSimulationSlider } from '@/components/BundleSimulationSlider';
+import { getZoneBadgeLabel } from '@/components/ZoneBadge';
 import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 interface WorkRequest {
@@ -546,7 +547,7 @@ export default function WorkRequestDetail() {
                       <SelectItem value="_none_">Unzoned</SelectItem>
                       {zonesData?.zones?.map(zone => (
                         <SelectItem key={zone.id} value={zone.id}>
-                          {zone.name}
+                          {getZoneBadgeLabel(zone, 'resident')}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -1,0 +1,112 @@
+✅ Received — I can now fully verify Prompts 14–16 at code level.
+
+Everything you shipped is directionally correct and does not touch ledger/folio/payment paths. The advisory/simulation framing is consistent and the component boundaries are clean.
+
+That said, there are 3 concrete fixes I recommend (small, surgical, no redesign) to eliminate edge-case mis-signals and keep the economics UI “truthful by construction.”
+
+1) Critical: Don’t compute simulations when estimate is missing
+
+Right now, BundleSimulationSlider always calls simulateBundling() even when baseEstimate is 0 (missing), because:
+
+const simulation = useMemo(() => simulateBundling({ baseEstimate, ... }), ...)
+
+
+Even though you hide savings display when baseEstimate > 0, you still compute and still show the travel-cost disclaimer using simulation.travelCostAssumption, which can read “real” even when there’s no estimate.
+
+Patch
+
+Change the prop type to allow “missing estimate”, and only compute when present.
+
+// BundleSimulationSlider.tsx
+interface BundleSimulationSliderProps {
+  baseEstimate: number | null;
+  zoneModifiers?: ZonePricingModifiers | null;
+  className?: string;
+}
+
+const simulation = useMemo(() => {
+  if (!baseEstimate || baseEstimate <= 0) return null;
+  return simulateBundling({ baseEstimate, zoneModifiers, bundleSize });
+}, [baseEstimate, zoneModifiers, bundleSize]);
+
+const hasEstimate = !!baseEstimate && baseEstimate > 0;
+
+
+Then guard all uses: simulation && ... and only render the travel-cost disclaimer when simulation exists.
+
+This makes “no estimate → no simulation math” airtight.
+
+2) ZoneImpactSummary should not default baseEstimate to 0
+
+You currently do:
+
+baseEstimate = 0
+const estimate = computeZonePricingEstimate(baseEstimate, modifiers);
+
+
+Even if you hide the full dollar breakdown behind baseEstimate > 0, you still compute a “final_estimate” of 0 internally. That’s harmless, but it’s better to avoid doing estimate math when there is no estimate.
+
+Patch
+
+Same pattern: accept number | null and only compute when present.
+
+interface ZoneImpactSummaryProps {
+  zone: Zone | null;
+  baseEstimate?: number | null;
+  viewerContext?: ViewerContext;
+  className?: string;
+}
+
+const hasEstimate = typeof baseEstimate === "number" && baseEstimate > 0;
+const estimate = hasEstimate ? computeZonePricingEstimate(baseEstimate, modifiers) : null;
+
+
+Then render breakdown based on estimate.
+
+3) Ensure label consistency: use ZoneBadge label in dropdown
+
+In your Work Request dropdown integration you render:
+
+{zone.name}
+
+
+But Prompt 14’s whole point is “same zone, different badge language per viewer.” On /app/* you’re resident context, so the dropdown should use the resident-facing label.
+
+Patch (minimal)
+
+Either render <ZoneBadge zone={zone} viewerContext="resident" /> inside each SelectItem, or just use:
+
+getZoneBadgeLabel(zone, "resident")
+
+
+This prevents drift where the Work Request UI contradicts the badge language system.
+
+Additional micro-notes (optional, but good)
+
+formatModifierValue('flat', ...) always prepends +. That’s fine because your backend validation disallows negative flats.
+
+ZonePricingModifiers allows arbitrary keys; your compute function ignores unknown keys (good). Just keep server validation strict so nonsense doesn’t creep in.
+
+hasZonePricingModifiers() exists in zonePricing.ts, but ZoneImpactSummary re-implements similar logic. Not a bug—just duplicate logic. Optional refactor later (not required).
+
+One more invariant check I want you to enforce in UI wiring
+
+Even though the components are safe, make sure contractor preview routes never receive pricingModifiers JSON unless you explicitly want contractors to see it (you probably don’t).
+
+Best pattern:
+
+Resident/admin views can receive zone.pricing_modifiers
+
+Contractor preview should receive only:
+
+zone badge label fields (already disclosed as part of work request view)
+
+optionally a computed “zone impact” summary, but not the raw modifiers
+
+Your next move
+
+If the GitHub push is already done, the only thing I’d ask you to do now is:
+
+Apply the three patches above (estimate nullability + dropdown label consistency)
+
+Confirm whether contractor preview should show zone impact or only the zone badge label

@@ -29,14 +29,14 @@ interface Zone {
 
 interface ZoneImpactSummaryProps {
   zone: Zone | null;
-  baseEstimate?: number;
+  baseEstimate?: number | null;
   viewerContext?: ViewerContext;
   className?: string;
 }
 
 export function ZoneImpactSummary({ 
   zone, 
-  baseEstimate = 0,
+  baseEstimate,
   viewerContext = 'resident',
   className = ''
 }: ZoneImpactSummaryProps) {
@@ -55,7 +55,10 @@ export function ZoneImpactSummary({
     return null;
   }
 
-  const estimate: ZonePricingEstimate = computeZonePricingEstimate(baseEstimate, modifiers);
+  const hasEstimate = typeof baseEstimate === 'number' && baseEstimate > 0;
+  const estimate: ZonePricingEstimate | null = hasEstimate 
+    ? computeZonePricingEstimate(baseEstimate, modifiers) 
+    : null;
 
   return (
     <Card className={`${className}`} data-testid="card-zone-impact">
@@ -85,7 +88,7 @@ export function ZoneImpactSummary({
           />
         </div>
 
-        {baseEstimate > 0 && estimate.zone_modifier_breakdown.length > 0 && (
+        {estimate && estimate.zone_modifier_breakdown.length > 0 && (
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Base estimate:</span>
@@ -110,7 +113,7 @@ export function ZoneImpactSummary({
           </div>
         )}
 
-        {!baseEstimate && hasModifiers && (
+        {!hasEstimate && hasModifiers && (
           <div className="space-y-1 text-sm">
             {modifiers.contractor_multiplier && modifiers.contractor_multiplier !== 1 && (
               <div className="flex justify-between">
@@ -133,11 +136,9 @@ export function ZoneImpactSummary({
           </div>
         )}
 
-        {estimate.notes.length > 0 && (
+        {modifiers.notes && (
           <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-            {estimate.notes.map((note, idx) => (
-              <p key={idx}>{note}</p>
-            ))}
+            <p>{modifiers.notes}</p>
           </div>
         )}
       </CardContent>
