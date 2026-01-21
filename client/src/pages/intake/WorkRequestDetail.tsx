@@ -568,14 +568,14 @@ export default function WorkRequestDetail() {
                         pricingModifiers: z.pricingModifiers,
                       };
                     })()}
-                    baseEstimate={request.estimated_value || 0}
+                    baseEstimate={typeof request.estimated_value === 'number' ? request.estimated_value : null}
                     viewerContext="resident"
                   />
                 )}
                 
                 {/* Bundle Simulation - Pure UI, no persistence */}
                 <BundleSimulationSlider
-                  baseEstimate={request.estimated_value || 0}
+                  baseEstimate={typeof request.estimated_value === 'number' ? request.estimated_value : null}
                   zoneModifiers={(() => {
                     if (!request.zone_id || !zonesData?.zones) return null;
                     const z = zonesData.zones.find(zn => zn.id === request.zone_id);

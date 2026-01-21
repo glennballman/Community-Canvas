@@ -1,0 +1,75 @@
+✅ What you pasted looks correct
+Migration 162 (work request zone_id)
+
+zone_id UUID REFERENCES cc_zones(id) ON DELETE SET NULL ✅ correct
+
+Partial index on zone_id IS NOT NULL ✅ good for filtering
+
+Optional hardening (nice-to-have):
+
+If you frequently query by (portal_id, zone_id) together, consider a composite index later, but not required right now.
+
+Migration 163 (zone pricing_modifiers)
+
+pricing_modifiers jsonb NOT NULL DEFAULT '{}' ✅ correct
+
+GIN index ✅ fine
+
+Column comment documenting expected structure ✅ good (also helps future auditors)
+
+⚠️ One real issue in the WorkRequestDetail integration snippet
+
+You are passing request.estimated_value || 0 into both the zone impact and bundle simulation:
+
+baseEstimate={request.estimated_value || 0}
+...
+<BundleSimulationSlider baseEstimate={request.estimated_value || 0} ... />
+
+
+That creates a subtle but serious UX/economics risk:
+
+If estimated_value is missing, you’re silently treating it as $0.
+
+That can produce “savings” and “zone impact” outputs that look valid but are meaningless.
+
+You said the slider “prompts user to add one” when no estimate exists — that can’t reliably happen if you always hand it 0.
+
+✅ Fix (no redesign):
+
+Pass undefined | null when missing, and let the component render an explicit empty state.
+
+Example:
+
+const baseEstimate =
+  typeof request.estimated_value === "number" ? request.estimated_value : null;
+
+{request.zone_id && baseEstimate != null && (
+  <ZoneImpactSummary
+    zone={zone}
+    baseEstimate={baseEstimate}
+    viewerContext="resident"
+  />
+)}
+
+<BundleSimulationSlider
+  baseEstimate={baseEstimate}
+  zoneModifiers={zoneModifiers}
+/>
+
+
+And inside BundleSimulationSlider, if baseEstimate == null, show the “add estimate” prompt and do not compute.
+
+✅ Two improvements that strengthen Prompt 14 consistency
+1) Zone dropdown label should use ZoneBadge
+
+Right now it shows only zone.name. If you want badge-language to actually be the “single truth” everywhere, render:
+
+ZoneBadge in dropdown rows (resident context here)
+
+or at least use getZoneBadgeLabel(zone, "resident")
+
+This prevents drift where Work Requests show one label and QA / public routes show another.
+
+2) “ViewerContext=resident” is correct here
+
+Because this is /app/* resident/admin experience. ✅
