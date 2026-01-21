@@ -13,6 +13,7 @@ import {
   XCircle, Clock, FileCheck, AlertTriangle 
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getAuthHeaders } from '@/lib/api';
 
 interface PlatformStats {
   total_tenants: string;
@@ -75,11 +76,6 @@ interface CertStatus {
 interface CertResponse {
   success: boolean;
   cert: CertStatus;
-}
-
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth_token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
 export default function AnalyticsPage() {
