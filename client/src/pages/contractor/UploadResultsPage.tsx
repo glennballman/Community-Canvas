@@ -43,8 +43,22 @@ import {
   FileText,
   Quote,
   Hammer,
-  RefreshCw
+  RefreshCw,
+  MessageSquare,
+  ExternalLink
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
@@ -223,18 +237,29 @@ function ConfidenceMeter({ confidence }: { confidence: number }) {
   );
 }
 
-// A2.6: Durable Action Card with confirm/dismiss workflow
+// Action types that support edit workflow
+const EDITABLE_ACTION_TYPES = ['request_more_photos', 'create_work_request', 'open_quote_draft'];
+
+// A2.6: Durable Action Card with confirm/dismiss/edit workflow
 function DurableActionCard({ 
   action,
   onConfirm,
   onDismiss,
+  onEdit,
   isLoading 
 }: { 
   action: DurableNextAction;
   onConfirm: () => void;
   onDismiss: () => void;
+  onEdit?: (updatedPayload: Record<string, any>) => void;
   isLoading: boolean;
 }) {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editedPrompts, setEditedPrompts] = useState<string>('');
+  const [editedTodos, setEditedTodos] = useState<string>('');
+  const [editedCategory, setEditedCategory] = useState<string>('');
+  const [editedAddress, setEditedAddress] = useState<string>('');
+  
   const meta = ACTION_TYPE_META[action.actionType] || {
     icon: <Sparkles className="h-4 w-4" />,
     label: action.actionType.replace(/_/g, ' '),
@@ -243,6 +268,37 @@ function DurableActionCard({
   
   const confidenceNum = parseInt(action.confidence || '50');
   const payload = action.actionPayload || {};
+  const isEditable = EDITABLE_ACTION_TYPES.includes(action.actionType);
+  
+  // Initialize edit fields when dialog opens
+  const handleEditOpen = () => {
+    if (action.actionType === 'request_more_photos') {
+      setEditedPrompts((payload.prompts || []).join('\n'));
+    } else if (action.actionType === 'create_work_request') {
+      setEditedTodos((payload.todos || payload.lineItems?.map((i: any) => i.text) || []).join('\n'));
+    } else if (action.actionType === 'open_quote_draft') {
+      setEditedCategory(payload.category || '');
+      setEditedAddress(payload.address || '');
+    }
+    setIsEditOpen(true);
+  };
+  
+  const handleSaveEdit = () => {
+    if (!onEdit) return;
+    
+    let updatedPayload: Record<string, any> = {};
+    
+    if (action.actionType === 'request_more_photos') {
+      updatedPayload = { prompts: editedPrompts.split('\n').filter(p => p.trim()) };
+    } else if (action.actionType === 'create_work_request') {
+      updatedPayload = { todos: editedTodos.split('\n').filter(t => t.trim()) };
+    } else if (action.actionType === 'open_quote_draft') {
+      updatedPayload = { category: editedCategory, address: editedAddress };
+    }
+    
+    onEdit(updatedPayload);
+    setIsEditOpen(false);
+  };
   
   return (
     <div 
@@ -292,6 +348,20 @@ function DurableActionCard({
             </div>
           )}
           
+          {/* Show prompts for request_more_photos */}
+          {action.actionType === 'request_more_photos' && payload.prompts?.length > 0 && (
+            <div className="mt-2 p-2 rounded bg-muted/50 text-sm">
+              <ul className="space-y-1 text-muted-foreground">
+                {payload.prompts.slice(0, 3).map((prompt: string, i: number) => (
+                  <li key={i} className="flex items-start gap-1">
+                    <span className="text-xs">-</span>
+                    <span>{prompt}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
           {/* Show details for fleet/tool additions */}
           {action.actionType === 'add_fleet' && payload.assetType && (
             <div className="mt-2 text-sm text-muted-foreground">
@@ -321,6 +391,92 @@ function DurableActionCard({
           <X className="h-4 w-4 mr-1" />
           Skip
         </Button>
+        
+        {isEditable && onEdit && (
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleEditOpen}
+                disabled={isLoading}
+                data-testid={`button-edit-action-${action.id}`}
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit {meta.label}</DialogTitle>
+                <DialogDescription>
+                  Modify the details before confirming this action.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-4">
+                {action.actionType === 'request_more_photos' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="prompts">Photo Prompts (one per line)</Label>
+                    <Textarea
+                      id="prompts"
+                      value={editedPrompts}
+                      onChange={(e) => setEditedPrompts(e.target.value)}
+                      placeholder="Please add a 'before' photo..."
+                      rows={4}
+                    />
+                  </div>
+                )}
+                
+                {action.actionType === 'create_work_request' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="todos">Tasks (one per line)</Label>
+                    <Textarea
+                      id="todos"
+                      value={editedTodos}
+                      onChange={(e) => setEditedTodos(e.target.value)}
+                      placeholder="Task 1&#10;Task 2"
+                      rows={4}
+                    />
+                  </div>
+                )}
+                
+                {action.actionType === 'open_quote_draft' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Input
+                        id="category"
+                        value={editedCategory}
+                        onChange={(e) => setEditedCategory(e.target.value)}
+                        placeholder="e.g., landscaping, plumbing"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={editedAddress}
+                        onChange={(e) => setEditedAddress(e.target.value)}
+                        placeholder="Service address"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit}>
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+        
         <Button 
           size="sm" 
           onClick={onConfirm}
@@ -352,22 +508,15 @@ function ActionCard({
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isDone, setIsDone] = useState(false);
-  const { currentPortal } = useTenant();
+  const { currentTenant } = useTenant();
   
   const handleAction = async () => {
     if (action.type === 'open_message_thread' && action.payload?.autoCreateThread) {
       setIsLoading(true);
       try {
-        await apiRequest(`/api/contractor/ingestions/${ingestionId}/create-thread`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-portal-id': currentPortal?.id || ''
-          },
-          body: JSON.stringify({
-            proposedMessage: action.payload.proposedMessage
-          })
-        });
+        await apiRequest(`/api/contractor/ingestions/${ingestionId}/create-thread`, JSON.stringify({
+          proposedMessage: action.payload.proposedMessage
+        }));
         setIsDone(true);
       } catch (err) {
         console.error('Failed to create thread:', err);
@@ -723,12 +872,12 @@ export default function UploadResultsPage() {
     }
   });
   
-  // A2.6: Resolve next action mutation
+  // A2.6: Resolve next action mutation (supports confirm, dismiss, edit)
   const resolveActionMutation = useMutation({
     mutationFn: async ({ ingestionId, actionId, resolution, payload }: {
       ingestionId: string;
       actionId: string;
-      resolution: 'confirm' | 'dismiss';
+      resolution: 'confirm' | 'dismiss' | 'edit';
       payload?: Record<string, any>;
     }) => {
       setResolvingActionId(actionId);
@@ -755,6 +904,20 @@ export default function UploadResultsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contractor/ingestions/opportunities'] });
+    }
+  });
+  
+  // A2.6: Ensure thread mutation
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const ensureThreadMutation = useMutation({
+    mutationFn: async (ingestionId: string) => {
+      const res = await apiRequest('POST', `/api/contractor/ingestions/${ingestionId}/ensure-thread`, {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.ok && data.threadId) {
+        setThreadId(data.threadId);
+      }
     }
   });
   
@@ -839,19 +1002,38 @@ export default function UploadResultsPage() {
                 <Sparkles className="h-5 w-5 text-primary" />
                 Suggested Actions
               </h2>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => refetchActions()}
-                disabled={loadingActions}
-                data-testid="button-refresh-actions"
-              >
-                {loadingActions ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
+              <div className="flex items-center gap-2">
+                {/* Open Thread button */}
+                {classifications[0]?.ingestionId && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => ensureThreadMutation.mutate(classifications[0].ingestionId)}
+                    disabled={ensureThreadMutation.isPending}
+                    data-testid="button-open-thread"
+                  >
+                    {ensureThreadMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                    )}
+                    {threadId ? 'View Thread' : 'Open Thread'}
+                  </Button>
                 )}
-              </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => refetchActions()}
+                  disabled={loadingActions}
+                  data-testid="button-refresh-actions"
+                >
+                  {loadingActions ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
               Based on your uploads, here are some actions you can take:
@@ -870,6 +1052,12 @@ export default function UploadResultsPage() {
                     ingestionId: action.ingestionId,
                     actionId: action.id,
                     resolution: 'dismiss'
+                  })}
+                  onEdit={(payload) => resolveActionMutation.mutate({
+                    ingestionId: action.ingestionId,
+                    actionId: action.id,
+                    resolution: 'edit',
+                    payload
                   })}
                   isLoading={resolvingActionId === action.id}
                 />

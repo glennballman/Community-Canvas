@@ -298,7 +298,7 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
     }
 
     const { resolution, payload } = parsed.data;
-    const actionPayload = existingAction.payload as any || {};
+    const actionPayload = existingAction.actionPayload as any || {};
 
     // Handle edit resolution - update payload without confirming
     if (resolution === 'edit') {
@@ -309,12 +309,12 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
       
       const updatedPayload = { ...actionPayload, ...editParsed.data };
       await db.update(ccIngestionNextActions)
-        .set({ payload: updatedPayload })
+        .set({ actionPayload: updatedPayload })
         .where(eq(ccIngestionNextActions.id, actionId));
       
       return res.json({ 
         ok: true, 
-        action: { ...existingAction, payload: updatedPayload },
+        action: { ...existingAction, actionPayload: updatedPayload },
         message: 'Payload updated. Confirm to execute.'
       });
     }
@@ -456,7 +456,7 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
             sourceMode: 'worksite_upload',
             status: 'draft',
             category: actionPayload.category,
-            estimatedTotal: extractedItems.quantities?.[0]?.total?.toString()
+            baseEstimate: extractedItems.quantities?.[0]?.total?.toString()
           }).returning();
           
           // Create link
@@ -515,11 +515,10 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
         const [tool] = await db.insert(ccContractorTools).values({
           tenantId,
           contractorProfileId: userId || tenantId,
+          assetType: 'tool',
           name: actionPayload.name || classification.detectedTool?.name || 'Unknown Tool',
           category: actionPayload.category || classification.detectedTool?.category || 'general',
-          sourceIngestionId: id,
-          photoUrl: ingestion.uploadUrl || null,
-          status: 'active'
+          sourceIngestionId: id
         }).returning();
         
         await postThreadMessage(threadId, tenantId,
@@ -539,17 +538,15 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
         const [fleet] = await db.insert(ccContractorFleet).values({
           tenantId,
           contractorProfileId: userId || tenantId,
-          vehicleType: actionPayload.vehicleType || classification.detectedVehicle?.type || 'truck',
+          assetType: actionPayload.vehicleType || classification.detectedVehicle?.type || 'truck',
           make: actionPayload.make || classification.detectedVehicle?.make,
           model: actionPayload.model || classification.detectedVehicle?.model,
           year: actionPayload.year || classification.detectedVehicle?.year,
-          sourceIngestionId: id,
-          photoUrl: ingestion.uploadUrl || null,
-          status: 'active'
+          sourceIngestionId: id
         }).returning();
         
         await postThreadMessage(threadId, tenantId,
-          `Fleet asset added: ${fleet.vehicleType}`,
+          `Fleet asset added: ${fleet.assetType}`,
           { type: 'fleet_added', fleetId: fleet.id }
         );
         

@@ -284,12 +284,12 @@ export async function recomputeNextActions(
     )
   });
   
-  // Build a set of dismissed action keys (actionType + payload.key)
+  // Build a set of dismissed action keys (actionType + actionPayload.key)
   const dismissedKeys = new Set<string>();
   if (!force) {
     for (const action of dismissedActions) {
       if (action.status === 'dismissed' || action.status === 'expired') {
-        const payload = action.payload as any || {};
+        const payload = action.actionPayload as any || {};
         const key = `${action.actionType}:${payload.key || 'default'}`;
         dismissedKeys.add(key);
       }
@@ -333,7 +333,7 @@ export async function recomputeNextActions(
       contractorProfileId,
       ingestionId,
       actionType: proposal.actionType,
-      payload: payloadWithKey,
+      actionPayload: payloadWithKey,
       confidence: String(proposal.confidence),
       status: 'proposed'
     }).returning();
