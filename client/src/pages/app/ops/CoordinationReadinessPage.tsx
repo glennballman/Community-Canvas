@@ -185,15 +185,17 @@ function CategoryBucketsPanel({
   zoneId,
   zoneName,
   windowDays,
+  isUnzoned = false,
 }: {
   portalId: string;
   zoneId: string | null;
   zoneName: string;
   windowDays: number;
+  isUnzoned?: boolean;
 }) {
   const { data, isLoading } = useCoordinationReadinessBuckets(
     portalId,
-    zoneId || 'none',
+    isUnzoned ? 'none' : zoneId,
     windowDays,
     10
   );
@@ -452,6 +454,7 @@ export default function CoordinationReadinessPage() {
                   zoneId={selectedZone.zone_id}
                   zoneName={selectedZoneLabel || 'Selected Zone'}
                   windowDays={windowDays}
+                  isUnzoned={!selectedZone.zone_id}
                 />
               ) : (
                 <Card>
@@ -470,6 +473,7 @@ export default function CoordinationReadinessPage() {
                   zoneId={null}
                   zoneName="All Zones"
                   windowDays={windowDays}
+                  isUnzoned={false}
                 />
               )}
             </div>
