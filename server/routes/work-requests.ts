@@ -371,7 +371,8 @@ router.get('/:id/coordination', requireAuth, requireTenant, async (req: Request,
     const countResult = await tenantReq.tenantQuery!(
       `SELECT 
         COUNT(*) FILTER (WHERE wr.status IN ('${activeStatusList}')) as similar_active_count,
-        COUNT(*) FILTER (WHERE wr.status IN ('${newStatusList}')) as similar_new_count
+        COUNT(*) FILTER (WHERE wr.status IN ('${newStatusList}')) as similar_new_count,
+        COUNT(*) FILTER (WHERE wr.status IN ('${activeStatusList}') AND wr.coordination_intent = true) as coordination_ready_similar_count
       FROM cc_work_requests wr
       WHERE wr.portal_id = $1
         AND wr.created_at >= $2
@@ -417,6 +418,7 @@ router.get('/:id/coordination', requireAuth, requireTenant, async (req: Request,
         similar_active_count: parseInt(countResult.rows[0]?.similar_active_count || '0', 10),
         similar_new_count: parseInt(countResult.rows[0]?.similar_new_count || '0', 10),
         unzoned_similar_count: unzonedSimilarCount,
+        coordination_ready_similar_count: parseInt(countResult.rows[0]?.coordination_ready_similar_count || '0', 10),
       },
     });
   } catch (error) {
@@ -737,6 +739,122 @@ router.put('/:id/zone', requireAuth, requireTenant, async (req: Request, res: Re
   } catch (error) {
     console.error('Error assigning zone to work request:', error);
     res.status(500).json({ error: 'Failed to assign zone' });
+  }
+});
+
+/**
+ * PUT /api/work-requests/:id/coordination-intent
+ * Set or clear coordination intent (opt-in flag for coordination)
+ * 
+ * Request body:
+ * - coordination_intent: boolean (required)
+ * - note?: string | null (max 280 chars, trimmed)
+ * 
+ * Role gating: resident/admin/owner only; contractors denied
+ */
+router.put('/:id/coordination-intent', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { id } = req.params;
+    const { coordination_intent, note } = req.body;
+
+    const roles = tenantReq.ctx?.roles || [];
+    const isContractor = roles.includes('contractor');
+    const isResidentOrAdmin = 
+      roles.includes('owner') || 
+      roles.includes('admin') || 
+      roles.includes('tenant_admin') ||
+      roles.includes('resident') ||
+      !!tenantReq.user?.isPlatformAdmin;
+    
+    if (isContractor || !isResidentOrAdmin) {
+      return res.status(403).json({ 
+        error: 'Coordination intent requires resident or admin access',
+        code: 'COORDINATION_INTENT_ACCESS_DENIED'
+      });
+    }
+
+    if (typeof coordination_intent !== 'boolean') {
+      return res.status(400).json({ 
+        error: 'coordination_intent must be a boolean',
+        code: 'INVALID_INTENT_VALUE'
+      });
+    }
+
+    const wrResult = await tenantReq.tenantQuery!(
+      `SELECT id, portal_id, zone_id FROM cc_work_requests WHERE id = $1`,
+      [id]
+    );
+
+    if (wrResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Work request not found' });
+    }
+
+    const wr = wrResult.rows[0];
+    const actorId = tenantReq.ctx?.individual_id || tenantReq.user?.id || null;
+
+    let result;
+    if (coordination_intent) {
+      const trimmedNote = note?.trim()?.substring(0, 280) || null;
+      
+      result = await tenantReq.tenantQuery!(
+        `UPDATE cc_work_requests 
+         SET coordination_intent = true,
+             coordination_intent_set_at = NOW(),
+             coordination_intent_set_by = $1,
+             coordination_intent_note = $2,
+             updated_at = NOW()
+         WHERE id = $3
+         RETURNING id, coordination_intent, coordination_intent_set_at, coordination_intent_note`,
+        [actorId, trimmedNote, id]
+      );
+
+      console.log('[audit] coordination_intent_set', {
+        work_request_id: id,
+        portal_id: wr.portal_id,
+        zone_id: wr.zone_id,
+        actor_id: actorId,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      result = await tenantReq.tenantQuery!(
+        `UPDATE cc_work_requests 
+         SET coordination_intent = false,
+             coordination_intent_set_at = NULL,
+             coordination_intent_set_by = NULL,
+             coordination_intent_note = NULL,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, coordination_intent, coordination_intent_set_at, coordination_intent_note`,
+        [id]
+      );
+
+      console.log('[audit] coordination_intent_cleared', {
+        work_request_id: id,
+        portal_id: wr.portal_id,
+        zone_id: wr.zone_id,
+        actor_id: actorId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const updated = result.rows[0];
+    const response: any = {
+      ok: true,
+      work_request_id: updated.id,
+      coordination_intent: updated.coordination_intent,
+      coordination_intent_set_at: updated.coordination_intent_set_at,
+      coordination_intent_note: updated.coordination_intent_note,
+    };
+
+    if (!wr.portal_id) {
+      response.portal_required_for_matching = true;
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error setting coordination intent:', error);
+    res.status(500).json({ error: 'Failed to set coordination intent' });
   }
 });
 
