@@ -2330,3 +2330,316 @@ n3Router.post('/runs/:runId/readiness-unlock', requireAuth, requireTenant, requi
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/**
+ * ============ EXECUTION ELIGIBILITY GATE (Prompt 31) ============
+ * 
+ * Compares locked snapshot against current live state.
+ * Advisory only - no execution, no notifications, no blocking.
+ */
+
+/**
+ * GET /api/n3/runs/:runId/execution-eligibility
+ * 
+ * Compare locked snapshot vs live state for advisory eligibility check.
+ * Returns counts + deltas only (no PII, no IDs).
+ * Admin/owner only. Requires active snapshot.
+ */
+n3Router.get('/runs/:runId/execution-eligibility', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const actorId = tenantReq.user?.id || 'system';
+  const evaluatedAt = new Date().toISOString();
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({
+        id: ccN3Runs.id,
+        status: ccN3Runs.status,
+        zoneId: ccN3Runs.zoneId,
+        portalId: ccN3Runs.portalId,
+      })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Only draft or scheduled runs
+    if (run.status !== 'draft' && run.status !== 'scheduled') {
+      return res.status(400).json({
+        error: 'Eligibility check only applies to draft or scheduled runs',
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    // Get snapshot (required)
+    const snapshots = await db
+      .select()
+      .from(ccN3RunReadinessSnapshots)
+      .where(and(
+        eq(ccN3RunReadinessSnapshots.runId, runId),
+        eq(ccN3RunReadinessSnapshots.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (snapshots.length === 0) {
+      return res.status(409).json({
+        error: 'Snapshot required for eligibility check',
+        code: 'SNAPSHOT_REQUIRED',
+      });
+    }
+    
+    const snapshot = snapshots[0];
+    const snapshotPayload = snapshot.snapshotPayload as {
+      run: {
+        id: string;
+        name: string;
+        status: string;
+        zone_id: string | null;
+        portal_id: string | null;
+        starts_at: string | null;
+        ends_at: string | null;
+      };
+      attached_requests: Array<{
+        maintenance_request_id: string;
+        attached_at: string;
+        status_at_lock: string;
+        zone_id_at_lock: string | null;
+        coordination_opt_in_at_lock: boolean;
+        coordination_opt_in_set_at: string | null;
+      }>;
+      summary: {
+        total_attached: number;
+        opted_in_count: number;
+        opted_out_count: number;
+      };
+    };
+    
+    // --- Collect Live State ---
+    
+    // Live attached maintenance requests
+    const liveAttached = await db
+      .select({
+        maintenanceRequestId: ccN3RunMaintenanceRequests.maintenanceRequestId,
+        status: ccMaintenanceRequests.status,
+        category: ccMaintenanceRequests.category,
+        zoneId: ccMaintenanceRequests.zoneId,
+        coordinationOptIn: ccMaintenanceRequests.coordinationOptIn,
+        coordinationOptInSetAt: ccMaintenanceRequests.coordinationOptInSetAt,
+      })
+      .from(ccN3RunMaintenanceRequests)
+      .innerJoin(
+        ccMaintenanceRequests,
+        eq(ccN3RunMaintenanceRequests.maintenanceRequestId, ccMaintenanceRequests.id)
+      )
+      .where(and(
+        eq(ccN3RunMaintenanceRequests.runId, runId),
+        eq(ccN3RunMaintenanceRequests.tenantId, tenantId)
+      ));
+    
+    // Live counts
+    const liveAttachedCount = liveAttached.length;
+    const liveOptedInCount = liveAttached.filter(r => r.coordinationOptIn).length;
+    const liveOptedOutCount = liveAttached.filter(r => !r.coordinationOptIn).length;
+    
+    // Snapshot counts
+    const snapshotAttachedCount = snapshotPayload.summary.total_attached;
+    const snapshotOptedInCount = snapshotPayload.summary.opted_in_count;
+    const snapshotOptedOutCount = snapshotPayload.summary.opted_out_count;
+    
+    // --- Compute Deltas ---
+    
+    // Attachment deltas
+    const attachedCountDelta = liveAttachedCount - snapshotAttachedCount;
+    
+    // Category deltas (count per category in live vs snapshot)
+    const liveCategoryCounts: Record<string, number> = {};
+    for (const r of liveAttached) {
+      const cat = r.category || 'uncategorized';
+      liveCategoryCounts[cat] = (liveCategoryCounts[cat] || 0) + 1;
+    }
+    
+    const snapshotCategoryCounts: Record<string, number> = {};
+    for (const r of snapshotPayload.attached_requests) {
+      // We don't have category in snapshot, so skip category deltas for now
+      // This could be enhanced in future prompts
+    }
+    
+    // Coordination deltas
+    const coordReadyCountDelta = liveOptedInCount - snapshotOptedInCount;
+    const snapshotOptInRatio = snapshotAttachedCount > 0 ? snapshotOptedInCount / snapshotAttachedCount : 0;
+    const liveOptInRatio = liveAttachedCount > 0 ? liveOptedInCount / liveAttachedCount : 0;
+    const optInRatioDelta = liveOptInRatio - snapshotOptInRatio;
+    
+    // Readiness drift deltas (compare snapshot state to live state)
+    const activeStatuses = ['reported', 'triaged', 'scheduled'];
+    const ageDays = 30;
+    const ageThresholdDate = new Date();
+    ageThresholdDate.setDate(ageThresholdDate.getDate() - ageDays);
+    
+    // Count drift types in snapshot (at lock time)
+    let snapshotOptOutDrift = 0;
+    let snapshotZoneMismatchDrift = 0;
+    let snapshotInactiveStatusDrift = 0;
+    let snapshotAgeExceededDrift = 0;
+    
+    for (const req of snapshotPayload.attached_requests) {
+      if (!req.coordination_opt_in_at_lock) snapshotOptOutDrift++;
+      if (snapshotPayload.run.zone_id && (!req.zone_id_at_lock || req.zone_id_at_lock !== snapshotPayload.run.zone_id)) {
+        snapshotZoneMismatchDrift++;
+      }
+      if (req.status_at_lock && !activeStatuses.includes(req.status_at_lock)) {
+        snapshotInactiveStatusDrift++;
+      }
+      if (req.coordination_opt_in_set_at) {
+        const optInDate = new Date(req.coordination_opt_in_set_at);
+        if (optInDate < ageThresholdDate) {
+          snapshotAgeExceededDrift++;
+        }
+      }
+    }
+    
+    // Count drift types in live state
+    let liveOptOutDrift = 0;
+    let liveZoneMismatchDrift = 0;
+    let liveInactiveStatusDrift = 0;
+    let liveAgeExceededDrift = 0;
+    
+    for (const req of liveAttached) {
+      if (!req.coordinationOptIn) liveOptOutDrift++;
+      if (run.zoneId && (!req.zoneId || req.zoneId !== run.zoneId)) {
+        liveZoneMismatchDrift++;
+      }
+      if (req.status && !activeStatuses.includes(req.status)) {
+        liveInactiveStatusDrift++;
+      }
+      if (req.coordinationOptInSetAt) {
+        const optInDate = new Date(req.coordinationOptInSetAt);
+        if (optInDate < ageThresholdDate) {
+          liveAgeExceededDrift++;
+        }
+      }
+    }
+    
+    // Drift deltas
+    const driftDeltas = {
+      coordination_opt_out: liveOptOutDrift - snapshotOptOutDrift,
+      zone_mismatch: liveZoneMismatchDrift - snapshotZoneMismatchDrift,
+      inactive_status: liveInactiveStatusDrift - snapshotInactiveStatusDrift,
+      age_exceeded: liveAgeExceededDrift - snapshotAgeExceededDrift,
+    };
+    
+    // --- Eligibility Classification ---
+    // Tolerance thresholds (configurable)
+    const tolerances = {
+      optInRatioThreshold: 0.10, // 10%
+      attachedCountThreshold: 2,
+      driftThreshold: 1,
+    };
+    
+    let overall: 'unchanged' | 'improved' | 'degraded' = 'unchanged';
+    
+    // Check for degradation
+    const hasDegradation = 
+      optInRatioDelta < -tolerances.optInRatioThreshold ||
+      attachedCountDelta < -tolerances.attachedCountThreshold ||
+      driftDeltas.coordination_opt_out > 0 ||
+      driftDeltas.zone_mismatch > 0 ||
+      driftDeltas.inactive_status > 0 ||
+      driftDeltas.age_exceeded > 0;
+    
+    // Check for improvement
+    const hasImprovement = 
+      coordReadyCountDelta > 0 ||
+      optInRatioDelta > tolerances.optInRatioThreshold ||
+      driftDeltas.coordination_opt_out < 0 ||
+      driftDeltas.zone_mismatch < 0 ||
+      driftDeltas.inactive_status < 0 ||
+      driftDeltas.age_exceeded < 0;
+    
+    if (hasDegradation) {
+      overall = 'degraded';
+    } else if (hasImprovement) {
+      overall = 'improved';
+    }
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_run_execution_eligibility_evaluated', {
+      event: 'n3_run_execution_eligibility_evaluated',
+      run_id: runId,
+      tenant_id: tenantId,
+      actor_id: actorId,
+      occurred_at: evaluatedAt,
+      overall,
+    });
+    
+    // Build response (counts + deltas only, no PII)
+    const response: any = {
+      run_id: runId,
+      evaluated_at: evaluatedAt,
+      snapshot: {
+        locked_at: snapshot.lockedAt,
+        locked_by: snapshot.lockedBy,
+      },
+      eligibility: {
+        overall,
+      },
+      deltas: {},
+    };
+    
+    // Only include non-zero deltas
+    if (attachedCountDelta !== 0) {
+      response.deltas.attachments = {
+        attached_count_delta: attachedCountDelta,
+      };
+    }
+    
+    if (coordReadyCountDelta !== 0 || Math.abs(optInRatioDelta) > 0.01) {
+      response.deltas.coordination = {
+        coord_ready_count_delta: coordReadyCountDelta,
+        opt_in_ratio_delta: Math.round(optInRatioDelta * 100) / 100,
+      };
+    }
+    
+    const hasNonZeroDrift = 
+      driftDeltas.coordination_opt_out !== 0 ||
+      driftDeltas.zone_mismatch !== 0 ||
+      driftDeltas.inactive_status !== 0 ||
+      driftDeltas.age_exceeded !== 0;
+    
+    if (hasNonZeroDrift) {
+      response.deltas.readiness_drift = {};
+      if (driftDeltas.coordination_opt_out !== 0) {
+        response.deltas.readiness_drift.coordination_opt_out = driftDeltas.coordination_opt_out;
+      }
+      if (driftDeltas.zone_mismatch !== 0) {
+        response.deltas.readiness_drift.zone_mismatch = driftDeltas.zone_mismatch;
+      }
+      if (driftDeltas.inactive_status !== 0) {
+        response.deltas.readiness_drift.inactive_status = driftDeltas.inactive_status;
+      }
+      if (driftDeltas.age_exceeded !== 0) {
+        response.deltas.readiness_drift.age_exceeded = driftDeltas.age_exceeded;
+      }
+    }
+    
+    res.json(response);
+  } catch (err) {
+    console.error('[N3 API] Error evaluating execution eligibility:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});

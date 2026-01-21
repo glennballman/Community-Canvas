@@ -1,0 +1,324 @@
+✅ PROMPT 31 — Execution Eligibility Gate (Snapshot vs Live State, Advisory Only)
+PURPOSE
+
+Provide operators with a final, advisory eligibility check by comparing a locked readiness snapshot (Prompt 30) against current live conditions.
+
+This prompt answers one question only:
+
+“Does reality still match what we locked?”
+
+It does not:
+
+start execution
+
+notify contractors
+
+block actions
+
+mutate run status
+
+create obligations
+
+It surfaces deltas, not decisions.
+
+HARD INVARIANTS (NON-NEGOTIABLE)
+
+❌ No contractor access
+
+❌ No resident notifications
+
+❌ No billing / ledger / folio impact
+
+❌ No execution triggers
+
+❌ No auto-blocking
+
+✅ Admin/owner only
+
+✅ Snapshot-vs-live comparison only
+
+✅ Counts-only deltas (no PII, no IDs)
+
+✅ Advisory language everywhere
+
+✅ Non-destructive, read-only
+
+CONCEPT
+
+This is an eligibility gate, not a gatekeeper.
+
+It compares:
+
+Locked snapshot (what we believed was true)
+
+Live state (what is true now)
+
+…and reports:
+
+what changed
+
+how much
+
+in which direction
+
+Operators decide what to do next.
+
+PART A — Backend
+A1) Eligibility Comparison Endpoint
+GET /api/n3/runs/:runId/execution-eligibility
+
+Access Control
+requireAuth
+requireTenant
+requireTenantAdminOrOwner
+
+A2) Preconditions
+
+Run exists and belongs to tenant
+
+Run has an active readiness snapshot
+
+If not → 409 SNAPSHOT_REQUIRED
+
+Run status ∈ { draft, scheduled }
+
+A3) Live State Collection (Same Sources as Snapshot)
+
+Collect current advisory state:
+
+Attached maintenance request rollups
+
+Coordination readiness rollups
+
+Readiness drift (Prompt 29)
+
+Zone pricing advisory estimate (if applicable)
+
+⚠️ Must use same logic paths as snapshot creation to ensure comparability.
+
+A4) Comparison Logic
+
+For each domain, compute delta = live − snapshot.
+
+Domains:
+
+1) Attachments
+
+attached_count_delta
+
+category_deltas (map of category → delta)
+
+2) Coordination Readiness
+
+coord_ready_count_delta
+
+opt_in_ratio_delta
+
+3) Readiness Drift
+
+For each drift type:
+
+delta_count
+
+4) Zone Pricing (Advisory)
+
+base_estimate_delta
+
+final_estimate_delta
+
+modifier changes (added/removed/changed keys only)
+
+A5) Response Shape (Counts + Deltas Only)
+{
+  "run_id": "uuid",
+  "evaluated_at": "timestamp",
+  "snapshot": {
+    "locked_at": "timestamp",
+    "locked_by": "uuid"
+  },
+  "eligibility": {
+    "overall": "unchanged | improved | degraded"
+  },
+  "deltas": {
+    "attachments": {
+      "attached_count_delta": -2,
+      "category_deltas": {
+        "plumbing": -1,
+        "electrical": -1
+      }
+    },
+    "coordination": {
+      "coord_ready_count_delta": -3,
+      "opt_in_ratio_delta": -0.15
+    },
+    "readiness_drift": {
+      "coordination_opt_out": +2,
+      "zone_mismatch": 0,
+      "inactive_status": +1,
+      "age_exceeded": +1
+    },
+    "zone_pricing": {
+      "final_estimate_delta": +450.00
+    }
+  }
+}
+
+
+❌ No request IDs
+❌ No identities
+❌ No blocking flags
+
+A6) Eligibility Classification (Advisory)
+
+Compute eligibility.overall:
+
+unchanged
+
+all deltas ≈ 0 (within tolerance)
+
+improved
+
+more coordination readiness
+
+fewer drift signals
+
+degraded
+
+fewer opt-ins
+
+more drift
+
+materially worse pricing
+
+Tolerance rules:
+
+configurable server-side
+
+default:
+
+opt-in ratio change > ±10%
+
+attached count change ≥ 2
+
+any drift delta ≥ 1 → degraded
+
+A7) Audit (Informational)
+console.log('[N3 AUDIT] n3_run_execution_eligibility_evaluated', {
+  event: 'n3_run_execution_eligibility_evaluated',
+  run_id,
+  tenant_id,
+  actor_id,
+  occurred_at,
+});
+
+PART B — Frontend (ServiceRunMonitorPage)
+B1) Eligibility Gate Card
+
+Visible when:
+
+admin/owner
+
+readiness snapshot exists
+
+run.status ∈ { draft, scheduled }
+
+Card Header
+
+“Execution Eligibility (Advisory)”
+
+Badge:
+
+unchanged → gray
+
+improved → green
+
+degraded → amber
+
+B2) Delta Summary
+
+Show only non-zero deltas.
+
+Sections:
+
+Attachments
+
+Coordination readiness
+
+Drift changes
+
+Zone pricing changes
+
+Use:
+
+↑ / ↓ indicators
+
+signed numbers
+
+neutral language
+
+Example copy:
+
+“3 fewer coordination-ready requests since snapshot.”
+
+B3) Operator Guidance (Static Copy)
+
+At bottom:
+
+If unchanged:
+
+“Conditions are consistent with the locked snapshot.”
+
+If improved:
+
+“Readiness has improved since the snapshot.”
+
+If degraded:
+
+“Some readiness signals have declined since the snapshot. You may want to review attachments or drift warnings.”
+
+No buttons. No automation.
+
+PART C — Hooks
+
+Add:
+
+useN3ExecutionEligibility(runId)
+
+
+Disabled if no snapshot
+
+Cache key includes snapshot locked_at (to force re-eval if relocked)
+
+Invalidate when:
+
+snapshot unlocked / re-locked
+
+attachments change
+
+coordination opt-in toggled
+
+UX & LANGUAGE RULES
+
+Never say “approved” or “blocked”
+
+Never say “ready to execute”
+
+Use:
+
+“eligibility”
+
+“signals”
+
+“may want to review”
+
+Always show advisory only
+
+ACCEPTANCE CHECKLIST
+
+✅ Snapshot required
+✅ Admin/owner only
+✅ Snapshot vs live comparison only
+✅ Counts + deltas only
+✅ No execution or notifications
+✅ Advisory classification only
+✅ Fully auditable
