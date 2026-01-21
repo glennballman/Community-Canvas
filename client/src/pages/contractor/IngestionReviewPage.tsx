@@ -35,6 +35,31 @@ interface MediaItem {
   captured_at: string;
 }
 
+interface IdentityProposalEvidence {
+  type: 'ocr_domain' | 'ocr_phone' | 'ocr_name' | 'ocr_social' | 'gps_hint' | 'plate_region' | string;
+  value: string;
+}
+
+interface WebEnrichment {
+  website_title?: string;
+  logo_url?: string;
+  brand_colors?: string[];
+  about_snippet?: string;
+  fetched_at?: string;
+}
+
+interface IdentityProposal {
+  company_name?: string;
+  phone?: string;
+  website?: string;
+  location_hint?: string;
+  likely_person?: string;
+  confidence?: number;
+  evidence?: IdentityProposalEvidence[];
+  requires_consent_for_web_lookup?: boolean;
+  web_enrichment?: WebEnrichment;
+}
+
 interface Ingestion {
   id: string;
   tenantId: string;
@@ -46,6 +71,8 @@ interface Ingestion {
   humanConfirmedPayload: object | null;
   confidenceScore: string | null;
   errorMessage: string | null;
+  identityProposal?: IdentityProposal;
+  identityProposalStatus?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -218,6 +245,8 @@ export default function IngestionReviewPage() {
           <IdentityProposalCard
             ingestionId={ingestion.id}
             sourceType={ingestion.sourceType}
+            existingProposal={ingestion.identityProposal}
+            existingProposalStatus={ingestion.identityProposalStatus}
           />
         )}
 

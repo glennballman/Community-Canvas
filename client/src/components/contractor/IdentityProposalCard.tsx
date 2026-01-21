@@ -10,7 +10,7 @@
  * - Web lookups require explicit consent button
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +44,7 @@ interface WebEnrichment {
   logo_url?: string;
   brand_colors?: string[];
   about_snippet?: string;
-  fetched_at: string;
+  fetched_at?: string;
 }
 
 interface IdentityProposal {
@@ -53,31 +53,60 @@ interface IdentityProposal {
   website?: string;
   location_hint?: string;
   likely_person?: string;
-  confidence: number;
-  evidence: IdentityProposalEvidence[];
-  requires_consent_for_web_lookup: boolean;
+  confidence?: number;
+  evidence?: IdentityProposalEvidence[];
+  requires_consent_for_web_lookup?: boolean;
+  web_enrichment?: WebEnrichment;
+}
+
+// Accept more flexible types for external data
+interface ExternalIdentityProposal {
+  company_name?: string;
+  phone?: string;
+  website?: string;
+  location_hint?: string;
+  likely_person?: string;
+  confidence?: number;
+  evidence?: Array<{ type: string; value: string }>;
+  requires_consent_for_web_lookup?: boolean;
   web_enrichment?: WebEnrichment;
 }
 
 interface IdentityProposalCardProps {
   ingestionId: string;
   sourceType: string;
+  existingProposal?: ExternalIdentityProposal;
+  existingProposalStatus?: string;
   onComplete?: () => void;
 }
 
 export function IdentityProposalCard({ 
   ingestionId, 
   sourceType,
+  existingProposal,
+  existingProposalStatus,
   onComplete 
 }: IdentityProposalCardProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedValues, setEditedValues] = useState({
-    company_name: '',
-    phone: '',
-    website: '',
-    location_hint: ''
+    company_name: existingProposal?.company_name || '',
+    phone: existingProposal?.phone || '',
+    website: existingProposal?.website || '',
+    location_hint: existingProposal?.location_hint || ''
   });
+
+  // Sync editedValues when existingProposal changes (e.g., after fetch)
+  useEffect(() => {
+    if (existingProposal && !isEditing) {
+      setEditedValues({
+        company_name: existingProposal.company_name || '',
+        phone: existingProposal.phone || '',
+        website: existingProposal.website || '',
+        location_hint: existingProposal.location_hint || ''
+      });
+    }
+  }, [existingProposal, isEditing]);
 
   // Only show for vehicle photos
   if (sourceType !== 'vehicle_photo') {
@@ -181,9 +210,13 @@ export function IdentityProposalCard({
 
   const isLoading = proposeMutation.isPending || confirmMutation.isPending || 
                     denyMutation.isPending || dismissMutation.isPending;
-  const proposal = proposeMutation.data?.proposal as IdentityProposal | undefined;
-  const hasProposal = proposal && proposal.evidence?.length > 0;
+  
+  // Use existing proposal from ingestion if available, otherwise use freshly generated one
+  const freshProposal = proposeMutation.data?.proposal as IdentityProposal | undefined;
+  const proposal = freshProposal || (existingProposalStatus === 'proposed' ? existingProposal : undefined);
+  const hasProposal = proposal && (proposal.evidence?.length ?? 0) > 0;
   const identityConfirmed = identityState?.identity?.state === 'confirmed';
+  const alreadyProposed = existingProposalStatus === 'proposed' && existingProposal;
 
   // If identity is already confirmed, show confirmation view
   if (identityConfirmed && identityState?.identity) {
