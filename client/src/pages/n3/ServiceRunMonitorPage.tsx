@@ -724,8 +724,11 @@ export default function ServiceRunMonitorPage() {
           </div>
           
           {selectedRequestIds.length > 10 && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
-              <p className="text-sm text-destructive">
+            <div 
+              className="rounded-lg border border-destructive/50 bg-destructive/10 p-3"
+              data-testid="alert-attach-limit-exceeded"
+            >
+              <p className="text-sm text-destructive" data-testid="text-attach-limit-message">
                 Cannot attach more than 10 requests at once. Please deselect {selectedRequestIds.length - 10} request(s).
               </p>
             </div>
