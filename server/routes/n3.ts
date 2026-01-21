@@ -1217,6 +1217,119 @@ n3Router.post('/runs/:runId/promote', requireAuth, requireTenant, requireTenantA
 });
 
 /**
+ * POST /api/n3/runs/:runId/demote - Demote a scheduled Service Run back to draft
+ * PROMPT 27: Reversible demotion, admin-only
+ * 
+ * Changes status from 'scheduled' -> 'draft'. No side effects:
+ * - No contractor notification
+ * - No billing/ledger/folio impact
+ * - No execution triggers
+ * - Fully reversible
+ */
+const demoteRunSchema = z.object({
+  note: z.string().max(280).optional(),
+});
+
+n3Router.post('/runs/:runId/demote', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  
+  try {
+    const parseResult = demoteRunSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ 
+        error: 'Invalid request body',
+        details: parseResult.error.flatten(),
+      });
+    }
+    
+    const { note } = parseResult.data;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const userId = tenantReq.user?.id;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Fetch the run
+    const runRows = await db
+      .select()
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Check current status
+    if (run.status === 'draft') {
+      // Idempotent: already draft
+      return res.status(409).json({ 
+        error: 'Run is already draft',
+        code: 'ALREADY_DRAFT',
+      });
+    }
+    
+    if (run.status !== 'scheduled') {
+      return res.status(400).json({ 
+        error: `Cannot demote run with status '${run.status}'. Only scheduled runs can be demoted.`,
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    // Update status to draft with demotion metadata
+    const now = new Date();
+    const existingMetadata = (run.metadata as Record<string, unknown>) || {};
+    const updatedMetadata = {
+      ...existingMetadata,
+      demoted_from: 'scheduled',
+      demoted_at: now.toISOString(),
+      demoted_by: userId,
+      demotion_note: note || null,
+    };
+    
+    await db
+      .update(ccN3Runs)
+      .set({
+        status: 'draft',
+        metadata: updatedMetadata,
+        updatedAt: now,
+      })
+      .where(eq(ccN3Runs.id, runId));
+    
+    // Emit audit event
+    console.log('[N3 AUDIT] n3_run_demoted', {
+      event: 'n3_run_demoted',
+      run_id: runId,
+      previous_status: 'scheduled',
+      new_status: 'draft',
+      actor_user_id: userId,
+      tenant_id: tenantId,
+      portal_id: run.portalId,
+      zone_id: run.zoneId,
+      note: note || null,
+      occurred_at: now.toISOString(),
+    });
+    
+    res.json({
+      success: true,
+      id: runId,
+      status: 'draft',
+      audit_action: 'n3_run_demoted',
+    });
+  } catch (err) {
+    console.error('[N3 API] Error demoting run:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/n3/health - Unauthenticated healthcheck (returns only { ok: true })
  */
 n3Router.get('/health', async (_req, res) => {

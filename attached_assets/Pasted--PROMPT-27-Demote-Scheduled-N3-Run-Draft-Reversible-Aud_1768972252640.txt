@@ -1,0 +1,251 @@
+✅ PROMPT 27 — Demote Scheduled N3 Run → Draft (Reversible, Audited)
+PURPOSE
+
+Allow admin/owner operators to safely revert a scheduled N3 Service Run back to draft when conditions change (coordination drops, timing no longer viable, zone misassignment, etc.).
+
+This is a reversible control action, not a cancellation, and must not:
+
+notify contractors
+
+trigger billing
+
+delete data
+
+break audit continuity
+
+This preserves operator trust and supports iterative planning.
+
+HARD INVARIANTS (NON-NEGOTIABLE)
+
+❌ No contractor visibility
+
+❌ No notifications
+
+❌ No billing / ledger / folio impact
+
+❌ No execution triggers
+
+❌ No automatic side effects
+
+✅ Admin/owner only
+
+✅ Fully auditable
+
+✅ Idempotent where possible
+
+✅ Tenant-scoped, portal-aware
+
+BACKEND (A)
+New Endpoint
+POST /api/n3/runs/:runId/demote
+
+Access Control
+
+Middleware chain (same pattern as Prompt 26):
+
+requireAuth
+requireTenant
+requireTenantAdminOrOwner
+
+
+Contractors and non-admin residents receive 403.
+
+Validation Rules
+
+Run exists
+
+Must belong to authenticated tenant
+
+Status must be scheduled
+
+If already draft → return 409 ALREADY_DRAFT
+
+If in any other terminal state (future-proofing) → 400 INVALID_STATUS
+
+No execution lock
+
+If you already track execution state (now or later), block demotion when:
+
+run is actively executing
+
+downstream irreversible artifacts exist
+
+For now: allow demotion unconditionally from scheduled
+
+Behavior
+
+On success:
+
+Update cc_n3_runs.status → 'draft'
+
+Preserve:
+
+portal_id
+
+zone_id
+
+starts_at, ends_at
+
+metadata
+
+Append demotion metadata:
+
+metadata: {
+  ...existing,
+  demoted_from: "scheduled",
+  demoted_at: "<timestamp>",
+  demoted_by: "<user_id>",
+  demotion_note: "<optional note>"
+}
+
+Audit Logging
+
+Emit audit event:
+
+n3_run_demoted
+
+
+Include:
+
+run_id
+
+previous_status: scheduled
+
+new_status: draft
+
+actor_user_id
+
+optional note
+
+timestamp
+
+Responses
+
+200 OK
+
+{
+  "success": true,
+  "id": "<runId>",
+  "status": "draft",
+  "audit_action": "n3_run_demoted"
+}
+
+
+409
+
+{
+  "error": "Run is already draft",
+  "code": "ALREADY_DRAFT"
+}
+
+
+400
+
+{
+  "error": "Run status cannot be demoted",
+  "code": "INVALID_STATUS"
+}
+
+FRONTEND (B)
+UI Placement
+
+ServiceRunMonitorPage
+
+Visible only when:
+
+user is admin/owner
+
+run.status === 'scheduled'
+
+Component: DemoteRunCard
+
+Mirror the Promote UI pattern for symmetry and predictability.
+
+UI Elements
+
+Title: “Revert to Draft”
+
+Warning tone (amber)
+
+Copy:
+
+“This will return the service run to draft. Draft runs are not visible to contractors and do not trigger execution.”
+
+Optional note input:
+
+Max 280 characters
+
+Placeholder: “Why are you reverting this run?”
+
+Confirmation Flow
+
+Click “Revert to Draft”
+
+Inline confirmation appears:
+
+Confirm
+
+Cancel
+
+On confirm:
+
+Disable buttons
+
+Call mutation
+
+On success:
+
+Toast: “Run reverted to draft”
+
+Status banner updates immediately
+
+Draft Status Banner (Update)
+
+Ensure banner logic handles both creation paths:
+
+draft from coordination window
+
+demoted from scheduled
+
+Copy example:
+
+“This service run is in draft mode. Draft runs are internal only and do not notify contractors.”
+
+FRONTEND HOOK (C)
+Hook
+useDemoteN3Run()
+
+
+POST /api/n3/runs/:runId/demote
+
+Accepts { runId, note? }
+
+On success:
+
+invalidate:
+
+/api/n3/runs
+
+/api/n3/runs/:runId/monitor
+
+/api/n3/attention
+
+UX & SAFETY NOTES
+
+No confirmation modal — inline confirmation only (consistent with Promote)
+
+No destructive language (“cancel”, “delete”) — this is reversible
+
+No contractor-facing side effects
+
+Explicitly framed as operational planning control
+
+ACCEPTANCE CHECKLIST
+
+✅ Admin/owner only
+✅ Tenant-scoped
+✅ Status transition strictly scheduled → draft
+✅ Fully audited
+✅ UI symmetry with Promote
+✅ No execution, billing, or disclosure
+✅ Reversible planning control unlocked
