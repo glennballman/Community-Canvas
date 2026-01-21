@@ -36,6 +36,8 @@ import {
   Eye,
   ShieldCheck,
   ScrollText,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -62,6 +64,8 @@ import {
   useN3ExecutionContract,
   useCreateN3ExecutionContract,
   useN3ExecutionReceipts,
+  useN3ExecutionVerification,
+  useEvaluateN3ExecutionVerification,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -188,6 +192,16 @@ export default function ServiceRunMonitorPage() {
     contractData ? runId : undefined,
     TEST_TENANT_ID
   );
+  
+  // Execution Verification (Prompt 35) - Only fetch if receipts exist
+  const hasReceipts = receiptsData && receiptsData.receipts.length > 0;
+  const { data: verificationData, isError: verificationNotFound } = useN3ExecutionVerification(
+    hasReceipts ? runId : undefined,
+    TEST_TENANT_ID
+  );
+  const evaluateVerificationMutation = useEvaluateN3ExecutionVerification(runId || '', TEST_TENANT_ID);
+  const [verificationNote, setVerificationNote] = useState('');
+  const [showSignals, setShowSignals] = useState(false);
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -1455,6 +1469,183 @@ export default function ServiceRunMonitorPage() {
                 <ScrollText className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No execution receipts recorded</p>
                 <p className="text-xs mt-1">Receipts will appear when execution engines report outcomes.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Execution Verification Card (Prompt 35) - Advisory confidence scoring */}
+      {contractData && hasReceipts && (
+        <Card data-testid="card-execution-verification">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                Execution Verification
+              </CardTitle>
+              {verificationData && (
+                <Badge 
+                  variant="outline" 
+                  className={
+                    verificationData.confidence_band === 'high' 
+                      ? 'text-green-600 border-green-600 dark:text-green-400 dark:border-green-400'
+                      : verificationData.confidence_band === 'medium'
+                      ? 'text-amber-600 border-amber-600 dark:text-amber-400 dark:border-amber-400'
+                      : 'text-gray-600 border-gray-600 dark:text-gray-400 dark:border-gray-400'
+                  }
+                  data-testid="badge-confidence-band"
+                >
+                  {verificationData.confidence_band.charAt(0).toUpperCase() + verificationData.confidence_band.slice(1)} Confidence
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {verificationData ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">Advisory Score</div>
+                  <div className="text-2xl font-bold" data-testid="text-confidence-score">
+                    {verificationData.confidence_score}
+                    <span className="text-sm font-normal text-muted-foreground">/100</span>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground">
+                  Evaluated: {format(new Date(verificationData.evaluated_at), 'PPpp')}
+                </div>
+                
+                <button
+                  onClick={() => setShowSignals(!showSignals)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full justify-between"
+                  data-testid="button-toggle-signals"
+                >
+                  <span>Verification Signals</span>
+                  {showSignals ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                
+                {showSignals && (
+                  <div className="space-y-2 text-sm border rounded-md p-3 bg-muted/30">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>Receipt Count:</div>
+                      <div className="text-right font-medium">{verificationData.signals.receipt_count}</div>
+                      
+                      <div>Hash Consistency:</div>
+                      <div className="text-right font-medium">{(verificationData.signals.hash_consistency_ratio * 100).toFixed(0)}%</div>
+                      
+                      <div>Time Alignment:</div>
+                      <div className="text-right font-medium">{(verificationData.signals.time_alignment_ratio * 100).toFixed(0)}%</div>
+                      
+                      <div>Coverage Ratio:</div>
+                      <div className="text-right font-medium">{(verificationData.signals.coverage_ratio * 100).toFixed(0)}%</div>
+                      
+                      <div>Duplicate Rate:</div>
+                      <div className="text-right font-medium">{(verificationData.signals.duplicate_payload_rate * 100).toFixed(0)}%</div>
+                      
+                      <div>Window Overrun:</div>
+                      <div className="text-right font-medium">{verificationData.signals.window_overrun ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div className="pt-2 border-t mt-2">
+                      <div className="text-muted-foreground mb-1">Status Distribution (Reported)</div>
+                      <div className="flex gap-4">
+                        <span>Done: {verificationData.signals.status_distribution.done}</span>
+                        <span>Attempted: {verificationData.signals.status_distribution.attempted}</span>
+                        <span>Pending: {verificationData.signals.status_distribution.pending}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await evaluateVerificationMutation.mutateAsync(verificationNote || undefined);
+                        toast({
+                          title: 'Verification re-evaluated',
+                          description: 'Confidence assessment has been updated.',
+                        });
+                        setVerificationNote('');
+                      } catch (err: any) {
+                        toast({
+                          title: 'Failed to re-evaluate',
+                          description: err.message,
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                    disabled={evaluateVerificationMutation.isPending}
+                    data-testid="button-reevaluate-verification"
+                  >
+                    {evaluateVerificationMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Re-evaluate
+                  </Button>
+                </div>
+                
+                <p className="text-xs text-muted-foreground italic pt-2 border-t">
+                  This assessment is advisory only. Execution receipts are untrusted inputs.
+                </p>
+              </>
+            ) : verificationNotFound ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Evaluate execution receipts to generate an advisory confidence assessment.
+                </p>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Note (optional, 280 chars max)</label>
+                  <Textarea
+                    placeholder="Add an optional note..."
+                    value={verificationNote}
+                    onChange={(e) => setVerificationNote(e.target.value.slice(0, 280))}
+                    maxLength={280}
+                    className="resize-none"
+                    data-testid="input-verification-note"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {verificationNote.length}/280
+                  </p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await evaluateVerificationMutation.mutateAsync(verificationNote || undefined);
+                      toast({
+                        title: 'Verification evaluated',
+                        description: 'Advisory confidence assessment generated.',
+                      });
+                      setVerificationNote('');
+                    } catch (err: any) {
+                      toast({
+                        title: 'Failed to evaluate',
+                        description: err.message,
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  disabled={evaluateVerificationMutation.isPending}
+                  data-testid="button-evaluate-verification"
+                >
+                  {evaluateVerificationMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="h-4 w-4 mr-2" />
+                  )}
+                  Evaluate Receipts
+                </Button>
+                <p className="text-xs text-muted-foreground italic">
+                  Advisory only. Does not affect run status, billing, or notifications.
+                </p>
+              </>
+            ) : (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             )}
           </CardContent>

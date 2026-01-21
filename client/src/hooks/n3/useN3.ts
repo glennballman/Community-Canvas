@@ -1151,3 +1151,92 @@ export function useCreateExecutionReceipt(runId: string, tenantId: string) {
     },
   });
 }
+
+// ============ EXECUTION VERIFICATION (ADVISORY CONFIDENCE SCORING) ============
+
+export interface VerificationSignals {
+  receipt_count: number;
+  hash_consistency_ratio: number;
+  time_alignment_ratio: number;
+  status_distribution: {
+    done: number;
+    attempted: number;
+    pending: number;
+  };
+  duplicate_payload_rate: number;
+  window_overrun: boolean;
+  coverage_ratio: number;
+}
+
+export interface ExecutionVerificationResponse {
+  run_id: string;
+  confidence_score: number;
+  confidence_band: 'low' | 'medium' | 'high';
+  signals: VerificationSignals;
+  evaluated_at: string;
+  notes: string | null;
+}
+
+export interface EvaluateVerificationResponse {
+  ok: boolean;
+  verification_id: string;
+  confidence_score: number;
+  confidence_band: 'low' | 'medium' | 'high';
+  signals: VerificationSignals;
+  evaluated_at: string;
+}
+
+/**
+ * Hook to fetch execution verification for a run.
+ * Advisory only - does not affect run status.
+ * Admin/owner only.
+ */
+export function useN3ExecutionVerification(runId: string | undefined, tenantId: string) {
+  return useQuery<ExecutionVerificationResponse>({
+    queryKey: ['/api/n3/runs', runId, 'execution-verification'],
+    queryFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-verification`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch execution verification');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+    retry: false, // Don't retry 404s
+    staleTime: 30 * 1000, // 30 seconds
+  });
+}
+
+/**
+ * Hook to evaluate/re-evaluate execution verification.
+ * Computes signals and confidence score from receipts.
+ * Admin/owner only.
+ */
+export function useEvaluateN3ExecutionVerification(runId: string, tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (notes?: string) => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify({ notes }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to evaluate execution verification');
+      }
+      return res.json() as Promise<EvaluateVerificationResponse>;
+    },
+    onSuccess: () => {
+      // Invalidate verification query
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'execution-verification'] });
+    },
+  });
+}
