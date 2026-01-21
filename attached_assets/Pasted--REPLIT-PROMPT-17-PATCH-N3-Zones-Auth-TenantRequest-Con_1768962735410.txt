@@ -1,0 +1,201 @@
+✅ REPLIT PROMPT 17-PATCH — N3 Zones: Auth + TenantRequest Context + Prompt 14 UI Compliance
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+Apply changes only to N3 zone-related routes + N3 monitor UI.
+Do NOT refactor unrelated N3 endpoints.
+
+Replace x-tenant-id header usage with canonical TenantRequest pattern.
+
+Enforce requireAuth + requireTenant middleware.
+
+Enforce owner/admin gating for any endpoint that returns pricing_modifiers or writes zone_id.
+
+Fix Prompt 14 label semantics and remove all any casts in the zone UI.
+
+Context
+
+Current N3 router uses manual header checks:
+
+const tenantId = req.headers['x-tenant-id'] as string;
+
+
+Canonical pattern elsewhere:
+
+import { requireAuth, requireTenant } from '../middleware/guards';
+import type { TenantRequest } from '../tenantContext';
+
+router.get('/', requireAuth, requireTenant, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const q = tenantReq.tenantQuery!();
+});
+
+A) Add middleware + context swap for N3 zone routes
+Target routes in server/routes/n3.ts
+
+GET /api/n3/zones
+
+PUT /api/n3/runs/:runId/zone
+
+GET /api/n3/runs/:runId/monitor (because it returns zone fields / modifiers / estimate)
+
+Step A1 — add imports
+
+At top of server/routes/n3.ts, import:
+
+requireAuth, requireTenant
+
+TenantRequest
+
+(owner/admin gate) use existing canonical helper if it exists, otherwise implement a minimal inline requireTenantAdminOrOwner for these routes only.
+
+Example expected imports:
+
+import { requireAuth, requireTenant } from '../middleware/guards';
+import type { TenantRequest } from '../tenantContext';
+
+Step A2 — exact swap inside the three handlers
+
+Replace:
+
+const tenantId = req.headers['x-tenant-id'] as string;
+if (!tenantId) return res.status(400)...
+
+
+With:
+
+const tenantReq = req as TenantRequest;
+const tenantId = tenantReq.ctx.tenant_id;
+if (!tenantId) return res.status(400).json({ error: 'Missing tenant context' });
+const q = tenantReq.tenantQuery?.();
+
+
+Then:
+
+Use tenantId from tenantReq.ctx.tenant_id
+
+Prefer q (tenant-scoped query helper) for reads/updates if available in your codebase.
+
+Step A3 — add route-level middleware
+
+Attach middleware on the route declarations (do NOT apply globally to the entire router yet):
+
+n3Router.get('/zones', requireAuth, requireTenant, requireTenantAdminOrOwner, async (...) => { ... });
+n3Router.put('/runs/:runId/zone', requireAuth, requireTenant, requireTenantAdminOrOwner, async (...) => { ... });
+n3Router.get('/runs/:runId/monitor', requireAuth, requireTenant, async (...) => { ... });
+
+
+Notes:
+
+/monitor requires auth/tenant, but doesn’t necessarily require admin.
+However, do not return pricing_modifiers unless requester is owner/admin.
+
+/zones and zone assignment must be owner/admin.
+
+Step A4 — stop leaking pricing_modifiers to non-admin
+
+In /runs/:runId/monitor:
+
+Continue including zone label fields to all authenticated tenant users.
+
+Only include:
+
+pricing_modifiers
+
+zone_pricing_estimate
+if owner/admin (or if roles/scopes include the right permission).
+
+Implement:
+
+const isAdmin = tenantReq.ctx.roles?.includes('tenant_admin') || tenantReq.ctx.roles?.includes('owner') || tenantReq.user?.isPlatformAdmin;
+
+
+(Use your actual canonical role names if they exist elsewhere—search for tenant_admin usage and match.)
+
+If not admin:
+
+set pricing_modifiers = null
+
+set zone_pricing_estimate = null
+
+B) UI fixes (Prompt 14 compliance, remove any)
+Target file: client/src/pages/n3/ServiceRunMonitorPage.tsx
+Step B1 — dropdown label must use canonical function
+
+Replace:
+
+{zone.badge_label_resident || zone.name}
+
+
+With:
+
+{getZoneBadgeLabel(
+  { id: zone.id, key: zone.key, name: zone.name, badge_label_resident: zone.badge_label_resident, badge_label_contractor: zone.badge_label_contractor, badge_label_visitor: zone.badge_label_visitor },
+  'resident'
+)}
+
+
+Or create a typed adapter once and reuse.
+
+Step B2 — remove as any for ZoneBadge and ZoneImpactSummary
+
+Create an adapter:
+
+function toZoneBadgeZone(data: MonitorDetail) {
+  return {
+    id: data.zone_id!,
+    key: data.zone_key || '',
+    name: data.zone_name || '',
+    badge_label_resident: data.badge_label_resident,
+    badge_label_contractor: data.badge_label_contractor,
+    badge_label_visitor: data.badge_label_visitor,
+  };
+}
+
+
+Use:
+
+{data?.zone_id && data?.zone_name && (
+  <ZoneBadge zone={toZoneBadgeZone(data)} viewerContext="resident" />
+)}
+
+
+For ZoneImpactSummary, pass the correct prop shape it expects (snake_case labels + pricingModifiers key as per component):
+
+{data?.zone_id && data?.zone_name && data?.pricing_modifiers && (
+  <ZoneImpactSummary
+    zone={{
+      id: data.zone_id,
+      key: data.zone_key || '',
+      name: data.zone_name,
+      badge_label_resident: data.badge_label_resident,
+      badge_label_contractor: data.badge_label_contractor,
+      badge_label_visitor: data.badge_label_visitor,
+      pricingModifiers: data.pricing_modifiers as any, // if needed, but ideally type it as ZonePricingModifiers
+    }}
+    baseEstimate={data.zone_pricing_estimate?.base_estimate ?? null}
+    viewerContext="resident"
+  />
+)}
+
+
+If ZoneImpactSummary expects pricingModifiers typed as ZonePricingModifiers, update MonitorDetail.pricing_modifiers typing to that instead of Record<string, unknown>.
+
+C) Acceptance
+
+/api/n3/zones requires auth + tenant + owner/admin
+
+/api/n3/runs/:runId/zone requires auth + tenant + owner/admin
+
+/api/n3/runs/:runId/monitor requires auth + tenant
+
+Monitor response never includes pricing_modifiers or zone_pricing_estimate unless owner/admin
+
+UI uses getZoneBadgeLabel and no longer uses any for ZoneBadge wiring
+
+No changes to legacy service runs
+
+END PROMPT 17-PATCH

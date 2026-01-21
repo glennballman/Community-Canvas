@@ -13,7 +13,7 @@
  * - GET /api/n3/status - Get monitor status
  */
 
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { 
   ccN3Runs, 
@@ -27,6 +27,37 @@ import {
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { computeZonePricingEstimate, ZonePricingModifiers } from '@shared/zonePricing';
+import { requireAuth, requireTenant } from '../middleware/guards';
+import type { TenantRequest } from '../middleware/tenantContext';
+
+/**
+ * Owner/Admin gate for zone-sensitive N3 routes
+ * Only tenant owners, admins, or platform admins can access pricing modifiers and assign zones
+ */
+function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
+  const tenantReq = req as TenantRequest;
+  const roles = tenantReq.ctx?.roles || [];
+  const isPlatformAdmin = tenantReq.user?.isPlatformAdmin === true;
+  
+  const isAdminOrOwner = roles.includes('admin') || roles.includes('owner') || isPlatformAdmin;
+  
+  if (!isAdminOrOwner) {
+    return res.status(403).json({ 
+      error: 'Owner or admin access required',
+      code: 'ADMIN_REQUIRED'
+    });
+  }
+  next();
+}
+
+/**
+ * Check if requester has admin/owner privileges (for conditional data exposure)
+ */
+function isAdminOrOwner(req: TenantRequest): boolean {
+  const roles = req.ctx?.roles || [];
+  const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+  return roles.includes('admin') || roles.includes('owner') || isPlatformAdmin;
+}
 import { 
   evaluateServiceRun, 
   saveEvaluationResult,
@@ -90,21 +121,28 @@ n3Router.get('/attention', async (req, res) => {
   }
 });
 
-n3Router.get('/runs/:runId/monitor', async (req, res) => {
+n3Router.get('/runs/:runId/monitor', requireAuth, requireTenant, async (req, res) => {
   try {
     const { runId } = req.params;
-    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
 
     const run = await db.query.ccN3Runs.findFirst({
       where: and(
         eq(ccN3Runs.id, runId),
-        tenantId ? eq(ccN3Runs.tenantId, tenantId) : undefined
+        eq(ccN3Runs.tenantId, tenantId)
       ),
     });
 
     if (!run) {
       return res.status(404).json({ error: 'Run not found' });
     }
+
+    const canSeePricing = isAdminOrOwner(tenantReq);
 
     const segments = await db.query.ccN3Segments.findMany({
       where: eq(ccN3Segments.runId, runId),
@@ -164,13 +202,15 @@ n3Router.get('/runs/:runId/monitor', async (req, res) => {
           badge_label_resident: zone.badgeLabelResident,
           badge_label_contractor: zone.badgeLabelContractor,
           badge_label_visitor: zone.badgeLabelVisitor,
-          pricing_modifiers: pricingModifiers,
+          pricing_modifiers: canSeePricing ? pricingModifiers : null,
           zone_pricing_estimate: null,
         };
 
-        const baseEstimate = (run.metadata as any)?.estimated_value;
-        if (typeof baseEstimate === 'number' && baseEstimate > 0 && pricingModifiers) {
-          zoneData.zone_pricing_estimate = computeZonePricingEstimate(baseEstimate, pricingModifiers);
+        if (canSeePricing) {
+          const baseEstimate = (run.metadata as any)?.estimated_value;
+          if (typeof baseEstimate === 'number' && baseEstimate > 0 && pricingModifiers) {
+            zoneData.zone_pricing_estimate = computeZonePricingEstimate(baseEstimate, pricingModifiers);
+          }
         }
       }
     }
@@ -192,13 +232,14 @@ n3Router.get('/runs/:runId/monitor', async (req, res) => {
   }
 });
 
-n3Router.get('/zones', async (req, res) => {
+n3Router.get('/zones', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
     const portalId = req.query.portalId as string;
 
     if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenant ID' });
+      return res.status(400).json({ error: 'Missing tenant context' });
     }
 
     if (!portalId) {
@@ -233,14 +274,15 @@ const zoneAssignmentSchema = z.object({
   zone_id: z.string().uuid().nullable(),
 });
 
-n3Router.put('/runs/:runId/zone', async (req, res) => {
+n3Router.put('/runs/:runId/zone', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
   try {
     const { runId } = req.params;
-    const tenantId = req.headers['x-tenant-id'] as string;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
     const body = zoneAssignmentSchema.parse(req.body);
 
     if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenant ID' });
+      return res.status(400).json({ error: 'Missing tenant context' });
     }
 
     const run = await db.query.ccN3Runs.findFirst({
