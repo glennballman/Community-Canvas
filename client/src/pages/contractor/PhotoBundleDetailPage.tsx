@@ -36,17 +36,14 @@ import { apiRequest } from '@/lib/queryClient';
 import { useTenant } from '@/contexts/TenantContext';
 
 interface TimelineItem {
-  mediaId: string;
+  id: string;
   stage: 'before' | 'during' | 'after';
-  timestamp: string | null;
-  orderIndex: number;
+  capturedAt: string | null;
+  lat: number | null;
+  lng: number | null;
+  url: string | null;
   qualityScore: number;
-  qualityFactors: {
-    hasTimestamp: boolean;
-    hasGeo: boolean;
-    resolution: 'low' | 'medium' | 'high';
-    fileSize: 'small' | 'medium' | 'large';
-  };
+  sortOrder: number;
 }
 
 interface ProofClaim {
@@ -71,7 +68,9 @@ interface PhotoBundle {
   timelineJson: {
     items: TimelineItem[];
     ordering: 'chronological' | 'unknown';
-    computedAt: string;
+    completeness: 'complete' | 'incomplete';
+    reasoning: string;
+    totalQualityScore: number;
   } | null;
   proofJson: {
     claims: ProofClaim[];
@@ -316,7 +315,7 @@ export default function PhotoBundleDetailPage() {
                       
                       return (
                         <div 
-                          key={item.mediaId} 
+                          key={item.id} 
                           className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
                           data-testid={`timeline-item-${index}`}
                         >
@@ -324,19 +323,19 @@ export default function PhotoBundleDetailPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 text-sm">
                               <span className="font-medium capitalize">{item.stage}</span>
-                              {item.timestamp && (
+                              {item.capturedAt && (
                                 <span className="text-muted-foreground">
-                                  {new Date(item.timestamp).toLocaleString()}
+                                  {new Date(item.capturedAt).toLocaleString()}
                                 </span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               <Progress value={item.qualityScore} className="h-1.5 w-20" />
                               <span className="text-xs text-muted-foreground">{item.qualityScore}%</span>
-                              {item.qualityFactors.hasGeo && (
+                              {item.lat !== null && item.lng !== null && (
                                 <MapPin className="h-3 w-3 text-muted-foreground" />
                               )}
-                              {item.qualityFactors.hasTimestamp && (
+                              {item.capturedAt && (
                                 <Clock className="h-3 w-3 text-muted-foreground" />
                               )}
                             </div>

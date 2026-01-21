@@ -45,21 +45,22 @@ interface BuildTimelineResult {
 
 /**
  * Computes a quality score for a media item (0-100).
+ * Weighting: timestamp (30), geo (30), resolution (20), fileSize (20)
  */
 function computeQualityScore(item: ResolvedMediaItem): number {
   let score = 0;
   
-  // +25 if capturedAt present
-  if (item.capturedAt) score += 25;
+  // +30 if capturedAt present (timestamp is critical for timeline ordering)
+  if (item.capturedAt) score += 30;
   
-  // +25 if geo present
-  if (item.lat !== null && item.lng !== null) score += 25;
+  // +30 if geo present (location verification is critical for proof)
+  if (item.lat !== null && item.lng !== null) score += 30;
   
-  // +25 if resolution available and reasonable (>= 640px width)
-  if (item.width && item.width >= 640) score += 25;
+  // +20 if resolution available and reasonable (>= 640px width)
+  if (item.width && item.width >= 640) score += 20;
   
-  // +25 if file size available (indicates real image)
-  if (item.fileSize && item.fileSize > 0) score += 25;
+  // +20 if file size available (indicates real image)
+  if (item.fileSize && item.fileSize > 0) score += 20;
   
   return score;
 }

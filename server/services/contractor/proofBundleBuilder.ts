@@ -12,13 +12,21 @@ export interface MissingItem {
   prompt: string;
   actionType: 'request_more_photos';
   stage: 'before' | 'during' | 'after';
+  priority: 'required' | 'recommended';
+}
+
+export interface ProofClaim {
+  type: string;
+  label: string;
+  evidence: string[];
 }
 
 export interface ProofJson {
-  claims: string[];
+  claims: ProofClaim[];
   missingItems: MissingItem[];
   riskFlags: string[];
   exportReady: boolean;
+  computedAt: string;
 }
 
 /**
@@ -33,7 +41,7 @@ export function buildProofJson(
   },
   timelineJson: TimelineJson
 ): ProofJson {
-  const claims: string[] = [];
+  const claims: ProofClaim[] = [];
   const missingItems: MissingItem[] = [];
   const riskFlags: string[] = [];
   
@@ -45,31 +53,60 @@ export function buildProofJson(
   const afterCount = afterIds.length;
   const duringCount = duringIds.length;
   
+  // Get IDs for evidence references
+  const beforeEvidenceIds = beforeIds.map(String);
+  const afterEvidenceIds = afterIds.map(String);
+  const duringEvidenceIds = duringIds.map(String);
+  
   // Generate claims based on what's present
   if (beforeCount > 0 && afterCount > 0) {
-    claims.push('Before/After evidence present');
+    claims.push({
+      type: 'before_after_present',
+      label: 'Before/After evidence present',
+      evidence: [...beforeEvidenceIds, ...afterEvidenceIds]
+    });
   }
   
   if (beforeCount > 0) {
-    claims.push(`${beforeCount} before photo${beforeCount > 1 ? 's' : ''} captured`);
+    claims.push({
+      type: 'before_photos',
+      label: `${beforeCount} before photo${beforeCount > 1 ? 's' : ''} captured`,
+      evidence: beforeEvidenceIds
+    });
   }
   
   if (afterCount > 0) {
-    claims.push(`${afterCount} after photo${afterCount > 1 ? 's' : ''} captured`);
+    claims.push({
+      type: 'after_photos',
+      label: `${afterCount} after photo${afterCount > 1 ? 's' : ''} captured`,
+      evidence: afterEvidenceIds
+    });
   }
   
   if (duringCount > 0) {
-    claims.push(`${duringCount} progress photo${duringCount > 1 ? 's' : ''} captured`);
+    claims.push({
+      type: 'progress_photos',
+      label: `${duringCount} progress photo${duringCount > 1 ? 's' : ''} captured`,
+      evidence: duringEvidenceIds
+    });
   }
   
   if (timelineJson.ordering === 'chronological') {
-    claims.push('Chronological ordering verified');
+    claims.push({
+      type: 'chronological_order',
+      label: 'Chronological ordering verified',
+      evidence: timelineJson.items.map(i => i.id)
+    });
   }
   
   // Check for geo presence
   const geoItems = timelineJson.items.filter(i => i.lat !== null && i.lng !== null);
   if (geoItems.length > 0) {
-    claims.push(`${geoItems.length} photos with GPS location`);
+    claims.push({
+      type: 'geo_tagged',
+      label: `${geoItems.length} photos with GPS location`,
+      evidence: geoItems.map(i => i.id)
+    });
   }
   
   // Generate missing items based on bundle type
@@ -78,7 +115,8 @@ export function buildProofJson(
       missingItems.push({
         prompt: 'Add a BEFORE photo showing initial conditions',
         actionType: 'request_more_photos',
-        stage: 'before'
+        stage: 'before',
+        priority: 'required'
       });
     }
     
@@ -86,7 +124,8 @@ export function buildProofJson(
       missingItems.push({
         prompt: 'Add an AFTER photo showing completed work',
         actionType: 'request_more_photos',
-        stage: 'after'
+        stage: 'after',
+        priority: 'required'
       });
     }
     
@@ -95,7 +134,8 @@ export function buildProofJson(
       missingItems.push({
         prompt: 'Add a wide BEFORE photo from 10 steps back for context',
         actionType: 'request_more_photos',
-        stage: 'before'
+        stage: 'before',
+        priority: 'recommended'
       });
     }
     
@@ -104,7 +144,8 @@ export function buildProofJson(
       missingItems.push({
         prompt: 'Add a wide AFTER photo from 10 steps back for context',
         actionType: 'request_more_photos',
-        stage: 'after'
+        stage: 'after',
+        priority: 'recommended'
       });
     }
   }
@@ -114,7 +155,8 @@ export function buildProofJson(
       missingItems.push({
         prompt: `Add ${3 - duringCount} more progress photo${3 - duringCount > 1 ? 's' : ''} to complete the series`,
         actionType: 'request_more_photos',
-        stage: 'during'
+        stage: 'during',
+        priority: 'required'
       });
     }
     
@@ -122,7 +164,8 @@ export function buildProofJson(
       missingItems.push({
         prompt: 'Add a BEFORE photo to establish baseline',
         actionType: 'request_more_photos',
-        stage: 'before'
+        stage: 'before',
+        priority: 'recommended'
       });
     }
     
@@ -130,7 +173,8 @@ export function buildProofJson(
       missingItems.push({
         prompt: 'Add an AFTER photo to show completion',
         actionType: 'request_more_photos',
-        stage: 'after'
+        stage: 'after',
+        priority: 'recommended'
       });
     }
   }
@@ -158,15 +202,17 @@ export function buildProofJson(
     riskFlags.push('low_quality_average');
   }
   
-  // Determine if export ready (complete, no critical missing items, no critical flags)
+  // Determine if export ready (complete, no required missing items)
+  const requiredMissing = missingItems.filter(m => m.priority === 'required').length;
   const exportReady = 
     timelineJson.completeness === 'complete' && 
-    missingItems.filter(m => m.stage === 'before' || m.stage === 'after').length === 0;
+    requiredMissing === 0;
   
   return {
     claims,
     missingItems,
     riskFlags,
-    exportReady
+    exportReady,
+    computedAt: new Date().toISOString()
   };
 }
