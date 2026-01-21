@@ -51,7 +51,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Business Operator Onboarding**: Application workflow system for registering 11 operator types, with document verification and auto-provisioning.
 - **V3 Stored Value Stack**: PSP-agnostic payment infrastructure with append-only ledgers and FORCE RLS.
 - **Coordination Circles**: Federated resource sharing between tenants.
-- **V3 App Shell (U1)**: Authoritative left navigation via `V3_NAV`.
+- **V3 App Shell (U1)**: Role-based layouts with three first-class app shells: PlatformLayout (`/app/platform/*`), FounderLayout (`/app/founder/*`), and TenantAppLayout (`/app/*`). Each has its own nav source of truth (PLATFORM_NAV, FOUNDER_NAV, V3_NAV). View mode persisted in localStorage with key `cc_view_mode`.
 - **Defensive Record Bundles**: Immutable, owner-controlled evidence packages for legal/insurance defense.
 - **Evidence Chain-of-Custody Engine**: Tamper-evident evidence bundles with immutable manifests.
 - **Insurance Claim Auto-Assembler**: Carrier-agnostic claim dossiers generated from sealed evidence.
