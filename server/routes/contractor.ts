@@ -611,4 +611,227 @@ router.get('/profile/identity', authenticateToken, async (req: Request, res: Res
   }
 });
 
+// ============================================================================
+// A2.2: Service Area & Route Intelligence Endpoints
+// ============================================================================
+
+import {
+  proposeServiceAreas,
+  confirmServiceAreas,
+  getContractorServiceAreas,
+  updateServiceAreaPublishState,
+  deactivateServiceArea,
+  ServiceAreaProposal
+} from '../services/contractorServiceAreaInference.js';
+
+/**
+ * POST /api/contractor/profile/service-areas/propose
+ * Generate service area proposals from all available signals
+ */
+router.post('/profile/service-areas/propose', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    const tenantId = req.headers['x-tenant-id'] as string;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    // Generate proposals
+    const proposals = await proposeServiceAreas(profile.id, tenantId, portalId);
+    
+    return res.json({
+      success: true,
+      proposals,
+      message: proposals.length > 0 
+        ? `Found ${proposals.length} potential service area(s)`
+        : 'No service areas detected yet. Upload more photos or job site images to help us understand where you work.'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR SERVICE AREAS] Error proposing areas:', error);
+    return res.status(500).json({ success: false, error: 'Failed to propose service areas' });
+  }
+});
+
+/**
+ * POST /api/contractor/profile/service-areas/confirm
+ * Confirm, modify, or dismiss service area proposals
+ */
+router.post('/profile/service-areas/confirm', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    const { accepted, modified, dismissed } = req.body as {
+      accepted?: Array<{ proposal: ServiceAreaProposal; is_published: boolean }>;
+      modified?: Array<{ proposal: ServiceAreaProposal; is_published: boolean }>;
+      dismissed?: string[];
+    };
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    // Combine accepted and modified proposals for confirmation
+    const toConfirm = [
+      ...(accepted || []),
+      ...(modified || [])
+    ];
+    
+    let savedIds: string[] = [];
+    if (toConfirm.length > 0) {
+      savedIds = await confirmServiceAreas(profile.id, toConfirm);
+    }
+    
+    return res.json({
+      success: true,
+      saved_area_ids: savedIds,
+      accepted_count: (accepted || []).length,
+      modified_count: (modified || []).length,
+      dismissed_count: (dismissed || []).length,
+      message: 'Service areas updated successfully'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR SERVICE AREAS] Error confirming areas:', error);
+    return res.status(500).json({ success: false, error: 'Failed to confirm service areas' });
+  }
+});
+
+/**
+ * POST /api/contractor/profile/service-areas/dismiss
+ * Dismiss all service area proposals without saving
+ */
+router.post('/profile/service-areas/dismiss', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    return res.json({
+      success: true,
+      message: 'Service area setup skipped. You can set this up later in settings.'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR SERVICE AREAS] Error dismissing areas:', error);
+    return res.status(500).json({ success: false, error: 'Failed to dismiss service areas' });
+  }
+});
+
+/**
+ * GET /api/contractor/profile/service-areas
+ * Get all confirmed service areas for the contractor
+ */
+router.get('/profile/service-areas', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const portalId = req.headers['x-portal-id'] as string;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    // Get contractor profile
+    const profile = await db.query.ccContractorProfiles.findFirst({
+      where: and(
+        eq(ccContractorProfiles.userId, userId),
+        eq(ccContractorProfiles.portalId, portalId)
+      )
+    });
+    
+    if (!profile) {
+      return res.status(404).json({ success: false, error: 'Contractor profile not found' });
+    }
+    
+    const areas = await getContractorServiceAreas(profile.id);
+    
+    return res.json({
+      success: true,
+      service_areas: areas
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR SERVICE AREAS] Error fetching areas:', error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch service areas' });
+  }
+});
+
+/**
+ * PATCH /api/contractor/profile/service-areas/:id/publish
+ * Update publish state for a service area
+ */
+router.patch('/profile/service-areas/:id/publish', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { id } = req.params;
+    const { is_published } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    await updateServiceAreaPublishState(id, is_published);
+    
+    return res.json({
+      success: true,
+      message: is_published 
+        ? 'Service area is now visible to the community'
+        : 'Service area is now private'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR SERVICE AREAS] Error updating publish state:', error);
+    return res.status(500).json({ success: false, error: 'Failed to update publish state' });
+  }
+});
+
+/**
+ * DELETE /api/contractor/profile/service-areas/:id
+ * Deactivate (soft delete) a service area
+ */
+router.delete('/profile/service-areas/:id', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { id } = req.params;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    
+    await deactivateServiceArea(id);
+    
+    return res.json({
+      success: true,
+      message: 'Service area removed'
+    });
+  } catch (error) {
+    console.error('[CONTRACTOR SERVICE AREAS] Error deactivating area:', error);
+    return res.status(500).json({ success: false, error: 'Failed to remove service area' });
+  }
+});
+
 export default router;
