@@ -39,6 +39,7 @@ import {
   ChevronDown,
   ChevronUp,
   UserCheck,
+  Flag,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -1701,9 +1702,15 @@ export default function ServiceRunMonitorPage() {
                   }
                   data-testid="badge-attestation-assessment"
                 >
-                  {attestationData.assessment === 'acceptable' && '✅ Acceptable'}
-                  {attestationData.assessment === 'questionable' && '⚠️ Questionable'}
-                  {attestationData.assessment === 'requires_follow_up' && '🚩 Requires Follow-Up'}
+                  {attestationData.assessment === 'acceptable' && (
+                    <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Acceptable</span>
+                  )}
+                  {attestationData.assessment === 'questionable' && (
+                    <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Questionable</span>
+                  )}
+                  {attestationData.assessment === 'requires_follow_up' && (
+                    <span className="flex items-center gap-1"><Flag className="h-3 w-3" /> Requires Follow-Up</span>
+                  )}
                 </Badge>
               )}
             </div>
@@ -1749,9 +1756,9 @@ export default function ServiceRunMonitorPage() {
                       className="w-full p-2 border rounded-md bg-background"
                       data-testid="select-attestation-assessment"
                     >
-                      <option value="acceptable">✅ Acceptable</option>
-                      <option value="questionable">⚠️ Questionable</option>
-                      <option value="requires_follow_up">🚩 Requires Follow-Up</option>
+                      <option value="acceptable">Acceptable - No concerns identified</option>
+                      <option value="questionable">Questionable - Warrants attention</option>
+                      <option value="requires_follow_up">Requires Follow-Up - Action needed</option>
                     </select>
                   </div>
                   
