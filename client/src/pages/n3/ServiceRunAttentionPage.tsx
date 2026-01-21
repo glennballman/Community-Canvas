@@ -303,77 +303,79 @@ export default function ServiceRunAttentionPage() {
         </CardHeader>
       </Card>
 
-      <Card data-testid="card-zone-heat">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Flame className="h-4 w-4 text-orange-500" />
-              Zone Heat
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Window:</span>
-              <Select
-                value={windowDays.toString()}
-                onValueChange={(v) => setWindowDays(parseInt(v, 10))}
-              >
-                <SelectTrigger className="w-[100px]" data-testid="select-window-days">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7" data-testid="option-window-7">7 days</SelectItem>
-                  <SelectItem value="14" data-testid="option-window-14">14 days</SelectItem>
-                  <SelectItem value="30" data-testid="option-window-30">30 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Total attention:</span>
-              <Badge variant="outline" data-testid="text-total-attention">
-                {heatData?.rollups?.total_attention_bundles || 0}
-              </Badge>
-            </div>
-            {(heatData?.rollups?.unzoned_attention_bundles || 0) > 0 && (
+      {!selectedZoneId && (
+        <Card data-testid="card-zone-heat">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Flame className="h-4 w-4 text-orange-500" />
+                Zone Heat
+              </CardTitle>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Unzoned:</span>
-                <Badge 
-                  variant="secondary" 
-                  className="text-amber-600 dark:text-amber-400"
-                  data-testid="text-unzoned-attention"
+                <span className="text-sm text-muted-foreground">Window:</span>
+                <Select
+                  value={windowDays.toString()}
+                  onValueChange={(v) => setWindowDays(parseInt(v, 10))}
                 >
-                  {heatData?.rollups?.unzoned_attention_bundles}
+                  <SelectTrigger className="w-[100px]" data-testid="select-window-days">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7" data-testid="option-window-7">7 days</SelectItem>
+                    <SelectItem value="14" data-testid="option-window-14">14 days</SelectItem>
+                    <SelectItem value="30" data-testid="option-window-30">30 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Total attention:</span>
+                <Badge variant="outline" data-testid="text-total-attention">
+                  {heatData?.rollups?.total_attention_bundles || 0}
                 </Badge>
               </div>
-            )}
-          </div>
-
-          {hotZones.length > 0 && (
-            <div className="space-y-1">
-              <h4 className="text-sm font-medium text-muted-foreground">Hot Zones</h4>
-              <div className="space-y-0">
-                {hotZones.map((zone) => (
-                  <ZoneHeatRow
-                    key={zone.zone_id || 'unzoned'}
-                    zone={zone}
-                    count={zone.attention_bundles_count}
-                    maxCount={maxHeatCount}
-                    label="attention"
-                  />
-                ))}
-              </div>
+              {(heatData?.rollups?.unzoned_attention_bundles || 0) > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Unzoned:</span>
+                  <Badge 
+                    variant="secondary" 
+                    className="text-amber-600 dark:text-amber-400"
+                    data-testid="text-unzoned-attention"
+                  >
+                    {heatData?.rollups?.unzoned_attention_bundles}
+                  </Badge>
+                </div>
+              )}
             </div>
-          )}
 
-          {hotZones.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-2">
-              No zone activity in the last {windowDays} days.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            {hotZones.length > 0 && (
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-muted-foreground">Hot Zones</h4>
+                <div className="space-y-0">
+                  {hotZones.map((zone) => (
+                    <ZoneHeatRow
+                      key={zone.zone_id || 'unzoned'}
+                      zone={zone}
+                      count={zone.attention_bundles_count}
+                      maxCount={maxHeatCount}
+                      label="attention"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {hotZones.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                No zone activity in the last {windowDays} days.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {unzonedCount > 0 && !selectedZoneId && (
         <Card className="border-amber-500/50 bg-amber-500/5">
