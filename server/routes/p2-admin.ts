@@ -785,10 +785,11 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
     const workRequestsTotal = parseInt(workRequestsCountResult.rows[0]?.total || '0', 10);
 
     // Get recent work requests for this portal (limited to 50, ordered deterministically)
-    // Include zone info for zone badge display
+    // Include zone info for zone badge display with badge labels for context-aware display
     const workRequestsResult = await pool.query(`
       SELECT mr.id, mr.title, mr.status, mr.created_at, mr.property_id, mr.assigned_contractor_person_id,
-             mr.zone_id, z.name as zone_name, z.key as zone_key
+             mr.zone_id, z.name as zone_name, z.key as zone_key,
+             z.badge_label_resident, z.badge_label_contractor, z.badge_label_visitor
       FROM cc_maintenance_requests mr
       LEFT JOIN cc_zones z ON mr.zone_id = z.id
       WHERE mr.portal_id = $1
@@ -805,6 +806,9 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
       zoneId: wr.zone_id,
       zoneName: wr.zone_name,
       zoneKey: wr.zone_key,
+      badgeLabelResident: wr.badge_label_resident,
+      badgeLabelContractor: wr.badge_label_contractor,
+      badgeLabelVisitor: wr.badge_label_visitor,
       assignedContractorPersonId: wr.assigned_contractor_person_id,
     }));
 

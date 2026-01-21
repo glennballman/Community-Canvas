@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { ZoneBadge } from '@/components/ZoneBadge';
 
 interface QaData {
   ok: boolean;
@@ -60,6 +61,9 @@ interface QaData {
     zoneId: string | null;
     zoneName: string | null;
     zoneKey: string | null;
+    badgeLabelResident: string | null;
+    badgeLabelContractor: string | null;
+    badgeLabelVisitor: string | null;
   }>;
   workRequestsTotal: number;
 }
@@ -456,6 +460,9 @@ interface WorkRequest {
   zoneId: string | null;
   zoneName: string | null;
   zoneKey: string | null;
+  badgeLabelResident: string | null;
+  badgeLabelContractor: string | null;
+  badgeLabelVisitor: string | null;
 }
 
 function WorkRequestsCard({ 
@@ -536,10 +543,20 @@ function WorkRequestsCard({
                       {wr.title || `Work Request ${wr.id.slice(0, 8).toUpperCase()}`}
                     </span>
                     <StatusBadge status={wr.status} />
-                    {wr.zoneName ? (
-                      <Badge variant="outline" className="text-xs" data-testid={`badge-zone-${wr.id.slice(0, 8)}`}>
-                        {wr.zoneName}
-                      </Badge>
+                    {wr.zoneId && wr.zoneKey ? (
+                      <ZoneBadge 
+                        zone={{
+                          id: wr.zoneId,
+                          key: wr.zoneKey,
+                          name: wr.zoneName || wr.zoneKey,
+                          badge_label_resident: wr.badgeLabelResident,
+                          badge_label_contractor: wr.badgeLabelContractor,
+                          badge_label_visitor: wr.badgeLabelVisitor,
+                        }}
+                        viewerContext="resident"
+                        variant="outline"
+                        className="text-xs"
+                      />
                     ) : (
                       <Badge variant="outline" className="text-xs text-muted-foreground" data-testid={`badge-unzoned-${wr.id.slice(0, 8)}`}>
                         Unzoned
