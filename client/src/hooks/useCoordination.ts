@@ -304,3 +304,59 @@ export function useSuggestCoordinationWindows() {
     },
   });
 }
+
+// =====================================
+// Draft N3 Service Run from Window (Prompt 25)
+// =====================================
+
+export interface DraftFromWindowParams {
+  portal_id: string;
+  zone_id?: string | null;
+  category?: string | null;
+  starts_at: string;
+  ends_at: string;
+  coordination_metrics: {
+    coord_ready_count: number;
+    total_active_count: number;
+    readiness_ratio: number;
+    confidence_score: number;
+    window_source: 'suggested';
+    parameters: {
+      lookahead_days: number;
+      window_size_days: number;
+      desired_windows: number;
+    };
+  };
+}
+
+export interface DraftFromWindowResponse {
+  success: boolean;
+  run_id: string;
+  status: 'draft';
+  redirect: string;
+}
+
+/**
+ * Hook for creating a draft N3 Service Run from suggested window.
+ * Admin/owner only. Explicit action, auditable, reversible.
+ */
+export function useCreateDraftRunFromWindow() {
+  return useMutation<DraftFromWindowResponse, Error, DraftFromWindowParams>({
+    mutationFn: async (params) => {
+      const res = await apiRequest(
+        'POST',
+        '/api/n3/runs/draft-from-window',
+        params
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to create draft run');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/attention'] });
+    },
+  });
+}
