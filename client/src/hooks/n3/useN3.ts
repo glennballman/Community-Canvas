@@ -35,7 +35,19 @@ export interface N3Run {
   status: string;
   startsAt: string | null;
   endsAt: string | null;
+  portal_id: string | null;
+  zone_id: string | null;
   metadata: Record<string, unknown>;
+}
+
+export interface N3Zone {
+  id: string;
+  key: string;
+  name: string;
+  badge_label_resident: string | null;
+  badge_label_contractor: string | null;
+  badge_label_visitor: string | null;
+  pricing_modifiers: Record<string, unknown> | null;
 }
 
 export interface MonitorState {
@@ -93,11 +105,32 @@ export interface ReplanBundle extends AttentionBundle {
   options: ReplanOption[];
 }
 
+export interface ZonePricingEstimate {
+  base_estimate: number;
+  zone_modifier_breakdown: Array<{
+    type: 'multiplier' | 'flat';
+    key: string;
+    label: string;
+    value: number;
+    effect: number;
+  }>;
+  final_estimate: number;
+  notes: string[];
+}
+
 export interface MonitorDetail {
   run: N3Run;
   segments: N3Segment[];
   monitorState: MonitorState | null;
   bundles: ReplanBundle[];
+  zone_id: string | null;
+  zone_name: string | null;
+  zone_key: string | null;
+  badge_label_resident: string | null;
+  badge_label_contractor: string | null;
+  badge_label_visitor: string | null;
+  pricing_modifiers: Record<string, unknown> | null;
+  zone_pricing_estimate: ZonePricingEstimate | null;
 }
 
 export interface MonitorStatus {
@@ -212,5 +245,45 @@ export function useN3TriggerEvaluation(tenantId: string) {
 export function useN3Status() {
   return useQuery<MonitorStatus>({
     queryKey: ['/api/n3/status'],
+  });
+}
+
+export function useN3Zones(portalId: string | null, tenantId: string) {
+  return useQuery<{ zones: N3Zone[] }>({
+    queryKey: ['/api/n3/zones', portalId],
+    queryFn: async () => {
+      if (!portalId) return { zones: [] };
+      const res = await fetch(`/api/n3/zones?portalId=${portalId}`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) throw new Error('Failed to fetch zones');
+      return res.json();
+    },
+    enabled: !!portalId && !!tenantId,
+  });
+}
+
+export function useN3AssignZone(tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ runId, zoneId }: { runId: string; zoneId: string | null }) => {
+      const res = await fetch(`/api/n3/runs/${runId}/zone`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId 
+        },
+        body: JSON.stringify({ zone_id: zoneId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to assign zone');
+      }
+      return res.json();
+    },
+    onSuccess: (_, { runId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
+    },
   });
 }
