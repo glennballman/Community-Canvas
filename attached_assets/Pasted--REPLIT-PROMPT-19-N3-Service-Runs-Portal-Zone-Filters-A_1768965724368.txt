@@ -1,0 +1,272 @@
+✅ REPLIT PROMPT 19 — N3 Service Runs: Portal/Zone Filters + Attention Queue Grouping (Ops Throughput)
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+N3 (cc_n3_runs) is the only Service Runs spine.
+
+Do not touch legacy service runs (cc_service_runs, p2-service-runs.ts, legacy UI).
+
+No billing/ledger/folio/payment changes.
+
+Zone pricing modifiers remain advisory only.
+
+Contractors must never see pricing_modifiers or zone impact summaries.
+
+Respect sovereign portal scoping: filter and grouping must be portal-safe and tenant-safe.
+
+GOAL
+
+Improve operator throughput by adding:
+
+Portal + Zone filtering for N3 runs list and attention queue
+
+Zone-aware grouping in the attention queue UI, using Prompt 14 label logic
+
+“Unzoned” visibility so missing zone assignments become obvious
+
+Deliverables:
+
+Backend: filterable endpoints + filter option endpoint
+
+Frontend: filter controls + grouping display
+
+No refactors; additive and compatible
+
+PART A — Backend (server/routes/n3.ts)
+A1) Extend GET /api/n3/runs with filters
+
+Add optional query params:
+
+portalId?: string
+
+zoneId?: string where special values allowed:
+
+zoneId=none means zone_id IS NULL
+
+Behavior:
+
+Always tenant-scoped using authenticated TenantRequest context (tenantReq.ctx.tenant_id)
+
+If portalId provided, include only runs with portal_id = portalId
+
+If zoneId provided:
+
+if zoneId === 'none' -> filter zone_id IS NULL
+
+else filter zone_id = zoneId
+
+Return shape (additive):
+
+include existing fields
+
+also include:
+
+portal_id
+
+zone_id
+
+zone_name (LEFT JOIN cc_zones)
+
+zone_key
+
+badge_label_resident, badge_label_contractor, badge_label_visitor (from zones)
+
+IMPORTANT: do NOT include pricing_modifiers in list endpoints unless strictly needed (not needed for Prompt 19).
+
+A2) Add filter options endpoint
+
+Add:
+
+GET /api/n3/filters
+
+Returns:
+
+portals visible to tenant (tenant-scoped)
+
+zones for a selected portal OR return zones grouped by portal
+
+Choose one implementation (prefer simplest):
+
+If request includes portalId, return zones for that portal
+
+Always return portals list
+
+Payload example:
+
+{
+  portals: Array<{ id: string; name: string; slug?: string | null }>;
+  zones: Array<{ id: string; portal_id: string; key: string; name: string; badge_label_resident: string | null; badge_label_contractor: string | null; badge_label_visitor: string | null }>;
+}
+
+
+No pricing modifiers in this endpoint.
+
+A3) Extend GET /api/n3/attention with same filters
+
+Add optional query params:
+
+portalId?: string
+
+zoneId?: string | 'none'
+
+Behavior:
+
+The attention queue should only return bundles belonging to runs matching the filters.
+
+Implement by joining bundle → run, then applying portal/zone filters at the run level.
+
+Return items should include:
+
+runId, runName, startsAt, status, etc (existing)
+
+plus:
+
+portal_id
+
+zone_id
+
+zone badge label fields (resident label is used in UI)
+
+Do NOT include pricing modifiers.
+
+PART B — Frontend (N3 UI)
+B1) Add filter controls to N3 Runs list page
+
+Find the page that renders the list of runs (likely in N3 monitor navigation). If there isn’t a dedicated list page, add filters to the Attention page first (B2) and optionally to wherever /api/n3/runs is rendered.
+
+Add two dropdowns:
+
+Portal: “All portals” + portal options
+
+Zone: depends on selected portal:
+
+“All zones”
+
+“Unzoned”
+
+zones for portal (label via Prompt 14 logic)
+
+Filter behavior:
+
+Selecting a portal updates zone options
+
+If portal changes, reset zone to “All zones”
+
+Filters update query keys and refetch
+
+B2) Zone-aware grouping on ServiceRunAttentionPage.tsx
+
+In client/src/pages/n3/ServiceRunAttentionPage.tsx:
+
+Group attention bundles by:
+
+Zone (if zone_id exists)
+
+else “Unzoned”
+
+Group headers should show:
+
+A zone badge label computed using Prompt 14 fallback chain:
+
+use getZoneBadgeLabel(zoneLike, 'resident')
+
+If only zone name/key available, still follow fallback rules.
+
+Implementation approach:
+
+Build a “zone display model” from each attention item:
+
+{
+  zone_id,
+  zone_key,
+  zone_name,
+  badge_label_resident,
+  badge_label_contractor,
+  badge_label_visitor
+}
+
+
+Group key:
+
+zone:${zone_id} when zone_id exists
+
+zone:none otherwise
+
+Render group sections with counts
+
+Under each group:
+
+render the existing bundle cards unchanged
+
+B3) Add a lightweight “Unzoned” callout
+
+If any attention bundles are in “Unzoned”:
+
+render a small warning/info block:
+
+“Some runs are unzoned. Assign a zone for better logistics + estimate accuracy.”
+
+This is operational language only; do not mention charges.
+
+PART C — Hooks (client/src/hooks/n3/useN3.ts)
+C1) Add useN3Filters()
+
+Create a hook:
+
+useN3Filters(tenantId: string, portalId?: string | null)
+
+Calls:
+
+GET /api/n3/filters (with optional portalId param)
+
+C2) Update useN3Runs() and useN3Attention() to accept filters
+
+Add optional args: { portalId?: string | null; zoneId?: string | null }
+
+Include filters in query key
+
+Append query params to fetch URL
+
+PART D — Acceptance Criteria / QA
+
+Runs list:
+
+Filtering by portal narrows results ✅
+
+Filtering by zone narrows results ✅
+
+ZoneId=none shows unzoned runs ✅
+
+Attention queue:
+
+Same filters apply ✅
+
+Bundles grouped by zone ✅
+
+Unzoned group appears when relevant ✅
+
+Label correctness:
+
+Zone labels use Prompt 14 fallback chain (resident label → name → key) ✅
+
+No any casts for ZoneBadge wiring ✅
+
+Security:
+
+No pricing_modifiers exposed in list/filters/attention payloads ✅
+
+Tenant scoping enforced via TenantRequest context ✅
+
+DELIVERABLES
+
+Backend: filterable /runs and /attention + /filters
+
+Frontend: portal/zone filter controls + attention grouping
+
+Hooks: updated query hooks
+
+QA steps documented in comments or PR notes
+
+END PROMPT 19

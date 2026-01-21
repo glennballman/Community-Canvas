@@ -25,7 +25,7 @@ import {
   ccZones,
   ccPortals
 } from '@shared/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { computeZonePricingEstimate, ZonePricingModifiers } from '@shared/zonePricing';
 import { requireAuth, requireTenant } from '../middleware/guards';
@@ -76,20 +76,116 @@ import {
 
 export const n3Router = Router();
 
-// List all runs for a tenant
+/**
+ * GET /api/n3/filters - Get filter options (portals and zones)
+ * Returns portals for the tenant and zones (optionally filtered by portalId)
+ */
+n3Router.get('/filters', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const { portalId } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+
+    // Get all portals for the tenant
+    const portals = await db
+      .select({
+        id: ccPortals.id,
+        name: ccPortals.name,
+        slug: ccPortals.slug,
+      })
+      .from(ccPortals)
+      .where(eq(ccPortals.owningTenantId, tenantId))
+      .orderBy(ccPortals.name);
+
+    // Get zones - if portalId provided, filter by it; otherwise get all tenant zones
+    let zonesQuery = db
+      .select({
+        id: ccZones.id,
+        portal_id: ccZones.portalId,
+        key: ccZones.key,
+        name: ccZones.name,
+        badge_label_resident: ccZones.badgeLabelResident,
+        badge_label_contractor: ccZones.badgeLabelContractor,
+        badge_label_visitor: ccZones.badgeLabelVisitor,
+      })
+      .from(ccZones)
+      .orderBy(ccZones.name);
+
+    let zones;
+    if (portalId && typeof portalId === 'string') {
+      zones = await zonesQuery.where(
+        and(
+          eq(ccZones.tenantId, tenantId),
+          eq(ccZones.portalId, portalId)
+        )
+      );
+    } else {
+      zones = await zonesQuery.where(eq(ccZones.tenantId, tenantId));
+    }
+
+    res.json({ portals, zones });
+  } catch (err) {
+    console.error('[N3 API] Error fetching filters:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/runs - List all runs for a tenant with optional filters
+ * Query params:
+ *   - portalId?: string - Filter by portal
+ *   - zoneId?: string | 'none' - Filter by zone (use 'none' for unzoned runs)
+ */
 n3Router.get('/runs', requireAuth, requireTenant, async (req, res) => {
   try {
     const tenantReq = req as TenantRequest;
     const tenantId = tenantReq.ctx.tenant_id;
+    const { portalId, zoneId } = req.query;
     
     if (!tenantId) {
       return res.status(400).json({ error: 'Missing tenant context' });
     }
 
+    // Build query with LEFT JOIN to zones for zone metadata
     const runs = await db
-      .select()
+      .select({
+        id: ccN3Runs.id,
+        tenantId: ccN3Runs.tenantId,
+        name: ccN3Runs.name,
+        description: ccN3Runs.description,
+        status: ccN3Runs.status,
+        startsAt: ccN3Runs.startsAt,
+        endsAt: ccN3Runs.endsAt,
+        metadata: ccN3Runs.metadata,
+        portal_id: ccN3Runs.portalId,
+        zone_id: ccN3Runs.zoneId,
+        zone_name: ccZones.name,
+        zone_key: ccZones.key,
+        badge_label_resident: ccZones.badgeLabelResident,
+        badge_label_contractor: ccZones.badgeLabelContractor,
+        badge_label_visitor: ccZones.badgeLabelVisitor,
+      })
       .from(ccN3Runs)
-      .where(eq(ccN3Runs.tenantId, tenantId))
+      .leftJoin(ccZones, eq(ccN3Runs.zoneId, ccZones.id))
+      .where(
+        and(
+          eq(ccN3Runs.tenantId, tenantId),
+          // Portal filter
+          portalId && typeof portalId === 'string' 
+            ? eq(ccN3Runs.portalId, portalId) 
+            : undefined,
+          // Zone filter
+          zoneId === 'none'
+            ? isNull(ccN3Runs.zoneId)
+            : (zoneId && typeof zoneId === 'string' 
+                ? eq(ccN3Runs.zoneId, zoneId) 
+                : undefined)
+        )
+      )
       .orderBy(desc(ccN3Runs.startsAt))
       .limit(50);
 
@@ -100,10 +196,17 @@ n3Router.get('/runs', requireAuth, requireTenant, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/n3/attention - Get attention queue with optional filters
+ * Query params:
+ *   - portalId?: string - Filter by portal
+ *   - zoneId?: string | 'none' - Filter by zone (use 'none' for unzoned runs)
+ */
 n3Router.get('/attention', requireAuth, requireTenant, async (req, res) => {
   try {
     const tenantReq = req as TenantRequest;
     const tenantId = tenantReq.ctx.tenant_id;
+    const { portalId, zoneId } = req.query;
     
     if (!tenantId) {
       return res.status(400).json({ error: 'Missing tenant context' });
@@ -120,10 +223,32 @@ n3Router.get('/attention', requireAuth, requireTenant, async (req, res) => {
         summary: ccReplanBundles.summary,
         riskDelta: ccReplanBundles.riskDelta,
         createdAt: ccReplanBundles.createdAt,
+        portal_id: ccN3Runs.portalId,
+        zone_id: ccN3Runs.zoneId,
+        zone_name: ccZones.name,
+        zone_key: ccZones.key,
+        badge_label_resident: ccZones.badgeLabelResident,
+        badge_label_contractor: ccZones.badgeLabelContractor,
+        badge_label_visitor: ccZones.badgeLabelVisitor,
       })
       .from(ccReplanBundles)
       .innerJoin(ccN3Runs, eq(ccReplanBundles.runId, ccN3Runs.id))
-      .where(eq(ccReplanBundles.tenantId, tenantId))
+      .leftJoin(ccZones, eq(ccN3Runs.zoneId, ccZones.id))
+      .where(
+        and(
+          eq(ccReplanBundles.tenantId, tenantId),
+          // Portal filter at run level
+          portalId && typeof portalId === 'string' 
+            ? eq(ccN3Runs.portalId, portalId) 
+            : undefined,
+          // Zone filter at run level
+          zoneId === 'none'
+            ? isNull(ccN3Runs.zoneId)
+            : (zoneId && typeof zoneId === 'string' 
+                ? eq(ccN3Runs.zoneId, zoneId) 
+                : undefined)
+        )
+      )
       .orderBy(desc(ccReplanBundles.createdAt))
       .limit(100);
 
