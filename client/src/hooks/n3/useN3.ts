@@ -1240,3 +1240,68 @@ export function useEvaluateN3ExecutionVerification(runId: string, tenantId: stri
     },
   });
 }
+
+// ============ N3 EXECUTION ATTESTATIONS (PROMPT 36) ============
+// Human-in-the-loop advisory assessment hooks
+// Advisory only - does not approve execution, billing, or outcomes
+
+interface AttestationResponse {
+  run_id: string;
+  assessment: 'acceptable' | 'questionable' | 'requires_follow_up';
+  rationale: string | null;
+  attested_by: string;
+  attested_at: string;
+  based_on_verification_id: string;
+  based_on_contract_id: string;
+}
+
+export function useN3ExecutionAttestation(runId: string | undefined, tenantId: string) {
+  return useQuery({
+    queryKey: ['/api/n3/runs', runId, 'attestation'],
+    queryFn: async () => {
+      if (!runId) return null;
+      const res = await fetch(`/api/n3/runs/${runId}/attestation`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error('Failed to fetch attestation');
+      }
+      return res.json() as Promise<AttestationResponse>;
+    },
+    enabled: !!runId,
+    staleTime: 30000,
+    retry: false,
+  });
+}
+
+interface CreateAttestationInput {
+  assessment: 'acceptable' | 'questionable' | 'requires_follow_up';
+  rationale?: string;
+}
+
+export function useCreateN3ExecutionAttestation(runId: string, tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (input: CreateAttestationInput) => {
+      const res = await fetch(`/api/n3/runs/${runId}/attestation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create attestation');
+      }
+      return res.json() as Promise<AttestationResponse>;
+    },
+    onSuccess: () => {
+      // Invalidate attestation query
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'attestation'] });
+    },
+  });
+}

@@ -38,6 +38,7 @@ import {
   ScrollText,
   ChevronDown,
   ChevronUp,
+  UserCheck,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -66,6 +67,8 @@ import {
   useN3ExecutionReceipts,
   useN3ExecutionVerification,
   useEvaluateN3ExecutionVerification,
+  useN3ExecutionAttestation,
+  useCreateN3ExecutionAttestation,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -202,6 +205,16 @@ export default function ServiceRunMonitorPage() {
   const evaluateVerificationMutation = useEvaluateN3ExecutionVerification(runId || '', TEST_TENANT_ID);
   const [verificationNote, setVerificationNote] = useState('');
   const [showSignals, setShowSignals] = useState(false);
+  
+  // Execution Attestation (Prompt 36) - Only fetch if verification exists
+  const hasVerification = verificationData && !verificationNotFound;
+  const { data: attestationData } = useN3ExecutionAttestation(
+    hasVerification ? runId : undefined,
+    TEST_TENANT_ID
+  );
+  const createAttestationMutation = useCreateN3ExecutionAttestation(runId || '', TEST_TENANT_ID);
+  const [attestationAssessment, setAttestationAssessment] = useState<'acceptable' | 'questionable' | 'requires_follow_up'>('acceptable');
+  const [attestationRationale, setAttestationRationale] = useState('');
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -1662,6 +1675,137 @@ export default function ServiceRunMonitorPage() {
               <div className="flex justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Execution Attestation Card (Prompt 36) - Human-in-the-loop advisory */}
+      {contractData && hasVerification && (
+        <Card data-testid="card-execution-attestation">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-muted-foreground" />
+                Operator Attestation
+              </CardTitle>
+              {attestationData && (
+                <Badge 
+                  variant="outline" 
+                  className={
+                    attestationData.assessment === 'acceptable' 
+                      ? 'text-green-600 border-green-600 dark:text-green-400 dark:border-green-400'
+                      : attestationData.assessment === 'questionable'
+                      ? 'text-amber-600 border-amber-600 dark:text-amber-400 dark:border-amber-400'
+                      : 'text-gray-600 border-gray-600 dark:text-gray-400 dark:border-gray-400'
+                  }
+                  data-testid="badge-attestation-assessment"
+                >
+                  {attestationData.assessment === 'acceptable' && '✅ Acceptable'}
+                  {attestationData.assessment === 'questionable' && '⚠️ Questionable'}
+                  {attestationData.assessment === 'requires_follow_up' && '🚩 Requires Follow-Up'}
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {attestationData ? (
+              <>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">This attestation is immutable.</span>
+                  </div>
+                  
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Attested: </span>
+                    <span>{format(new Date(attestationData.attested_at), 'PPpp')}</span>
+                  </div>
+                  
+                  {attestationData.rationale && (
+                    <div className="border rounded-md p-3 bg-muted/30">
+                      <div className="text-xs text-muted-foreground mb-1">Operator Rationale</div>
+                      <p className="text-sm">{attestationData.rationale}</p>
+                    </div>
+                  )}
+                </div>
+                
+                <p className="text-xs text-muted-foreground italic pt-2 border-t">
+                  This is a human advisory assessment. It does not approve execution, billing, or outcomes.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Record your assessment of this service run based on the verification signals.
+                </p>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Assessment</label>
+                    <select
+                      value={attestationAssessment}
+                      onChange={(e) => setAttestationAssessment(e.target.value as typeof attestationAssessment)}
+                      className="w-full p-2 border rounded-md bg-background"
+                      data-testid="select-attestation-assessment"
+                    >
+                      <option value="acceptable">✅ Acceptable</option>
+                      <option value="questionable">⚠️ Questionable</option>
+                      <option value="requires_follow_up">🚩 Requires Follow-Up</option>
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Rationale (optional, 500 chars max)</label>
+                    <Textarea
+                      placeholder="Explain your assessment..."
+                      value={attestationRationale}
+                      onChange={(e) => setAttestationRationale(e.target.value.slice(0, 500))}
+                      maxLength={500}
+                      className="resize-none"
+                      data-testid="input-attestation-rationale"
+                    />
+                    <p className="text-xs text-muted-foreground text-right">
+                      {attestationRationale.length}/500
+                    </p>
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={async () => {
+                    try {
+                      await createAttestationMutation.mutateAsync({
+                        assessment: attestationAssessment,
+                        rationale: attestationRationale || undefined,
+                      });
+                      toast({
+                        title: 'Attestation recorded',
+                        description: 'Your assessment has been recorded and is now immutable.',
+                      });
+                      setAttestationRationale('');
+                    } catch (err: any) {
+                      toast({
+                        title: 'Failed to record attestation',
+                        description: err.message,
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  disabled={createAttestationMutation.isPending}
+                  data-testid="button-record-attestation"
+                >
+                  {createAttestationMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <UserCheck className="h-4 w-4 mr-2" />
+                  )}
+                  Record Attestation
+                </Button>
+                
+                <p className="text-xs text-muted-foreground italic">
+                  This is a human advisory assessment. It does not approve execution, billing, or outcomes.
+                </p>
+              </>
             )}
           </CardContent>
         </Card>

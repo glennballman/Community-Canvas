@@ -3870,7 +3870,7 @@ n3Router.post('/runs/:runId/attestation', requireAuth, requireTenant, requireTen
   const tenantReq = req as TenantRequest;
   const { runId } = req.params;
   const tenantId = tenantReq.ctx.tenant_id;
-  const userId = tenantReq.ctx.user_id;
+  const userId = tenantReq.user?.id;
   
   try {
     if (!tenantId || !userId) {
