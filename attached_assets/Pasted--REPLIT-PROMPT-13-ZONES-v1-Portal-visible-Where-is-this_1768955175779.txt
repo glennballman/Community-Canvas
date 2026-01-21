@@ -1,0 +1,93 @@
+✅ REPLIT PROMPT 13 — ZONES v1 (Portal-visible “Where is this work?”)
+
+Minimal schema + maximal value. No Bamfield special casing.
+
+What this delivers
+
+A tenant can define Zones (East Bamfield, West Bamfield, Anacla, Pachena, Helby Island, etc.)
+
+Zones are visible in both Community and Contractor contexts
+
+Work Requests and Properties can be tagged with zone_id
+
+Portal QA Launchpad can show “Work Requests by Zone”
+
+Paste verbatim:
+
+Implement Zones v1: first-class zones scoped to a portal and usable across Work Requests and Properties.
+
+Rules:
+- No geography assumptions (works everywhere).
+- No special casing Bamfield.
+- Terminology: "Work Request" (maintenance) not "job" (employment).
+
+A) Migration: add cc_zones table
+
+Create table cc_zones:
+- id uuid PK default random
+- tenant_id uuid not null
+- portal_id uuid not null references cc_portals(id) on delete cascade
+- key text not null  (unique within portal, e.g. 'east-bamfield')
+- name text not null (display, e.g. 'East Bamfield')
+- kind text not null default 'neighborhood'  (enum-ish: neighborhood, community, island, access_point, district, custom)
+- badge_label_resident text null
+- badge_label_contractor text null
+- badge_label_visitor text null
+- theme jsonb not null default '{}'  (optional overrides: primaryColor, logoUrl, etc)
+- access_profile jsonb not null default '{}' (defaults for access constraints)
+- created_at timestamptz default now()
+- updated_at timestamptz default now()
+
+Constraints/indexes:
+- UNIQUE(portal_id, key)
+- index(tenant_id, portal_id)
+- GIN on theme, access_profile if supported (DB-level)
+RLS: tenant isolation w/ is_service_mode() bypass.
+
+B) Add zone_id to cc_properties and cc_maintenance_requests
+
+- ALTER TABLE cc_properties ADD COLUMN zone_id uuid null references cc_zones(id) on delete set null
+- ALTER TABLE cc_maintenance_requests ADD COLUMN zone_id uuid null references cc_zones(id) on delete set null
+Indexes:
+- (tenant_id, zone_id) on both tables
+
+C) API (owner/admin only)
+Under /api/p2/app:
+
+Zones CRUD:
+- GET /zones?portalId=
+- POST /zones  { portalId, key, name, kind, badge labels, theme, accessProfile }
+- PUT /zones/:zoneId
+- DELETE /zones/:zoneId
+
+Assign zone:
+- PUT /properties/:propertyId/zone  { zoneId|null }
+- PUT /work-requests/:workRequestId/zone { zoneId|null }
+
+Enforce:
+- requireOwnerOrAdmin()
+- verify zone belongs to tenant and portal_id matches the portal of the property/work request where applicable.
+
+D) UI
+1) Portal Admin: add "Zones" tab within /app/admin/portals/:portalId (or existing portals admin page)
+- List zones, create/edit/delete
+- Show 3 badge labels (resident/contractor/visitor)
+- Optional theme overrides (primaryColor, logoUrl)
+- Optional accessProfile JSON editor (advanced, collapsible)
+
+2) Property Manage: add Zone dropdown (portal-scoped zones)
+- When property has portal_id, show only that portal’s zones
+
+3) Work Request create/edit: add Zone dropdown (prefer property zone default)
+- If property selected and has zone_id, auto-select it but allow override
+
+E) QA Launchpad enhancement
+In /app/admin/portals/:portalId/qa:
+- Show work requests grouped by zone (or include zone badge on each row)
+- If zone null, show badge "Unzoned"
+
+Acceptance:
+- Zones can be created per portal
+- Properties + Work Requests can be assigned to zones
+- Zone badge appears in QA Launchpad
+- No impact on employment jobs module

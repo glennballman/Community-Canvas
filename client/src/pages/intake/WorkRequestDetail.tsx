@@ -55,8 +55,17 @@ interface WorkRequest {
   converted_to_project_id: string | null;
   converted_at: string | null;
   assigned_contractor_person_id: string | null;
+  zone_id: string | null;
+  zone_name: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface Zone {
+  id: string;
+  key: string;
+  name: string;
+  kind: string;
 }
 
 interface WorkRequestNote {
@@ -119,7 +128,8 @@ export default function WorkRequestDetail() {
     queryFn: async () => {
       const res = await fetch(`/api/work-requests/${id}`);
       if (!res.ok) throw new Error('Failed to fetch');
-      return res.json();
+      const data = await res.json();
+      return data.workRequest || data;
     },
     enabled: !!id,
   });
@@ -132,6 +142,31 @@ export default function WorkRequestDetail() {
       return res.json();
     },
     enabled: !!id,
+  });
+
+  // Fetch zones for the portal (using same auth as work requests via apiRequest)
+  const { data: zonesData } = useQuery<{ ok: boolean; zones: Zone[] }>({
+    queryKey: ['/api/work-requests/zones', request?.portal_id],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/work-requests/zones?portalId=${request?.portal_id}`);
+      return res.json();
+    },
+    enabled: !!request?.portal_id,
+  });
+
+  const assignZoneMutation = useMutation({
+    mutationFn: async (zoneId: string | null) => {
+      const res = await apiRequest('PUT', `/api/work-requests/${id}/zone`, { zoneId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-requests', id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-requests'] });
+      toast({ title: 'Zone updated', description: 'Work request zone has been updated.' });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to update zone', variant: 'destructive' });
+    }
   });
 
   const updateMutation = useMutation({
@@ -484,6 +519,34 @@ export default function WorkRequestDetail() {
                 <p className="mt-1" data-testid="text-quoted-amount">{formatCurrency(request.quoted_amount)}</p>
               </div>
             </div>
+
+            {request.portal_id && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Zone</p>
+                  <Select
+                    value={request.zone_id || '_none_'}
+                    onValueChange={(value) => {
+                      assignZoneMutation.mutate(value === '_none_' ? null : value);
+                    }}
+                    disabled={assignZoneMutation.isPending}
+                  >
+                    <SelectTrigger className="w-full max-w-xs" data-testid="select-zone">
+                      <SelectValue placeholder="Select zone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none_">Unzoned</SelectItem>
+                      {zonesData?.zones?.map(zone => (
+                        <SelectItem key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             <Separator />
 

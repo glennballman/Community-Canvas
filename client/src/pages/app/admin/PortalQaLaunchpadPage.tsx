@@ -57,6 +57,9 @@ interface QaData {
     createdAt: string;
     propertyId: string | null;
     assignedContractorPersonId: string | null;
+    zoneId: string | null;
+    zoneName: string | null;
+    zoneKey: string | null;
   }>;
   workRequestsTotal: number;
 }
@@ -450,6 +453,9 @@ interface WorkRequest {
   createdAt: string;
   propertyId: string | null;
   assignedContractorPersonId: string | null;
+  zoneId: string | null;
+  zoneName: string | null;
+  zoneKey: string | null;
 }
 
 function WorkRequestsCard({ 
@@ -530,6 +536,15 @@ function WorkRequestsCard({
                       {wr.title || `Work Request ${wr.id.slice(0, 8).toUpperCase()}`}
                     </span>
                     <StatusBadge status={wr.status} />
+                    {wr.zoneName ? (
+                      <Badge variant="outline" className="text-xs" data-testid={`badge-zone-${wr.id.slice(0, 8)}`}>
+                        {wr.zoneName}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs text-muted-foreground" data-testid={`badge-unzoned-${wr.id.slice(0, 8)}`}>
+                        Unzoned
+                      </Badge>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground block">
                     Created: {formatDate(wr.createdAt)}

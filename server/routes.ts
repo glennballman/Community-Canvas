@@ -126,6 +126,7 @@ import p2FoliosRouter from "./routes/p2-folios";
 import p2PlatformRouter from "./routes/p2-platform";
 import p2WorkCatalogRouter from "./routes/p2-work-catalog";
 import p2SubsystemsRouter from "./routes/p2-subsystems";
+import p2ZonesRouter from "./routes/p2-zones";
 import aiRouter from "./routes/ai";
 import { createParticipantTripsRouter } from "./routes/participant-trips";
 import participantRouter from "./routes/participant";
@@ -358,6 +359,9 @@ export async function registerRoutes(
   
   // P2 subsystems & on-site resources API
   app.use('/api/p2/app', p2SubsystemsRouter);
+  
+  // P2 zones API (portal-scoped zones for organizing properties and work requests)
+  app.use('/api/p2/app', p2ZonesRouter);
   
   // P2 AI assist API (work request drafts, job posting drafts, message suggestions)
   app.use('/api/p2/ai', aiRouter);

@@ -785,11 +785,14 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
     const workRequestsTotal = parseInt(workRequestsCountResult.rows[0]?.total || '0', 10);
 
     // Get recent work requests for this portal (limited to 50, ordered deterministically)
+    // Include zone info for zone badge display
     const workRequestsResult = await pool.query(`
-      SELECT id, title, status, created_at, property_id, assigned_contractor_person_id
-      FROM cc_maintenance_requests
-      WHERE portal_id = $1
-      ORDER BY created_at DESC, id ASC
+      SELECT mr.id, mr.title, mr.status, mr.created_at, mr.property_id, mr.assigned_contractor_person_id,
+             mr.zone_id, z.name as zone_name, z.key as zone_key
+      FROM cc_maintenance_requests mr
+      LEFT JOIN cc_zones z ON mr.zone_id = z.id
+      WHERE mr.portal_id = $1
+      ORDER BY mr.created_at DESC, mr.id ASC
       LIMIT 50
     `, [portalId]);
 
@@ -799,6 +802,9 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
       status: wr.status,
       createdAt: wr.created_at,
       propertyId: wr.property_id,
+      zoneId: wr.zone_id,
+      zoneName: wr.zone_name,
+      zoneKey: wr.zone_key,
       assignedContractorPersonId: wr.assigned_contractor_person_id,
     }));
 

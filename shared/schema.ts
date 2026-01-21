@@ -1417,6 +1417,33 @@ export const ccPortals = pgTable('cc_portals', {
 export type Portal = typeof ccPortals.$inferSelect;
 export type InsertPortal = typeof ccPortals.$inferInsert;
 
+// ============ ZONES ============
+// First-class zones scoped to portals for organizing Work Requests and Properties
+export const ccZones = pgTable('cc_zones', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  portalId: uuid('portal_id').notNull(),
+  key: text('key').notNull(),
+  name: text('name').notNull(),
+  kind: text('kind').notNull().default('neighborhood'),
+  badgeLabelResident: text('badge_label_resident'),
+  badgeLabelContractor: text('badge_label_contractor'),
+  badgeLabelVisitor: text('badge_label_visitor'),
+  theme: jsonb('theme').notNull().default({}),
+  accessProfile: jsonb('access_profile').notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  portalKeyUnique: uniqueIndex('cc_zones_portal_key_unique').on(table.portalId, table.key),
+  tenantPortalIdx: index('cc_zones_tenant_portal_idx').on(table.tenantId, table.portalId),
+}));
+
+export const insertZoneSchema = createInsertSchema(ccZones).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type Zone = typeof ccZones.$inferSelect;
+export type InsertZone = z.infer<typeof insertZoneSchema>;
+
 // Locations - canonical registry of docks, marinas, trailheads, and stops
 export const ccLocations = pgTable('cc_locations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -2295,6 +2322,7 @@ export const ccProperties = pgTable('cc_properties', {
   tenantId: uuid('tenant_id'),
   ownerId: uuid('owner_id'),
   locationId: uuid('location_id'),
+  zoneId: uuid('zone_id'),
   
   name: text('name').notNull(),
   code: varchar('code', { length: 20 }),
@@ -2945,6 +2973,7 @@ export const ccMaintenanceRequests = pgTable('cc_maintenance_requests', {
   propertyId: uuid('property_id').notNull(),
   unitId: uuid('unit_id'),
   locationId: uuid('location_id'),
+  zoneId: uuid('zone_id'),
   
   reportedByType: varchar('reported_by_type').default('staff'),
   reportedByName: text('reported_by_name'),

@@ -56,12 +56,15 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
         wr.source, wr.referral_source, wr.location_text,
         wr.created_at, wr.updated_at,
         wr.converted_to_project_id, wr.converted_at,
+        wr.zone_id, wr.portal_id,
         c.id as person_id, c.given_name as contact_given_name, c.family_name as contact_family_name,
         p.id as property_id, p.name as property_name, p.address_line1 as property_address,
+        z.name as zone_name,
         (SELECT COUNT(*) FROM cc_work_request_notes wn WHERE wn.work_request_id = wr.id) as notes_count
       FROM cc_work_requests wr
       LEFT JOIN cc_people c ON wr.person_id = c.id
       LEFT JOIN cc_crm_properties p ON wr.property_id = p.id
+      LEFT JOIN cc_zones z ON wr.zone_id = z.id
       ${whereClause}
       ORDER BY wr.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -102,6 +105,32 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
   }
 });
 
+// Get zones for a portal (for dropdown in work request detail)
+// NOTE: Must be defined BEFORE /:id routes to avoid route shadowing
+router.get('/zones', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { portalId } = req.query;
+
+    if (!portalId) {
+      return res.status(400).json({ error: 'portalId is required' });
+    }
+
+    const result = await tenantReq.tenantQuery!(
+      `SELECT id, key, name, kind, badge_label_resident, badge_label_contractor 
+       FROM cc_zones 
+       WHERE portal_id = $1 
+       ORDER BY name ASC`,
+      [portalId]
+    );
+
+    res.json({ ok: true, zones: result.rows });
+  } catch (error) {
+    console.error('Error fetching zones:', error);
+    res.status(500).json({ error: 'Failed to fetch zones' });
+  }
+});
+
 // Get single work request
 router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
@@ -114,11 +143,13 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
         c.given_name as contact_given_name, c.family_name as contact_family_name, 
         c.telephone as contact_telephone, c.email as contact_email,
         o.name as organization_name,
-        p.name as property_name, p.address_line1 as property_address, p.city as property_city
+        p.name as property_name, p.address_line1 as property_address, p.city as property_city,
+        z.name as zone_name
       FROM cc_work_requests wr
       LEFT JOIN cc_people c ON wr.person_id = c.id
       LEFT JOIN cc_organizations o ON wr.organization_id = o.id
       LEFT JOIN cc_crm_properties p ON wr.property_id = p.id
+      LEFT JOIN cc_zones z ON wr.zone_id = z.id
       WHERE wr.id = $1`,
       [id]
     );
@@ -404,6 +435,56 @@ router.get('/:id/notes', requireAuth, requireTenant, async (req: Request, res: R
   } catch (error) {
     console.error('Error fetching notes:', error);
     res.status(500).json({ error: 'Failed to fetch notes' });
+  }
+});
+
+// Assign zone to work request
+router.put('/:id/zone', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { id } = req.params;
+    const { zoneId } = req.body;
+    const tenantId = tenantReq.ctx!.tenant_id;
+
+    // Verify work request exists
+    const wrCheck = await tenantReq.tenantQuery!(
+      `SELECT wr.id, wr.portal_id FROM cc_work_requests wr WHERE wr.id = $1`,
+      [id]
+    );
+
+    if (wrCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Work request not found' });
+    }
+
+    const workRequest = wrCheck.rows[0];
+
+    // Validate zone assignment
+    if (zoneId) {
+      // If work request has no portal_id, reject zone assignment
+      if (!workRequest.portal_id) {
+        return res.status(400).json({ error: 'Cannot assign zone to work request without a portal' });
+      }
+      
+      // Verify zone belongs to the same portal
+      const zoneCheck = await tenantReq.tenantQuery!(
+        `SELECT id FROM cc_zones WHERE id = $1 AND portal_id = $2`,
+        [zoneId, workRequest.portal_id]
+      );
+
+      if (zoneCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Zone not found or does not belong to the same portal' });
+      }
+    }
+
+    await tenantReq.tenantQuery!(
+      `UPDATE cc_work_requests SET zone_id = $1, updated_at = NOW() WHERE id = $2`,
+      [zoneId || null, id]
+    );
+
+    res.json({ ok: true, workRequestId: id, zoneId: zoneId || null });
+  } catch (error) {
+    console.error('Error assigning zone to work request:', error);
+    res.status(500).json({ error: 'Failed to assign zone' });
   }
 });
 
