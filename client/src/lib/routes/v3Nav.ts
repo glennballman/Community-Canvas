@@ -104,6 +104,7 @@ export const V3_NAV: NavSection[] = [
       { icon: Sparkles, label: 'Housekeeping', href: '/app/ops/housekeeping', testId: 'nav-housekeeping', requiresTenant: true },
       { icon: AlertTriangle, label: 'Incidents', href: '/app/ops/incidents', testId: 'nav-incidents', requiresTenant: true },
       { icon: Zap, label: 'N3 Attention', href: '/app/n3/attention', testId: 'nav-n3-attention', requiresTenant: true },
+      { icon: Users, label: 'Coordination', href: '/app/ops/coordination', testId: 'nav-coordination', requiresTenant: true, tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
     ],
   },
   {

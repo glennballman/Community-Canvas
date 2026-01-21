@@ -101,6 +101,7 @@ import ServiceRunMonitorPage from './pages/n3/ServiceRunMonitorPage';
 // Pages - Ops (P-UI-11)
 import HousekeepingPage from './pages/app/ops/HousekeepingPage';
 import IncidentsPage from './pages/app/ops/IncidentsPage';
+import CoordinationReadinessPage from './pages/app/ops/CoordinationReadinessPage';
 
 // Pages - Jobs (V3.5)
 import JobsIndexPage from './pages/app/jobs/JobsIndexPage';
@@ -326,6 +327,7 @@ export default function App() {
                 <Route path="ops" element={<OpsBoardPage />} />
                 <Route path="ops/housekeeping" element={<HousekeepingPage />} />
                 <Route path="ops/incidents" element={<IncidentsPage />} />
+                <Route path="ops/coordination" element={<CoordinationReadinessPage />} />
                 <Route path="operations" element={<OperationsBoard />} />
                 
                 {/* V3 Reservations */}
