@@ -238,27 +238,36 @@ function ConfidenceMeter({ confidence }: { confidence: number }) {
 }
 
 // Action types that support edit workflow
-const EDITABLE_ACTION_TYPES = ['request_more_photos', 'create_work_request', 'open_quote_draft'];
+const EDITABLE_ACTION_TYPES = ['request_more_photos', 'create_work_request', 'open_quote_draft', 'attach_to_zone'];
 
 // A2.6: Durable Action Card with confirm/dismiss/edit workflow
+interface ZoneCandidate {
+  zoneId: string;
+  label: string;
+  confidence: number;
+}
+
 function DurableActionCard({ 
   action,
   onConfirm,
   onDismiss,
   onEdit,
-  isLoading 
+  isLoading,
+  isLocationConfirmed = false
 }: { 
   action: DurableNextAction;
-  onConfirm: () => void;
+  onConfirm: (payload?: Record<string, any>) => void;
   onDismiss: () => void;
   onEdit?: (updatedPayload: Record<string, any>) => void;
   isLoading: boolean;
+  isLocationConfirmed?: boolean;
 }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editedPrompts, setEditedPrompts] = useState<string>('');
   const [editedTodos, setEditedTodos] = useState<string>('');
   const [editedCategory, setEditedCategory] = useState<string>('');
   const [editedAddress, setEditedAddress] = useState<string>('');
+  const [selectedZoneId, setSelectedZoneId] = useState<string>(action.actionPayload?.selectedZoneId || '');
   
   const meta = ACTION_TYPE_META[action.actionType] || {
     icon: <Sparkles className="h-4 w-4" />,
@@ -377,6 +386,66 @@ function DurableActionCard({
               {payload.category && ` (${payload.category})`}
             </div>
           )}
+          
+          {/* Zone selection for attach_to_zone */}
+          {action.actionType === 'attach_to_zone' && (
+            <div className="mt-2 space-y-2">
+              {!isLocationConfirmed && payload.geo?.lat && (
+                <div className="flex items-center gap-2 p-2 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <span className="text-amber-700 dark:text-amber-300">Confirm location first</span>
+                </div>
+              )}
+              
+              {payload.proposedAddress && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  <span>Near: {payload.proposedAddress}</span>
+                </div>
+              )}
+              
+              {payload.zoneCandidates && payload.zoneCandidates.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Select Zone:</Label>
+                  <div className="space-y-1">
+                    {payload.zoneCandidates.map((zone: ZoneCandidate) => (
+                      <label
+                        key={zone.zoneId}
+                        className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${
+                          selectedZoneId === zone.zoneId 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:bg-muted/50'
+                        }`}
+                        data-testid={`zone-option-${zone.zoneId}`}
+                      >
+                        <input
+                          type="radio"
+                          name={`zone-${action.id}`}
+                          value={zone.zoneId}
+                          checked={selectedZoneId === zone.zoneId}
+                          onChange={(e) => {
+                            setSelectedZoneId(e.target.value);
+                            onEdit?.({ selectedZoneId: e.target.value });
+                          }}
+                          className="text-primary"
+                        />
+                        <span className="text-sm">{zone.label}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {zone.confidence}%
+                        </Badge>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {(!payload.zoneCandidates || payload.zoneCandidates.length === 0) && (
+                <div className="text-sm text-muted-foreground">
+                  No zones available. Create a zone first.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       
@@ -479,8 +548,15 @@ function DurableActionCard({
         
         <Button 
           size="sm" 
-          onClick={onConfirm}
-          disabled={isLoading}
+          onClick={() => {
+            // For attach_to_zone, pass selectedZoneId in payload
+            if (action.actionType === 'attach_to_zone' && selectedZoneId) {
+              onConfirm({ selectedZoneId });
+            } else {
+              onConfirm();
+            }
+          }}
+          disabled={isLoading || (action.actionType === 'attach_to_zone' && !selectedZoneId)}
           data-testid={`button-confirm-action-${action.id}`}
         >
           {isLoading ? (
@@ -488,7 +564,7 @@ function DurableActionCard({
           ) : (
             <Check className="h-4 w-4 mr-1" />
           )}
-          Confirm
+          {action.actionType === 'attach_to_zone' ? 'Attach Zone' : 'Confirm'}
         </Button>
       </div>
     </div>
@@ -1043,10 +1119,11 @@ export default function UploadResultsPage() {
                 <DurableActionCard
                   key={action.id}
                   action={action}
-                  onConfirm={() => resolveActionMutation.mutate({
+                  onConfirm={(payload) => resolveActionMutation.mutate({
                     ingestionId: action.ingestionId,
                     actionId: action.id,
-                    resolution: 'confirm'
+                    resolution: 'confirm',
+                    payload
                   })}
                   onDismiss={() => resolveActionMutation.mutate({
                     ingestionId: action.ingestionId,
