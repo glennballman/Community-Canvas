@@ -20,6 +20,8 @@ import {
 import { useState } from 'react';
 import { 
   ArrowLeft, 
+  ArrowUp,
+  ArrowDown,
   RefreshCw, 
   Calendar, 
   MapPin,
@@ -931,9 +933,9 @@ export default function ServiceRunMonitorPage() {
                 variant="outline" 
                 className={
                   eligibilityData.eligibility.overall === 'degraded' 
-                    ? 'text-amber-600 border-amber-600' 
+                    ? 'text-amber-600 border-amber-600 dark:text-amber-400 dark:border-amber-400' 
                     : eligibilityData.eligibility.overall === 'improved'
-                      ? 'text-green-600 border-green-600'
+                      ? 'text-green-600 border-green-600 dark:text-green-400 dark:border-green-400'
                       : 'text-muted-foreground'
                 }
                 data-testid="badge-eligibility-overall"
@@ -951,9 +953,11 @@ export default function ServiceRunMonitorPage() {
                     className="flex items-center gap-2 text-sm"
                     data-testid="delta-attachments"
                   >
-                    <span className={eligibilityData.deltas.attachments.attached_count_delta < 0 ? 'text-amber-600' : 'text-green-600'}>
-                      {eligibilityData.deltas.attachments.attached_count_delta > 0 ? '↑' : '↓'}
-                    </span>
+                    {eligibilityData.deltas.attachments.attached_count_delta > 0 ? (
+                      <ArrowUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    )}
                     <span>
                       {Math.abs(eligibilityData.deltas.attachments.attached_count_delta)} 
                       {eligibilityData.deltas.attachments.attached_count_delta > 0 ? ' more' : ' fewer'} attached requests since snapshot
@@ -966,9 +970,11 @@ export default function ServiceRunMonitorPage() {
                     className="flex items-center gap-2 text-sm"
                     data-testid="delta-coordination"
                   >
-                    <span className={eligibilityData.deltas.coordination.coord_ready_count_delta < 0 ? 'text-amber-600' : 'text-green-600'}>
-                      {eligibilityData.deltas.coordination.coord_ready_count_delta >= 0 ? '↑' : '↓'}
-                    </span>
+                    {eligibilityData.deltas.coordination.coord_ready_count_delta >= 0 ? (
+                      <ArrowUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    )}
                     <span>
                       {Math.abs(eligibilityData.deltas.coordination.coord_ready_count_delta)} 
                       {eligibilityData.deltas.coordination.coord_ready_count_delta >= 0 ? ' more' : ' fewer'} coordination-ready requests since snapshot
@@ -980,8 +986,12 @@ export default function ServiceRunMonitorPage() {
                   <div className="space-y-1" data-testid="delta-drift">
                     {eligibilityData.deltas.readiness_drift.coordination_opt_out !== undefined && 
                      eligibilityData.deltas.readiness_drift.coordination_opt_out !== 0 && (
-                      <div className="flex items-center gap-2 text-sm text-amber-600">
-                        <span>{eligibilityData.deltas.readiness_drift.coordination_opt_out > 0 ? '↑' : '↓'}</span>
+                      <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                        {eligibilityData.deltas.readiness_drift.coordination_opt_out > 0 ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4" />
+                        )}
                         <span>
                           {Math.abs(eligibilityData.deltas.readiness_drift.coordination_opt_out)} 
                           {eligibilityData.deltas.readiness_drift.coordination_opt_out > 0 ? ' more' : ' fewer'} coordination opt-outs
@@ -990,8 +1000,12 @@ export default function ServiceRunMonitorPage() {
                     )}
                     {eligibilityData.deltas.readiness_drift.zone_mismatch !== undefined && 
                      eligibilityData.deltas.readiness_drift.zone_mismatch !== 0 && (
-                      <div className="flex items-center gap-2 text-sm text-amber-600">
-                        <span>{eligibilityData.deltas.readiness_drift.zone_mismatch > 0 ? '↑' : '↓'}</span>
+                      <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                        {eligibilityData.deltas.readiness_drift.zone_mismatch > 0 ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4" />
+                        )}
                         <span>
                           {Math.abs(eligibilityData.deltas.readiness_drift.zone_mismatch)} 
                           {eligibilityData.deltas.readiness_drift.zone_mismatch > 0 ? ' more' : ' fewer'} zone mismatches
@@ -1001,7 +1015,11 @@ export default function ServiceRunMonitorPage() {
                     {eligibilityData.deltas.readiness_drift.inactive_status !== undefined && 
                      eligibilityData.deltas.readiness_drift.inactive_status !== 0 && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{eligibilityData.deltas.readiness_drift.inactive_status > 0 ? '↑' : '↓'}</span>
+                        {eligibilityData.deltas.readiness_drift.inactive_status > 0 ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4" />
+                        )}
                         <span>
                           {Math.abs(eligibilityData.deltas.readiness_drift.inactive_status)} 
                           {eligibilityData.deltas.readiness_drift.inactive_status > 0 ? ' more' : ' fewer'} inactive statuses
@@ -1011,7 +1029,11 @@ export default function ServiceRunMonitorPage() {
                     {eligibilityData.deltas.readiness_drift.age_exceeded !== undefined && 
                      eligibilityData.deltas.readiness_drift.age_exceeded !== 0 && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{eligibilityData.deltas.readiness_drift.age_exceeded > 0 ? '↑' : '↓'}</span>
+                        {eligibilityData.deltas.readiness_drift.age_exceeded > 0 ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4" />
+                        )}
                         <span>
                           {Math.abs(eligibilityData.deltas.readiness_drift.age_exceeded)} 
                           {eligibilityData.deltas.readiness_drift.age_exceeded > 0 ? ' more' : ' fewer'} age-exceeded signals
