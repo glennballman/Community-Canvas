@@ -1055,6 +1055,168 @@ n3Router.post('/runs/draft-from-window', requireAuth, requireTenant, requireTena
 });
 
 /**
+ * POST /api/n3/runs/:runId/promote - Promote a draft Service Run to scheduled
+ * PROMPT 26: Explicit, admin-only promotion
+ * 
+ * Changes status from 'draft' -> 'scheduled'. No side effects:
+ * - No contractor assignment/notification
+ * - No billing/ledger/folio interaction
+ * - No public disclosure
+ * - Fully reversible
+ */
+const promoteRunSchema = z.object({
+  note: z.string().max(280).optional(),
+});
+
+n3Router.post('/runs/:runId/promote', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  
+  try {
+    const parseResult = promoteRunSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ 
+        error: 'Invalid request body',
+        details: parseResult.error.flatten(),
+      });
+    }
+    
+    const { note } = parseResult.data;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const userId = tenantReq.user?.id;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Fetch the run
+    const runRows = await db
+      .select()
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Check current status
+    if (run.status === 'scheduled') {
+      // Idempotent: already scheduled
+      return res.status(409).json({ 
+        error: 'Run is already scheduled',
+        code: 'ALREADY_SCHEDULED',
+      });
+    }
+    
+    if (run.status !== 'draft') {
+      return res.status(400).json({ 
+        error: `Cannot promote run with status '${run.status}'. Only draft runs can be promoted.`,
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    // Validate portal assignment
+    if (!run.portalId) {
+      return res.status(400).json({ 
+        error: 'Run must have a portal assigned before promotion',
+        code: 'PORTAL_REQUIRED',
+      });
+    }
+    
+    // Validate time window
+    if (!run.startsAt || !run.endsAt) {
+      return res.status(400).json({ 
+        error: 'Run must have valid start and end times before promotion',
+        code: 'INVALID_WINDOW',
+      });
+    }
+    
+    const startsAt = new Date(run.startsAt);
+    const endsAt = new Date(run.endsAt);
+    
+    if (startsAt >= endsAt) {
+      return res.status(400).json({ 
+        error: 'Start time must be before end time',
+        code: 'INVALID_WINDOW',
+      });
+    }
+    
+    const durationDays = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60 * 24);
+    if (durationDays > 14) {
+      return res.status(400).json({ 
+        error: 'Run duration must not exceed 14 days',
+        code: 'INVALID_WINDOW',
+      });
+    }
+    
+    // Check for zone warning (soft check)
+    const warnings: string[] = [];
+    
+    if (!run.zoneId) {
+      // Check if portal has zones
+      const zoneCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(ccZones)
+        .where(eq(ccZones.portalId, run.portalId));
+      
+      if (zoneCount[0]?.count > 0) {
+        warnings.push('ZONE_NOT_ASSIGNED');
+      }
+    }
+    
+    // Perform the promotion
+    await db
+      .update(ccN3Runs)
+      .set({
+        status: 'scheduled',
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId),
+        eq(ccN3Runs.status, 'draft')
+      ));
+    
+    const now = new Date();
+    
+    // Emit audit event
+    console.log('[N3 AUDIT] n3_run_promoted', {
+      event: 'n3_run_promoted',
+      run_id: runId,
+      from_status: 'draft',
+      to_status: 'scheduled',
+      actor_id: userId,
+      tenant_id: tenantId,
+      portal_id: run.portalId,
+      zone_id: run.zoneId,
+      note: note || null,
+      occurred_at: now.toISOString(),
+    });
+    
+    const response: { success: boolean; run_id: string; status: string; warnings?: string[] } = {
+      success: true,
+      run_id: runId,
+      status: 'scheduled',
+    };
+    
+    if (warnings.length > 0) {
+      response.warnings = warnings;
+    }
+    
+    res.json(response);
+  } catch (err) {
+    console.error('[N3 API] Error promoting run:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/n3/health - Unauthenticated healthcheck (returns only { ok: true })
  */
 n3Router.get('/health', async (_req, res) => {

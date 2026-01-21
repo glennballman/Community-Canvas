@@ -360,3 +360,46 @@ export function useCreateDraftRunFromWindow() {
     },
   });
 }
+
+// =====================================
+// Promote Draft N3 Run to Scheduled (Prompt 26)
+// =====================================
+
+export interface PromoteN3RunParams {
+  runId: string;
+  note?: string;
+}
+
+export interface PromoteN3RunResponse {
+  success: boolean;
+  run_id: string;
+  status: 'scheduled';
+  warnings?: string[];
+}
+
+/**
+ * Hook for promoting a draft N3 Service Run to scheduled.
+ * Admin/owner only. Explicit action, auditable, reversible.
+ * No side effects: no contractor notifications, no billing, no execution.
+ */
+export function usePromoteN3Run() {
+  return useMutation<PromoteN3RunResponse, Error, PromoteN3RunParams>({
+    mutationFn: async ({ runId, note }) => {
+      const res = await apiRequest(
+        'POST',
+        `/api/n3/runs/${runId}/promote`,
+        note ? { note } : {}
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to promote run');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', data.run_id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/attention'] });
+    },
+  });
+}

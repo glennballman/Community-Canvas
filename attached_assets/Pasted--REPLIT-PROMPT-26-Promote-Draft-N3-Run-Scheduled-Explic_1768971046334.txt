@@ -1,0 +1,276 @@
+✅ REPLIT PROMPT 26 — Promote Draft N3 Run → Scheduled (Explicit, Audited, Reversible)
+Purpose
+
+Allow tenant owners/admins to explicitly promote a draft N3 Service Run into a scheduled state.
+
+This is the first lifecycle transition of a Service Run, but it is still non-executing:
+
+❌ no contractor assignment
+
+❌ no notifications
+
+❌ no billing / ledger / folio interaction
+
+❌ no public disclosure
+
+This prompt only changes run status and records operator intent.
+
+Hard Constraints (Non-Negotiable)
+
+Admin / Owner only
+
+Explicit action (no auto-promotion)
+
+Audited
+
+Reversible
+
+No side effects
+
+No economic execution
+
+A) Backend — API
+Endpoint
+POST /api/n3/runs/:runId/promote
+
+Middleware (REQUIRED)
+requireAuth
+requireTenant
+requireTenantAdminOrOwner
+
+
+No header-based tenant inference. Use canonical TenantRequest.
+
+Request Body (optional)
+{
+  note?: string; // optional operator note, max 280 chars
+}
+
+Validation Rules (STRICT)
+
+Before promotion, the server MUST validate:
+
+Run exists
+
+cc_n3_runs.id = :runId
+
+tenant_id === req.ctx.tenant_id
+
+Current status
+
+MUST be draft
+
+If already scheduled, return 409 (idempotent protection)
+
+Portal assignment
+
+portal_id IS NOT NULL
+
+Else: 400 PORTAL_REQUIRED
+
+Time window
+
+starts_at IS NOT NULL
+
+ends_at IS NOT NULL
+
+starts_at < ends_at
+
+Duration ≤ 14 days
+
+Else: 400 INVALID_WINDOW
+
+Zone sanity (soft)
+
+If portal has zones AND:
+
+zone_id IS NULL
+
+Allow promotion, but include a warning flag in response:
+
+warnings: ['ZONE_NOT_ASSIGNED']
+
+Mutation
+UPDATE cc_n3_runs
+SET
+  status = 'scheduled',
+  updated_at = now()
+WHERE
+  id = :runId
+  AND tenant_id = :tenantId
+  AND status = 'draft';
+
+Audit Logging (REQUIRED)
+
+Emit audit event:
+
+{
+  event: 'n3_run_promoted',
+  run_id: runId,
+  from_status: 'draft',
+  to_status: 'scheduled',
+  actor_id: req.user.id,
+  tenant_id: req.ctx.tenant_id,
+  portal_id: run.portal_id,
+  zone_id: run.zone_id,
+  note?: string,
+  occurred_at: now()
+}
+
+Response
+{
+  success: true,
+  run_id: string,
+  status: 'scheduled',
+  warnings?: string[]
+}
+
+B) Frontend — UI
+Location
+
+ServiceRunMonitorPage
+
+Only render controls if:
+
+user role ∈ { owner, admin }
+
+run.status === 'draft'
+
+UI Component: PromoteRunCard
+
+Placement
+
+Below Draft Status Banner
+
+Above zone / bundle sections
+
+UI Copy (Exact Tone)
+
+Title
+
+Promote Draft Service Run
+
+Body
+
+This will mark the service run as scheduled, making it eligible for planning and future actions.
+No contractors will be notified and no charges will occur.
+
+Optional Input
+
+Textarea: “Promotion note (optional)”
+
+Max 280 chars
+
+Stored only in audit log / metadata (not visible to contractors)
+
+Action Buttons
+
+Primary:
+
+[ Promote to Scheduled ]
+
+
+Secondary:
+
+Cancel
+
+Confirmation Step (REQUIRED)
+
+On click → inline confirmation:
+
+Are you sure you want to promote this draft service run to scheduled?
+
+Buttons:
+
+Confirm Promote
+
+Cancel
+
+Success Behavior
+
+On success:
+
+Toast: “Service run scheduled (no notifications sent)”
+
+Refresh monitor data
+
+Draft banner disappears
+
+Status badge updates to Scheduled
+
+Warning Display
+
+If response includes warnings:
+
+Example:
+
+⚠️ This run was scheduled without a zone assignment.
+
+Displayed as amber inline callout (non-blocking).
+
+C) Frontend — Hooks
+New Hook
+usePromoteN3Run()
+
+
+POST /api/n3/runs/:runId/promote
+
+Handles 400 / 403 / 409 errors explicitly
+
+Invalidates:
+
+/api/n3/runs
+
+/api/n3/runs/:runId/monitor
+
+/api/n3/attention
+
+D) Security & Privacy Invariants
+
+❌ No pricing modifiers exposed
+
+❌ No contractor visibility
+
+❌ No notifications
+
+❌ No Service Run execution
+
+❌ No billing or accounting touchpoints
+
+This is status intent only.
+
+E) Acceptance Criteria
+
+Draft runs can be promoted only by admin/owner
+
+Promotion fails cleanly if validation fails
+
+Promotion is auditable
+
+Promotion is reversible (future demotion prompt)
+
+No side effects occur
+
+UI clearly communicates non-execution
+
+F) Explicitly Out of Scope
+
+Contractor assignment
+
+Contractor notifications
+
+Service Run execution
+
+Billing / folios / invoices
+
+Automatic promotion
+
+Zone enforcement (soft warning only)
+
+Result
+
+Prompt 26 completes the safe lifecycle transition from:
+
+“coordination idea” → “operator-approved scheduled run”
+
+…without crossing into execution or disclosure.
