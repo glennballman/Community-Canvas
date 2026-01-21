@@ -180,6 +180,11 @@ const ACTION_TYPE_META: Record<string, { icon: React.ReactNode; label: string; d
     icon: <Truck className="h-4 w-4" />,
     label: 'Add Fleet Asset',
     description: 'Add detected vehicle to your fleet'
+  },
+  create_or_update_proof_bundle: {
+    icon: <Camera className="h-4 w-4" />,
+    label: 'Add to Proof Bundle',
+    description: 'Add this photo to a before/after proof bundle'
   }
 };
 
@@ -831,6 +836,126 @@ function OpportunityCard({
   );
 }
 
+// A2.7: Photo Bundle Card
+function PhotoBundleCard({ 
+  bundle,
+  onViewDetails 
+}: { 
+  bundle: {
+    id: string;
+    bundleType: string;
+    status: string;
+    beforeMediaIds: string[];
+    afterMediaIds: string[];
+    duringMediaIds: string[];
+    timelineJson: any;
+    proofJson: any;
+    createdAt: string;
+  };
+  onViewDetails: () => void;
+}) {
+  const proofJson = bundle.proofJson || {};
+  const claims = proofJson.claims || [];
+  const missingItems = proofJson.missingItems || [];
+  const riskFlags = proofJson.riskFlags || [];
+  
+  const beforeCount = bundle.beforeMediaIds?.length || 0;
+  const afterCount = bundle.afterMediaIds?.length || 0;
+  const duringCount = bundle.duringMediaIds?.length || 0;
+  const totalPhotos = beforeCount + afterCount + duringCount;
+  
+  const statusColor = bundle.status === 'complete' ? 'bg-green-500/10 text-green-600' 
+    : bundle.status === 'sealed' ? 'bg-blue-500/10 text-blue-600'
+    : 'bg-amber-500/10 text-amber-600';
+  
+  return (
+    <Card className="overflow-visible" data-testid={`card-bundle-${bundle.id}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-md bg-primary/10 text-primary">
+              <Camera className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-base">
+                {bundle.bundleType === 'before_after' ? 'Before/After Bundle' : 'Progress Series'}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {totalPhotos} photo{totalPhotos !== 1 ? 's' : ''} - Created {new Date(bundle.createdAt).toLocaleDateString()}
+              </CardDescription>
+            </div>
+          </div>
+          <Badge className={statusColor}>
+            {bundle.status}
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <span>Before: {beforeCount}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-amber-500" />
+            <span>During: {duringCount}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <span>After: {afterCount}</span>
+          </div>
+        </div>
+        
+        {claims.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {claims.slice(0, 3).map((claim: any, i: number) => (
+              <Badge key={i} variant="secondary" className="text-xs">
+                <Check className="h-3 w-3 mr-1" />
+                {claim.label}
+              </Badge>
+            ))}
+            {claims.length > 3 && (
+              <Badge variant="secondary" className="text-xs">+{claims.length - 3}</Badge>
+            )}
+          </div>
+        )}
+        
+        {missingItems.length > 0 && (
+          <div className="p-2 rounded bg-amber-500/10 text-sm">
+            <div className="flex items-center gap-1 text-amber-600 font-medium mb-1">
+              <AlertTriangle className="h-3 w-3" />
+              Missing items
+            </div>
+            <ul className="text-muted-foreground text-xs space-y-0.5">
+              {missingItems.slice(0, 2).map((item: any, i: number) => (
+                <li key={i}>{item.prompt}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {riskFlags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {riskFlags.map((flag: string, i: number) => (
+              <Badge key={i} variant="destructive" className="text-xs">
+                {flag.replace(/_/g, ' ')}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+      
+      <CardFooter className="justify-end gap-2 pt-0">
+        <Button variant="outline" size="sm" onClick={onViewDetails} data-testid={`button-view-bundle-${bundle.id}`}>
+          View Details
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
 export default function UploadResultsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -923,6 +1048,36 @@ export default function UploadResultsPage() {
     queryKey: ['/api/contractor/ingestions/opportunities'],
     enabled: !!user && !!currentTenant
   });
+  
+  // A2.7: Fetch photo bundles
+  interface PhotoBundle {
+    id: string;
+    bundleType: string;
+    status: string;
+    beforeMediaIds: string[];
+    afterMediaIds: string[];
+    duringMediaIds: string[];
+    timelineJson: any;
+    proofJson: any;
+    createdAt: string;
+  }
+  
+  const { data: bundlesData, refetch: refetchBundles } = useQuery<{ ok: boolean; bundles: PhotoBundle[] }>({
+    queryKey: ['/api/contractor/photo-bundles'],
+    queryFn: async () => {
+      const res = await fetch('/api/contractor/photo-bundles', {
+        headers: {
+          'x-portal-id': currentTenant?.tenant_id || '',
+          'x-tenant-id': currentTenant?.tenant_id || ''
+        },
+        credentials: 'include'
+      });
+      return res.json();
+    },
+    enabled: !!user && !!currentTenant
+  });
+  
+  const photoBundles = bundlesData?.bundles || [];
   
   // Confirm ingestion mutation
   const confirmMutation = useMutation({
@@ -1135,6 +1290,38 @@ export default function UploadResultsPage() {
                     payload
                   })}
                   isLoading={resolvingActionId === action.id}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* A2.7: Photo Bundles Section */}
+        {photoBundles.length > 0 && (
+          <div className="space-y-4 mt-8" data-testid="section-photo-bundles">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Camera className="h-5 w-5 text-primary" />
+                Proof Bundles
+              </h2>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => refetchBundles()}
+                data-testid="button-refresh-bundles"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Before/after photo bundles for proof of work documentation.
+            </p>
+            <div className="space-y-3">
+              {photoBundles.map((bundle) => (
+                <PhotoBundleCard
+                  key={bundle.id}
+                  bundle={bundle}
+                  onViewDetails={() => navigate(`/app/contractor/photo-bundles/${bundle.id}`)}
                 />
               ))}
             </div>
