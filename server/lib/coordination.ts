@@ -10,6 +10,11 @@
  * 3. Same subsystem_id OR work_area_id OR category (whichever exists)
  */
 
+import {
+  WORK_REQUEST_ACTIVE_STATUSES,
+  WORK_REQUEST_NEW_STATUSES,
+} from '@shared/workRequestStatuses';
+
 export interface SimilarityKey {
   subsystem_id?: string | null;
   work_area_id?: string | null;
@@ -111,13 +116,15 @@ export function getSimilarityLabel(key: SimilarityKey, metadata?: { subsystemNam
 
 /**
  * Active work request statuses for coordination counting.
+ * Re-exported from canonical source for convenience.
  */
-export const ACTIVE_STATUSES = ['new', 'contacted', 'quoted', 'scheduled'] as const;
+export const ACTIVE_STATUSES = WORK_REQUEST_ACTIVE_STATUSES;
 
 /**
  * New statuses (subset of active) for "new count".
+ * Re-exported from canonical source for convenience.
  */
-export const NEW_STATUSES = ['new'] as const;
+export const NEW_STATUSES = WORK_REQUEST_NEW_STATUSES;
 
 /**
  * Window days clamped to 1-60 range.
