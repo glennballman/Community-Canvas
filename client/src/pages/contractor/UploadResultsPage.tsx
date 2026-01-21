@@ -1,21 +1,23 @@
 /**
  * A2.3: Upload Results Page - "Here's what I found" UI
+ * A2.6: Next Actions Workspace - durable action tracking
  * 
  * Displays:
  * - Classification results for each uploaded image
  * - Extracted entities (license plates, phones, addresses, materials)
  * - Proposed links (fleet, tools, jobsites, customers)
- * - Next actions with accept/edit/dismiss workflow
+ * - Next actions with accept/edit/dismiss workflow (A2.6)
  * - Opportunities (asset upsells, zone expansion)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { 
   Check, 
   X, 
@@ -35,7 +37,13 @@ import {
   Camera,
   ChevronRight,
   AlertTriangle,
-  Image
+  Image,
+  ClipboardList,
+  Play,
+  FileText,
+  Quote,
+  Hammer,
+  RefreshCw
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -111,6 +119,56 @@ interface Opportunity {
   status: string;
 }
 
+// A2.6: Durable next actions from backend
+interface DurableNextAction {
+  id: string;
+  ingestionId: string;
+  actionType: string;
+  actionPayload: Record<string, any>;
+  confidence: string;
+  status: 'proposed' | 'confirmed' | 'dismissed';
+  createdAt: string;
+}
+
+// Action type metadata for UI
+const ACTION_TYPE_META: Record<string, { icon: React.ReactNode; label: string; description: string }> = {
+  create_work_request: {
+    icon: <ClipboardList className="h-4 w-4" />,
+    label: 'Create Work Request',
+    description: 'Turn this sticky note into a tracked work request'
+  },
+  attach_to_zone: {
+    icon: <MapPin className="h-4 w-4" />,
+    label: 'Attach to Zone',
+    description: 'Link this photo to a customer jobsite'
+  },
+  request_more_photos: {
+    icon: <Camera className="h-4 w-4" />,
+    label: 'Need More Photos',
+    description: 'Add more context photos for better analysis'
+  },
+  draft_n3_run: {
+    icon: <Play className="h-4 w-4" />,
+    label: 'Create Service Run',
+    description: 'Draft a service run from this evidence'
+  },
+  open_quote_draft: {
+    icon: <FileText className="h-4 w-4" />,
+    label: 'Open Quote Draft',
+    description: 'Create a quote from this work'
+  },
+  add_tool: {
+    icon: <Hammer className="h-4 w-4" />,
+    label: 'Add Tool',
+    description: 'Add detected tool to your inventory'
+  },
+  add_fleet: {
+    icon: <Truck className="h-4 w-4" />,
+    label: 'Add Fleet Asset',
+    description: 'Add detected vehicle to your fleet'
+  }
+};
+
 function getClassificationIcon(type: string) {
   switch (type) {
     case 'vehicle_truck':
@@ -161,6 +219,122 @@ function ConfidenceMeter({ confidence }: { confidence: number }) {
     <div className="flex items-center gap-2">
       <Progress value={percent} className="h-2 w-16" />
       <span className="text-xs text-muted-foreground">{percent}%</span>
+    </div>
+  );
+}
+
+// A2.6: Durable Action Card with confirm/dismiss workflow
+function DurableActionCard({ 
+  action,
+  onConfirm,
+  onDismiss,
+  isLoading 
+}: { 
+  action: DurableNextAction;
+  onConfirm: () => void;
+  onDismiss: () => void;
+  isLoading: boolean;
+}) {
+  const meta = ACTION_TYPE_META[action.actionType] || {
+    icon: <Sparkles className="h-4 w-4" />,
+    label: action.actionType.replace(/_/g, ' '),
+    description: 'AI suggested action'
+  };
+  
+  const confidenceNum = parseInt(action.confidence || '50');
+  const payload = action.actionPayload || {};
+  
+  return (
+    <div 
+      className="p-3 rounded-lg border bg-card hover-elevate"
+      data-testid={`durable-action-${action.id}`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-md bg-primary/10 text-primary shrink-0">
+          {meta.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="font-medium">{meta.label}</div>
+            <Badge variant="secondary" className="text-xs">
+              {confidenceNum}% confidence
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {meta.description}
+          </p>
+          
+          {/* Show payload details for work requests */}
+          {action.actionType === 'create_work_request' && payload.title && (
+            <div className="mt-2 p-2 rounded bg-muted/50 text-sm">
+              <div className="font-medium">{payload.title}</div>
+              {payload.lineItems?.length > 0 && (
+                <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                  {payload.lineItems.slice(0, 3).map((item: any, i: number) => (
+                    <li key={i} className="flex items-center gap-1">
+                      <span className="text-xs">-</span>
+                      {item.text}
+                    </li>
+                  ))}
+                  {payload.lineItems.length > 3 && (
+                    <li className="text-xs">+{payload.lineItems.length - 3} more</li>
+                  )}
+                </ul>
+              )}
+              {payload.urgency && payload.urgency !== 'medium' && (
+                <Badge 
+                  variant={payload.urgency === 'urgent' ? 'destructive' : 'secondary'}
+                  className="mt-2"
+                >
+                  {payload.urgency}
+                </Badge>
+              )}
+            </div>
+          )}
+          
+          {/* Show details for fleet/tool additions */}
+          {action.actionType === 'add_fleet' && payload.assetType && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Type: {payload.assetType}
+              {payload.color && `, Color: ${payload.color}`}
+              {payload.make && `, Make: ${payload.make}`}
+            </div>
+          )}
+          
+          {action.actionType === 'add_tool' && payload.name && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              {payload.name}
+              {payload.category && ` (${payload.category})`}
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-end gap-2 mt-3 pt-2 border-t">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onDismiss}
+          disabled={isLoading}
+          data-testid={`button-dismiss-action-${action.id}`}
+        >
+          <X className="h-4 w-4 mr-1" />
+          Skip
+        </Button>
+        <Button 
+          size="sm" 
+          onClick={onConfirm}
+          disabled={isLoading}
+          data-testid={`button-confirm-action-${action.id}`}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Check className="h-4 w-4 mr-1" />
+          )}
+          Confirm
+        </Button>
+      </div>
     </div>
   );
 }
@@ -440,6 +614,7 @@ export default function UploadResultsPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { currentTenant } = useTenant();
+  const [resolvingActionId, setResolvingActionId] = useState<string | null>(null);
   
   // Get ingestion IDs from URL params
   const ingestionIds = searchParams.get('ids')?.split(',') || [];
@@ -484,6 +659,42 @@ export default function UploadResultsPage() {
     enabled: ingestionIds.length > 0 && !!currentTenant
   });
   
+  // A2.6: Fetch durable next actions for all ingestions
+  const { data: nextActionsData, isLoading: loadingActions, refetch: refetchActions } = useQuery<{
+    ok: boolean;
+    actions: DurableNextAction[];
+  }>({
+    queryKey: ['/api/contractor/ingestions/next-actions', ingestionIds.join(',')],
+    queryFn: async () => {
+      // Fetch next actions for each ingestion
+      const allActions: DurableNextAction[] = [];
+      
+      for (const id of ingestionIds) {
+        try {
+          const res = await fetch(`/api/contractor/ingestions/${id}/next-actions`, {
+            headers: {
+              'x-portal-id': currentTenant?.tenant_id || '',
+              'x-tenant-id': currentTenant?.tenant_id || ''
+            },
+            credentials: 'include'
+          });
+          const data = await res.json();
+          if (data.ok && data.actions) {
+            allActions.push(...data.actions.map((a: any) => ({
+              ...a,
+              ingestionId: id
+            })));
+          }
+        } catch (err) {
+          console.error('Failed to fetch next actions for', id, err);
+        }
+      }
+      
+      return { ok: true, actions: allActions };
+    },
+    enabled: ingestionIds.length > 0 && !!currentTenant
+  });
+  
   // Fetch opportunities
   const { data: opportunitiesData } = useQuery<{ ok: boolean; opportunities: Opportunity[] }>({
     queryKey: ['/api/contractor/ingestions/opportunities'],
@@ -512,6 +723,30 @@ export default function UploadResultsPage() {
     }
   });
   
+  // A2.6: Resolve next action mutation
+  const resolveActionMutation = useMutation({
+    mutationFn: async ({ ingestionId, actionId, resolution, payload }: {
+      ingestionId: string;
+      actionId: string;
+      resolution: 'confirm' | 'dismiss';
+      payload?: Record<string, any>;
+    }) => {
+      setResolvingActionId(actionId);
+      const res = await apiRequest('POST', `/api/contractor/ingestions/${ingestionId}/next-actions/${actionId}/resolve`, {
+        resolution,
+        payload
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contractor/ingestions/next-actions'] });
+      setResolvingActionId(null);
+    },
+    onError: () => {
+      setResolvingActionId(null);
+    }
+  });
+  
   // Respond to opportunity mutation
   const respondOpportunityMutation = useMutation({
     mutationFn: async ({ id, response }: { id: string; response: 'accepted' | 'dismissed' }) => {
@@ -525,6 +760,7 @@ export default function UploadResultsPage() {
   
   const classifications = classificationsData?.classifications || [];
   const opportunities = opportunitiesData?.opportunities || [];
+  const durableActions = (nextActionsData?.actions || []).filter(a => a.status === 'proposed');
   
   const handleDone = () => {
     navigate('/app/contractor/onboard');
@@ -594,6 +830,55 @@ export default function UploadResultsPage() {
             </CardContent>
           </Card>
         )}
+        
+        {/* A2.6: Next Actions Workspace */}
+        {durableActions.length > 0 && (
+          <div className="space-y-4 mt-8" data-testid="section-next-actions">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Suggested Actions
+              </h2>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => refetchActions()}
+                disabled={loadingActions}
+                data-testid="button-refresh-actions"
+              >
+                {loadingActions ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Based on your uploads, here are some actions you can take:
+            </p>
+            <div className="space-y-3">
+              {durableActions.map((action) => (
+                <DurableActionCard
+                  key={action.id}
+                  action={action}
+                  onConfirm={() => resolveActionMutation.mutate({
+                    ingestionId: action.ingestionId,
+                    actionId: action.id,
+                    resolution: 'confirm'
+                  })}
+                  onDismiss={() => resolveActionMutation.mutate({
+                    ingestionId: action.ingestionId,
+                    actionId: action.id,
+                    resolution: 'dismiss'
+                  })}
+                  isLoading={resolvingActionId === action.id}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <Separator className="my-6" />
         
         {opportunities.length > 0 && (
           <div className="space-y-4 mt-8">

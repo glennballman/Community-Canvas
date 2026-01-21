@@ -60,8 +60,24 @@ router.get('/:id/next-actions', authenticateToken, async (req: Request, res: Res
       return res.status(401).json({ ok: false, error: 'Not authenticated' });
     }
 
+    // Verify ingestion belongs to tenant
+    const ingestion = await db.query.ccAiIngestions.findFirst({
+      where: and(
+        eq(ccAiIngestions.id, id),
+        eq(ccAiIngestions.tenantId, tenantId)
+      )
+    });
+    
+    if (!ingestion) {
+      return res.status(404).json({ ok: false, error: 'Ingestion not found' });
+    }
+
+    // Get actions scoped to tenant + ingestion
     const actions = await db.query.ccIngestionNextActions.findMany({
-      where: eq(ccIngestionNextActions.ingestionId, id),
+      where: and(
+        eq(ccIngestionNextActions.ingestionId, id),
+        eq(ccIngestionNextActions.tenantId, tenantId)
+      ),
       orderBy: [desc(ccIngestionNextActions.confidence)]
     });
 
@@ -84,6 +100,18 @@ router.post('/:id/next-actions/recompute', authenticateToken, async (req: Reques
     
     if (!userId || !tenantId) {
       return res.status(401).json({ ok: false, error: 'Not authenticated' });
+    }
+
+    // Verify ingestion belongs to tenant
+    const ingestion = await db.query.ccAiIngestions.findFirst({
+      where: and(
+        eq(ccAiIngestions.id, id),
+        eq(ccAiIngestions.tenantId, tenantId)
+      )
+    });
+    
+    if (!ingestion) {
+      return res.status(404).json({ ok: false, error: 'Ingestion not found' });
     }
 
     // Get contractor profile ID from user
@@ -113,6 +141,35 @@ router.post('/:id/next-actions/:actionId/resolve', authenticateToken, async (req
     
     if (!tenantId) {
       return res.status(401).json({ ok: false, error: 'Not authenticated' });
+    }
+
+    // Verify ingestion belongs to tenant
+    const ingestion = await db.query.ccAiIngestions.findFirst({
+      where: and(
+        eq(ccAiIngestions.id, id),
+        eq(ccAiIngestions.tenantId, tenantId)
+      )
+    });
+    
+    if (!ingestion) {
+      return res.status(404).json({ ok: false, error: 'Ingestion not found' });
+    }
+
+    // Verify action belongs to tenant + ingestion and is proposed
+    const existingAction = await db.query.ccIngestionNextActions.findFirst({
+      where: and(
+        eq(ccIngestionNextActions.id, actionId),
+        eq(ccIngestionNextActions.ingestionId, id),
+        eq(ccIngestionNextActions.tenantId, tenantId)
+      )
+    });
+    
+    if (!existingAction) {
+      return res.status(404).json({ ok: false, error: 'Action not found' });
+    }
+    
+    if (existingAction.status !== 'proposed') {
+      return res.status(400).json({ ok: false, error: 'Action already resolved' });
     }
 
     const parsed = resolveActionSchema.safeParse(req.body);
@@ -165,8 +222,24 @@ router.get('/:id/sticky-note-extraction', authenticateToken, async (req: Request
       return res.status(401).json({ ok: false, error: 'Not authenticated' });
     }
 
+    // Verify ingestion belongs to tenant
+    const ingestion = await db.query.ccAiIngestions.findFirst({
+      where: and(
+        eq(ccAiIngestions.id, id),
+        eq(ccAiIngestions.tenantId, tenantId)
+      )
+    });
+    
+    if (!ingestion) {
+      return res.status(404).json({ ok: false, error: 'Ingestion not found' });
+    }
+
+    // Get extraction scoped to tenant + ingestion
     const extraction = await db.query.ccStickyNoteExtractions.findFirst({
-      where: eq(ccStickyNoteExtractions.ingestionId, id)
+      where: and(
+        eq(ccStickyNoteExtractions.ingestionId, id),
+        eq(ccStickyNoteExtractions.tenantId, tenantId)
+      )
     });
 
     if (!extraction) {
@@ -204,9 +277,12 @@ router.post('/work-requests/draft-from-ingestion', authenticateToken, async (req
       return res.status(400).json({ ok: false, error: 'Invalid input', details: parsed.error.errors });
     }
 
-    // Get ingestion for source data
+    // Verify ingestion belongs to tenant
     const ingestion = await db.query.ccAiIngestions.findFirst({
-      where: eq(ccAiIngestions.id, ingestionId)
+      where: and(
+        eq(ccAiIngestions.id, ingestionId),
+        eq(ccAiIngestions.tenantId, tenantId)
+      )
     });
 
     if (!ingestion) {
@@ -267,9 +343,12 @@ router.post('/n3/draft-from-ingestion', authenticateToken, async (req: Request, 
       return res.status(400).json({ ok: false, error: 'Invalid input', details: parsed.error.errors });
     }
 
-    // Get ingestion for source data
+    // Verify ingestion belongs to tenant
     const ingestion = await db.query.ccAiIngestions.findFirst({
-      where: eq(ccAiIngestions.id, ingestionId)
+      where: and(
+        eq(ccAiIngestions.id, ingestionId),
+        eq(ccAiIngestions.tenantId, tenantId)
+      )
     });
 
     if (!ingestion) {
