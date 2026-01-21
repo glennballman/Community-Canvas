@@ -7648,6 +7648,10 @@ export const ccAiIngestions = pgTable("cc_ai_ingestions", {
   identityProposal: jsonb("identity_proposal").notNull().default({}),
   identityProposalStatus: varchar("identity_proposal_status", { length: 20 }).notNull().default('none'),
   
+  // A2.2: Service area proposals from location signals
+  proposedServiceAreas: jsonb("proposed_service_areas").notNull().default([]),
+  serviceAreaStatus: varchar("service_area_status", { length: 20 }).notNull().default('none'),
+  
   // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -7661,3 +7665,68 @@ export const insertAiIngestionSchema = createInsertSchema(ccAiIngestions).omit({
 });
 export type AiIngestion = typeof ccAiIngestions.$inferSelect;
 export type InsertAiIngestion = z.infer<typeof insertAiIngestionSchema>;
+
+// ============================================================================
+// A2.2: Contractor Service Areas - Where Contractors Work
+// ============================================================================
+
+/**
+ * Contractor Service Areas - Coverage Definitions
+ * 
+ * Coverage types:
+ * - zone: Specific work zone within a portal
+ * - portal: Entire community/region portal
+ * - radius: Circular area around a point
+ * - route: Corridor between two locations
+ * 
+ * Sources:
+ * - identity_enrichment: Derived from confirmed company location
+ * - job_photo: GPS from job site photos
+ * - sticky_note: Place names from sticky notes/whiteboards
+ * - manual: Manually entered by contractor
+ * - service_run_pattern: Derived from service run history
+ */
+export const ccContractorServiceAreas = pgTable("cc_contractor_service_areas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Optional portal/zone references
+  portalId: uuid("portal_id"),
+  zoneId: uuid("zone_id"),
+  
+  // Coverage type: zone | portal | radius | route
+  coverageType: varchar("coverage_type", { length: 20 }).notNull(),
+  
+  // Coverage details (varies by type)
+  // For radius: { lat, lng, radius_km }
+  // For route: { from, to, buffer_km }
+  // For zone/portal: zone_label, portal_name
+  coveragePayload: jsonb("coverage_payload").notNull().default({}),
+  
+  // Confidence score (0.00-1.00) - how sure we are about this coverage
+  confidence: numeric("confidence", { precision: 3, scale: 2 }).default('0.00'),
+  
+  // Source of this service area
+  source: varchar("source", { length: 30 }).notNull(),
+  
+  // Confirmation state
+  isConfirmed: boolean("is_confirmed").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Publishing preference - whether jobs here should appear on community calendar
+  isPublished: boolean("is_published").notNull().default(false),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+}, (table) => ({
+  contractorIdx: index("idx_contractor_service_areas_contractor").on(table.contractorProfileId),
+  portalIdx: index("idx_contractor_service_areas_portal").on(table.portalId),
+  zoneIdx: index("idx_contractor_service_areas_zone").on(table.zoneId),
+}));
+
+export const insertContractorServiceAreaSchema = createInsertSchema(ccContractorServiceAreas).omit({ 
+  id: true, createdAt: true 
+});
+export type ContractorServiceArea = typeof ccContractorServiceAreas.$inferSelect;
+export type InsertContractorServiceArea = z.infer<typeof insertContractorServiceAreaSchema>;

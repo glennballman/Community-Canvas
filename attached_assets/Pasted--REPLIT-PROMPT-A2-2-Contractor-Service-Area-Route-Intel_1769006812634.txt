@@ -1,0 +1,328 @@
+✅ REPLIT PROMPT A2.2 — Contractor Service Area & Route Intelligence (Consent-First, Editable, Non-Blocking)
+Purpose
+
+After (or alongside) identity enrichment, the system should help contractors define where they actually work — without forms, maps, or friction.
+
+This is the moment where a contractor thinks:
+
+“Holy sh*t — it already knows where I work.”
+
+This prompt converts visual clues + GPS + sticky notes + jobs photos into proposed service coverage, while always allowing:
+
+Confirm
+
+Adjust
+
+Ignore
+
+Defer
+
+No hard commitments. No lock-in.
+
+🔒 HARD PRINCIPLES (NON-NEGOTIABLE)
+
+Advisory only
+
+Nothing here restricts future jobs.
+
+Everything is editable later.
+
+Consent-first
+
+We propose. Contractor confirms or adjusts.
+
+Never auto-publish to community calendars without confirmation.
+
+Multi-origin
+
+Coverage proposals may come from:
+
+truck/trailer photo GPS
+
+job site photos
+
+sticky notes (place names)
+
+EXIF timestamps + clustering
+
+confirmed company address (if provided)
+
+Messy-input tolerant
+
+Contractor may upload:
+
+20 sticky notes
+
+whiteboard
+
+random job photos
+
+trailer photo taken on the highway
+
+System must handle all of it.
+
+A) Data Model Additions
+1) New table: cc_contractor_service_areas
+id uuid PK
+contractor_profile_id uuid FK
+portal_id uuid nullable   // community/region portal
+zone_id uuid nullable     // work zone
+coverage_type text not null
+  // 'zone'
+  // 'portal'
+  // 'radius'
+  // 'route'
+coverage_payload jsonb not null
+confidence numeric(3,2) default 0.0
+source text not null
+  // 'identity_enrichment'
+  // 'job_photo'
+  // 'sticky_note'
+  // 'manual'
+is_confirmed boolean default false
+is_active boolean default true
+created_at timestamptz
+confirmed_at timestamptz nullable
+
+
+⚠️ This table is not exclusive. Contractors can have multiple overlapping coverage rules.
+
+2) Extend cc_ai_ingestions
+
+Add:
+
+proposed_service_areas jsonb default []
+service_area_status text default 'none'
+  // none | proposed | confirmed | dismissed
+
+B) Service Logic
+1) Service Area Proposal Engine
+
+Create:
+
+server/services/contractorServiceAreaInference.ts
+
+Input sources
+
+Confirmed identity location (if exists)
+
+EXIF GPS clusters from uploaded photos
+
+Place names extracted from sticky notes / whiteboards
+
+Known portals/zones near inferred locations
+
+Existing service runs created from sticky notes
+
+Output shape
+[
+  {
+    "coverage_type": "portal",
+    "portal_id": "uuid",
+    "portal_name": "Humboldt Community",
+    "confidence": 0.82,
+    "source": "sticky_note"
+  },
+  {
+    "coverage_type": "zone",
+    "portal_id": "uuid",
+    "zone_id": "uuid",
+    "zone_label": "Zone 4 – North Humboldt",
+    "confidence": 0.74,
+    "source": "job_photo"
+  },
+  {
+    "coverage_type": "radius",
+    "coverage_payload": {
+      "lat": 52.201,
+      "lng": -105.125,
+      "radius_km": 15
+    },
+    "confidence": 0.65,
+    "source": "identity_enrichment"
+  },
+  {
+    "coverage_type": "route",
+    "coverage_payload": {
+      "from": "Saskatoon, SK",
+      "to": "Humboldt, SK",
+      "buffer_km": 10
+    },
+    "confidence": 0.58,
+    "source": "service_run_pattern"
+  }
+]
+
+C) API Endpoints
+1) Propose Service Areas
+POST /api/contractor/profile/service-areas/propose
+
+Requires auth
+
+Pulls all available signals
+
+Writes proposals to cc_ai_ingestions.proposed_service_areas
+
+Sets service_area_status = 'proposed'
+
+2) Confirm / Adjust Service Areas
+POST /api/contractor/profile/service-areas/confirm
+{
+  "accepted": [proposal_ids],
+  "modified": [
+    {
+      "proposal_id": "...",
+      "coverage_payload": { ... }
+    }
+  ],
+  "dismissed": [proposal_ids]
+}
+
+
+Writes confirmed entries to cc_contractor_service_areas
+
+Marks proposals confirmed/dismissed
+
+Does not auto-publish anything
+
+3) Skip / Defer
+POST /api/contractor/profile/service-areas/dismiss
+
+Sets service_area_status = 'dismissed'
+
+Never blocks future proposals
+
+D) Frontend UX — The 5th WOW
+Route
+
+/app/contractor/onboard/service-areas
+
+Automatically appears when:
+
+identity is confirmed OR
+
+a sticky-note-generated service run exists OR
+
+job photos include GPS/place names
+
+UI Layout
+Card: “Where do you usually take work?”
+
+Copy (very important):
+
+“Based on what you’ve uploaded, here’s where it looks like you usually work.
+This helps us surface nearby work requests, but nothing is shared unless you say yes.”
+
+Section 1 — Suggested Coverage
+
+Each suggestion card shows:
+
+Coverage type badge:
+
+🟦 Community
+
+🟩 Zone
+
+🟨 Route
+
+🟪 Radius
+
+Confidence meter (subtle)
+
+Evidence chips:
+
+“Seen on sticky note”
+
+“Photo GPS”
+
+“Job history”
+
+Actions:
+
+✅ Accept
+
+✏️ Adjust
+
+❌ Dismiss
+
+Section 2 — Publish Choice (CRITICAL)
+
+When accepting a coverage area, immediately ask:
+
+“Should jobs in this area be visible on the community calendar?”
+
+Options:
+
+🔓 Accept more work requests here
+
+🔒 Keep this private for now
+
+Tooltip:
+“You can change this per service run at any time.”
+
+This feeds directly into:
+
+Community portal calendars
+
+Service run discoverability
+
+Coordination signals later
+
+Section 3 — Quick Exit
+
+Always visible:
+
+“I just want to view my jobs right now”
+
+This immediately routes them to:
+/app/contractor/jobs
+
+No guilt. No penalty.
+
+E) Integration Points (Important)
+
+Service Runs
+
+Accepted service areas allow:
+
+“Accept additional work requests” toggle
+
+Zone-based coordination suggestions
+
+Messaging (Negotiation UI)
+
+When a sticky-note service run is created, auto-open a conversation:
+
+“Would you like this run to accept more work from Zone 4 in Humboldt?”
+
+Community Portals
+
+Only confirmed + published service areas appear
+
+Never auto-publish
+
+F) Acceptance Criteria
+
+✅ Contractor uploads messy data (out of order)
+→ system proposes coverage
+
+✅ Contractor accepts “Humboldt Zone 4”
+→ service run can accept more work there
+
+✅ Contractor dismisses everything
+→ zero blocking, zero regressions
+
+✅ Contractor accepts route corridor
+→ future prompts can say:
+
+“You’re already heading this way…”
+
+G) Explicit Non-Goals
+
+No pricing logic
+
+No contractor ranking
+
+No enforcement
+
+No exclusivity
