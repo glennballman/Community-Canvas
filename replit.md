@@ -1,7 +1,7 @@
 # Community Status Dashboard
 
 ## Overview
-The Community Status Dashboard is a Bloomberg-terminal style application designed to monitor community resilience across British Columbia. It provides a centralized hub for real-time status information, crucial for emergency response, logistical planning, and public awareness. Key capabilities include a dual-view mode (Sources View and Data View), a 4-column layout, comprehensive admin tools, and hierarchical source inheritance with extensive geographic navigation. The dashboard also incorporates criticality-based ground transportation tabs for focused monitoring. The project aims to enhance situational awareness and support critical decision-making in BC, with a business vision to serve as a critical tool for provincial emergency management and public safety.
+The Community Status Dashboard is a Bloomberg-terminal style application for monitoring community resilience across British Columbia. It provides a centralized hub for real-time status information, crucial for emergency response, logistical planning, and public awareness. Key capabilities include a dual-view mode (Sources View and Data View), a 4-column layout, comprehensive admin tools, and hierarchical source inheritance with extensive geographic navigation. The dashboard also incorporates criticality-based ground transportation tabs for focused monitoring. The project aims to enhance situational awareness and support critical decision-making in BC, serving as a critical tool for provincial emergency management and public safety.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -35,41 +35,41 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Storage Abstraction**: `IStorage` interface for flexible storage implementations.
 - **Geographic Hierarchy**: Provincial → Regional → Municipal data inheritance.
 - **Multi-Tenant Security**: RLS-based tenant isolation with `is_service_mode()` bypass, tenant context middleware, and route guards.
-- **Terminology Standards**: Enforced via `docs/TERMINOLOGY_STANDARDS.md` and `./scripts/check-terminology.sh`.
+- **Terminology Standards**: Enforced via `docs/TERMINOLOGY_STANDARDS.md`.
 - **External Data Lake V2**: Entity-graph architecture for managing scraped external data.
 - **Unified Assets Registry**: Central registry for all rentable assets with unified reservations.
 - **Capability Architecture**: Operational layer for work order planning and asset linking.
 - **Multi-Portal Foundation**: Supports one tenant operating multiple business brands, with portal-scoped data and context management.
-- **Entity Presentations System**: Portal-owned editorial content presentation system with composable blocks and AI pipeline auditing.
+- **Entity Presentations System**: Portal-owned editorial content presentation system with composable blocks.
 - **Procurement & Accounting Standards**: Industry-standard classification columns (UNSPSC, CSI MasterFormat) for future accounting integration.
-- **Canadian Tax & Payroll System**: Comprehensive payroll infrastructure including tax jurisdictions, rates, contribution rates, and employer taxes.
-- **Infrastructure & Organization Schema**: Extensive schema.org classification for entities using reference tables for infrastructure and organization types.
+- **Canadian Tax & Payroll System**: Comprehensive payroll infrastructure.
+- **Infrastructure & Organization Schema**: Extensive schema.org classification for entities.
 - **SEO & Sitemap System**: Multi-tenant sitemap infrastructure with portal-aware filtering and JSON-LD structured data.
 - **Media Storage System**: Cloudflare R2-based storage for images and documents with automatic optimization and tenant-isolated storage.
 - **Authority & Permits System**: Multi-authority permit management with lifecycle management and QR code verification.
 - **Trip Permit Orchestration**: Links permits to trips with automatic requirement detection and status tracking.
 - **Business Operator Onboarding**: Application workflow system for registering 11 operator types, with document verification and auto-provisioning.
-- **V3 Stored Value Stack**: PSP-agnostic payment infrastructure with append-only ledgers and FORCE RLS, including Payment Rail Spine, Wallet Ledger Spine, and RTR Connector Pack.
-- **Coordination Circles**: Federated resource sharing between tenants via circles with circle-aware messaging and unified conversation inbox.
-- **V3 App Shell (U1)**: Authoritative left navigation via `V3_NAV` in `client/src/lib/routes/v3Nav.ts`, with 6 sections (Operations, Reservations, Work, Compliance, Communication, Admin).
-- **Defensive Record Bundles**: Immutable, owner-controlled evidence packages for legal/insurance defense, with specific bundle types, contemporaneous notes, ACL delegation, and a seal workflow.
-- **Evidence Chain-of-Custody Engine**: Tamper-evident evidence bundles with immutable manifests, evidence objects, event chains, and bundle manifests.
-- **Insurance Claim Auto-Assembler**: Carrier-agnostic claim dossiers generated from sealed evidence, including policies, claims, inputs, and dossiers, with a deterministic assembly engine and R2 export.
-- **Legal Hold & Retention Policies**: Spoliation prevention and audit-grade hold management using hold containers, targets, events, and retention policies, enforced by DB triggers.
-- **Offline/Low-Signal Evidence Queue**: Evidence capture without connectivity, utilizing sync sessions, an ingest queue, a reconcile log, and a client-side queue library for batch processing and network status monitoring.
-- **Authority/Adjuster Read-Only Portals**: Secure external access for insurance adjusters, legal authorities, and auditors, managed through grants, scopes, tokens, and audit logs, leveraging SECURITY DEFINER functions and public routes.
-- **Dispute/Extortion Defense Pack**: Unified dispute management for various types of disputes, linking to sealed evidence, assembling defense packs with versioning, and integrating with Authority Share for external access.
-- **Anonymous Interest Groups & Threshold Triggers (P2.11)**: Privacy-preserving collective action system for whistleblower protection and class-action coordination.
-- **P2.15 Monetization Event Ledger**: Append-only ledger for tracking billable events with plan-based gating, supporting various event types and enforcing limits.
-- **P2.16 SCM Integration Certification**: Unified certification tracking for P2.5-P2.15 modules via System Completion Matrix (SCM), allowing manual certification and overrides.
-- **P2.17 Emergency Drill Mode**: Safe rehearsal of emergency scenarios without contaminating production records, using drill sessions, scripts, and synthetic record generation.
-- **Jobs/Labor System (V3.5)**: Multi-tenant B2B SaaS job posting and application system with moderation workflows and payment intent tracking.
-- **Job Publication Accounting GL Integration**: Complete financial audit trail for paid job placement intents, ensuring state machine protection and append-only audit logs.
-- **N3 Service Run Monitor + Replan Engine (Patent CC-01)**: Real-time service run monitoring with attention bundles and an evaluator for classifying run health based on deviation thresholds, considering various surface requirements and capacities.
-- **V3.5 Surface Spine (Patent CC-02)**: Atomic unit-level spatial modeling for containers, surfaces, claims, and utilities with Capacity Lenses, critical for various operational aspects.
+- **V3 Stored Value Stack**: PSP-agnostic payment infrastructure with append-only ledgers and FORCE RLS.
+- **Coordination Circles**: Federated resource sharing between tenants.
+- **V3 App Shell (U1)**: Authoritative left navigation via `V3_NAV`.
+- **Defensive Record Bundles**: Immutable, owner-controlled evidence packages for legal/insurance defense.
+- **Evidence Chain-of-Custody Engine**: Tamper-evident evidence bundles with immutable manifests.
+- **Insurance Claim Auto-Assembler**: Carrier-agnostic claim dossiers generated from sealed evidence.
+- **Legal Hold & Retention Policies**: Spoliation prevention and audit-grade hold management.
+- **Offline/Low-Signal Evidence Queue**: Evidence capture without connectivity.
+- **Authority/Adjuster Read-Only Portals**: Secure external access for insurance adjusters, legal authorities, and auditors.
+- **Dispute/Extortion Defense Pack**: Unified dispute management for various types of disputes.
+- **Anonymous Interest Groups & Threshold Triggers (P2.11)**: Privacy-preserving collective action system.
+- **P2.15 Monetization Event Ledger**: Append-only ledger for tracking billable events with plan-based gating.
+- **P2.16 SCM Integration Certification**: Unified certification tracking for P2.5-P2.15 modules.
+- **P2.17 Emergency Drill Mode**: Safe rehearsal of emergency scenarios without contaminating production records.
+- **Jobs/Labor System (V3.5)**: Multi-tenant B2B SaaS job posting and application system.
+- **Job Publication Accounting GL Integration**: Complete financial audit trail for paid job placement intents.
+- **N3 Service Run Monitor + Replan Engine (Patent CC-01)**: Real-time service run monitoring with attention bundles and an evaluator.
+- **V3.5 Surface Spine (Patent CC-02)**: Atomic unit-level spatial modeling for containers, surfaces, claims, and utilities with Capacity Lenses.
 - **P-UI-08 Proposal API**: Itinerary + atomic allocations + folios API with 10-participant split pay support, operator credits, and incidents.
-- **P-UI-09 Proposal UI**: 8 React components for proposal/approver workflow including ProposalHeaderCard, ParticipantList, FolioSummaryCard, PayYourSharePanel, InvitePanel, AssignUnitsPanel, OperatorCreditPanel, AllocationDrilldownDrawer.
-- **P-UI-10 Availability → Proposal Handoff**: Complete flow from availability search to confirmed reservation with public API endpoints (from-cart, release, confirm, risk), N3 risk banners, hold expiration timers (30-min TTL), forward-to-approver handoff, and privacy-preserving anonymization for pre-confirm public views.
+- **P-UI-09 Proposal UI**: 8 React components for proposal/approver workflow.
+- **P-UI-10 Availability → Proposal Handoff**: Complete flow from availability search to confirmed reservation.
 
 ### Feature Specifications
 - **Dual-view Mode**: Sources View (data source URLs) and Data View (live monitoring).
@@ -77,42 +77,16 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Criticality-based Tabs**: Lifeline, Supply Chain, Bus, Taxi, Courier, Postal transportation tabs.
 - **Apify Sync Integration**: External data ingestion from Apify datasets with streaming support and MD5-based change detection.
 - **Operations Board**: 15-minute precision scheduling interface for all resources.
-- **System Explorer**: Platform Admin debug/discovery surface for overview, evidence, integrations, data sources, data browser, and routes audit.
+- **System Explorer**: Platform Admin debug/discovery surface for various system aspects.
 - **Evidence Rule Enforcement**: Machine-enforceable evidence gates to track and verify system artifacts.
 - **Parking Plan View**: Visual operations map showing parking stall layout, real-time occupancy, and availability.
 - **Marina Plan View**: Visual operations map showing marina slip layout, real-time occupancy, and amenities.
-- **P-UI-17 Admin & Folios**: Admin pages for role management (users list, role updates), portal settings (branding, moderation, features), notification preferences, and read-only folio/ledger views with financial summaries.
-- **P-UI-17 Platform Console**: Platform-level administrative interface for platform admins including tenant management, platform-wide analytics, and V3.5 certification status. API endpoints at `/api/p2/platform/*` secured with `authenticateToken + requirePlatformAdmin`. UI pages at `/app/platform/*` with TenantsListPage, TenantDetailPage, and AnalyticsPage. V3_NAV updated with Platform section using `platformAdminOnly` gating flags.
-- **Work Catalog System**: Comprehensive property reference information system for contractors. Includes: Access Constraints (physical access parameters), Work Areas with media attachments, Property Subsystems (32 canonical + custom subsystems from cc_subsystem_catalog), On-Site Resources (tools/materials with share policies), and Community Use media. UI in WorkCatalogPage.tsx with 5 tabs. APIs in server/routes/p2-work-catalog.ts and server/routes/p2-subsystems.ts.
-- **A2.1 Contractor Identity Enrichment**: Camera-first identity extraction from vehicle photos. Schema: cc_contractor_profiles with identity fields (company_name, phone, website, location_hint, brand_hints, identity_enrichment_state), cc_ai_ingestions with identity_proposal. Service: contractorIdentityService.ts. APIs at /api/contractor/profile/identity/*. UI: IdentityProposalCard with propose/confirm/deny/edit/dismiss workflow. Privacy invariants: no addresses as facts, no raw license plates, web lookups require consent.
-- **A2.2 Service Area & Route Intelligence**: Consent-first service coverage inference from uploads. Schema: cc_contractor_service_areas table with coverage types (zone, portal, radius, route), cc_ai_ingestions with proposed_service_areas. Service: contractorServiceAreaInference.ts. APIs at /api/contractor/profile/service-areas/*. UI: ServiceAreaProposalCard with accept/adjust/dismiss and publish preference toggle. Page at /app/contractor/onboard/service-areas. Hard principles: advisory only (nothing restricts future jobs), consent-first (never auto-publish), multi-origin (GPS, sticky notes, identity), quick exit never blocks.
-
-## V3.5 Certification Suite
-
-### How to Run V3.5 Certification
-```bash
-tsx scripts/v35-cert.ts
-```
-
-### What It Checks
-1. **Terminology Scan** (HARD FAIL) - Scans for "book/booking" violations (must use "reserve/reservation" instead)
-2. **UI Route Inventory** - Verifies required app and public routes exist
-3. **API Route Inventory** - Verifies required API endpoints exist
-4. **Invariant Checks** - Validates schema definitions for ledger, surfaces, claims, and portal scoping
-5. **Proof Bundle** - Generates JSON artifacts in `./proof/v3.5/`
-
-### Proof Bundle Files
-- `routes-ui.json` - UI route inventory
-- `routes-api.json` - API endpoint inventory
-- `terminology-scan.json` - Terminology violations found
-- `invariants.json` - Schema invariant checks
-- `seed-wedding-proposal.json` - Wedding stress test seed info
-- `seed-n3-eval.json` - N3 monitor seed info
-- `seed-ops.json` - Ops seed info
-
-### Patents
-- **CC-01**: N3 Service Run Monitor + Replan Engine - Inventor Glenn Ballman
-- **CC-02**: V3.5 Surface Spine - Inventor Glenn Ballman
+- **P-UI-17 Admin & Folios**: Admin pages for role management, portal settings, notification preferences, and read-only folio/ledger views.
+- **P-UI-17 Platform Console**: Platform-level administrative interface for platform admins including tenant management, platform-wide analytics, and V3.5 certification status.
+- **Work Catalog System**: Comprehensive property reference information system for contractors.
+- **A2.1 Contractor Identity Enrichment**: Camera-first identity extraction from vehicle photos.
+- **A2.2 Service Area & Route Intelligence**: Consent-first service coverage inference from uploads.
+- **A2.3 Unified Upload Classifier + Asset Router**: Any-media classification pipeline for contractor uploads.
 
 ## External Dependencies
 
