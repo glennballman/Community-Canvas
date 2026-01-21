@@ -70,9 +70,6 @@ export default function ServiceAreasPage() {
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/contractor/profile/service-areas/dismiss', {});
       return res.json();
-    },
-    onSuccess: () => {
-      navigate('/app/contractor/jobs');
     }
   });
   
@@ -82,6 +79,7 @@ export default function ServiceAreasPage() {
   
   const handleSkip = () => {
     dismissMutation.mutate();
+    navigate('/app/contractor/jobs');
   };
   
   if (isLoading) {

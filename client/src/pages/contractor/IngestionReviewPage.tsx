@@ -23,7 +23,9 @@ import {
   Loader2,
   ArrowLeft,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  MapPin,
+  ArrowRight
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { IdentityProposalCard } from '@/components/contractor/IdentityProposalCard';
@@ -336,6 +338,34 @@ export default function IngestionReviewPage() {
               >
                 Back to Onboarding
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* What's Next - Service Areas prompt after confirming */}
+        {ingestion.status === 'confirmed' && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <MapPin className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium">Where do you usually take work?</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Based on your uploads, we can help identify your service areas. 
+                    This helps surface nearby work requests.
+                  </p>
+                  <Button 
+                    className="mt-3"
+                    onClick={() => navigate('/app/contractor/onboard/service-areas')}
+                    data-testid="button-go-service-areas"
+                  >
+                    Set up service areas
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
