@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
   ArrowLeft, 
   RefreshCw, 
   Calendar, 
@@ -23,11 +30,15 @@ import {
   useN3MonitorDetail, 
   useN3TakeAction, 
   useN3TriggerEvaluation,
-  useN3DismissBundle
+  useN3DismissBundle,
+  useN3Zones,
+  useN3AssignZone
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
 import { ReplanOptionCard } from '@/components/n3/ReplanOptionCard';
+import { ZoneBadge } from '@/components/ZoneBadge';
+import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { useToast } from '@/hooks/use-toast';
 
 const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
@@ -47,6 +58,29 @@ export default function ServiceRunMonitorPage() {
   const actionMutation = useN3TakeAction(TEST_TENANT_ID);
   const evaluateMutation = useN3TriggerEvaluation(TEST_TENANT_ID);
   const dismissMutation = useN3DismissBundle(TEST_TENANT_ID);
+  const assignZoneMutation = useN3AssignZone(TEST_TENANT_ID);
+  
+  const portalId = data?.run?.portal_id || null;
+  const { data: zonesData } = useN3Zones(portalId, TEST_TENANT_ID);
+  const zones = zonesData?.zones || [];
+
+  const handleZoneChange = async (zoneId: string) => {
+    if (!runId) return;
+    const actualZoneId = zoneId === 'none' ? null : zoneId;
+    try {
+      await assignZoneMutation.mutateAsync({ runId, zoneId: actualZoneId });
+      toast({
+        title: 'Zone updated',
+        description: actualZoneId ? 'Zone assigned successfully.' : 'Zone removed.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update zone.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleTakeAction = async (
     bundleId: string,
@@ -204,6 +238,57 @@ export default function ServiceRunMonitorPage() {
           </CardContent>
         </Card>
       </div>
+
+      {portalId && (
+        <Card data-testid="zone-assignment-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Zone Assignment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Select 
+                value={data?.zone_id || 'none'} 
+                onValueChange={handleZoneChange}
+                disabled={assignZoneMutation.isPending}
+              >
+                <SelectTrigger className="w-48" data-testid="select-zone">
+                  <SelectValue placeholder="Select zone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No zone</SelectItem>
+                  {zones.map(zone => (
+                    <SelectItem key={zone.id} value={zone.id}>
+                      {zone.badge_label_resident || zone.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {data?.zone_id && data?.zone_name && (
+                <ZoneBadge
+                  zoneName={data.zone_name}
+                  zoneKey={data.zone_key || ''}
+                  badgeLabelResident={data.badge_label_resident || null}
+                  badgeLabelContractor={data.badge_label_contractor || null}
+                  badgeLabelVisitor={data.badge_label_visitor || null}
+                  viewer="resident"
+                />
+              )}
+            </div>
+            {data?.zone_pricing_estimate && (
+              <ZoneImpactSummary
+                baseEstimate={data.zone_pricing_estimate.base_estimate}
+                zoneName={data.zone_name || ''}
+                breakdown={data.zone_pricing_estimate.zone_modifier_breakdown}
+                finalEstimate={data.zone_pricing_estimate.final_estimate}
+                notes={data.zone_pricing_estimate.notes}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
