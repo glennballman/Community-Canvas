@@ -671,3 +671,126 @@ export function useN3ReadinessDrift(runId: string | undefined, tenantId: string,
     refetchOnWindowFocus: false,
   });
 }
+
+// ============ READINESS LOCK / SNAPSHOT (Prompt 30) ============
+
+export interface ReadinessSnapshotPayload {
+  run: {
+    id: string;
+    name: string;
+    status: string;
+    zone_id: string | null;
+    portal_id: string | null;
+    starts_at: string | null;
+    ends_at: string | null;
+  };
+  attached_requests: Array<{
+    maintenance_request_id: string;
+    attached_at: string;
+    status_at_lock: string;
+    zone_id_at_lock: string | null;
+    coordination_opt_in_at_lock: boolean;
+    coordination_opt_in_set_at: string | null;
+  }>;
+  summary: {
+    total_attached: number;
+    opted_in_count: number;
+    opted_out_count: number;
+  };
+}
+
+export interface ReadinessSnapshot {
+  id: string;
+  run_id: string;
+  locked_at: string;
+  locked_by: string;
+  note: string | null;
+  payload: ReadinessSnapshotPayload;
+}
+
+export interface ReadinessLockResponse {
+  locked: boolean;
+  snapshot: ReadinessSnapshot | null;
+}
+
+/**
+ * Hook to fetch readiness lock/snapshot for an N3 Service Run.
+ * Returns locked status and snapshot payload if locked.
+ * Admin/owner only.
+ */
+export function useN3ReadinessSnapshot(runId: string | undefined, tenantId: string) {
+  return useQuery<ReadinessLockResponse>({
+    queryKey: ['/api/n3/runs', runId, 'readiness-lock'],
+    queryFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/readiness-lock`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch readiness lock');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook to lock a run's readiness state by creating a snapshot.
+ * Admin/owner only. Only draft or scheduled runs can be locked.
+ */
+export function useLockN3Readiness(runId: string, tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (note?: string) => {
+      const res = await fetch(`/api/n3/runs/${runId}/readiness-lock`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify({ note }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to lock readiness');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'readiness-lock'] });
+    },
+  });
+}
+
+/**
+ * Hook to unlock a run by deleting the readiness snapshot.
+ * Admin/owner only.
+ */
+export function useUnlockN3Readiness(runId: string, tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/readiness-unlock`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to unlock readiness');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'readiness-lock'] });
+    },
+  });
+}
