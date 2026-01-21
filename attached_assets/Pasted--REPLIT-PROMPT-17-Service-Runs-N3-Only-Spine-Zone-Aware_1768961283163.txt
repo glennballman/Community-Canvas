@@ -1,0 +1,269 @@
+✅ REPLIT PROMPT 17 — Service Runs (N3-Only Spine) Zone-Aware Advisory Estimates
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+Service Runs are logistics/operations objects (not employment jobs)
+
+Zone pricing modifiers are simulation / advisory only
+
+❌ Do NOT write to or modify:
+
+ledger / folio / payment / invoice paths
+
+❌ Do NOT auto-charge anything
+
+Contractors must never see:
+
+pricing_modifiers JSON
+
+zone impact summaries
+
+bundle simulations
+
+Reuse shared logic: computeZonePricingEstimate() from shared/zonePricing.ts
+
+Do not invent table names—use cc_n3_runs and existing cc_zones
+
+AUTHORITATIVE TARGET
+
+Only system to modify: cc_n3_runs + server/routes/n3.ts + N3 UI pages
+
+Ignore / do not touch: server/routes/p2-service-runs.ts, cc_service_runs, legacy Service Run UI pages
+
+GOAL
+
+Make Service Runs (N3) support:
+
+portal-scoped zones
+
+zone assignment
+
+zone-aware advisory estimate output (same shape as Work Requests)
+
+UI in N3 monitor to show:
+
+Zone dropdown (resident/admin)
+
+Zone impact summary (simulation / advisory only)
+
+No persistence of computed estimates. Compute-on-read only.
+
+PART A — DATA MODEL (N3 becomes the canonical Service Runs spine)
+A1) Migration: Add portal + zone to cc_n3_runs
+
+Create a migration (next number in sequence) that adds:
+
+portal_id (required for zone scoping)
+
+ALTER TABLE cc_n3_runs
+ADD COLUMN IF NOT EXISTS portal_id UUID;
+CREATE INDEX IF NOT EXISTS idx_cc_n3_runs_portal_id
+ON cc_n3_runs(portal_id)
+WHERE portal_id IS NOT NULL;
+
+
+zone_id with FK + index
+
+ALTER TABLE cc_n3_runs
+ADD COLUMN IF NOT EXISTS zone_id UUID
+REFERENCES cc_zones(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_cc_n3_runs_zone_id
+ON cc_n3_runs(zone_id)
+WHERE zone_id IS NOT NULL;
+
+A1 Notes
+
+Do not remove or refactor existing N3 fields.
+
+We are making N3 runs portal-aware to align with zones.
+
+A2) Base estimate source (NO schema guessing)
+
+Find where a Service Run “estimate” is stored or derived (search code + schema for N3 estimate fields or computed cost).
+
+If an existing numeric estimate field exists for N3 runs, use it as baseEstimate.
+
+If no such field exists, do not add a new one in this prompt. The advisory estimate output should be null until a base estimate exists.
+
+PART B — API (N3-only)
+B1) Zones read endpoint for portal-scoped zones
+
+Add in server/routes/n3.ts:
+
+GET /api/n3/zones?portalId=:portalId
+
+Requirements:
+
+requireAuth + requireTenant
+
+Validate portalId is provided and belongs to tenant context
+
+Return zone fields needed for label display:
+
+id, key, name, badge_label_resident, badge_label_contractor, badge_label_visitor
+
+Include pricing_modifiers ONLY for resident/admin contexts (never for contractor preview)
+
+If role detection exists, use it
+
+Otherwise: create a resident-only route under /api/p2/app/... pattern if that’s the established convention
+
+But keep it simple: N3 pages are resident/admin, so it’s acceptable that /api/n3/zones includes pricing_modifiers while also being gated by owner/admin authorization.
+
+Authorization: Owner/admin only.
+
+B2) Assign zone to a run
+
+Add in server/routes/n3.ts:
+
+PUT /api/n3/runs/:runId/zone
+
+Body:
+
+{ zone_id: string | null }
+
+
+Rules:
+
+Run must exist and belong to tenant
+
+Run must have portal_id set, else reject (400)
+
+If zone_id is not null:
+
+zone must exist
+
+zone.portal_id must equal run.portal_id
+
+Clearing zone allowed with null
+
+Auth: requireAuth + requireTenant
+
+Authorization: owner/admin
+
+Emit audit logs:
+
+zone_set, zone_update, zone_cleared
+
+B3) N3 monitor detail must include zone info + advisory estimate
+
+In the endpoint that returns run monitor detail:
+
+GET /api/n3/runs/:runId/monitor
+
+Add to payload:
+
+portal_id
+
+zone_id
+
+zone_name (LEFT JOIN cc_zones)
+
+badge labels (resident/contractor/visitor)
+
+DO NOT include pricing_modifiers in any contractor preview route (N3 doesn’t have contractor preview; keep it resident-only anyway)
+
+Add computed field (compute-on-read only):
+
+zone_pricing_estimate: ZonePricingEstimate | null
+
+Compute only when:
+
+base estimate exists (number > 0)
+
+zone has pricing modifiers configured
+
+Use:
+
+computeZonePricingEstimate(baseEstimate, zone.pricing_modifiers)
+
+
+Never persist the result.
+
+PART C — UI (N3 monitor becomes the canonical Service Runs UI)
+C1) Update TypeScript interfaces
+
+Update the N3 run / monitor interfaces to include:
+
+portal_id
+
+zone_id
+
+zone_name
+
+badge labels
+
+(optionally) pricing_modifiers only in resident/admin pages if needed for UI display
+
+zone_pricing_estimate
+
+C2) Zone dropdown on N3 monitor page
+
+In client/src/pages/n3/ServiceRunMonitorPage.tsx:
+
+Fetch zones using GET /api/n3/zones?portalId=...
+
+Render dropdown only if portal_id exists
+
+Values: Unzoned + zones
+
+Zone option label must match Prompt 14:
+
+use getZoneBadgeLabel(zone, 'resident')
+
+C3) Zone impact summary
+
+On monitor page, when zone_id exists:
+
+Render ZoneImpactSummary
+
+viewerContext="resident"
+
+baseEstimate should be number | null (do not pass 0)
+
+Must show “simulation” and “advisory only” language
+
+❌ Do NOT add BundleSimulationSlider to Service Runs in this prompt
+
+PART D — SECURITY / INVARIANTS
+
+No sharing by default
+
+No contractor exposure of pricing modifiers or impact summaries
+
+All routes owner/admin gated (N3 is internal ops)
+
+No Bamfield hardcoding
+
+PART E — QA / ACCEPTANCE
+
+Must verify:
+
+Can assign zone to N3 run (same portal)
+
+Cross-portal zone assignment rejected
+
+If run.portal_id missing → assignment rejected
+
+Monitor payload includes zone_id + zone_name
+
+ZoneImpactSummary displays “simulation / advisory only”
+
+No billing/ledger/folio changes
+
+DELIVERABLES
+
+Migration(s) for cc_n3_runs portal_id + zone_id
+
+N3 API routes: zones read + run zone assign + monitor payload enrichment
+
+N3 UI: dropdown + ZoneImpactSummary wiring
+
+Uses shared compute logic
+
+No legacy changes
+
+END PROMPT 17

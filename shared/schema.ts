@@ -6888,6 +6888,8 @@ export const ccN3Runs = pgTable("cc_n3_runs", {
   status: text("status").notNull().default("scheduled"),
   startsAt: timestamp("starts_at", { withTimezone: true }),
   endsAt: timestamp("ends_at", { withTimezone: true }),
+  portalId: uuid("portal_id"),
+  zoneId: uuid("zone_id").references(() => ccZones.id, { onDelete: "set null" }),
   metadata: jsonb("metadata").default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -6895,6 +6897,8 @@ export const ccN3Runs = pgTable("cc_n3_runs", {
   tenantIdx: index("idx_n3_runs_tenant").on(table.tenantId),
   statusIdx: index("idx_n3_runs_status").on(table.status),
   startsIdx: index("idx_n3_runs_starts").on(table.startsAt),
+  portalIdx: index("idx_n3_runs_portal_id").on(table.portalId),
+  zoneIdx: index("idx_n3_runs_zone_id").on(table.zoneId),
 }));
 
 export const insertN3RunSchema = createInsertSchema(ccN3Runs).omit({ id: true, createdAt: true, updatedAt: true });
