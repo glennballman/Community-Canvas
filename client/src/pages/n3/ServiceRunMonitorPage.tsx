@@ -28,6 +28,7 @@ import {
   Clock,
   AlertTriangle,
   FileText,
+  FileCheck,
   Loader2,
   CheckCircle2,
   Lock,
@@ -54,6 +55,8 @@ import {
   useLockN3Readiness,
   useUnlockN3Readiness,
   useN3ExecutionEligibility,
+  useN3ExecutionHandoff,
+  useCreateN3ExecutionHandoff,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -158,6 +161,14 @@ export default function ServiceRunMonitorPage() {
     TEST_TENANT_ID,
     snapshotLockedAt
   );
+  
+  // Execution handoff (Prompt 32) - read-only contract of intent
+  const [handoffNote, setHandoffNote] = useState('');
+  const { data: handoffData, isError: handoffNotFound } = useN3ExecutionHandoff(
+    runId,
+    TEST_TENANT_ID
+  );
+  const createHandoffMutation = useCreateN3ExecutionHandoff(runId || '', TEST_TENANT_ID);
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -1063,6 +1074,125 @@ export default function ServiceRunMonitorPage() {
                 )}
               </p>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Execution Handoff Card (Prompt 32) - Read-only contract of intent */}
+      {(run.status === 'draft' || run.status === 'scheduled') && 
+       snapshotData?.locked && (
+        <Card data-testid="card-execution-handoff">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-muted-foreground" />
+                Execution Handoff
+              </CardTitle>
+              {handoffData && (
+                <Badge 
+                  variant="outline" 
+                  className="text-green-600 border-green-600 dark:text-green-400 dark:border-green-400"
+                  data-testid="badge-handoff-recorded"
+                >
+                  recorded
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {handoffData ? (
+              <>
+                {/* Handoff already recorded - read-only state */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Recorded:</span>
+                    <span className="font-medium" data-testid="text-handoff-created-at">
+                      {format(new Date(handoffData.created_at), 'PPpp')}
+                    </span>
+                  </div>
+                  {handoffData.payload?.execution_eligibility?.overall && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Eligibility at handoff:</span>
+                      <Badge 
+                        variant="outline"
+                        className={
+                          handoffData.payload.execution_eligibility.overall === 'degraded'
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : handoffData.payload.execution_eligibility.overall === 'improved'
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-muted-foreground'
+                        }
+                        data-testid="badge-handoff-eligibility"
+                      >
+                        {handoffData.payload.execution_eligibility.overall}
+                      </Badge>
+                    </div>
+                  )}
+                  {handoffData.note && (
+                    <div>
+                      <span className="text-muted-foreground">Note:</span>
+                      <p className="mt-1" data-testid="text-handoff-note">{handoffData.note}</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground italic pt-2 border-t">
+                  Execution handoff recorded for reference. This is a read-only contract of intent.
+                </p>
+              </>
+            ) : !handoffNotFound ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                {/* Create handoff form */}
+                <p className="text-sm text-muted-foreground">
+                  This records the current planning state for execution reference. 
+                  No notifications or execution will occur.
+                </p>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Note (optional, 280 chars max)</label>
+                  <Textarea
+                    placeholder="Add an optional note for this handoff..."
+                    value={handoffNote}
+                    onChange={(e) => setHandoffNote(e.target.value.slice(0, 280))}
+                    maxLength={280}
+                    className="resize-none"
+                    data-testid="input-handoff-note"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {handoffNote.length}/280
+                  </p>
+                </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await createHandoffMutation.mutateAsync(handoffNote || undefined);
+                      toast({
+                        title: 'Handoff recorded',
+                        description: 'Execution handoff has been recorded for reference.',
+                      });
+                      setHandoffNote('');
+                    } catch (err: any) {
+                      toast({
+                        title: 'Failed to create handoff',
+                        description: err.message,
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  disabled={createHandoffMutation.isPending}
+                  data-testid="button-create-handoff"
+                >
+                  {createHandoffMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileCheck className="h-4 w-4 mr-2" />
+                  )}
+                  Create Execution Handoff
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

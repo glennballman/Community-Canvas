@@ -857,3 +857,97 @@ export function useN3ExecutionEligibility(
     refetchOnWindowFocus: false,
   });
 }
+
+// ============ EXECUTION HANDOFF (Prompt 32) ============
+
+export interface ExecutionHandoffPayload {
+  run: {
+    id: string;
+    status: string;
+    portal_id: string | null;
+    zone_id: string | null;
+    starts_at: string | null;
+    ends_at: string | null;
+  };
+  readiness_snapshot: {
+    locked_at: string;
+    locked_by: string;
+    summary: {
+      total_attached: number;
+      opted_in_count: number;
+      opted_out_count: number;
+    };
+  };
+  execution_eligibility: {
+    evaluated_at: string;
+    overall: 'unchanged' | 'improved' | 'degraded';
+    deltas: Record<string, any>;
+  };
+  captured_at: string;
+}
+
+export interface ExecutionHandoffResponse {
+  id: string;
+  run_id: string;
+  created_at: string;
+  created_by: string;
+  note: string | null;
+  payload: ExecutionHandoffPayload;
+}
+
+/**
+ * Hook to fetch the execution handoff for a run.
+ * Returns 404 if none exists.
+ * Admin/owner only.
+ */
+export function useN3ExecutionHandoff(runId: string | undefined, tenantId: string) {
+  return useQuery<ExecutionHandoffResponse>({
+    queryKey: ['/api/n3/runs', runId, 'execution-handoff'],
+    queryFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-handoff`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch execution handoff');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+    retry: false, // Don't retry 404s
+    staleTime: 60 * 1000, // 1 minute
+  });
+}
+
+/**
+ * Hook to create an execution handoff for a run.
+ * Requires active readiness snapshot.
+ * Admin/owner only.
+ */
+export function useCreateN3ExecutionHandoff(runId: string, tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (note?: string) => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-handoff`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify({ note }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create execution handoff');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate handoff query and related monitor queries
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'execution-handoff'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId] });
+    },
+  });
+}
