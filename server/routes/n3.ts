@@ -27,8 +27,10 @@ import {
   ccMaintenanceRequests,
   ccN3RunMaintenanceRequests,
   ccN3RunReadinessSnapshots,
-  ccN3RunExecutionHandoffs
+  ccN3RunExecutionHandoffs,
+  ccN3ExecutionContracts
 } from '@shared/schema';
+import { createHash } from 'crypto';
 import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { computeZonePricingEstimate, ZonePricingModifiers } from '@shared/zonePricing';
@@ -3023,6 +3025,310 @@ n3Router.get('/runs/:runId/execution-handoff', requireAuth, requireTenant, requi
     });
   } catch (err) {
     console.error('[N3 API] Error fetching execution handoff:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============ EXECUTION CONTRACTS (Prompt 33) ============
+
+/**
+ * Compute SHA256 hash of a JSON payload
+ */
+function computePayloadHash(payload: object): string {
+  const payloadString = JSON.stringify(payload);
+  return createHash('sha256').update(payloadString).digest('hex');
+}
+
+/**
+ * Execution Consumer Guard (read-only access for execution systems)
+ * For now, allows admin/owner or platform admin access.
+ * Future: Add mTLS, service tokens, or internal execution role checks.
+ */
+function requireExecutionConsumer(req: Request, res: Response, next: NextFunction) {
+  const tenantReq = req as TenantRequest;
+  const roles = tenantReq.ctx?.roles || [];
+  
+  // Allow admin/owner (for testing/verification) or platform admin
+  const hasAccess = 
+    roles.includes('owner') || 
+    roles.includes('admin') || 
+    roles.includes('tenant_admin') ||
+    !!tenantReq.user?.isPlatformAdmin;
+  
+  if (!hasAccess) {
+    return res.status(403).json({ 
+      error: 'Execution consumer access required',
+      code: 'CONSUMER_ACCESS_REQUIRED'
+    });
+  }
+  next();
+}
+
+/**
+ * POST /api/n3/runs/:runId/execution-contract
+ * 
+ * Create an immutable, cryptographically verifiable execution contract.
+ * Requires: readiness snapshot, execution eligibility, execution handoff.
+ * Admin/owner only. One contract per run.
+ */
+n3Router.post('/runs/:runId/execution-contract', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const actorId = tenantReq.user?.id || 'system';
+  const issuedAt = new Date().toISOString();
+  const { note } = req.body || {};
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({
+        id: ccN3Runs.id,
+        name: ccN3Runs.name,
+        status: ccN3Runs.status,
+        zoneId: ccN3Runs.zoneId,
+        portalId: ccN3Runs.portalId,
+        startsAt: ccN3Runs.startsAt,
+        endsAt: ccN3Runs.endsAt,
+      })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Only draft or scheduled runs
+    if (run.status !== 'draft' && run.status !== 'scheduled') {
+      return res.status(400).json({
+        error: 'Execution contract only available for draft or scheduled runs',
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    // Check if contract already exists (one per run)
+    const existingContract = await db
+      .select({ id: ccN3ExecutionContracts.id })
+      .from(ccN3ExecutionContracts)
+      .where(eq(ccN3ExecutionContracts.runId, runId))
+      .limit(1);
+    
+    if (existingContract.length > 0) {
+      return res.status(409).json({
+        error: 'Execution contract already exists for this run',
+        code: 'CONTRACT_EXISTS',
+      });
+    }
+    
+    // Get snapshot (required)
+    const snapshots = await db
+      .select()
+      .from(ccN3RunReadinessSnapshots)
+      .where(and(
+        eq(ccN3RunReadinessSnapshots.runId, runId),
+        eq(ccN3RunReadinessSnapshots.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (snapshots.length === 0) {
+      return res.status(409).json({
+        error: 'Readiness snapshot required before creating execution contract',
+        code: 'SNAPSHOT_REQUIRED',
+      });
+    }
+    
+    const snapshot = snapshots[0];
+    
+    // Get handoff (required)
+    const handoffs = await db
+      .select()
+      .from(ccN3RunExecutionHandoffs)
+      .where(and(
+        eq(ccN3RunExecutionHandoffs.runId, runId),
+        eq(ccN3RunExecutionHandoffs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (handoffs.length === 0) {
+      return res.status(409).json({
+        error: 'Execution handoff required before creating execution contract',
+        code: 'HANDOFF_REQUIRED',
+      });
+    }
+    
+    const handoff = handoffs[0];
+    const handoffPayload = handoff.handoffPayload as {
+      readiness_snapshot?: {
+        locked_at: string;
+        locked_by: string;
+        summary: {
+          total_attached: number;
+          opted_in_count: number;
+          opted_out_count: number;
+          drift_count?: number;
+        };
+      };
+      execution_eligibility?: {
+        evaluated_at: string;
+        overall: string;
+        deltas: {
+          opt_in_ratio: { classification: string };
+          attached_count: { classification: string };
+          drift: { classification: string };
+        };
+      };
+    };
+    
+    // Validate handoff has execution eligibility
+    if (!handoffPayload.execution_eligibility) {
+      return res.status(409).json({
+        error: 'Execution eligibility evaluation required before creating execution contract',
+        code: 'ELIGIBILITY_REQUIRED',
+      });
+    }
+    
+    // Build contract payload (counts only, no PII)
+    const contractPayload = {
+      run: {
+        id: run.id,
+        status: run.status,
+        starts_at: run.startsAt?.toISOString() || null,
+        ends_at: run.endsAt?.toISOString() || null,
+      },
+      scope: {
+        portal_id: run.portalId,
+        zone_id: run.zoneId,
+      },
+      planning_state: {
+        attached_requests: handoffPayload.readiness_snapshot?.summary.total_attached || 0,
+        coordination_opt_in: handoffPayload.readiness_snapshot?.summary.opted_in_count || 0,
+        unassigned: 0,
+      },
+      eligibility: {
+        status: handoffPayload.execution_eligibility?.overall || 'unknown',
+        evaluated_at: handoffPayload.execution_eligibility?.evaluated_at || issuedAt,
+      },
+      readiness_snapshot: {
+        locked_at: handoffPayload.readiness_snapshot?.locked_at || null,
+        counts: {
+          attached: handoffPayload.readiness_snapshot?.summary.total_attached || 0,
+          coord_ready: handoffPayload.readiness_snapshot?.summary.opted_in_count || 0,
+          drift: handoffPayload.readiness_snapshot?.summary.drift_count || 0,
+        },
+      },
+      advisory_only: true,
+    };
+    
+    // Compute hash
+    const payloadHash = computePayloadHash(contractPayload);
+    
+    // Insert contract
+    const [contract] = await db
+      .insert(ccN3ExecutionContracts)
+      .values({
+        runId,
+        tenantId,
+        portalId: run.portalId,
+        zoneId: run.zoneId,
+        contractPayload,
+        payloadHash,
+        payloadVersion: 'v1',
+        issuedAt: new Date(),
+        issuedBy: actorId,
+        note: note ? String(note).slice(0, 280) : null,
+      })
+      .returning();
+    
+    // Emit audit log
+    console.log('[N3 AUDIT] n3_execution_contract_issued', {
+      run_id: runId,
+      tenant_id: tenantId,
+      portal_id: run.portalId,
+      zone_id: run.zoneId,
+      payload_hash: payloadHash,
+      issued_by: actorId,
+      issued_at: issuedAt,
+    });
+    
+    res.status(201).json({
+      id: contract.id,
+      run_id: contract.runId,
+      payload_hash: contract.payloadHash,
+      payload_version: contract.payloadVersion,
+      issued_at: contract.issuedAt,
+      issued_by: contract.issuedBy,
+      note: contract.note,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error creating execution contract:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/runs/:runId/execution-contract
+ * 
+ * Retrieve the execution contract for consumption by execution systems.
+ * Read-only. Execution consumer guard.
+ */
+n3Router.get('/runs/:runId/execution-contract', requireAuth, requireTenant, requireExecutionConsumer, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Get contract
+    const contracts = await db
+      .select()
+      .from(ccN3ExecutionContracts)
+      .where(and(
+        eq(ccN3ExecutionContracts.runId, runId),
+        eq(ccN3ExecutionContracts.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (contracts.length === 0) {
+      return res.status(404).json({ error: 'No execution contract exists for this run' });
+    }
+    
+    const contract = contracts[0];
+    
+    res.json({
+      contract: contract.contractPayload,
+      payload_hash: contract.payloadHash,
+      payload_version: contract.payloadVersion,
+      issued_at: contract.issuedAt,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching execution contract:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
