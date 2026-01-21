@@ -23,7 +23,9 @@ import {
   ccReplanOptions,
   ccReplanActions,
   ccZones,
-  ccPortals
+  ccPortals,
+  ccMaintenanceRequests,
+  ccN3RunMaintenanceRequests
 } from '@shared/schema';
 import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -1383,6 +1385,402 @@ n3Router.post('/trigger-cycle', requireAuth, async (req, res) => {
     res.json({ success: true, stats });
   } catch (err) {
     console.error('[N3 API] Error triggering cycle:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============ PROMPT 28: Maintenance Request Attachments ============
+
+/**
+ * GET /api/n3/runs/:runId/eligible-maintenance-requests
+ * List coordination-opt-in maintenance requests eligible for attachment to a draft run
+ * Admin/owner only
+ */
+const eligibleMaintenanceRequestsSchema = z.object({
+  category: z.string().optional(),
+  limit: z.coerce.number().min(10).max(200).default(50),
+  include_unzoned: z.coerce.boolean().default(false),
+});
+
+n3Router.get('/runs/:runId/eligible-maintenance-requests', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  
+  try {
+    const parseResult = eligibleMaintenanceRequestsSchema.safeParse(req.query);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Invalid query parameters', details: parseResult.error.flatten() });
+    }
+    
+    const { category, limit, include_unzoned } = parseResult.data;
+    const tenantId = tenantReq.ctx.tenant_id;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Fetch the run
+    const runRows = await db
+      .select()
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    if (run.status !== 'draft') {
+      return res.status(400).json({ 
+        error: 'Only draft runs can have maintenance requests attached',
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    if (!run.portalId) {
+      return res.status(400).json({ 
+        error: 'Run must have a portal assigned before attaching maintenance requests',
+        code: 'PORTAL_REQUIRED',
+      });
+    }
+    
+    const warnings: string[] = [];
+    
+    // Build query conditions
+    const conditions: any[] = [
+      eq(ccMaintenanceRequests.portalId, run.portalId),
+      eq(ccMaintenanceRequests.coordinationOptIn, true),
+    ];
+    
+    if (run.zoneId) {
+      conditions.push(eq(ccMaintenanceRequests.zoneId, run.zoneId));
+    } else {
+      if (include_unzoned) {
+        conditions.push(isNull(ccMaintenanceRequests.zoneId));
+      } else {
+        warnings.push('ZONE_NOT_ASSIGNED');
+        // Return empty list with warning if run has no zone and include_unzoned is false
+        return res.json({
+          ok: true,
+          run: { 
+            id: run.id, 
+            portal_id: run.portalId, 
+            zone_id: run.zoneId, 
+            status: run.status 
+          },
+          items: [],
+          warnings,
+        });
+      }
+    }
+    
+    if (category) {
+      conditions.push(eq(ccMaintenanceRequests.category, category));
+    }
+    
+    // Fetch eligible requests
+    const requests = await db
+      .select({
+        id: ccMaintenanceRequests.id,
+        request_number: ccMaintenanceRequests.requestNumber,
+        category: ccMaintenanceRequests.category,
+        status: ccMaintenanceRequests.status,
+        zone_id: ccMaintenanceRequests.zoneId,
+        portal_id: ccMaintenanceRequests.portalId,
+        coordination_opt_in_set_at: ccMaintenanceRequests.coordinationOptInSetAt,
+        created_at: ccMaintenanceRequests.createdAt,
+        updated_at: ccMaintenanceRequests.updatedAt,
+      })
+      .from(ccMaintenanceRequests)
+      .where(and(...conditions))
+      .orderBy(desc(ccMaintenanceRequests.createdAt))
+      .limit(limit);
+    
+    res.json({
+      ok: true,
+      run: { 
+        id: run.id, 
+        portal_id: run.portalId, 
+        zone_id: run.zoneId, 
+        status: run.status 
+      },
+      items: requests,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching eligible maintenance requests:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/n3/runs/:runId/attach-maintenance-requests
+ * Attach coordination-opt-in maintenance requests to a draft run
+ * Admin/owner only
+ */
+const attachMaintenanceRequestsSchema = z.object({
+  maintenance_request_ids: z.array(z.string().uuid()).min(1).max(100),
+});
+
+n3Router.post('/runs/:runId/attach-maintenance-requests', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  
+  try {
+    const parseResult = attachMaintenanceRequestsSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Invalid request body', details: parseResult.error.flatten() });
+    }
+    
+    const { maintenance_request_ids } = parseResult.data;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const userId = tenantReq.user?.id;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Fetch the run
+    const runRows = await db
+      .select()
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    if (run.status !== 'draft') {
+      return res.status(400).json({ 
+        error: 'Only draft runs can have maintenance requests attached',
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    if (!run.portalId) {
+      return res.status(400).json({ 
+        error: 'Run must have a portal assigned',
+        code: 'PORTAL_REQUIRED',
+      });
+    }
+    
+    // Validate each maintenance request
+    const validRequests: string[] = [];
+    for (const reqId of maintenance_request_ids) {
+      const reqRows = await db
+        .select({
+          id: ccMaintenanceRequests.id,
+          portalId: ccMaintenanceRequests.portalId,
+          zoneId: ccMaintenanceRequests.zoneId,
+          coordinationOptIn: ccMaintenanceRequests.coordinationOptIn,
+        })
+        .from(ccMaintenanceRequests)
+        .where(eq(ccMaintenanceRequests.id, reqId))
+        .limit(1);
+      
+      if (reqRows.length === 0) continue;
+      const mReq = reqRows[0];
+      
+      // Must match portal
+      if (mReq.portalId !== run.portalId) continue;
+      
+      // Must match zone if run has zone
+      if (run.zoneId && mReq.zoneId !== run.zoneId) continue;
+      
+      // Must be opted in
+      if (!mReq.coordinationOptIn) continue;
+      
+      validRequests.push(reqId);
+    }
+    
+    // Insert attachments (ignore duplicates)
+    let attachedCount = 0;
+    for (const reqId of validRequests) {
+      try {
+        await db.insert(ccN3RunMaintenanceRequests).values({
+          tenantId,
+          runId,
+          maintenanceRequestId: reqId,
+          attachedBy: userId,
+        }).onConflictDoNothing();
+        attachedCount++;
+      } catch (e) {
+        // Ignore duplicate key errors
+      }
+    }
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_run_maintenance_requests_attached', {
+      event: 'n3_run_maintenance_requests_attached',
+      run_id: runId,
+      attached_count: attachedCount,
+      actor_id: userId,
+      tenant_id: tenantId,
+      occurred_at: new Date().toISOString(),
+    });
+    
+    res.json({ success: true, attached_count: attachedCount });
+  } catch (err) {
+    console.error('[N3 API] Error attaching maintenance requests:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/n3/runs/:runId/detach-maintenance-requests
+ * Detach maintenance requests from a run
+ * Admin/owner only
+ */
+const detachMaintenanceRequestsSchema = z.object({
+  maintenance_request_ids: z.array(z.string().uuid()).min(1).max(100),
+});
+
+n3Router.post('/runs/:runId/detach-maintenance-requests', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  
+  try {
+    const parseResult = detachMaintenanceRequestsSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: 'Invalid request body', details: parseResult.error.flatten() });
+    }
+    
+    const { maintenance_request_ids } = parseResult.data;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const userId = tenantReq.user?.id;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select()
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Delete attachments
+    let detachedCount = 0;
+    for (const reqId of maintenance_request_ids) {
+      const result = await db
+        .delete(ccN3RunMaintenanceRequests)
+        .where(and(
+          eq(ccN3RunMaintenanceRequests.tenantId, tenantId),
+          eq(ccN3RunMaintenanceRequests.runId, runId),
+          eq(ccN3RunMaintenanceRequests.maintenanceRequestId, reqId)
+        ));
+      detachedCount++;
+    }
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_run_maintenance_requests_detached', {
+      event: 'n3_run_maintenance_requests_detached',
+      run_id: runId,
+      detached_count: detachedCount,
+      actor_id: userId,
+      tenant_id: tenantId,
+      occurred_at: new Date().toISOString(),
+    });
+    
+    res.json({ success: true, detached_count: detachedCount });
+  } catch (err) {
+    console.error('[N3 API] Error detaching maintenance requests:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/runs/:runId/maintenance-requests
+ * List attached maintenance requests for a run
+ * Admin/owner only
+ */
+n3Router.get('/runs/:runId/maintenance-requests', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  
+  try {
+    const tenantId = tenantReq.ctx.tenant_id;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select()
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Fetch attached requests with join
+    const attachments = await db
+      .select({
+        id: ccN3RunMaintenanceRequests.id,
+        maintenance_request_id: ccN3RunMaintenanceRequests.maintenanceRequestId,
+        attached_at: ccN3RunMaintenanceRequests.attachedAt,
+        request_number: ccMaintenanceRequests.requestNumber,
+        category: ccMaintenanceRequests.category,
+        status: ccMaintenanceRequests.status,
+        zone_id: ccMaintenanceRequests.zoneId,
+        coordination_opt_in_set_at: ccMaintenanceRequests.coordinationOptInSetAt,
+      })
+      .from(ccN3RunMaintenanceRequests)
+      .innerJoin(
+        ccMaintenanceRequests,
+        eq(ccN3RunMaintenanceRequests.maintenanceRequestId, ccMaintenanceRequests.id)
+      )
+      .where(and(
+        eq(ccN3RunMaintenanceRequests.tenantId, tenantId),
+        eq(ccN3RunMaintenanceRequests.runId, runId)
+      ))
+      .orderBy(desc(ccN3RunMaintenanceRequests.attachedAt));
+    
+    // Compute rollups
+    const categoryCount: Record<string, number> = {};
+    const statusCount: Record<string, number> = {};
+    
+    for (const att of attachments) {
+      categoryCount[att.category] = (categoryCount[att.category] || 0) + 1;
+      if (att.status) {
+        statusCount[att.status] = (statusCount[att.status] || 0) + 1;
+      }
+    }
+    
+    res.json({
+      ok: true,
+      items: attachments,
+      total_attached: attachments.length,
+      counts_by_category: categoryCount,
+      counts_by_status: statusCount,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching attached maintenance requests:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
