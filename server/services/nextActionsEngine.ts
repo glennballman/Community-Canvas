@@ -19,10 +19,46 @@ import {
   ccAiIngestions, 
   ccIngestionNextActions, 
   ccStickyNoteExtractions,
+  ccZones,
   type AiIngestion,
   type IngestionNextAction
 } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
+
+interface ZoneCandidate {
+  zoneId: string;
+  label: string;
+  confidence: number;
+}
+
+/**
+ * Infer zone candidates from geo coordinates
+ * Uses simple proximity logic - returns zones in the same tenant
+ * In a production system, would use spatial queries against zone boundaries
+ */
+export async function inferZoneCandidatesFromGeo(
+  tenantId: string,
+  contractorProfileId: string,
+  lat: number,
+  lng: number
+): Promise<ZoneCandidate[]> {
+  // Fetch all zones for this tenant
+  const zones = await db.query.ccZones.findMany({
+    where: eq(ccZones.tenantId, tenantId)
+  });
+  
+  if (zones.length === 0) {
+    return [];
+  }
+  
+  // For now, return all zones as candidates with equal confidence
+  // In production, would use PostGIS or similar for spatial queries
+  return zones.map(zone => ({
+    zoneId: zone.id,
+    label: zone.name,
+    confidence: 60 // Default confidence since we don't have spatial boundaries yet
+  }));
+}
 
 interface ActionProposal {
   actionType: string;
@@ -135,12 +171,18 @@ function detectPhotoBundles(ingestions: AiIngestion[]): Array<{ before: string; 
  * Derive next action proposals from an ingestion
  */
 export async function deriveNextActions(
-  ingestion: AiIngestion
+  ingestion: AiIngestion,
+  tenantId?: string,
+  contractorProfileId?: string
 ): Promise<ActionProposal[]> {
   const proposals: ActionProposal[] = [];
   const classification = ingestion.classification as any || {};
   const extractedEntities = ingestion.extractedEntities as any || {};
   const geoInference = ingestion.geoInference as any || {};
+  
+  // Use provided IDs or fallback to ingestion's
+  const effectiveTenantId = tenantId || ingestion.tenantId;
+  const effectiveContractorId = contractorProfileId || ingestion.contractorProfileId;
   
   const primaryType = classification.primary || ingestion.sourceType;
   const confidence = classification.confidence || 0.5;
@@ -210,12 +252,26 @@ export async function deriveNextActions(
   if (primaryType === 'jobsite' || primaryType === 'before_photo' || primaryType === 'after_photo') {
     // Propose zone attachment if we have geo
     if (geoInference.lat && geoInference.lng) {
+      // Fetch zone candidates
+      const zoneCandidates = await inferZoneCandidatesFromGeo(
+        effectiveTenantId,
+        effectiveContractorId,
+        geoInference.lat,
+        geoInference.lng
+      );
+      
       proposals.push({
         actionType: 'attach_to_zone',
         actionPayload: {
-          lat: geoInference.lat,
-          lng: geoInference.lng,
+          key: 'attach_to_zone',
+          geo: {
+            lat: geoInference.lat,
+            lng: geoInference.lng,
+            confidence: Math.round((geoInference.confidence || 0.5) * 100)
+          },
           proposedAddress: geoInference.proposedAddress,
+          zoneCandidates,
+          selectedZoneId: null,
           sourceIngestionId: ingestion.id
         },
         confidence: Math.round((geoInference.confidence || 0.5) * 100)
