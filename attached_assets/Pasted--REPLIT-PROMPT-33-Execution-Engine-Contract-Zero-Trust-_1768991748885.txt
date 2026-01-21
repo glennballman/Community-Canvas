@@ -1,0 +1,263 @@
+✅ REPLIT PROMPT 33 — Execution Engine Contract (Zero-Trust Consumer)
+
+Purpose
+Create a read-only, cryptographically verifiable execution contract that external or internal execution engines can consume safely, without granting them any authority to mutate runs, trigger billing, or notify contractors.
+
+This is the final boundary between planning & intent (N3) and execution systems (future).
+
+A) Core Principles (Non-Negotiable)
+
+Read-only: Execution systems may never modify N3 state
+
+Zero trust: Consumers must not be assumed safe
+
+Immutable: Once issued, the contract cannot change
+
+Verifiable: Payload integrity must be provable
+
+Non-executing: No side effects, no triggers, no billing
+
+Counts-only: No PII, no request IDs, no contractor data
+
+B) Data Model — Execution Contract Receipt
+
+Create a new table:
+
+cc_n3_execution_contracts
+export const ccN3ExecutionContracts = pgTable('cc_n3_execution_contracts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+
+  runId: uuid('run_id').notNull().unique(),
+  tenantId: uuid('tenant_id').notNull(),
+  portalId: uuid('portal_id'),
+  zoneId: uuid('zone_id'),
+
+  // Immutable execution contract
+  contractPayload: jsonb('contract_payload').notNull(),
+
+  // Integrity & verification
+  payloadHash: text('payload_hash').notNull(),
+  payloadVersion: varchar('payload_version').notNull().default('v1'),
+
+  // Issuance metadata
+  issuedAt: timestamp('issued_at', { withTimezone: true }).defaultNow(),
+  issuedBy: uuid('issued_by').notNull(),
+
+  note: text('note'),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+
+Constraints
+
+One contract per run (unique(run_id))
+
+No UPDATE routes
+
+No DELETE routes
+
+C) Contract Payload (Canonical Shape)
+
+The payload must be derived only from:
+
+Readiness Snapshot (Prompt 30)
+
+Execution Eligibility (Prompt 31)
+
+Execution Handoff (Prompt 32)
+
+Example (counts only):
+
+{
+  "run": {
+    "id": "uuid",
+    "status": "scheduled",
+    "starts_at": "ISO",
+    "ends_at": "ISO"
+  },
+  "scope": {
+    "portal_id": "uuid",
+    "zone_id": "uuid"
+  },
+  "planning_state": {
+    "attached_requests": 12,
+    "coordination_opt_in": 9,
+    "unassigned": 0
+  },
+  "eligibility": {
+    "status": "unchanged",
+    "evaluated_at": "ISO"
+  },
+  "readiness_snapshot": {
+    "locked_at": "ISO",
+    "counts": {
+      "attached": 12,
+      "coord_ready": 9,
+      "drift": 1
+    }
+  },
+  "advisory_only": true
+}
+
+
+🚫 Must NOT include
+
+Maintenance request IDs
+
+Work request IDs
+
+Contractor identities
+
+Pricing modifiers
+
+Billing data
+
+D) Hashing & Verification
+
+On creation:
+
+const payloadString = JSON.stringify(contractPayload);
+const payloadHash = sha256(payloadString);
+
+
+Store:
+
+contractPayload
+
+payloadHash
+
+This enables offline verification by consumers.
+
+E) API Endpoints
+1) Create Execution Contract
+POST /api/n3/runs/:runId/execution-contract
+
+
+Guards
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner
+
+Validation
+
+Run exists & belongs to tenant
+
+Run has:
+
+readiness snapshot
+
+execution eligibility evaluated
+
+execution handoff created
+
+No existing execution contract
+
+Behavior
+
+Build payload
+
+Compute hash
+
+Persist contract
+
+Emit audit log
+
+console.log('[N3 AUDIT] n3_execution_contract_issued', {
+  run_id,
+  tenant_id,
+  portal_id,
+  zone_id,
+  payload_hash,
+  issued_by,
+  issued_at
+});
+
+2) Read Execution Contract (Consumer)
+GET /api/n3/runs/:runId/execution-contract
+
+
+Guards
+
+requireAuth
+
+requireExecutionConsumer() (new)
+
+Response
+
+{
+  "contract": { ...payload },
+  "payload_hash": "sha256",
+  "payload_version": "v1",
+  "issued_at": "ISO"
+}
+
+
+🚫 No mutation
+🚫 No admin UI
+🚫 No billing hooks
+
+F) Execution Consumer Guard
+
+Create a read-only consumer guard:
+
+function requireExecutionConsumer(req, res, next) {
+  // Either:
+  // - platform-issued service token
+  // - internal execution role
+  // - future mTLS
+}
+
+
+Rules:
+
+Cannot call any other N3 endpoints
+
+Cannot impersonate tenant users
+
+Cannot access pricing, modifiers, or PII
+
+G) Frontend (Admin Visibility Only)
+
+Add Execution Contract Card to ServiceRunMonitorPage:
+
+Visible only when:
+
+Execution Handoff exists
+
+Execution Contract exists
+
+Displays:
+
+Issued timestamp
+
+Hash (copyable)
+
+Read-only JSON viewer
+
+Badge: “Execution Contract (Read-Only)”
+
+No edit. No delete. No regenerate.
+
+H) Invariants Checklist (Must Pass)
+
+✅ One contract per run
+
+✅ Immutable by schema + API
+
+✅ Hash verifiable
+
+✅ Counts-only
+
+✅ No execution side effects
+
+✅ No billing
+
+✅ No notifications
+
+✅ Admin/owner issuance only
+
+✅ Consumer is read-only

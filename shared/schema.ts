@@ -3104,6 +3104,36 @@ export const ccN3RunExecutionHandoffs = pgTable('cc_n3_run_execution_handoffs', 
 
 export type N3RunExecutionHandoff = typeof ccN3RunExecutionHandoffs.$inferSelect;
 
+// ============ N3 EXECUTION CONTRACTS (Prompt 33) ============
+// Zero-trust, cryptographically verifiable execution contract for external consumers
+export const ccN3ExecutionContracts = pgTable('cc_n3_execution_contracts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  runId: uuid('run_id').notNull(),
+  tenantId: uuid('tenant_id').notNull(),
+  portalId: uuid('portal_id'),
+  zoneId: uuid('zone_id'),
+  
+  // Immutable execution contract
+  contractPayload: jsonb('contract_payload').notNull(),
+  
+  // Integrity & verification
+  payloadHash: text('payload_hash').notNull(),
+  payloadVersion: varchar('payload_version', { length: 10 }).notNull().default('v1'),
+  
+  // Issuance metadata
+  issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow(),
+  issuedBy: uuid('issued_by').notNull(),
+  
+  note: text('note'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('uq_n3_execution_contract_run').on(table.runId),
+  index('idx_n3_execution_contract_tenant_run').on(table.tenantId, table.runId),
+]);
+
+export type N3ExecutionContract = typeof ccN3ExecutionContracts.$inferSelect;
+
 // ============ HOUSEKEEPING CHECKLISTS ============
 export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
   id: uuid('id').primaryKey().defaultRandom(),
