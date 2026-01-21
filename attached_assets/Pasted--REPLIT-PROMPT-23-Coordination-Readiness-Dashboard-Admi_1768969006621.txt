@@ -1,0 +1,290 @@
+✅ REPLIT PROMPT 23 — Coordination Readiness Dashboard (Admin/Ops, Counts-Only, Zone-Aware)
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+Jobs = employment. Work Requests = maintenance/contractor work.
+
+No billing/ledger/folio/payment changes.
+
+No auto-grouping, no Service Run auto-creation, no side effects.
+
+No “shared by default” data.
+
+Contractors gain zero new visibility.
+
+Counts-only: no lists of work requests, no IDs, no titles, no addresses, no media.
+
+Use Prompt 14 label logic for zone display (getZoneBadgeLabel / ZoneBadge).
+
+GOAL
+
+Create an admin/ops dashboard that shows where coordination intent is accumulating so operators can target outreach and scheduling planning later.
+
+This dashboard answers:
+
+“Which zones have the most coordination-ready work right now?”
+
+“Which categories are most coordination-ready in each zone?”
+
+“How much is unzoned (operational debt)?”
+
+All outputs are counts-only, privacy-safe.
+
+PART A — Backend: Coordination Readiness Aggregation
+A1) Add endpoint: zone-level readiness heat
+
+Route:
+GET /api/work-requests/coordination/readiness
+
+Middleware:
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner (or canonical owner/admin gate)
+
+Query params:
+
+portalId (required)
+
+windowDays optional default 14, clamp 1–60
+
+zoneId optional (none allowed) for drilling into a single zone
+
+Returns:
+
+{
+  ok: true,
+  portal_id: string,
+  window_days: number,
+  rollups: {
+    total_active: number,
+    total_coord_ready: number,
+    unzoned_active: number,
+    unzoned_coord_ready: number
+  },
+  zones: Array<{
+    zone_id: string | null, // null => Unzoned
+    zone_key: string | null,
+    zone_name: string | null,
+    badge_label_resident: string | null,
+    badge_label_contractor: string | null,
+    badge_label_visitor: string | null,
+    active_count: number,
+    coord_ready_count: number,
+    coord_ready_ratio: number, // coord_ready_count / active_count rounded to 2 decimals
+    last_activity_at: string | null
+  }>
+}
+
+
+Rules:
+
+Tenant scoped and portal scoped.
+
+Active statuses (same set as Prompt 21): new, contacted, quoted, scheduled
+
+Only include items within window:
+
+Use created_at >= now - windowDays OR updated_at if you prefer; be consistent across all readiness endpoints.
+
+If zoneId provided:
+
+If zoneId='none' return only unzoned aggregate row.
+
+Else return only that zone row (still counts-only).
+
+A2) Add endpoint: category buckets for a zone (drill-down)
+
+Route:
+GET /api/work-requests/coordination/readiness/buckets
+
+Middleware: same as A1 (admin/owner only)
+
+Query params:
+
+portalId (required)
+
+zoneId optional (none allowed; if omitted return top buckets across portal)
+
+windowDays optional default 14 clamp 1–60
+
+limit optional default 10 clamp 1–50
+
+Returns:
+
+{
+  ok: true,
+  portal_id: string,
+  zone_id: string | null,
+  window_days: number,
+  buckets: Array<{
+    category: string | null,
+    active_count: number,
+    coord_ready_count: number,
+    coord_ready_ratio: number
+  }>
+}
+
+
+Notes:
+
+Use category as the grouping field (as currently used in similarity).
+
+If category is null/empty, bucket as "uncategorized" in response.
+
+A3) Performance
+
+Use the existing partial index on coordination_intent=true plus portal/zone filters.
+
+Add a supporting index if needed for active filtering in window:
+
+(portal_id, zone_id, status, updated_at) (optional; only if query is slow)
+
+Do NOT return work request IDs.
+
+PART B — Frontend: Admin/Ops Dashboard UI
+B1) Add new page route
+
+Add an admin/ops page in an appropriate place (follow your existing navigation conventions). Recommended:
+
+/app/ops/coordination
+
+Or if you have a portal-scoped admin area:
+
+/app/admin/portals/:portalId/coordination
+
+Choose the route that matches your existing ops structure. Must be admin/owner gated.
+
+B2) Page layout (simple, high signal)
+
+Top controls:
+
+Portal selector (required)
+
+Window selector (7 / 14 / 30)
+
+Optional zone selector (All zones / Unzoned / specific zone)
+
+Top KPI cards:
+
+Total active work requests (in window)
+
+Coordination-ready count
+
+Coordination-ready % (ratio)
+
+Unzoned coordination-ready count (highlighted)
+
+Main section: “Coordination readiness by zone”
+
+Table or stacked list sorted by:
+
+coord_ready_count desc
+
+coord_ready_ratio desc
+
+zone label asc
+
+Each row shows:
+
+ZoneBadge (resident context) or “Unzoned”
+
+coord_ready_count / active_count
+
+ratio badge (e.g., “42% ready”)
+
+a horizontal “readiness bar” (width = ratio)
+
+last_activity_at (optional small text)
+
+Drill-down section: “Top coordination-ready categories”
+
+When a zone row is selected:
+
+Fetch buckets endpoint for that zone
+
+Render top categories with:
+
+coord_ready_count
+
+ratio
+
+If no zone selected:
+
+Show top categories across portal
+
+B3) Label correctness
+
+For zone display:
+
+Use Prompt 14 fallback chain:
+
+getZoneBadgeLabel(zone, 'resident')
+
+“Unzoned” label is literal and always last in lists.
+
+PART C — Hooks
+
+Add hooks:
+
+useCoordinationReadiness(portalId, zoneId, windowDays)
+
+useCoordinationReadinessBuckets(portalId, zoneId, windowDays, limit)
+
+Rules:
+
+Disabled until portalId available and tenant context present.
+
+Query keys include portalId/zoneId/windowDays.
+
+PART D — Security
+
+Page access: admin/owner only.
+
+API access: admin/owner only.
+
+No contractor visibility.
+
+No IDs returned, counts-only.
+
+PART E — Acceptance Criteria / QA
+
+Without portal selected:
+
+UI prompts to select a portal; no queries fired ✅
+
+With portal selected:
+
+Zone readiness list renders ✅
+
+Unzoned appears only if has activity, and is last ✅
+
+Sorting correct ✅
+
+Drill-down:
+
+Selecting a zone loads category buckets ✅
+
+Buckets show “uncategorized” if category is null ✅
+
+Security:
+
+Non-admin user gets 403 on endpoints ✅
+
+Contractor preview cannot access page or endpoints ✅
+
+DELIVERABLES
+
+2 backend endpoints (readiness rollup + buckets)
+
+Admin/ops page with portal/window filters + zone table + category drilldown
+
+Hooks + caching
+
+QA notes
+
+END PROMPT 23

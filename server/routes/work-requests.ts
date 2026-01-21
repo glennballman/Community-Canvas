@@ -743,6 +743,228 @@ router.put('/:id/zone', requireAuth, requireTenant, async (req: Request, res: Re
 });
 
 /**
+ * GET /api/work-requests/coordination/readiness
+ * Zone-level coordination readiness heat map
+ * 
+ * Query params:
+ * - portalId: required
+ * - windowDays: optional, default 14, clamp 1-60
+ * - zoneId: optional, 'none' for unzoned only, or specific zone id
+ * 
+ * Role gating: admin/owner only
+ */
+router.get('/coordination/readiness', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { portalId, windowDays: windowDaysParam, zoneId } = req.query;
+
+    if (!portalId) {
+      return res.status(400).json({ error: 'portalId is required' });
+    }
+
+    const roles = tenantReq.ctx?.roles || [];
+    const isAdminOrOwner = 
+      roles.includes('owner') || 
+      roles.includes('admin') || 
+      roles.includes('tenant_admin') ||
+      !!tenantReq.user?.isPlatformAdmin;
+    
+    if (!isAdminOrOwner) {
+      return res.status(403).json({ 
+        error: 'Coordination readiness requires admin or owner access',
+        code: 'COORDINATION_READINESS_ACCESS_DENIED'
+      });
+    }
+
+    const windowDays = clampWindowDays(windowDaysParam as string | undefined);
+    const activeStatusList = ACTIVE_STATUSES.map(s => `'${s}'`).join(',');
+
+    let zoneFilter = '';
+    const params: any[] = [portalId, windowDays];
+    let paramIndex = 3;
+
+    if (zoneId === 'none') {
+      zoneFilter = 'AND zone_id IS NULL';
+    } else if (zoneId && zoneId !== 'all') {
+      zoneFilter = `AND zone_id = $${paramIndex}`;
+      params.push(zoneId);
+      paramIndex++;
+    }
+
+    const zonesQuery = `
+      WITH active_requests AS (
+        SELECT 
+          wr.id, wr.zone_id, wr.coordination_intent, wr.updated_at
+        FROM cc_work_requests wr
+        WHERE wr.portal_id = $1
+          AND wr.status IN (${activeStatusList})
+          AND wr.updated_at >= NOW() - ($2 || ' days')::interval
+          ${zoneFilter}
+      ),
+      zone_stats AS (
+        SELECT 
+          ar.zone_id,
+          COUNT(*) as active_count,
+          COUNT(*) FILTER (WHERE ar.coordination_intent = true) as coord_ready_count,
+          MAX(ar.updated_at) as last_activity_at
+        FROM active_requests ar
+        GROUP BY ar.zone_id
+      )
+      SELECT 
+        zs.zone_id,
+        z.key as zone_key,
+        z.name as zone_name,
+        z.badge_label_resident,
+        z.badge_label_contractor,
+        z.badge_label_visitor,
+        zs.active_count::int,
+        zs.coord_ready_count::int,
+        ROUND(zs.coord_ready_count::numeric / NULLIF(zs.active_count, 0), 2) as coord_ready_ratio,
+        zs.last_activity_at
+      FROM zone_stats zs
+      LEFT JOIN cc_zones z ON zs.zone_id = z.id
+      ORDER BY zs.coord_ready_count DESC, zs.active_count DESC, z.name ASC NULLS LAST
+    `;
+
+    const zonesResult = await tenantReq.tenantQuery!(zonesQuery, params);
+
+    const rollupQuery = `
+      SELECT 
+        COUNT(*) FILTER (WHERE status IN (${activeStatusList}) AND updated_at >= NOW() - ($2 || ' days')::interval) as total_active,
+        COUNT(*) FILTER (WHERE status IN (${activeStatusList}) AND updated_at >= NOW() - ($2 || ' days')::interval AND coordination_intent = true) as total_coord_ready,
+        COUNT(*) FILTER (WHERE status IN (${activeStatusList}) AND updated_at >= NOW() - ($2 || ' days')::interval AND zone_id IS NULL) as unzoned_active,
+        COUNT(*) FILTER (WHERE status IN (${activeStatusList}) AND updated_at >= NOW() - ($2 || ' days')::interval AND zone_id IS NULL AND coordination_intent = true) as unzoned_coord_ready
+      FROM cc_work_requests
+      WHERE portal_id = $1
+    `;
+
+    const rollupResult = await tenantReq.tenantQuery!(rollupQuery, [portalId, windowDays]);
+    const rollup = rollupResult.rows[0];
+
+    res.json({
+      ok: true,
+      portal_id: portalId,
+      window_days: windowDays,
+      rollups: {
+        total_active: parseInt(rollup.total_active, 10),
+        total_coord_ready: parseInt(rollup.total_coord_ready, 10),
+        unzoned_active: parseInt(rollup.unzoned_active, 10),
+        unzoned_coord_ready: parseInt(rollup.unzoned_coord_ready, 10),
+      },
+      zones: zonesResult.rows.map(row => ({
+        zone_id: row.zone_id,
+        zone_key: row.zone_key,
+        zone_name: row.zone_name,
+        badge_label_resident: row.badge_label_resident,
+        badge_label_contractor: row.badge_label_contractor,
+        badge_label_visitor: row.badge_label_visitor,
+        active_count: row.active_count,
+        coord_ready_count: row.coord_ready_count,
+        coord_ready_ratio: parseFloat(row.coord_ready_ratio) || 0,
+        last_activity_at: row.last_activity_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching coordination readiness:', error);
+    res.status(500).json({ error: 'Failed to fetch coordination readiness' });
+  }
+});
+
+/**
+ * GET /api/work-requests/coordination/readiness/buckets
+ * Category buckets for zone drill-down
+ * 
+ * Query params:
+ * - portalId: required
+ * - zoneId: optional, 'none' for unzoned, or specific zone id (omit for portal-wide)
+ * - windowDays: optional, default 14, clamp 1-60
+ * - limit: optional, default 10, clamp 1-50
+ * 
+ * Role gating: admin/owner only
+ */
+router.get('/coordination/readiness/buckets', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { portalId, zoneId, windowDays: windowDaysParam, limit: limitParam } = req.query;
+
+    if (!portalId) {
+      return res.status(400).json({ error: 'portalId is required' });
+    }
+
+    const roles = tenantReq.ctx?.roles || [];
+    const isAdminOrOwner = 
+      roles.includes('owner') || 
+      roles.includes('admin') || 
+      roles.includes('tenant_admin') ||
+      !!tenantReq.user?.isPlatformAdmin;
+    
+    if (!isAdminOrOwner) {
+      return res.status(403).json({ 
+        error: 'Coordination readiness buckets requires admin or owner access',
+        code: 'COORDINATION_BUCKETS_ACCESS_DENIED'
+      });
+    }
+
+    const windowDays = clampWindowDays(windowDaysParam as string | undefined);
+    const limit = Math.max(1, Math.min(50, parseInt(limitParam as string || '10', 10) || 10));
+    const activeStatusList = ACTIVE_STATUSES.map(s => `'${s}'`).join(',');
+
+    let zoneFilter = '';
+    const params: any[] = [portalId, windowDays, limit];
+    let paramIndex = 4;
+
+    if (zoneId === 'none') {
+      zoneFilter = 'AND zone_id IS NULL';
+    } else if (zoneId && zoneId !== 'all') {
+      zoneFilter = `AND zone_id = $${paramIndex}`;
+      params.push(zoneId);
+      paramIndex++;
+    }
+
+    const bucketsQuery = `
+      WITH active_requests AS (
+        SELECT 
+          id, 
+          COALESCE(NULLIF(TRIM(category), ''), 'Uncategorized') as category,
+          coordination_intent
+        FROM cc_work_requests
+        WHERE portal_id = $1
+          AND status IN (${activeStatusList})
+          AND updated_at >= NOW() - ($2 || ' days')::interval
+          ${zoneFilter}
+      )
+      SELECT 
+        category,
+        COUNT(*) as active_count,
+        COUNT(*) FILTER (WHERE coordination_intent = true) as coord_ready_count,
+        ROUND(COUNT(*) FILTER (WHERE coordination_intent = true)::numeric / NULLIF(COUNT(*), 0), 2) as coord_ready_ratio
+      FROM active_requests
+      GROUP BY category
+      ORDER BY coord_ready_count DESC, active_count DESC, category ASC
+      LIMIT $3
+    `;
+
+    const bucketsResult = await tenantReq.tenantQuery!(bucketsQuery, params);
+
+    res.json({
+      ok: true,
+      portal_id: portalId,
+      zone_id: zoneId === 'none' ? null : (zoneId || null),
+      window_days: windowDays,
+      buckets: bucketsResult.rows.map(row => ({
+        category: row.category,
+        active_count: parseInt(row.active_count, 10),
+        coord_ready_count: parseInt(row.coord_ready_count, 10),
+        coord_ready_ratio: parseFloat(row.coord_ready_ratio) || 0,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching coordination buckets:', error);
+    res.status(500).json({ error: 'Failed to fetch coordination buckets' });
+  }
+});
+
+/**
  * PUT /api/work-requests/:id/coordination-intent
  * Set or clear coordination intent (opt-in flag for coordination)
  * 
