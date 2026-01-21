@@ -628,6 +628,7 @@ export interface ReadinessDriftResponse {
   run_id: string;
   status: string;
   evaluated_at: string;
+  active_statuses: string[];
   totals: {
     attached: number;
     with_drift: number;

@@ -1986,6 +1986,7 @@ n3Router.get('/runs/:runId/readiness-drift', requireAuth, requireTenant, require
       run_id: runId,
       status: run.status,
       evaluated_at: evaluatedAt,
+      active_statuses: activeStatuses,
       totals: {
         attached: attachedRequests.length,
         with_drift: withDrift.size,
