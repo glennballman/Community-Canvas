@@ -1049,19 +1049,19 @@ router.get('/work-disclosures/contractor/:workRequestId', async (req: any, res) 
             (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
           VALUES ($1, $2, $3, $4, 'view_denied', $5)
         `, [tenantId, workRequestId, actorUserId, tokenRow.contractor_person_id, 
-            JSON.stringify({ reason: 'preview_token_expired' })]);
+            JSON.stringify({ reason: 'expired_preview_token' })]);
         
         return res.status(403).json({ ok: false, error: 'Preview token expired' });
       }
 
-      // Check if token already used
+      // Check if token already used (single-use enforcement)
       if (tokenRow.used_at) {
         await pool.query(`
           INSERT INTO cc_work_disclosure_audit 
             (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
           VALUES ($1, $2, $3, $4, 'view_denied', $5)
         `, [tenantId, workRequestId, actorUserId, tokenRow.contractor_person_id,
-            JSON.stringify({ reason: 'preview_token_already_used' })]);
+            JSON.stringify({ reason: 'used_preview_token' })]);
         
         return res.status(403).json({ ok: false, error: 'Preview token already used' });
       }

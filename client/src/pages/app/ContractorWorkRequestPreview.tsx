@@ -1,5 +1,6 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { AlertTriangle, Eye, FileText, Image, Lock, MapPin, Wrench, Package, Clock, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,7 @@ export default function ContractorWorkRequestPreview() {
   const { workRequestId } = useParams<{ workRequestId: string }>();
   const [searchParams] = useSearchParams();
   const previewToken = searchParams.get('previewToken');
+  const tokenStrippedRef = useRef(false);
 
   const { data, isLoading, error } = useQuery<PreviewResponse>({
     queryKey: ['/api/p2/app/work-disclosures/contractor', workRequestId, previewToken],
@@ -58,6 +60,16 @@ export default function ContractorWorkRequestPreview() {
     enabled: !!workRequestId && !!previewToken,
     retry: false,
   });
+
+  // PROMPT 11-B: Strip previewToken from URL after successful load
+  // This prevents token leakage via browser history, bookmarks, or referrer headers
+  useEffect(() => {
+    if (data?.ok && !tokenStrippedRef.current) {
+      tokenStrippedRef.current = true;
+      // Remove query string, keep path only
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [data?.ok]);
 
   if (!previewToken) {
     return (
@@ -217,7 +229,7 @@ export default function ContractorWorkRequestPreview() {
                       <a 
                         href={media.work_media_url} 
                         target="_blank" 
-                        rel="noopener noreferrer"
+                        rel="noreferrer noopener"
                         className="text-sm hover:underline mt-1 flex items-center gap-1"
                         data-testid={`link-work-media-${idx}`}
                       >

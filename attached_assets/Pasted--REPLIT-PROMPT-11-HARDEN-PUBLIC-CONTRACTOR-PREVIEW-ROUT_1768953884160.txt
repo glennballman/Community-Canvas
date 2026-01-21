@@ -1,0 +1,113 @@
+✅ REPLIT PROMPT 11 — HARDEN PUBLIC CONTRACTOR PREVIEW ROUTE
+
+Paste verbatim:
+
+Harden the unauthenticated public contractor preview route:
+  /preview/contractor/work-request/:workRequestId?previewToken=...
+
+Goal: prevent previewToken leakage via caching, referrers, and accidental persistence.
+
+A) Server: add explicit no-cache + security headers for preview route
+
+Wherever the server serves SPA routes (or middleware for this path), ensure responses for:
+  /^\/preview\/contractor\/work-request\/.+/
+
+Include headers:
+- Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+- Pragma: no-cache
+- Expires: 0
+- Referrer-Policy: no-referrer
+- X-Content-Type-Options: nosniff
+- X-Frame-Options: DENY
+- Content-Security-Policy: default-src 'self'; img-src 'self' data: blob: https:; media-src 'self' https:; object-src 'none'; frame-ancestors 'none'; base-uri 'self';
+  (keep CSP permissive enough for your existing image hosting; do NOT allow arbitrary third-party scripts)
+
+If you already have a global CSP, add a route override only if needed.
+
+B) Client: strip previewToken from the address bar after successful load
+
+In ContractorWorkRequestPreview (or the preview page component):
+- read previewToken from URLSearchParams
+- call the contractor disclosure endpoint
+- if the call succeeds (200), immediately remove previewToken from the visible URL:
+    window.history.replaceState({}, document.title, window.location.pathname);
+  (keep path only; drop query string)
+- If call fails, keep URL unchanged to allow debugging.
+
+C) Client: ensure no external navigation carries token
+
+- All outbound links from the preview page should use rel="noreferrer noopener"
+- Ensure any <a target="_blank"> includes rel="noreferrer noopener"
+
+D) Server: preview token validation must remain single-use
+
+Confirm:
+- token is marked used_at immediately upon validation before payload return
+- invalid/expired/used returns 403 and logs view_denied with reason codes:
+  invalid_preview_token / expired_preview_token / used_preview_token
+
+Acceptance:
+- Preview page never caches
+- After load, previewToken disappears from URL bar
+- No referrer leakage
+- Token remains single-use
+
+
+This keeps your UX exactly the same, but makes it production-safe.
+
+✅ REPLIT PROMPT 12 — QA LAUNCHPAD: SEED DISCLOSURE SET (One-Click “Share Pack”)
+
+Right now you can seed a Work Request, but you still might have to manually toggle what’s shared. Let’s make “seed + disclosed pack” a single click so commissioning is instant.
+
+Add a QA seed endpoint to create a deterministic disclosure set for the seeded [TEST] Work Request.
+
+Terminology:
+- Work Requests = cc_maintenance_requests
+- Contractors are People records (cc_people entity_type='contractor')
+
+Backend
+
+A) Endpoint:
+POST /api/p2/admin/portals/:portalId/qa/seed-work-request-disclosures
+
+Role gating:
+- requireTenantAdmin
+
+Behavior:
+1) Find the portal’s seeded test work request:
+   - title starts with "[TEST] Work Request"
+   - scoped to portal (portal_id OR property->portal join)
+   - deterministic pick: most recent created_at desc, id asc
+
+2) Ensure there is an assigned contractor_person_id.
+   - If none, deterministically assign most recent contractor (same logic as seed-work-request) and update work request.
+
+3) Create or replace a disclosure set for that work request with visibility:
+   - visibility = 'specific_contractor'
+   - specificContractorId = assigned contractor person id
+
+4) Disclose items deterministically:
+   - If property has work areas:
+       include most recent work area
+       include up to 6 most recent work media for that work area
+   - Include up to 6 most recent property-level media if applicable
+   - Include up to 6 most recent portal "community use" media (portal_id = portalId)
+   - Include subsystems/resources if they exist (up to 10 each), otherwise skip
+
+5) Write audit:
+   - action='share_set' (or 'qa_seed_disclosures') with payload including counts and ids
+
+Return:
+{ ok: true, workRequestId, contractorPersonId, counts: { areas, media, subsystems, resources } }
+
+Frontend
+
+B) QA Launchpad: add button under Work Request fixture card:
+- "Seed disclosure pack"
+- Shows counts returned
+- Provide "Preview" button that mints preview token and opens public preview route
+
+Acceptance:
+- One click produces a populated contractor preview with real content
+- Deterministic ordering and limits enforced
+- No leakage outside the specific work request

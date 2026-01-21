@@ -106,6 +106,24 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+// PROMPT 11: Security headers middleware for contractor preview routes
+// Prevents token leakage via caching, referrers, and accidental persistence
+app.use((req, res, next) => {
+  const pathOnly = req.path.split('?')[0];
+  if (/^\/preview\/contractor\/work-request\/.+/.test(pathOnly)) {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' https:; font-src 'self' data:; connect-src 'self' wss: ws:; object-src 'none'; frame-ancestors 'none'; base-uri 'self';",
+    });
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;

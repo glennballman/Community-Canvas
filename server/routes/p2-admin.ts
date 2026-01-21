@@ -1305,6 +1305,226 @@ router.post('/portals/:portalId/qa/seed-work-request', async (req: any, res) => 
 });
 
 // ============================================================================
+// QA SEED WORK REQUEST DISCLOSURES
+// Creates a deterministic disclosure set for the seeded [TEST] Work Request
+// ============================================================================
+
+/**
+ * POST /api/p2/admin/portals/:portalId/qa/seed-work-request-disclosures
+ * Creates or replaces disclosure set for [TEST] work request
+ * 
+ * Role gating: requireTenantAdmin
+ * Deterministic: finds [TEST] work request, assigns contractor if needed, creates disclosures
+ */
+router.post('/portals/:portalId/qa/seed-work-request-disclosures', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+
+    const { portalId } = req.params;
+
+    // Validate portal belongs to tenant
+    const portalResult = await pool.query(
+      `SELECT id, owning_tenant_id FROM cc_portals WHERE id = $1 AND owning_tenant_id = $2`,
+      [portalId, auth.tenantId]
+    );
+
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Portal not found' });
+    }
+
+    // 1) Find the portal's seeded test work request (most recent with [TEST] prefix)
+    const workRequestResult = await pool.query(`
+      SELECT wr.id, wr.property_id, wr.assigned_contractor_person_id
+      FROM cc_maintenance_requests wr
+      JOIN cc_portals p ON wr.portal_id = p.id
+      WHERE wr.portal_id = $1 AND wr.title LIKE $2
+      ORDER BY wr.created_at DESC, wr.id ASC
+      LIMIT 1
+    `, [portalId, TEST_PREFIX + '%']);
+
+    if (workRequestResult.rows.length === 0) {
+      return res.status(404).json({ 
+        ok: false, 
+        error: 'No [TEST] work request found. Run "Seed Work Request" first.' 
+      });
+    }
+
+    const workRequest = workRequestResult.rows[0];
+    const propertyId = workRequest.property_id;
+    let contractorPersonId = workRequest.assigned_contractor_person_id;
+
+    // 2) Ensure there is an assigned contractor; if none, assign most recent
+    if (!contractorPersonId) {
+      const contractorResult = await pool.query(`
+        SELECT id FROM cc_people
+        WHERE tenant_id = $1 AND entity_type = 'contractor' AND archived_at IS NULL
+        ORDER BY created_at DESC, id ASC
+        LIMIT 1
+      `, [auth.tenantId]);
+      
+      if (contractorResult.rows.length > 0) {
+        contractorPersonId = contractorResult.rows[0].id;
+        await pool.query(`
+          UPDATE cc_maintenance_requests 
+          SET assigned_contractor_person_id = $1, updated_at = NOW()
+          WHERE id = $2
+        `, [contractorPersonId, workRequest.id]);
+      }
+    }
+
+    if (!contractorPersonId) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'No contractor available. Create a contractor person first.' 
+      });
+    }
+
+    // 3) Delete existing disclosures for this work request (replace)
+    await pool.query(`
+      DELETE FROM cc_work_disclosures WHERE work_request_id = $1
+    `, [workRequest.id]);
+
+    const counts = { areas: 0, media: 0, subsystems: 0, resources: 0 };
+    const disclosedIds: { areas: string[], media: string[], subsystems: string[], resources: string[] } = {
+      areas: [], media: [], subsystems: [], resources: []
+    };
+
+    // 4a) Include most recent work area for property (if exists)
+    const workAreaResult = await pool.query(`
+      SELECT id FROM cc_work_areas
+      WHERE property_id = $1
+      ORDER BY created_at DESC, id ASC
+      LIMIT 1
+    `, [propertyId]);
+
+    if (workAreaResult.rows.length > 0) {
+      const workAreaId = workAreaResult.rows[0].id;
+      await pool.query(`
+        INSERT INTO cc_work_disclosures 
+          (tenant_id, work_request_id, item_type, item_id, visibility, specific_contractor_id)
+        VALUES ($1, $2, 'work_area', $3, 'specific_contractor', $4)
+      `, [auth.tenantId, workRequest.id, workAreaId, contractorPersonId]);
+      counts.areas++;
+      disclosedIds.areas.push(workAreaId);
+
+      // 4b) Include up to 6 most recent work media for that work area
+      const areaMediaResult = await pool.query(`
+        SELECT id FROM cc_work_media
+        WHERE work_area_id = $1
+        ORDER BY created_at DESC, id ASC
+        LIMIT 6
+      `, [workAreaId]);
+
+      for (const row of areaMediaResult.rows) {
+        await pool.query(`
+          INSERT INTO cc_work_disclosures 
+            (tenant_id, work_request_id, item_type, item_id, visibility, specific_contractor_id)
+          VALUES ($1, $2, 'work_media', $3, 'specific_contractor', $4)
+        `, [auth.tenantId, workRequest.id, row.id, contractorPersonId]);
+        counts.media++;
+        disclosedIds.media.push(row.id);
+      }
+    }
+
+    // 4c) Include up to 6 most recent property-level media (property_id set, work_area_id null)
+    const propertyMediaResult = await pool.query(`
+      SELECT id FROM cc_work_media
+      WHERE property_id = $1 AND work_area_id IS NULL
+      ORDER BY created_at DESC, id ASC
+      LIMIT 6
+    `, [propertyId]);
+
+    for (const row of propertyMediaResult.rows) {
+      await pool.query(`
+        INSERT INTO cc_work_disclosures 
+          (tenant_id, work_request_id, item_type, item_id, visibility, specific_contractor_id)
+        VALUES ($1, $2, 'work_media', $3, 'specific_contractor', $4)
+      `, [auth.tenantId, workRequest.id, row.id, contractorPersonId]);
+      counts.media++;
+      disclosedIds.media.push(row.id);
+    }
+
+    // 4d) Include up to 6 most recent portal "community use" media (portal_id = portalId)
+    const communityMediaResult = await pool.query(`
+      SELECT id FROM cc_work_media
+      WHERE portal_id = $1 AND property_id IS NULL
+      ORDER BY created_at DESC, id ASC
+      LIMIT 6
+    `, [portalId]);
+
+    for (const row of communityMediaResult.rows) {
+      await pool.query(`
+        INSERT INTO cc_work_disclosures 
+          (tenant_id, work_request_id, item_type, item_id, visibility, specific_contractor_id)
+        VALUES ($1, $2, 'work_media', $3, 'specific_contractor', $4)
+      `, [auth.tenantId, workRequest.id, row.id, contractorPersonId]);
+      counts.media++;
+      disclosedIds.media.push(row.id);
+    }
+
+    // 4e) Include up to 10 property subsystems if they exist
+    const subsystemsResult = await pool.query(`
+      SELECT id FROM cc_property_subsystems
+      WHERE property_id = $1
+      ORDER BY created_at DESC, id ASC
+      LIMIT 10
+    `, [propertyId]);
+
+    for (const row of subsystemsResult.rows) {
+      await pool.query(`
+        INSERT INTO cc_work_disclosures 
+          (tenant_id, work_request_id, item_type, item_id, visibility, specific_contractor_id)
+        VALUES ($1, $2, 'subsystem', $3, 'specific_contractor', $4)
+      `, [auth.tenantId, workRequest.id, row.id, contractorPersonId]);
+      counts.subsystems++;
+      disclosedIds.subsystems.push(row.id);
+    }
+
+    // 4f) Include up to 10 on-site resources if they exist
+    const resourcesResult = await pool.query(`
+      SELECT id FROM cc_on_site_resources
+      WHERE property_id = $1
+      ORDER BY created_at DESC, id ASC
+      LIMIT 10
+    `, [propertyId]);
+
+    for (const row of resourcesResult.rows) {
+      await pool.query(`
+        INSERT INTO cc_work_disclosures 
+          (tenant_id, work_request_id, item_type, item_id, visibility, specific_contractor_id)
+        VALUES ($1, $2, 'on_site_resource', $3, 'specific_contractor', $4)
+      `, [auth.tenantId, workRequest.id, row.id, contractorPersonId]);
+      counts.resources++;
+      disclosedIds.resources.push(row.id);
+    }
+
+    // 5) Write audit log
+    await pool.query(`
+      INSERT INTO cc_work_disclosure_audit 
+      (tenant_id, work_request_id, actor_user_id, contractor_person_id, action, payload)
+      VALUES ($1, $2, $3, $4, 'qa_seed_disclosures', $5)
+    `, [
+      auth.tenantId,
+      workRequest.id,
+      req.user?.id || null,
+      contractorPersonId,
+      JSON.stringify({ counts, disclosedIds }),
+    ]);
+
+    res.json({
+      ok: true,
+      workRequestId: workRequest.id,
+      contractorPersonId,
+      counts,
+    });
+  } catch (error: any) {
+    console.error('[Admin] POST seed-work-request-disclosures error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// ============================================================================
 // QA STATUS ENDPOINT
 // Mark portal QA as complete/incomplete for rollout tracking
 // ============================================================================

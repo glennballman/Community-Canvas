@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   ArrowLeft, ExternalLink, Copy, Globe, Briefcase, Users, 
   FileText, Calendar, CheckCircle, Clock, AlertCircle,
-  Rocket, Link2, Plus, Loader2, Wrench, Eye, ClipboardList
+  Rocket, Link2, Plus, Loader2, Wrench, Eye, ClipboardList, Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,6 +164,18 @@ interface FixtureResult {
   };
 }
 
+interface DisclosureResult {
+  ok: boolean;
+  workRequestId: string;
+  contractorPersonId: string;
+  counts: {
+    areas: number;
+    media: number;
+    subsystems: number;
+    resources: number;
+  };
+}
+
 function FixtureButton({
   label,
   icon: Icon,
@@ -265,10 +277,16 @@ function WorkRequestFixtureButton({
   onSeed,
   isPending,
   result,
+  onSeedDisclosures,
+  disclosurePending,
+  disclosureResult,
 }: {
   onSeed: () => void;
   isPending: boolean;
   result: FixtureResult | null;
+  onSeedDisclosures: () => void;
+  disclosurePending: boolean;
+  disclosureResult: DisclosureResult | null;
 }) {
   const { toast } = useToast();
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -300,42 +318,101 @@ function WorkRequestFixtureButton({
     }
   };
 
+  const totalDisclosed = disclosureResult 
+    ? disclosureResult.counts.areas + disclosureResult.counts.media + 
+      disclosureResult.counts.subsystems + disclosureResult.counts.resources
+    : 0;
+
   return (
-    <div className="flex items-center justify-between gap-3 p-3 border rounded-md" data-testid="fixture-test-work-request">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <ClipboardList className="h-5 w-5 text-muted-foreground shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="font-medium">Test Work Request</div>
-          {result && (
-            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-              {result.created ? (
-                <Badge variant="default">Created</Badge>
-              ) : (
-                <Badge variant="secondary">Exists</Badge>
+    <div className="space-y-2" data-testid="fixture-test-work-request">
+      <div className="flex items-center justify-between gap-3 p-3 border rounded-md">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <ClipboardList className="h-5 w-5 text-muted-foreground shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="font-medium">Test Work Request</div>
+            {result && (
+              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                {result.created ? (
+                  <Badge variant="default">Created</Badge>
+                ) : (
+                  <Badge variant="secondary">Exists</Badge>
+                )}
+                {result.workRequest?.title && (
+                  <span className="truncate">{result.workRequest.title}</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 flex-wrap">
+          {result?.workRequest?.id && (
+            <>
+              <Button size="sm" variant="outline" asChild data-testid="button-open-work-request-owner">
+                <Link to={`/app/intake/work-requests/${result.workRequest.id}`}>
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Open
+                </Link>
+              </Button>
+              {result.workRequest.assignedContractorPersonId && (
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={handlePreview}
+                  disabled={previewLoading}
+                  data-testid="button-preview-work-request-contractor"
+                >
+                  {previewLoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Eye className="h-3 w-3 mr-1" />
+                  )}
+                  Preview
+                </Button>
               )}
-              {result.workRequest?.title && (
-                <span className="truncate">{result.workRequest.title}</span>
-              )}
-            </div>
+            </>
           )}
+          <Button 
+            size="sm" 
+            onClick={onSeed} 
+            disabled={isPending}
+            data-testid="button-seed-test-work-request"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            <span className="ml-1">{result ? 'Refresh' : 'Create'}</span>
+          </Button>
         </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0 flex-wrap">
-        {result?.workRequest?.id && (
-          <>
-            <Button size="sm" variant="outline" asChild data-testid="button-open-work-request-owner">
-              <Link to={`/app/intake/work-requests/${result.workRequest.id}`}>
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Open
-              </Link>
-            </Button>
-            {result.workRequest.assignedContractorPersonId && (
+      
+      {/* Disclosure Pack sub-row */}
+      {result?.workRequest?.id && (
+        <div className="flex items-center justify-between gap-3 p-3 border rounded-md ml-6 bg-muted/30" data-testid="fixture-disclosure-pack">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Share2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">Disclosure Pack</div>
+              {disclosureResult && (
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                  <Badge variant="secondary">{totalDisclosed} items</Badge>
+                  <span>
+                    {disclosureResult.counts.areas} areas, {disclosureResult.counts.media} media, 
+                    {disclosureResult.counts.subsystems} subsystems, {disclosureResult.counts.resources} resources
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0 flex-wrap">
+            {disclosureResult && (
               <Button 
                 size="sm" 
                 variant="ghost"
                 onClick={handlePreview}
                 disabled={previewLoading}
-                data-testid="button-preview-work-request-contractor"
+                data-testid="button-preview-disclosure-pack"
               >
                 {previewLoading ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -345,22 +422,23 @@ function WorkRequestFixtureButton({
                 Preview
               </Button>
             )}
-          </>
-        )}
-        <Button 
-          size="sm" 
-          onClick={onSeed} 
-          disabled={isPending}
-          data-testid="button-seed-test-work-request"
-        >
-          {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4" />
-          )}
-          <span className="ml-1">{result ? 'Refresh' : 'Create'}</span>
-        </Button>
-      </div>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={onSeedDisclosures} 
+              disabled={disclosurePending}
+              data-testid="button-seed-disclosure-pack"
+            >
+              {disclosurePending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Share2 className="h-4 w-4 mr-1" />
+              )}
+              {disclosureResult ? 'Refresh' : 'Seed'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -506,6 +584,7 @@ export default function PortalQaLaunchpadPage() {
   const [proposalResult, setProposalResult] = useState<FixtureResult | null>(null);
   const [tripResult, setTripResult] = useState<FixtureResult | null>(null);
   const [workRequestResult, setWorkRequestResult] = useState<FixtureResult | null>(null);
+  const [disclosureResult, setDisclosureResult] = useState<DisclosureResult | null>(null);
   
   // Seed All state
   const [seedAllStep, setSeedAllStep] = useState<SeedStep>('idle');
@@ -615,6 +694,24 @@ export default function PortalQaLaunchpadPage() {
       toast({ title: data.created ? 'Test work request created' : 'Test work request exists' });
     },
     onError: () => toast({ title: 'Failed to create work request', variant: 'destructive' }),
+  });
+
+  const seedDisclosures = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/p2/admin/portals/${portalId}/qa/seed-work-request-disclosures`);
+      return res.json();
+    },
+    onSuccess: (data: DisclosureResult) => {
+      setDisclosureResult(data);
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId, 'qa'] });
+      const total = data.counts.areas + data.counts.media + data.counts.subsystems + data.counts.resources;
+      toast({ title: `Disclosure pack seeded: ${total} items` });
+    },
+    onError: (error: any) => toast({ 
+      title: 'Failed to seed disclosures', 
+      description: error?.message || 'Unknown error',
+      variant: 'destructive' 
+    }),
   });
   
   const portal = data?.portal;
@@ -888,6 +985,9 @@ export default function PortalQaLaunchpadPage() {
               onSeed={() => seedWorkRequest.mutate()}
               isPending={seedWorkRequest.isPending}
               result={workRequestResult}
+              onSeedDisclosures={() => seedDisclosures.mutate()}
+              disclosurePending={seedDisclosures.isPending}
+              disclosureResult={disclosureResult}
             />
           </div>
         </CardContent>
