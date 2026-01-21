@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 interface QuoteDraft {
   id: string;
   status: string;
+  tenantId: string | null;
   customerName: string | null;
   customerPhone: string | null;
   category: string | null;
@@ -66,6 +67,11 @@ export default function EventQuotesListPage() {
               <Badge variant={statusConfig[quote.status]?.variant || 'secondary'}>
                 {statusConfig[quote.status]?.label || quote.status}
               </Badge>
+              {!quote.tenantId && (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  Unclaimed
+                </Badge>
+              )}
               {quote.category && (
                 <Badge variant="outline">{quote.category}</Badge>
               )}

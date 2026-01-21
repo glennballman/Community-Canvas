@@ -196,6 +196,8 @@ import UploadResultsPage from './pages/contractor/UploadResultsPage';
 import EventModePage from './pages/contractor/EventModePage';
 import EventQuotesListPage from './pages/contractor/EventQuotesListPage';
 import EventQuoteDetailPage from './pages/contractor/EventQuoteDetailPage';
+import EventScanPage from './pages/contractor/EventScanPage';
+import EventCapturePage from './pages/contractor/EventCapturePage';
 
 // Pages - Public Event (A2.5)
 import EventQuotePage from './pages/public/EventQuotePage';
@@ -530,6 +532,8 @@ export default function App() {
                 
                 {/* Contractor Event Mode (A2.5) */}
                 <Route path="contractor/event" element={<EventModePage />} />
+                <Route path="contractor/event/scan" element={<EventScanPage />} />
+                <Route path="contractor/event/capture" element={<EventCapturePage />} />
                 <Route path="contractor/event/quotes" element={<EventQuotesListPage />} />
                 <Route path="contractor/event/quotes/:id" element={<EventQuoteDetailPage />} />
                 

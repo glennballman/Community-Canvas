@@ -11,7 +11,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, or, isNull } from 'drizzle-orm';
 import { db } from '../db';
 import { ccQuoteDrafts, ccAiIngestions } from '@shared/schema';
 import { conversations, messages } from '@shared/models/chat';
@@ -52,6 +52,7 @@ const opportunityPreferencesSchema = z.object({
 /**
  * GET /api/contractor/event/quote-drafts
  * List draft quotes for current contractor
+ * Includes unclaimed leads (tenantId IS NULL) that contractor can claim
  */
 router.get('/quote-drafts', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -62,8 +63,12 @@ router.get('/quote-drafts', authenticateToken, async (req: Request, res: Respons
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
 
+    // Get quotes owned by tenant OR unclaimed public leads
     const drafts = await db.query.ccQuoteDrafts.findMany({
-      where: eq(ccQuoteDrafts.tenantId, tenantId),
+      where: or(
+        eq(ccQuoteDrafts.tenantId, tenantId),
+        isNull(ccQuoteDrafts.tenantId)
+      ),
       orderBy: [desc(ccQuoteDrafts.createdAt)],
     });
 
@@ -76,7 +81,7 @@ router.get('/quote-drafts', authenticateToken, async (req: Request, res: Respons
 
 /**
  * GET /api/contractor/event/quote-drafts/:id
- * Get single quote draft
+ * Get single quote draft (owned by tenant or unclaimed)
  */
 router.get('/quote-drafts/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -90,7 +95,10 @@ router.get('/quote-drafts/:id', authenticateToken, async (req: Request, res: Res
     const draft = await db.query.ccQuoteDrafts.findFirst({
       where: and(
         eq(ccQuoteDrafts.id, id),
-        eq(ccQuoteDrafts.tenantId, tenantId)
+        or(
+          eq(ccQuoteDrafts.tenantId, tenantId),
+          isNull(ccQuoteDrafts.tenantId)
+        )
       ),
     });
 
@@ -175,10 +183,14 @@ router.patch('/quote-drafts/:id', authenticateToken, async (req: Request, res: R
       return res.status(400).json({ success: false, error: 'Invalid input', details: parsed.error.errors });
     }
 
+    // Find draft owned by tenant OR unclaimed (allows claiming)
     const existing = await db.query.ccQuoteDrafts.findFirst({
       where: and(
         eq(ccQuoteDrafts.id, id),
-        eq(ccQuoteDrafts.tenantId, tenantId)
+        or(
+          eq(ccQuoteDrafts.tenantId, tenantId),
+          isNull(ccQuoteDrafts.tenantId)
+        )
       ),
     });
 
@@ -209,6 +221,12 @@ router.patch('/quote-drafts/:id', authenticateToken, async (req: Request, res: R
     if (data.portalId !== undefined) updateData.portalId = data.portalId;
     if (data.zoneId !== undefined) updateData.zoneId = data.zoneId;
 
+    // Claim unclaimed lead if not already owned
+    if (!existing.tenantId) {
+      updateData.tenantId = tenantId;
+      console.log(`[EVENT] Claiming unclaimed lead ${id} for tenant ${tenantId}`);
+    }
+
     const [updated] = await db.update(ccQuoteDrafts)
       .set(updateData)
       .where(eq(ccQuoteDrafts.id, id))
@@ -224,6 +242,7 @@ router.patch('/quote-drafts/:id', authenticateToken, async (req: Request, res: R
 /**
  * POST /api/contractor/event/quote-drafts/:id/publish
  * Publish quote draft → create messaging thread
+ * Also claims unclaimed leads
  */
 router.post('/quote-drafts/:id/publish', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -234,10 +253,14 @@ router.post('/quote-drafts/:id/publish', authenticateToken, async (req: Request,
       return res.status(401).json({ success: false, error: 'Not authenticated' });
     }
 
+    // Find draft owned by tenant OR unclaimed (allows claiming on publish)
     const existing = await db.query.ccQuoteDrafts.findFirst({
       where: and(
         eq(ccQuoteDrafts.id, id),
-        eq(ccQuoteDrafts.tenantId, tenantId)
+        or(
+          eq(ccQuoteDrafts.tenantId, tenantId),
+          isNull(ccQuoteDrafts.tenantId)
+        )
       ),
     });
 
@@ -278,13 +301,21 @@ router.post('/quote-drafts/:id/publish', authenticateToken, async (req: Request,
       content: quoteMessageContent,
     });
 
+    const updatePayload: Record<string, any> = {
+      status: 'published',
+      conversationId: conversation.id,
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Claim if unclaimed
+    if (!existing.tenantId) {
+      updatePayload.tenantId = tenantId;
+      console.log(`[EVENT] Claiming and publishing unclaimed lead ${id} for tenant ${tenantId}`);
+    }
+
     const [published] = await db.update(ccQuoteDrafts)
-      .set({
-        status: 'published',
-        conversationId: conversation.id,
-        publishedAt: new Date(),
-        updatedAt: new Date(),
-      })
+      .set(updatePayload)
       .where(eq(ccQuoteDrafts.id, id))
       .returning();
 
