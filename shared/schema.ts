@@ -8155,3 +8155,95 @@ export const insertGeoEntityLinkSchema = createInsertSchema(ccGeoEntityLinks).om
 });
 export type GeoEntityLink = typeof ccGeoEntityLinks.$inferSelect;
 export type InsertGeoEntityLink = z.infer<typeof insertGeoEntityLinkSchema>;
+
+// ============================================================================
+// A2.5: Quote Drafts - Event Mode Lead to Quote Flow
+// ============================================================================
+
+/**
+ * Quote Drafts (CC-12 Event Mode)
+ * 
+ * Captures draft quotes created from:
+ * - Booth scans at community events
+ * - QR scans from contractor vehicles/signage
+ * - Worksite photos uploaded by customers
+ * 
+ * Non-linear flow: scans and photos can arrive in any order.
+ * AI proposes → human confirms (no auto-linking).
+ * Publish creates messaging thread for customer communication.
+ * 
+ * Status lifecycle:
+ * - draft: Initial state, editable
+ * - published: Quote sent to customer via messaging thread
+ * - archived: Closed (won, lost, or expired)
+ */
+export const ccQuoteDrafts = pgTable("cc_quote_drafts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  
+  // Tenant/contractor context (nullable for anonymous leads)
+  tenantId: uuid("tenant_id"),
+  contractorProfileId: uuid("contractor_profile_id"),
+  
+  // Source ingestion reference (links to booth_scan, qr_scan, or worksite_photos)
+  sourceIngestionId: uuid("source_ingestion_id"),
+  
+  // Portal/zone context
+  portalId: uuid("portal_id"),
+  zoneId: uuid("zone_id"),
+  
+  // Customer/lead info
+  customerName: text("customer_name"),
+  customerPhone: text("customer_phone"),
+  customerEmail: text("customer_email"),
+  
+  // Location (from A2.4 geo resolution or manual entry)
+  addressText: text("address_text"),
+  geoLat: numeric("geo_lat", { precision: 10, scale: 7 }),
+  geoLng: numeric("geo_lng", { precision: 10, scale: 7 }),
+  
+  // Work category (e.g., landscaping, plumbing, roofing)
+  category: varchar("category", { length: 50 }),
+  
+  // Scope summary and details
+  scopeSummary: text("scope_summary"),
+  scopeDetails: jsonb("scope_details").notNull().default({}),
+  
+  // Pricing breakdown
+  baseEstimate: numeric("base_estimate", { precision: 12, scale: 2 }),
+  lineItems: jsonb("line_items").notNull().default([]),
+  materials: jsonb("materials").notNull().default([]),
+  notes: text("notes"),
+  
+  // Computed payload (zone pricing, modifiers, etc.)
+  computedPayload: jsonb("computed_payload").notNull().default({}),
+  
+  // Status: draft | published | archived
+  status: varchar("status", { length: 20 }).notNull().default('draft'),
+  
+  // Messaging thread (set on publish)
+  conversationId: integer("conversation_id"),
+  
+  // Fourth Wow: calendar/opportunity preferences
+  opportunityPreferences: jsonb("opportunity_preferences").notNull().default({}),
+  
+  // Source mode: event_booth | qr_code | worksite_upload | manual
+  sourceMode: varchar("source_mode", { length: 30 }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+}, (table) => ({
+  contractorStatusIdx: index("idx_quote_drafts_contractor_status").on(table.contractorProfileId, table.status),
+  tenantIdx: index("idx_quote_drafts_tenant").on(table.tenantId),
+  portalZoneIdx: index("idx_quote_drafts_portal_zone").on(table.portalId, table.zoneId),
+  conversationIdx: index("idx_quote_drafts_conversation").on(table.conversationId),
+  createdIdx: index("idx_quote_drafts_created").on(table.createdAt),
+}));
+
+export const insertQuoteDraftSchema = createInsertSchema(ccQuoteDrafts).omit({ 
+  id: true, createdAt: true, updatedAt: true, publishedAt: true, archivedAt: true 
+});
+export type QuoteDraft = typeof ccQuoteDrafts.$inferSelect;
+export type InsertQuoteDraft = z.infer<typeof insertQuoteDraftSchema>;

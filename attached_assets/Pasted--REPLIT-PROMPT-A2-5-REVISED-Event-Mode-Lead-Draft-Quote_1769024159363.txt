@@ -1,0 +1,293 @@
+✅ REPLIT PROMPT A2.5 (REVISED) — Event Mode Lead → Draft Quote → Messaging
+
+Title: Event Mode (CC-12) — Non-Linear Booth/QR/Worksite Ingestions → Draft Quote → Thread Publish
+
+PURPOSE
+
+Enable contractors to operate “event mode” (booth / community event / pop-up) where photos and QR scans arrive in any order and become:
+
+structured lead
+
+draft quote
+
+message thread
+
+No payments. No execution. No SMS.
+
+HARD RULES
+
+✅ Non-linear ingestion: booth scan OR worksite photos can happen first
+
+✅ AI proposes → human confirms (no auto-linking)
+
+✅ Use existing messaging system (threads) exclusively
+
+✅ Do NOT create a second quote spine if one already exists
+
+✅ Use terminology: Work Request (not “job”)
+
+✅ Do NOT use “book/booking” anywhere (use reserve/reservation if needed)
+
+A) EXTEND INGESTION KINDS (DO NOT BREAK A2.3)
+
+A2.3 uses cc_ai_ingestions.sourceType. Do not add a competing field.
+
+Implement as one of:
+
+Option 1 (preferred): extend sourceType enum values:
+
+booth_scan
+
+qr_scan
+
+worksite_photos
+
+Option 2: add contextTag jsonb on ingestion (only if sourceType must remain unchanged)
+
+Each ingestion stores:
+
+extracted_signals json (existing)
+
+ai_proposed_payload json (existing)
+
+human_confirmed_payload json (existing)
+
+confidence_score
+
+B) BOOTH / QR EXTRACTION (DETERMINISTIC + AI STUB)
+booth_scan:
+
+OCR:
+
+company_name_candidate
+
+phone_candidates[]
+
+website_candidates[]
+
+email_candidates[]
+
+social_candidates[] (optional)
+
+qr_scan:
+
+detect QR payload:
+
+url
+
+vCard
+
+token (future)
+Store normalized.
+
+Create proposal:
+
+contractor_identity_candidates[]
+
+lead_capture_candidates[] (if public)
+
+No web scraping.
+
+C) DATA MODEL — DRAFT QUOTE (ADD ONLY IF NEEDED)
+
+First search repo/schema for existing quote/bid tables.
+
+If exists: add fields:
+
+source='event_mode'
+
+status='draft'
+
+payload jsonb
+
+If none exists: create cc_quote_drafts:
+
+id uuid pk
+
+tenant_id uuid nullable (public lead before claim)
+
+contractor_profile_id uuid nullable
+
+lead_id uuid nullable
+
+portal_id uuid nullable
+
+zone_id uuid nullable
+
+address_text text nullable
+
+geo_lat numeric nullable
+
+geo_lng numeric nullable
+
+category varchar nullable
+
+status varchar default 'draft' // draft|published|discarded
+
+draft_payload jsonb not null default '{}'
+
+computed_payload jsonb not null default '{}'
+
+created_at, updated_at
+
+Indexes:
+
+contractor_profile_id, status
+
+tenant_id
+
+portal_id, zone_id
+
+D) PUBLIC EVENT LEAD PAGE (OPTIONAL BUT INCLUDED)
+
+Route: /event/quote (no login)
+
+Allows customer to upload:
+
+worksite photos
+
+optional location (address text or pin)
+Creates:
+
+ingestion(s) with sourceType=worksite_photos
+
+a lead stub (minimal) OR temporary anonymous lead object
+Nothing publishable until contractor claims/reviews.
+
+Security:
+
+no tenant access until claimed
+
+rate limit + file size caps
+
+E) CONTRACTOR EVENT MODE UI
+1) /app/contractor/event
+
+Three big tiles:
+
+Scan booth sign / QR
+
+Add customer work photos
+
+Review draft quotes
+
+Must support messy order.
+
+2) /app/contractor/event/quotes
+
+List draft quotes (status=draft) for contractor.
+
+Detail:
+
+photo gallery
+
+inferred category + editable
+
+inferred address + editable (can call A2.4 geo resolve)
+
+zone badge via canonical helper
+
+advisory estimate breakdown using computeZonePricingEstimate
+
+Editable fields:
+
+base estimate (number)
+
+notes / assumptions
+
+materials bucket (simple list)
+
+Actions:
+
+Publish quote
+
+Discard
+
+Request missing info (sends message with 1–3 prompts)
+
+F) PUBLISH → THREAD (MANDATORY)
+
+Publish must:
+
+create/reuse messaging thread
+
+post “Quote Published” message with:
+
+summary
+
+estimate figure or range
+
+zone/logistics notes (advisory)
+
+next actions (ask question / reserve visit / accept)
+
+If Work Request objects exist cleanly:
+
+optionally create work_request status='quoted'
+Else keep quote-only.
+
+No SMS. No external email requirement.
+
+G) “FOURTH WOW” — CALENDAR / OPPORTUNITY PROMPT (STORE ONLY)
+
+After draft quote created (from booth/worksite/sticky):
+Send a system message (to contractor thread or a private contractor/system thread):
+
+Prompt:
+“Do you want this to appear on the {Portal} community calendar as accepting more work requests?”
+
+Quick actions:
+
+Accept more in this zone
+
+Accept more in all zones in this portal
+
+Accept more within X miles of route (5/10/25)
+
+Keep private
+
+MVP:
+
+store preference in quote_draft metadata OR contractor profile preferences
+
+do not notify residents unless pipeline already exists
+
+API ENDPOINTS
+
+Extend existing POST /api/contractor/ingestions to accept sourceType values
+
+POST /api/contractor/ingestions/:id/resolve (resolution confirm/deny/change/dismiss)
+
+Quote drafts:
+
+POST /api/contractor/event/quote-drafts
+
+GET /api/contractor/event/quote-drafts
+
+GET /api/contractor/event/quote-drafts/:id
+
+PATCH /api/contractor/event/quote-drafts/:id
+
+POST /api/contractor/event/quote-drafts/:id/publish
+
+POST /api/contractor/event/quote-drafts/:id/discard
+
+Auth:
+
+/api/contractor/event/* requires contractor context
+
+public /event/quote has separate controller with strict limits
+
+ACCEPTANCE
+
+Booth scan first OR photos first both work
+
+Draft quote created and editable
+
+Zone badge uses canonical helpers everywhere
+
+Publish creates thread and posts message
+
+Fourth wow prompt stored and visible
+
+No broken nav wiring; reachable from contractor nav/onboard
