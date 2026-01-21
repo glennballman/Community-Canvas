@@ -7603,3 +7603,47 @@ export const insertContractorProfileSchema = createInsertSchema(ccContractorProf
 });
 export type ContractorProfile = typeof ccContractorProfiles.$inferSelect;
 export type InsertContractorProfile = z.infer<typeof insertContractorProfileSchema>;
+
+// ============================================================================
+// A2: AI Ingestion Pipeline - Contractor Media Capture & AI Proposal
+// ============================================================================
+
+export const ccAiIngestions = pgTable("cc_ai_ingestions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  contractorProfileId: uuid("contractor_profile_id").notNull(),
+  
+  // Source type: vehicle_photo | tool_photo | sticky_note
+  sourceType: varchar("source_type", { length: 30 }).notNull(),
+  
+  // Status: proposed | confirmed | discarded | error
+  status: varchar("status", { length: 20 }).notNull().default('proposed'),
+  
+  // Media array: [{ url, mime, bytes, width?, height?, captured_at }]
+  media: jsonb("media").notNull().default([]),
+  
+  // AI-generated proposal (stub until A3/B2/C1)
+  aiProposedPayload: jsonb("ai_proposed_payload").notNull().default({}),
+  
+  // Human-confirmed payload (set on confirm action)
+  humanConfirmedPayload: jsonb("human_confirmed_payload"),
+  
+  // Confidence score (0-100)
+  confidenceScore: numeric("confidence_score"),
+  
+  // Error message if status = 'error'
+  errorMessage: text("error_message"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantProfileCreatedIdx: index("idx_ai_ingestions_tenant_profile_created").on(table.tenantId, table.contractorProfileId, table.createdAt),
+  tenantSourceCreatedIdx: index("idx_ai_ingestions_tenant_source_created").on(table.tenantId, table.sourceType, table.createdAt),
+}));
+
+export const insertAiIngestionSchema = createInsertSchema(ccAiIngestions).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type AiIngestion = typeof ccAiIngestions.$inferSelect;
+export type InsertAiIngestion = z.infer<typeof insertAiIngestionSchema>;
