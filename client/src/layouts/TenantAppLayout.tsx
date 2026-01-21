@@ -117,11 +117,12 @@ export function TenantAppLayout(): React.ReactElement {
 
   // --------------------------------------------------------------------------
   // Tenant redirect (when not at root and no tenant selected)
+  // Redirect to places picker instead of /app root for cleaner UX
   // --------------------------------------------------------------------------
   
   useEffect(() => {
     if (needsRedirectToRoot) {
-      navigate('/app');
+      navigate('/app/places');
     }
   }, [needsRedirectToRoot, navigate]);
 
