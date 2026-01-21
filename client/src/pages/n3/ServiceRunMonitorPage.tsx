@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState } from 'react';
 import { 
   ArrowLeft, 
   RefreshCw, 
@@ -25,7 +26,10 @@ import {
   Clock,
   AlertTriangle,
   FileText,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { format, formatDistanceToNow } from 'date-fns';
 import { 
   useN3MonitorDetail, 
@@ -43,6 +47,7 @@ import { ReplanOptionCard } from '@/components/n3/ReplanOptionCard';
 import { ZoneBadge } from '@/components/ZoneBadge';
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { useToast } from '@/hooks/use-toast';
+import { usePromoteN3Run } from '@/hooks/useCoordination';
 import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
@@ -51,6 +56,11 @@ export default function ServiceRunMonitorPage() {
   const { runId } = useParams<{ runId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Promote flow state
+  const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
+  const [promoteNote, setPromoteNote] = useState('');
+  const [promoteWarnings, setPromoteWarnings] = useState<string[]>([]);
 
   const { 
     data, 
@@ -64,6 +74,7 @@ export default function ServiceRunMonitorPage() {
   const dismissMutation = useN3DismissBundle(TEST_TENANT_ID);
   const assignZoneMutation = useN3AssignZone(TEST_TENANT_ID);
   const assignPortalMutation = useN3AssignPortal(TEST_TENANT_ID);
+  const promoteMutation = usePromoteN3Run();
   
   const portalId = data?.run?.portal_id || null;
   const { data: portalsData } = useN3Portals(TEST_TENANT_ID);
@@ -145,6 +156,34 @@ export default function ServiceRunMonitorPage() {
     }
   };
 
+  const handlePromote = async () => {
+    if (!runId) return;
+    try {
+      const result = await promoteMutation.mutateAsync({ 
+        runId, 
+        note: promoteNote || undefined,
+      });
+      
+      if (result.warnings && result.warnings.length > 0) {
+        setPromoteWarnings(result.warnings);
+      }
+      
+      toast({
+        title: 'Service run scheduled',
+        description: 'No notifications sent. The run is now eligible for planning.',
+      });
+      setShowPromoteConfirm(false);
+      setPromoteNote('');
+      refetch();
+    } catch (err) {
+      toast({
+        title: 'Promotion failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container max-w-4xl mx-auto p-6 space-y-6">
@@ -214,6 +253,101 @@ export default function ServiceRunMonitorPage() {
                 This Service Run is in draft status. Configure the run details, then schedule it to make it active. 
                 Draft runs are not visible to contractors and do not trigger notifications.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {run.status === 'draft' && (
+        <Card data-testid="card-promote-run">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              Promote Draft Service Run
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will mark the service run as scheduled, making it eligible for planning and future actions.
+              No contractors will be notified and no charges will occur.
+            </p>
+
+            {!showPromoteConfirm ? (
+              <Button 
+                onClick={() => setShowPromoteConfirm(true)}
+                data-testid="button-promote-run"
+              >
+                Promote to Scheduled
+              </Button>
+            ) : (
+              <div className="space-y-4 border-t pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Promotion note (optional)
+                  </label>
+                  <Textarea
+                    placeholder="Add a note for your records..."
+                    value={promoteNote}
+                    onChange={(e) => setPromoteNote(e.target.value.slice(0, 280))}
+                    className="resize-none"
+                    rows={2}
+                    data-testid="input-promote-note"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {promoteNote.length}/280 characters
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-muted p-3 space-y-1">
+                  <p className="text-sm font-medium">
+                    Are you sure you want to promote this draft service run to scheduled?
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This action is reversible. No contractors will be notified.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handlePromote}
+                    disabled={promoteMutation.isPending}
+                    data-testid="button-confirm-promote"
+                  >
+                    {promoteMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Promoting...
+                      </>
+                    ) : (
+                      'Confirm Promote'
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowPromoteConfirm(false);
+                      setPromoteNote('');
+                    }}
+                    disabled={promoteMutation.isPending}
+                    data-testid="button-cancel-promote"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {promoteWarnings.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3" data-testid="banner-promote-warnings">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div className="text-sm text-amber-700 dark:text-amber-300">
+              {promoteWarnings.includes('ZONE_NOT_ASSIGNED') && (
+                <p>This run was scheduled without a zone assignment.</p>
+              )}
             </div>
           </div>
         </div>
