@@ -35,6 +35,7 @@ import { createCrewRouter } from "./routes/crew";
 import claimsRouter from "./routes/claims";
 import internalRouter from "./routes/internal";
 import workRequestsRouter from "./routes/work-requests";
+import maintenanceRequestsRouter from "./routes/maintenance-requests";
 import procurementRequestsRouter from "./routes/procurement-requests";
 import projectsRouter from "./routes/projects";
 import bidsRouter from "./routes/bids";
@@ -222,6 +223,10 @@ export async function registerRoutes(
 
   // Register intake work requests (new system - quick capture inbox)
   app.use('/api/work-requests', workRequestsRouter);
+  
+  // Register maintenance requests (canonical API namespace)
+  // Includes coordination opt-in endpoint: PUT /api/maintenance-requests/:id/coordination-opt-in
+  app.use('/api/maintenance-requests', maintenanceRequestsRouter);
   
   // Register procurement requests (former "opportunities" - RFP/bidding system)
   app.use('/api/procurement-requests', procurementRequestsRouter);

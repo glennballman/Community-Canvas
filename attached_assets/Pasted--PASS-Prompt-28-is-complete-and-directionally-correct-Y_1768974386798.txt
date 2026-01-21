@@ -1,0 +1,83 @@
+✅ PASS — Prompt 28 is complete and directionally correct.
+You implemented the right spine: coordination opt-in on cc_maintenance_requests + join table + draft-only attach UI + admin-only routes + no side effects.
+
+There are 2 critical compliance checks and 3 small hardening tweaks I want you to apply (or confirm already applied) so this stays “production spine” grade.
+
+1) 🚨 Critical: Opt-in toggle route naming + semantics drift
+
+You implemented:
+
+PUT /api/work-requests/maintenance/:id/coordination-opt-in
+
+But the underlying entity is maintenance requests (cc_maintenance_requests), and your taxonomy rules say:
+
+Job = employment
+
+Maintenance is Work Request (but your DB is explicitly “maintenance_requests”)
+
+This endpoint path is acceptable only if your platform’s canonical API namespace for maintenance is work-requests/*. If that’s not a deliberate convention, you should move it to a clearer, consistent route:
+
+✅ Preferred:
+
+PUT /api/maintenance-requests/:id/coordination-opt-in
+
+…and keep work-requests reserved for the other work-request intake system.
+
+Action (choose one, do it now):
+
+Option A (best): Add the preferred route as an alias calling the same handler, keep the current one temporarily for compatibility.
+
+Option B: If you already have a documented convention that “work-requests” includes maintenance, then keep it, but update comments + docs to explicitly state that.
+
+2) 🚨 Critical: Tenant scoping on maintenance request selection
+
+For eligible/attach validation you must ensure tenant-scoped ownership, not just portal_id matching.
+
+Portal_id matching is good, but it’s not sufficient if there’s any chance of cross-tenant portal IDs ever being guessable/misbound.
+
+Minimum acceptable check:
+
+Request belongs to tenant via portal ownership, OR via property ownership.
+
+Since cc_maintenance_requests has propertyId, the best check is:
+
+join through cc_properties (or equivalent) to confirm owning_tenant_id == tenantId
+
+If you don’t have a property table in Drizzle, then validate:
+
+the portal belongs to the tenant (you already do for the run)
+
+AND request.portalId === run.portalId
+
+AND request.propertyId is within tenant’s property set (if available)
+
+Action:
+
+Confirm the eligible query and attach mutation include an explicit tenant constraint, not only portal/zone matching.
+
+3) Small hardening tweaks (quick wins)
+A) Attach endpoint limit consistency
+
+You said: batch attach with 10-item limit. Good.
+Make sure the server returns:
+
+400 with code LIMIT_EXCEEDED when >10
+
+and that the UI pre-validates and disables “Attach” when >10 selected.
+
+B) Detach endpoint should allow batch (optional, but recommended)
+
+You implemented detach single request. That’s okay, but operators will want batch detach.
+Add support for maintenance_request_ids: [] (same as attach). Keep single as a convenience.
+
+C) Console audit consistency
+
+Ensure all four actions use consistent console audit keys:
+
+n3_run_maintenance_requests_attached
+
+n3_run_maintenance_requests_detached
+
+maintenance_coordination_opt_in_set
+
+maintenance_coordination_opt_in_cleared

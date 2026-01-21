@@ -723,13 +723,21 @@ export default function ServiceRunMonitorPage() {
             )}
           </div>
           
+          {selectedRequestIds.length > 10 && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+              <p className="text-sm text-destructive">
+                Cannot attach more than 10 requests at once. Please deselect {selectedRequestIds.length - 10} request(s).
+              </p>
+            </div>
+          )}
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAttachModal(false)}>
               Cancel
             </Button>
             <Button 
               onClick={handleAttachRequests}
-              disabled={selectedRequestIds.length === 0 || attachMutation.isPending}
+              disabled={selectedRequestIds.length === 0 || selectedRequestIds.length > 10 || attachMutation.isPending}
               data-testid="button-confirm-attach"
             >
               {attachMutation.isPending ? (

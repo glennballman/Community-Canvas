@@ -1449,6 +1449,23 @@ n3Router.get('/runs/:runId/eligible-maintenance-requests', requireAuth, requireT
       });
     }
     
+    // Verify portal belongs to tenant (defense in depth)
+    const portalRows = await db
+      .select({ id: ccPortals.id })
+      .from(ccPortals)
+      .where(and(
+        eq(ccPortals.id, run.portalId),
+        eq(ccPortals.owningTenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (portalRows.length === 0) {
+      return res.status(403).json({ 
+        error: 'Portal does not belong to this tenant',
+        code: 'TENANT_MISMATCH',
+      });
+    }
+    
     const warnings: string[] = [];
     
     // Build query conditions
@@ -1524,7 +1541,7 @@ n3Router.get('/runs/:runId/eligible-maintenance-requests', requireAuth, requireT
  * Admin/owner only
  */
 const attachMaintenanceRequestsSchema = z.object({
-  maintenance_request_ids: z.array(z.string().uuid()).min(1).max(100),
+  maintenance_request_ids: z.array(z.string().uuid()).min(1).max(10),
 });
 
 n3Router.post('/runs/:runId/attach-maintenance-requests', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
@@ -1534,7 +1551,15 @@ n3Router.post('/runs/:runId/attach-maintenance-requests', requireAuth, requireTe
   try {
     const parseResult = attachMaintenanceRequestsSchema.safeParse(req.body);
     if (!parseResult.success) {
-      return res.status(400).json({ error: 'Invalid request body', details: parseResult.error.flatten() });
+      // Check for limit exceeded specifically
+      const errors = parseResult.error.flatten();
+      if (errors.fieldErrors?.maintenance_request_ids?.some(e => e.includes('10'))) {
+        return res.status(400).json({ 
+          error: 'Cannot attach more than 10 requests at once',
+          code: 'LIMIT_EXCEEDED',
+        });
+      }
+      return res.status(400).json({ error: 'Invalid request body', details: errors });
     }
     
     const { maintenance_request_ids } = parseResult.data;
@@ -1572,6 +1597,23 @@ n3Router.post('/runs/:runId/attach-maintenance-requests', requireAuth, requireTe
       return res.status(400).json({ 
         error: 'Run must have a portal assigned',
         code: 'PORTAL_REQUIRED',
+      });
+    }
+    
+    // Verify portal belongs to tenant (defense in depth)
+    const portalRows = await db
+      .select({ id: ccPortals.id })
+      .from(ccPortals)
+      .where(and(
+        eq(ccPortals.id, run.portalId),
+        eq(ccPortals.owningTenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (portalRows.length === 0) {
+      return res.status(403).json({ 
+        error: 'Portal does not belong to this tenant',
+        code: 'TENANT_MISMATCH',
       });
     }
     

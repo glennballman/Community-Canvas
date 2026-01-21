@@ -1328,13 +1328,14 @@ router.put('/maintenance/:id/coordination-opt-in', requireAuth, requireTenant, r
         [id, actorId, note || null]
       );
 
-      console.log('[audit] coordination_opt_in_set', {
+      console.log('[N3 AUDIT] maintenance_coordination_opt_in_set', {
+        event: 'maintenance_coordination_opt_in_set',
         maintenance_request_id: id,
         portal_id: existing.portal_id,
         zone_id: existing.zone_id,
         actor_id: actorId,
         note: note || null,
-        timestamp: new Date().toISOString(),
+        occurred_at: new Date().toISOString(),
       });
     } else {
       // Clear coordination opt-in
@@ -1350,12 +1351,13 @@ router.put('/maintenance/:id/coordination-opt-in', requireAuth, requireTenant, r
         [id]
       );
 
-      console.log('[audit] coordination_opt_in_cleared', {
+      console.log('[N3 AUDIT] maintenance_coordination_opt_in_cleared', {
+        event: 'maintenance_coordination_opt_in_cleared',
         maintenance_request_id: id,
         portal_id: existing.portal_id,
         zone_id: existing.zone_id,
         actor_id: actorId,
-        timestamp: new Date().toISOString(),
+        occurred_at: new Date().toISOString(),
       });
     }
 
