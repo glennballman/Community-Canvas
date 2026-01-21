@@ -105,3 +105,27 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - BC Ferries schedules
 - Lady Rose ferry schedules
 - Road condition reports
+
+## Architecture Invariants
+
+### Route Structure (V3.5)
+**PERMANENTLY RETIRED**: `/admin/*` routes were retired as of V3.5.
+
+All Platform Admin functionality MUST live under `/app/platform/*`. The server returns HTTP 410 Gone for any `/admin/*` requests.
+
+**Current Route Trees:**
+- `/c/:slug/*` - Public portal (no auth)
+- `/app/platform/*` - Platform Admin mode (PlatformLayout)
+- `/app/founder/*` - Founder Solo mode (FounderLayout)
+- `/app/*` - Tenant app (TenantAppLayout)
+
+**DO NOT:**
+- Add new routes under `/admin/*`
+- Re-introduce legacy admin links
+- Create duplicate admin systems
+
+**Legacy Code (Pending Cleanup):**
+- `client/src/pages/admin/` - Old admin pages
+- `client/src/layouts/PlatformAdminLayout.tsx` - Old admin layout
+- `client/src/pages/AdminLayout.tsx`, `AdminHome.tsx`, `AdminChambers.tsx`
+- `client/src/components/MainNav.tsx` - Contains legacy nav definitions

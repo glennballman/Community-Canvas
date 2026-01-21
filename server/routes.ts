@@ -163,17 +163,12 @@ export async function registerRoutes(
   app.use('/', sitemapRouter);
 
   // =========================================================================
-  // DEPRECATED /admin/* ROUTES (V3.5)
+  // PERMANENTLY RETIRED /admin/* ROUTES (V3.5)
   // All Platform Admin functionality has moved to /app/platform/*
-  // This redirect catches any legacy links and sends users to the new UI
+  // Returns 410 Gone - this path no longer exists
   // =========================================================================
-  app.use('/admin', (req, res) => {
-    console.warn('[DEPRECATED /admin HIT]', {
-      path: req.originalUrl,
-      userId: (req as any).session?.userId,
-      ts: new Date().toISOString(),
-    });
-    res.redirect(301, '/app/platform');
+  app.use('/admin', (_req, res) => {
+    res.status(410).send('This admin interface has been permanently retired. Use /app/platform instead.');
   });
 
   // Register fleet management routes
