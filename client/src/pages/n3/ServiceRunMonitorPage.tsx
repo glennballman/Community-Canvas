@@ -44,6 +44,7 @@ import {
   useN3EligibleMaintenanceRequests,
   useN3AttachMaintenanceRequests,
   useN3DetachMaintenanceRequests,
+  useN3ReadinessDrift,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -120,6 +121,14 @@ export default function ServiceRunMonitorPage() {
     showAttachModal ? runId : undefined,
     TEST_TENANT_ID,
     { category: categoryFilter, include_unzoned: includeUnzoned }
+  );
+  
+  // Readiness drift (Prompt 29) - only fetch for draft/scheduled runs with attached requests
+  const runStatus = data?.run?.status;
+  const shouldFetchDrift = runId && (runStatus === 'draft' || runStatus === 'scheduled') && attachedRequests.length > 0;
+  const { data: driftData } = useN3ReadinessDrift(
+    shouldFetchDrift ? runId : undefined,
+    TEST_TENANT_ID
   );
 
   const handlePortalChange = async (selectedPortalId: string) => {
@@ -652,6 +661,95 @@ export default function ServiceRunMonitorPage() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Readiness Drift Card (Prompt 29) - Advisory warnings for drift */}
+      {(run.status === 'draft' || run.status === 'scheduled') && 
+       attachedRequests.length > 0 && 
+       driftData && 
+       driftData.totals.with_drift > 0 && (
+        <Card data-testid="card-readiness-drift">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Readiness Drift (Advisory)
+              </CardTitle>
+              <Badge variant="outline" className="text-xs">advisory only</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              These signals indicate changes since this run was planned. No action is required.
+            </p>
+            
+            <div className="space-y-2">
+              {driftData.drift.coordination_opt_out && driftData.drift.coordination_opt_out.count > 0 && (
+                <div 
+                  className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
+                  data-testid="drift-coordination-opt-out"
+                >
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm text-amber-700 dark:text-amber-300">
+                    Requests opted out of coordination
+                  </span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {driftData.drift.coordination_opt_out.count}
+                  </Badge>
+                </div>
+              )}
+              
+              {driftData.drift.zone_mismatch && driftData.drift.zone_mismatch.count > 0 && (
+                <div 
+                  className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
+                  data-testid="drift-zone-mismatch"
+                >
+                  <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm text-amber-700 dark:text-amber-300">
+                    Zone mismatch or unzoned
+                  </span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {driftData.drift.zone_mismatch.count}
+                  </Badge>
+                </div>
+              )}
+              
+              {driftData.drift.inactive_status && driftData.drift.inactive_status.count > 0 && (
+                <div 
+                  className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border"
+                  data-testid="drift-inactive-status"
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Requests no longer active
+                  </span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {driftData.drift.inactive_status.count}
+                  </Badge>
+                </div>
+              )}
+              
+              {driftData.drift.age_exceeded && driftData.drift.age_exceeded.count > 0 && (
+                <div 
+                  className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border"
+                  data-testid="drift-age-exceeded"
+                >
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Opt-in older than {driftData.drift.age_exceeded.threshold_days} days
+                  </span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {driftData.drift.age_exceeded.count}
+                  </Badge>
+                </div>
+              )}
+            </div>
+            
+            <p className="text-xs text-muted-foreground italic">
+              You may want to review attachments, update zones, or revert this run to draft.
+            </p>
           </CardContent>
         </Card>
       )}
