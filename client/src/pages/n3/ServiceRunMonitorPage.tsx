@@ -1393,18 +1393,18 @@ export default function ServiceRunMonitorPage() {
                       {receipt.receipt_payload.summary && (
                         <div className="grid grid-cols-3 gap-2 text-sm">
                           <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Attempted</p>
+                            <p className="text-xs text-muted-foreground">Reported Attempted</p>
                             <p className="font-semibold">{receipt.receipt_payload.summary.tasks_attempted}</p>
                           </div>
                           <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Completed</p>
-                            <p className="font-semibold text-green-600 dark:text-green-400">
+                            <p className="text-xs text-muted-foreground">Reported Done</p>
+                            <p className="font-semibold">
                               {receipt.receipt_payload.summary.tasks_completed}
                             </p>
                           </div>
                           <div className="p-2 bg-muted rounded text-center">
-                            <p className="text-xs text-muted-foreground">Deferred</p>
-                            <p className="font-semibold text-amber-600 dark:text-amber-400">
+                            <p className="text-xs text-muted-foreground">Reported Pending</p>
+                            <p className="font-semibold">
                               {receipt.receipt_payload.summary.tasks_deferred}
                             </p>
                           </div>
