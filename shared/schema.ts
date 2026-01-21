@@ -3069,6 +3069,22 @@ export const ccN3RunMaintenanceRequests = pgTable('cc_n3_run_maintenance_request
 
 export type N3RunMaintenanceRequest = typeof ccN3RunMaintenanceRequests.$inferSelect;
 
+// ============ N3 READINESS SNAPSHOTS (Pre-Execution Lock) ============
+export const ccN3RunReadinessSnapshots = pgTable('cc_n3_run_readiness_snapshots', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  runId: uuid('run_id').notNull(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedBy: uuid('locked_by').notNull(),
+  note: text('note'),
+  snapshotPayload: jsonb('snapshot_payload').notNull(),
+}, (table) => [
+  uniqueIndex('uq_n3_run_readiness_snapshot_run').on(table.runId),
+  index('idx_n3_run_readiness_snapshot_tenant_run').on(table.tenantId, table.runId),
+]);
+
+export type N3RunReadinessSnapshot = typeof ccN3RunReadinessSnapshots.$inferSelect;
+
 // ============ HOUSEKEEPING CHECKLISTS ============
 export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
   id: uuid('id').primaryKey().defaultRandom(),

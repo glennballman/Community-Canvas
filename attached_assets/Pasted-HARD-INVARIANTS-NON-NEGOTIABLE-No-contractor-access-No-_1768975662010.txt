@@ -1,0 +1,273 @@
+HARD INVARIANTS (NON-NEGOTIABLE)
+
+❌ No contractor access
+
+❌ No resident notifications
+
+❌ No billing / ledger / folio impact
+
+❌ No execution triggers
+
+❌ No auto-promotion
+
+✅ Admin/owner only
+
+✅ Explicit user action required
+
+✅ Counts-only snapshot (no PII, no IDs)
+
+✅ Fully auditable
+
+✅ Reversible (lock can be cleared)
+
+CONCEPT
+
+A Pre-Execution Lock records:
+
+what the operator believed was true
+
+what coordination/readiness looked like
+
+what zone economics implied
+
+…at the moment they said:
+
+“This run looks ready to proceed.”
+
+It is an internal planning artifact, not a system guarantee.
+
+PART A — Data Model
+A1) Snapshot Table
+
+Create a new table:
+
+cc_n3_run_readiness_snapshots
+
+
+Columns:
+
+id UUID PK
+
+tenant_id UUID NOT NULL
+
+run_id UUID NOT NULL → cc_n3_runs(id) ON DELETE CASCADE
+
+locked_at TIMESTAMPTZ NOT NULL
+
+locked_by UUID NOT NULL
+
+note TEXT NULL
+
+Snapshot Payload (JSONB)
+
+run_status
+
+portal_id
+
+zone_id
+
+window:
+
+starts_at
+
+ends_at
+
+attachments:
+
+attached_count
+
+counts by category
+
+coordination:
+
+total_coord_ready
+
+opt_in_ratio
+
+readiness_drift:
+
+copy of Prompt 29 counts
+
+zone_pricing_estimate:
+
+base_estimate
+
+final_estimate
+
+modifiers summary (keys + values only)
+
+Indexes:
+
+(tenant_id, run_id)
+
+unique (run_id) (only one active snapshot allowed)
+
+PART B — Backend APIs
+B1) Create / Lock Snapshot
+POST /api/n3/runs/:runId/lock-readiness
+
+
+Access
+
+requireAuth
+requireTenant
+requireTenantAdminOrOwner
+
+
+Validation
+
+Run exists, tenant scoped
+
+Run status ∈ { draft, scheduled }
+
+No existing snapshot for this run
+
+If exists → 409 ALREADY_LOCKED
+
+Behavior
+
+Collect current advisory state:
+
+attached maintenance requests rollups
+
+coordination readiness rollups
+
+readiness drift counts (Prompt 29)
+
+zone pricing advisory estimate (if available)
+
+Persist snapshot row
+
+Do not mutate run status
+
+Audit
+
+console.log('[N3 AUDIT] n3_run_readiness_locked', {
+  event: 'n3_run_readiness_locked',
+  run_id,
+  tenant_id,
+  actor_id,
+  occurred_at,
+});
+
+
+Response
+
+{ "success": true, "run_id": "...", "locked_at": "..." }
+
+B2) Fetch Snapshot
+GET /api/n3/runs/:runId/readiness-snapshot
+
+
+Admin/owner only.
+
+Returns the stored snapshot exactly as persisted.
+
+B3) Clear Snapshot (Unlock)
+POST /api/n3/runs/:runId/unlock-readiness
+
+
+Admin/owner only.
+
+Behavior
+
+Deletes snapshot row
+
+No side effects on run
+
+Audit:
+
+n3_run_readiness_unlocked
+
+PART C — Frontend (ServiceRunMonitorPage)
+C1) Readiness Lock Card
+
+Visible when:
+
+admin/owner
+
+run.status ∈ { draft, scheduled }
+
+When NOT locked
+
+Button: “Lock readiness snapshot”
+
+Helper copy:
+
+“This records the current readiness state for reference. It does not start execution.”
+
+Optional note (280 chars)
+
+Confirmation required.
+
+When LOCKED
+
+Status badge: “Readiness Locked”
+
+Display:
+
+locked_at
+
+locked_by
+
+note (if present)
+
+Button: “View snapshot”
+
+Secondary button: “Unlock”
+
+C2) Snapshot View (Modal or Drawer)
+
+Show:
+
+Summary KPIs
+
+Readiness drift counts
+
+Coordination readiness ratios
+
+Zone pricing estimate summary
+
+Timestamp + operator
+
+Badge:
+advisory snapshot
+
+PART D — Hooks
+
+Add hooks:
+
+useN3ReadinessSnapshot(runId)
+useLockN3Readiness()
+useUnlockN3Readiness()
+
+
+Cache invalidation:
+
+/api/n3/runs/:runId/readiness-snapshot
+
+/api/n3/runs/:runId/monitor
+
+UX & LANGUAGE RULES
+
+Never say “final” or “execution”
+
+Use:
+
+“snapshot”
+
+“locked for reference”
+
+“advisory”
+
+Never imply commitment or obligation
+
+ACCEPTANCE CHECKLIST
+
+✅ Admin/owner only
+✅ One snapshot per run
+✅ Counts-only data
+✅ No execution or notifications
+✅ Fully auditable
+✅ Reversible
+✅ Preserves operator intent
