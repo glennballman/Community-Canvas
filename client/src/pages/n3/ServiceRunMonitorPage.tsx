@@ -39,7 +39,11 @@ import {
   useN3Zones,
   useN3AssignZone,
   useN3Portals,
-  useN3AssignPortal
+  useN3AssignPortal,
+  useN3AttachedMaintenanceRequests,
+  useN3EligibleMaintenanceRequests,
+  useN3AttachMaintenanceRequests,
+  useN3DetachMaintenanceRequests,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -48,7 +52,15 @@ import { ZoneBadge } from '@/components/ZoneBadge';
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { useToast } from '@/hooks/use-toast';
 import { usePromoteN3Run, useDemoteN3Run } from '@/hooks/useCoordination';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Link2, Link2Off, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
@@ -66,6 +78,12 @@ export default function ServiceRunMonitorPage() {
   // Demote flow state
   const [showDemoteConfirm, setShowDemoteConfirm] = useState(false);
   const [demoteNote, setDemoteNote] = useState('');
+  
+  // Attach maintenance requests flow state (Prompt 28)
+  const [showAttachModal, setShowAttachModal] = useState(false);
+  const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
+  const [includeUnzoned, setIncludeUnzoned] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
 
   const { 
     data, 
@@ -81,12 +99,28 @@ export default function ServiceRunMonitorPage() {
   const assignPortalMutation = useN3AssignPortal(TEST_TENANT_ID);
   const promoteMutation = usePromoteN3Run();
   const demoteMutation = useDemoteN3Run();
+  const attachMutation = useN3AttachMaintenanceRequests(TEST_TENANT_ID);
+  const detachMutation = useN3DetachMaintenanceRequests(TEST_TENANT_ID);
   
   const portalId = data?.run?.portal_id || null;
   const { data: portalsData } = useN3Portals(TEST_TENANT_ID);
   const portals = portalsData?.portals || [];
   const { data: zonesData } = useN3Zones(portalId, TEST_TENANT_ID);
   const zones = zonesData?.zones || [];
+  
+  // Attached maintenance requests (Prompt 28)
+  const { data: attachedData, refetch: refetchAttached } = useN3AttachedMaintenanceRequests(
+    runId, 
+    TEST_TENANT_ID
+  );
+  const attachedRequests = attachedData?.items || [];
+  
+  // Eligible requests for attach modal
+  const { data: eligibleData, refetch: refetchEligible } = useN3EligibleMaintenanceRequests(
+    showAttachModal ? runId : undefined,
+    TEST_TENANT_ID,
+    { category: categoryFilter, include_unzoned: includeUnzoned }
+  );
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -212,6 +246,58 @@ export default function ServiceRunMonitorPage() {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleAttachRequests = async () => {
+    if (!runId || selectedRequestIds.length === 0) return;
+    try {
+      await attachMutation.mutateAsync({ 
+        runId, 
+        maintenanceRequestIds: selectedRequestIds 
+      });
+      toast({
+        title: 'Requests attached',
+        description: `${selectedRequestIds.length} request(s) attached for planning.`,
+      });
+      setShowAttachModal(false);
+      setSelectedRequestIds([]);
+      refetchAttached();
+    } catch (err) {
+      toast({
+        title: 'Attach failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDetachRequest = async (maintenanceRequestId: string) => {
+    if (!runId) return;
+    try {
+      await detachMutation.mutateAsync({ 
+        runId, 
+        maintenanceRequestIds: [maintenanceRequestId] 
+      });
+      toast({
+        title: 'Request detached',
+        description: 'Request removed from planning.',
+      });
+      refetchAttached();
+    } catch (err) {
+      toast({
+        title: 'Detach failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleRequestSelection = (requestId: string) => {
+    setSelectedRequestIds(prev => 
+      prev.includes(requestId) 
+        ? prev.filter(id => id !== requestId)
+        : [...prev, requestId]
+    );
   };
 
   if (isLoading) {
@@ -466,6 +552,198 @@ export default function ServiceRunMonitorPage() {
           </CardContent>
         </Card>
       )}
+
+      {run.status === 'draft' && (
+        <Card data-testid="card-attached-maintenance-requests">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Link2 className="h-5 w-5" />
+                  Coordination-Opt-In Requests
+                </CardTitle>
+                <Badge variant="secondary" className="text-xs">internal only</Badge>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowAttachModal(true)}
+                data-testid="button-attach-requests"
+              >
+                Attach requests
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Attached for planning only. No one is notified.
+            </p>
+            
+            {attachedRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                No requests attached yet.
+              </p>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-2 font-medium">Request #</th>
+                      <th className="text-left p-2 font-medium">Category</th>
+                      <th className="text-left p-2 font-medium">Status</th>
+                      <th className="text-left p-2 font-medium">Zone</th>
+                      <th className="text-left p-2 font-medium">Attached</th>
+                      <th className="text-right p-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attachedRequests.map((req) => (
+                      <tr key={req.id} className="border-t">
+                        <td className="p-2 font-mono text-xs">{req.request_number}</td>
+                        <td className="p-2">{req.category}</td>
+                        <td className="p-2">
+                          <Badge variant="outline" className="text-xs">
+                            {req.status}
+                          </Badge>
+                        </td>
+                        <td className="p-2">
+                          {req.zone_id && zones.find(z => z.id === req.zone_id) ? (
+                            <ZoneBadge 
+                              zone={{
+                                id: req.zone_id,
+                                key: zones.find(z => z.id === req.zone_id)?.key || '',
+                                name: zones.find(z => z.id === req.zone_id)?.name || '',
+                                badge_label_resident: zones.find(z => z.id === req.zone_id)?.badge_label_resident || null,
+                                badge_label_contractor: zones.find(z => z.id === req.zone_id)?.badge_label_contractor || null,
+                                badge_label_visitor: zones.find(z => z.id === req.zone_id)?.badge_label_visitor || null,
+                              }}
+                              viewerContext="resident" 
+                            />
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-muted-foreground text-xs">
+                          {req.attached_at ? format(new Date(req.attached_at), 'MMM d, h:mm a') : '—'}
+                        </td>
+                        <td className="p-2 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDetachRequest(req.maintenance_request_id)}
+                            disabled={detachMutation.isPending}
+                            data-testid={`button-detach-${req.maintenance_request_id}`}
+                          >
+                            <Link2Off className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            {attachedData && attachedData.total_attached > 0 && (
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span>Total: {attachedData.total_attached}</span>
+                {Object.entries(attachedData.counts_by_category).map(([cat, count]) => (
+                  <span key={cat}>{cat}: {count}</span>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showAttachModal} onOpenChange={setShowAttachModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Attach Coordination-Opt-In Requests</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select requests to attach for planning. Only coordination-opted-in requests matching the run's portal/zone are shown.
+            </p>
+            
+            <div className="flex items-center gap-4">
+              {!eligibleData?.run?.zone_id && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="include-unzoned"
+                    checked={includeUnzoned}
+                    onCheckedChange={(checked) => setIncludeUnzoned(checked === true)}
+                  />
+                  <label htmlFor="include-unzoned" className="text-sm">
+                    Include unzoned requests
+                  </label>
+                </div>
+              )}
+            </div>
+            
+            {eligibleData?.warnings?.includes('ZONE_NOT_ASSIGNED') && !includeUnzoned && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Run has no zone assigned. Enable "Include unzoned requests" to see eligible requests.
+                </p>
+              </div>
+            )}
+            
+            {eligibleData && eligibleData.items.length > 0 ? (
+              <div className="border rounded-lg max-h-64 overflow-y-auto">
+                {eligibleData.items.map((req) => (
+                  <div 
+                    key={req.id}
+                    className="flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-muted/50"
+                  >
+                    <Checkbox
+                      id={`req-${req.id}`}
+                      checked={selectedRequestIds.includes(req.id)}
+                      onCheckedChange={() => toggleRequestSelection(req.id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs">{req.request_number}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {req.category}
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          {req.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic text-center py-4">
+                No eligible requests found.
+              </p>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAttachModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAttachRequests}
+              disabled={selectedRequestIds.length === 0 || attachMutation.isPending}
+              data-testid="button-confirm-attach"
+            >
+              {attachMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Attaching...
+                </>
+              ) : (
+                `Attach ${selectedRequestIds.length} request(s)`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

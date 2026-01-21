@@ -474,3 +474,148 @@ export function useN3AssignPortal(tenantId: string) {
     },
   });
 }
+
+// ============ PROMPT 28: Maintenance Request Attachments ============
+
+export interface EligibleMaintenanceRequest {
+  id: string;
+  request_number: string;
+  category: string;
+  status: string;
+  zone_id: string | null;
+  portal_id: string | null;
+  coordination_opt_in_set_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface EligibleMaintenanceRequestsResponse {
+  ok: boolean;
+  run: {
+    id: string;
+    portal_id: string | null;
+    zone_id: string | null;
+    status: string;
+  };
+  items: EligibleMaintenanceRequest[];
+  warnings?: string[];
+}
+
+export interface AttachedMaintenanceRequest {
+  id: string;
+  maintenance_request_id: string;
+  attached_at: string;
+  request_number: string;
+  category: string;
+  status: string;
+  zone_id: string | null;
+  coordination_opt_in_set_at: string | null;
+}
+
+export interface AttachedMaintenanceRequestsResponse {
+  ok: boolean;
+  items: AttachedMaintenanceRequest[];
+  total_attached: number;
+  counts_by_category: Record<string, number>;
+  counts_by_status: Record<string, number>;
+}
+
+export function useN3EligibleMaintenanceRequests(
+  runId: string | undefined,
+  tenantId: string,
+  params: { category?: string; limit?: number; include_unzoned?: boolean } = {}
+) {
+  const queryParams = new URLSearchParams();
+  if (params.category) queryParams.set('category', params.category);
+  if (params.limit) queryParams.set('limit', String(params.limit));
+  if (params.include_unzoned) queryParams.set('include_unzoned', 'true');
+  
+  return useQuery<EligibleMaintenanceRequestsResponse>({
+    queryKey: ['/api/n3/runs', runId, 'eligible-maintenance-requests', params],
+    queryFn: async () => {
+      const url = `/api/n3/runs/${runId}/eligible-maintenance-requests?${queryParams.toString()}`;
+      const res = await fetch(url, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch eligible maintenance requests');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+  });
+}
+
+export function useN3AttachedMaintenanceRequests(
+  runId: string | undefined,
+  tenantId: string
+) {
+  return useQuery<AttachedMaintenanceRequestsResponse>({
+    queryKey: ['/api/n3/runs', runId, 'maintenance-requests'],
+    queryFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/maintenance-requests`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch attached maintenance requests');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+  });
+}
+
+export function useN3AttachMaintenanceRequests(tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ runId, maintenanceRequestIds }: { runId: string; maintenanceRequestIds: string[] }) => {
+      const res = await fetch(`/api/n3/runs/${runId}/attach-maintenance-requests`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId 
+        },
+        body: JSON.stringify({ maintenance_request_ids: maintenanceRequestIds }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to attach maintenance requests');
+      }
+      return res.json();
+    },
+    onSuccess: (_, { runId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'maintenance-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'eligible-maintenance-requests'] });
+    },
+  });
+}
+
+export function useN3DetachMaintenanceRequests(tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ runId, maintenanceRequestIds }: { runId: string; maintenanceRequestIds: string[] }) => {
+      const res = await fetch(`/api/n3/runs/${runId}/detach-maintenance-requests`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId 
+        },
+        body: JSON.stringify({ maintenance_request_ids: maintenanceRequestIds }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to detach maintenance requests');
+      }
+      return res.json();
+    },
+    onSuccess: (_, { runId }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'maintenance-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'monitor'] });
+    },
+  });
+}
