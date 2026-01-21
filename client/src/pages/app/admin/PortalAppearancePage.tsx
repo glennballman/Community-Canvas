@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Plus, Trash2, ExternalLink, GripVertical,
-  Layout, Palette, Link2
+  Layout, Palette, Link2, MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,12 +38,20 @@ interface PortalUISettings {
   external_site_name?: string;
 }
 
+interface Zone {
+  id: string;
+  key: string;
+  name: string;
+  badgeLabelResident: string | null;
+}
+
 interface PortalResponse {
   ok: boolean;
   portal: {
     id: string;
     slug: string;
     name: string;
+    defaultZoneId?: string | null;
     settings: {
       ui?: PortalUISettings;
     };
@@ -67,18 +75,38 @@ export default function PortalAppearancePage() {
   const [showPoweredBy, setShowPoweredBy] = useState(true);
   const [externalSiteUrl, setExternalSiteUrl] = useState('');
   const [externalSiteName, setExternalSiteName] = useState('');
+  const [defaultZoneId, setDefaultZoneId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<PortalResponse>({
     queryKey: ['/api/p2/admin/portals', portalId],
     queryFn: async () => {
-      const res = await fetch(`/api/p2/admin/portals/${portalId}`);
+      const res = await fetch(`/api/p2/admin/portals/${portalId}`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Failed to fetch portal');
       return res.json();
     },
     enabled: !!portalId,
   });
 
+  const { data: zonesData } = useQuery<{ ok: boolean; zones: Zone[] }>({
+    queryKey: ['/api/p2/admin/portals', portalId, 'zones'],
+    queryFn: async () => {
+      const res = await fetch(`/api/p2/admin/portals/${portalId}/zones`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to fetch zones');
+      return res.json();
+    },
+    enabled: !!portalId,
+  });
+
+  const zones = zonesData?.zones || [];
+
   useEffect(() => {
+    if (data?.portal) {
+      setDefaultZoneId(data.portal.defaultZoneId || null);
+    }
     if (data?.portal?.settings?.ui) {
       const ui = data.portal.settings.ui;
       setLogoUrl(ui.logo_url || '');
@@ -105,6 +133,22 @@ export default function PortalAppearancePage() {
     },
   });
 
+  const defaultZoneMutation = useMutation({
+    mutationFn: async (zoneId: string | null) => {
+      const res = await apiRequest('PATCH', `/api/p2/admin/portals/${portalId}/default-zone`, {
+        default_zone_id: zoneId,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/admin/portals', portalId] });
+      toast({ title: 'Default zone updated' });
+    },
+    onError: () => {
+      toast({ title: 'Failed to update default zone', variant: 'destructive' });
+    },
+  });
+
   const handleSave = () => {
     saveMutation.mutate({
       logo_url: logoUrl || undefined,
@@ -115,6 +159,12 @@ export default function PortalAppearancePage() {
       external_site_url: externalSiteUrl || undefined,
       external_site_name: externalSiteName || undefined,
     });
+  };
+
+  const handleDefaultZoneChange = (zoneId: string) => {
+    const actualZoneId = zoneId === 'none' ? null : zoneId;
+    setDefaultZoneId(actualZoneId);
+    defaultZoneMutation.mutate(actualZoneId);
   };
 
   const addNavLink = () => {
@@ -176,6 +226,10 @@ export default function PortalAppearancePage() {
           <TabsTrigger value="links" data-testid="tab-links">
             <Link2 className="h-4 w-4 mr-2" />
             External Links
+          </TabsTrigger>
+          <TabsTrigger value="operations" data-testid="tab-operations">
+            <MapPin className="h-4 w-4 mr-2" />
+            Operations
           </TabsTrigger>
         </TabsList>
 
@@ -378,6 +432,45 @@ export default function PortalAppearancePage() {
                 <p className="text-xs text-muted-foreground">
                   Display name for the external link (e.g., "Back to Your Website")
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="operations">
+          <Card>
+            <CardHeader>
+              <CardTitle>Operations</CardTitle>
+              <CardDescription>Configure operational defaults for this portal</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="defaultZone">Default Zone</Label>
+                <Select 
+                  value={defaultZoneId || 'none'} 
+                  onValueChange={handleDefaultZoneChange}
+                  disabled={defaultZoneMutation.isPending}
+                >
+                  <SelectTrigger className="w-64" data-testid="select-default-zone">
+                    <SelectValue placeholder="Select default zone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No default zone</SelectItem>
+                    {zones.map(zone => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.badgeLabelResident || zone.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  New N3 Service Runs and Work Requests assigned to this portal will automatically use this zone if no other zone is specified.
+                </p>
+                {zones.length === 0 && (
+                  <p className="text-xs text-amber-600">
+                    No zones configured for this portal. Create zones to enable zone defaulting.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -91,6 +91,132 @@ router.get('/portals', async (req: any, res) => {
 });
 
 /**
+ * GET /api/p2/admin/portals/:portalId
+ * Get portal details including default zone
+ */
+router.get('/portals/:portalId', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+    
+    const { portalId } = req.params;
+    
+    const portalResult = await pool.query(`
+      SELECT id, slug, name, status, portal_type, default_zone_id, settings
+      FROM cc_portals WHERE id = $1 AND owning_tenant_id = $2
+    `, [portalId, auth.tenantId]);
+    
+    if (portalResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Portal not found' });
+    }
+    
+    const row = portalResult.rows[0];
+    res.json({
+      ok: true,
+      portal: {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        status: row.status,
+        portalType: row.portal_type,
+        defaultZoneId: row.default_zone_id,
+        settings: row.settings || {},
+      },
+    });
+  } catch (error: any) {
+    console.error('[Admin] GET portals/:portalId error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/p2/admin/portals/:portalId/zones
+ * Get all zones for a portal
+ */
+router.get('/portals/:portalId/zones', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+    
+    const { portalId } = req.params;
+    
+    // Verify portal belongs to tenant
+    const portalCheck = await pool.query(`
+      SELECT id FROM cc_portals WHERE id = $1 AND owning_tenant_id = $2
+    `, [portalId, auth.tenantId]);
+    
+    if (portalCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Portal not found' });
+    }
+    
+    const zonesResult = await pool.query(`
+      SELECT id, key, name, badge_label_resident, badge_label_contractor, badge_label_visitor
+      FROM cc_zones WHERE portal_id = $1
+      ORDER BY name ASC
+    `, [portalId]);
+    
+    res.json({
+      ok: true,
+      zones: zonesResult.rows.map((row: any) => ({
+        id: row.id,
+        key: row.key,
+        name: row.name,
+        badgeLabelResident: row.badge_label_resident,
+        badgeLabelContractor: row.badge_label_contractor,
+        badgeLabelVisitor: row.badge_label_visitor,
+      })),
+    });
+  } catch (error: any) {
+    console.error('[Admin] GET portals/:portalId/zones error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * PATCH /api/p2/admin/portals/:portalId/default-zone
+ * Update the default zone for a portal
+ */
+router.patch('/portals/:portalId/default-zone', async (req: any, res) => {
+  try {
+    const auth = await requireTenantAdmin(req, res);
+    if (!auth) return;
+    
+    const { portalId } = req.params;
+    const { default_zone_id } = req.body;
+    
+    // Verify portal belongs to tenant
+    const portalCheck = await pool.query(`
+      SELECT id FROM cc_portals WHERE id = $1 AND owning_tenant_id = $2
+    `, [portalId, auth.tenantId]);
+    
+    if (portalCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Portal not found' });
+    }
+    
+    // If zone_id provided, verify it belongs to this portal
+    if (default_zone_id) {
+      const zoneCheck = await pool.query(`
+        SELECT id FROM cc_zones WHERE id = $1 AND portal_id = $2
+      `, [default_zone_id, portalId]);
+      
+      if (zoneCheck.rows.length === 0) {
+        return res.status(400).json({ ok: false, error: 'Zone not found or does not belong to this portal' });
+      }
+    }
+    
+    // Update portal default zone
+    await pool.query(`
+      UPDATE cc_portals SET default_zone_id = $1 WHERE id = $2
+    `, [default_zone_id || null, portalId]);
+    
+    res.json({ ok: true, default_zone_id: default_zone_id || null });
+  } catch (error: any) {
+    console.error('[Admin] PATCH portals/:portalId/default-zone error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
  * GET /api/p2/admin/roles/catalog
  * Returns available role types for tenant + portal
  */
