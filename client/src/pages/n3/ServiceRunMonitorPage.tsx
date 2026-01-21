@@ -40,6 +40,7 @@ import { ReplanOptionCard } from '@/components/n3/ReplanOptionCard';
 import { ZoneBadge } from '@/components/ZoneBadge';
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { useToast } from '@/hooks/use-toast';
+import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -272,11 +273,10 @@ export default function ServiceRunMonitorPage() {
                     id: data.zone_id,
                     name: data.zone_name,
                     key: data.zone_key || '',
-                    badgeLabelResident: data.badge_label_resident || null,
-                    badgeLabelContractor: data.badge_label_contractor || null,
-                    badgeLabelVisitor: data.badge_label_visitor || null,
-                    pricingModifiers: data.pricing_modifiers || {},
-                  } as any}
+                    badge_label_resident: data.badge_label_resident || null,
+                    badge_label_contractor: data.badge_label_contractor || null,
+                    badge_label_visitor: data.badge_label_visitor || null,
+                  }}
                   viewerContext="resident"
                 />
               )}
@@ -287,11 +287,11 @@ export default function ServiceRunMonitorPage() {
                   id: data.zone_id,
                   name: data.zone_name,
                   key: data.zone_key || '',
-                  badgeLabelResident: data.badge_label_resident || null,
-                  badgeLabelContractor: data.badge_label_contractor || null,
-                  badgeLabelVisitor: data.badge_label_visitor || null,
-                  pricingModifiers: data.pricing_modifiers || {},
-                } as any}
+                  badge_label_resident: data.badge_label_resident || null,
+                  badge_label_contractor: data.badge_label_contractor || null,
+                  badge_label_visitor: data.badge_label_visitor || null,
+                  pricingModifiers: data.pricing_modifiers as ZonePricingModifiers,
+                }}
                 baseEstimate={data.zone_pricing_estimate?.base_estimate}
                 viewerContext="resident"
               />
