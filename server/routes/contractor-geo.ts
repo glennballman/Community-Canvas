@@ -195,8 +195,10 @@ router.post('/resolve', authenticateToken, async (req: Request, res: Response) =
 /**
  * POST /api/contractor/geo/confirm
  * 
- * Confirm a geo entity link.
- * Links a candidate (or manual address) to a customer/jobsite/work_request.
+ * Confirm a geo candidate or entity link.
+ * Two modes:
+ * 1. Entity link: Links a candidate to a customer/jobsite/work_request (requires entity_type + entity_id)
+ * 2. Candidate acceptance: Marks a candidate as accepted without linking (only candidate_id)
  */
 router.post('/confirm', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -216,13 +218,7 @@ router.post('/confirm', authenticateToken, async (req: Request, res: Response) =
       lng,
     } = req.body;
     
-    if (!entity_type || !entity_id) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'entity_type and entity_id required' 
-      });
-    }
-    
+    // At least one of candidate_id or manual_address_text is required
     if (!candidate_id && !manual_address_text) {
       return res.status(400).json({ 
         success: false, 
@@ -236,26 +232,83 @@ router.post('/confirm', authenticateToken, async (req: Request, res: Response) =
       return res.status(404).json({ success: false, error: 'Contractor profile not found' });
     }
     
-    // Confirm the link
-    const link = await confirmGeoLink(
-      tenantId,
-      profile.id,
-      entity_type,
-      entity_id,
-      candidate_id || null,
-      manual_address_text || null,
-      lat && lng ? { lat, lng } : null,
-      userId
-    );
+    // If we have entity_type and entity_id, create a full entity link
+    if (entity_type && entity_id) {
+      const link = await confirmGeoLink(
+        tenantId,
+        profile.id,
+        entity_type,
+        entity_id,
+        candidate_id || null,
+        manual_address_text || null,
+        lat && lng ? { lat, lng } : null,
+        userId
+      );
+      
+      return res.json({
+        success: true,
+        ok: true,
+        link,
+        mode: 'entity_link'
+      });
+    }
     
-    return res.json({
-      success: true,
-      ok: true,
-      link,
+    // Otherwise, just mark the candidate as accepted
+    if (candidate_id) {
+      await db
+        .update(ccGeoPlaceCandidates)
+        .set({
+          acceptedAt: new Date(),
+          acceptedBy: userId
+        })
+        .where(eq(ccGeoPlaceCandidates.id, candidate_id));
+      
+      return res.json({
+        success: true,
+        ok: true,
+        mode: 'candidate_accepted',
+        candidateId: candidate_id
+      });
+    }
+    
+    // Handle manual address confirmation (store new candidate)
+    if (manual_address_text && lat && lng) {
+      const { normalizeAddress } = await import('../services/normalizeAddress');
+      const { normalized, hash } = normalizeAddress(manual_address_text);
+      
+      const [candidate] = await db
+        .insert(ccGeoPlaceCandidates)
+        .values({
+          tenantId,
+          contractorProfileId: profile.id,
+          source: 'manual',
+          lat: lat.toString(),
+          lng: lng.toString(),
+          formattedAddress: manual_address_text,
+          addressComponents: { raw: manual_address_text },
+          confidence: '80',
+          provider: 'manual',
+          normalizedAddressHash: hash,
+          acceptedAt: new Date(),
+          acceptedBy: userId
+        })
+        .returning();
+      
+      return res.json({
+        success: true,
+        ok: true,
+        mode: 'manual_accepted',
+        candidate
+      });
+    }
+    
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid confirmation request - provide either candidate_id or manual_address_text with lat/lng' 
     });
   } catch (error) {
     console.error('[GEO] Confirm error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to confirm geo link' });
+    return res.status(500).json({ success: false, error: 'Failed to confirm geo' });
   }
 });
 

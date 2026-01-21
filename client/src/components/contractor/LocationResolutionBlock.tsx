@@ -33,30 +33,48 @@ import {
 import { apiRequest } from '@/lib/queryClient';
 import { useTenant } from '@/contexts/TenantContext';
 
-interface GeoCandidate {
+interface StoredCandidate {
   id: string;
+  lat: string | null;
+  lng: string | null;
+  formattedAddress: string;
+  confidence: string;
+  provider: string | null;
+  source: string;
+  addressComponents: Record<string, any>;
+  normalizedAddressHash: string;
+}
+
+interface GeoCandidate {
+  formattedAddress: string;
   lat: number | null;
   lng: number | null;
-  formattedAddress: string;
   confidence: number;
   provider: string;
-  source: string;
+  normalizedAddressHash?: string;
 }
 
 interface EntityMatch {
-  entityType: string;
+  entityType: 'customer' | 'jobsite' | 'work_request';
   entityId: string;
-  entityName: string;
-  matchType: string;
+  matchType: 'exact_hash' | 'proximity' | 'contact_match';
   confidence: number;
-  distance?: number;
+  label: string;
 }
 
-interface GeoResolutionResult {
-  candidates: GeoCandidate[];
+interface DraftProposal {
+  type: 'create_customer' | 'create_jobsite' | 'attach_to_existing';
+  suggestedData: Record<string, any>;
+  reason: string;
+}
+
+interface GeoResolutionResponse {
+  ok: boolean;
+  success: boolean;
+  candidates: StoredCandidate[];
   matches: EntityMatch[];
-  proposedAction: string;
-  requiresConfirmation: boolean;
+  proposals: DraftProposal[];
+  reasoning: string[];
 }
 
 interface LocationResolutionBlockProps {
@@ -88,8 +106,7 @@ function getMatchTypeLabel(type: string): string {
       return 'Exact Match';
     case 'proximity':
       return 'Nearby';
-    case 'contact_email':
-    case 'contact_phone':
+    case 'contact_match':
       return 'Contact Match';
     default:
       return type;
@@ -112,7 +129,7 @@ export function LocationResolutionBlock({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<GeoCandidate[]>([]);
-  const [selectedCandidate, setSelectedCandidate] = useState<GeoCandidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<StoredCandidate | null>(null);
   const [status, setStatus] = useState<'pending' | 'confirmed' | 'denied' | 'skipped'>('pending');
 
   const headers = {
@@ -120,7 +137,7 @@ export function LocationResolutionBlock({
     'x-tenant-id': currentTenant?.tenant_id || ''
   };
 
-  const { data: resolutionData, isLoading: isResolving } = useQuery<{ ok: boolean; result: GeoResolutionResult }>({
+  const { data: resolutionData, isLoading: isResolving } = useQuery<GeoResolutionResponse>({
     queryKey: ['/api/contractor/geo/resolve', ingestionId, photoBundleId],
     queryFn: async () => {
       const res = await fetch('/api/contractor/geo/resolve', {
@@ -128,12 +145,8 @@ export function LocationResolutionBlock({
         headers,
         credentials: 'include',
         body: JSON.stringify({
-          ingestionId,
-          photoBundleId,
-          lat: initialLat,
-          lng: initialLng,
-          addressText: initialAddress,
-          source
+          ingestion_id: ingestionId,
+          photo_bundle_id: photoBundleId,
         })
       });
       return res.json();
@@ -143,24 +156,55 @@ export function LocationResolutionBlock({
   });
 
   const confirmMutation = useMutation({
-    mutationFn: async ({ candidateId, entityType, entityId }: { candidateId: string; entityType?: string; entityId?: string }) => {
-      const res = await apiRequest('POST', '/api/contractor/geo/confirm', {
-        candidateId,
-        entityType,
-        entityId
+    mutationFn: async ({ 
+      candidateId, 
+      entityType, 
+      entityId,
+      manualAddressText,
+      lat,
+      lng
+    }: { 
+      candidateId?: string; 
+      entityType?: string; 
+      entityId?: string;
+      manualAddressText?: string;
+      lat?: number;
+      lng?: number;
+    }) => {
+      const res = await fetch('/api/contractor/geo/confirm', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          candidate_id: candidateId,
+          entity_type: entityType,
+          entity_id: entityId,
+          manual_address_text: manualAddressText,
+          lat,
+          lng
+        })
       });
       return res.json();
     },
     onSuccess: (data) => {
       setStatus('confirmed');
       queryClient.invalidateQueries({ queryKey: ['/api/contractor/geo'] });
-      onResolved?.({ confirmed: true, entityId: data.entityId });
+      onResolved?.({ confirmed: true, entityId: data.link?.entityId });
     }
   });
 
   const denyMutation = useMutation({
     mutationFn: async (candidateId: string) => {
-      const res = await apiRequest('POST', '/api/contractor/geo/deny', { candidateId });
+      const res = await fetch('/api/contractor/geo/deny', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ 
+          candidate_id: candidateId,
+          ingestion_id: ingestionId,
+          photo_bundle_id: photoBundleId 
+        })
+      });
       return res.json();
     },
     onSuccess: () => {
@@ -175,9 +219,14 @@ export function LocationResolutionBlock({
     
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/contractor/geo/search?q=${encodeURIComponent(searchQuery)}`, {
+      const res = await fetch('/api/contractor/geo/search', {
+        method: 'POST',
         headers,
-        credentials: 'include'
+        credentials: 'include',
+        body: JSON.stringify({ 
+          query: searchQuery,
+          country_code: 'ca'
+        })
       });
       const data = await res.json();
       if (data.ok) {
@@ -193,9 +242,9 @@ export function LocationResolutionBlock({
     onResolved?.({ confirmed: false });
   };
 
-  const resolution = resolutionData?.result;
-  const candidates = resolution?.candidates || [];
-  const matches = resolution?.matches || [];
+  const candidates = resolutionData?.candidates || [];
+  const matches = resolutionData?.matches || [];
+  const proposals = resolutionData?.proposals || [];
   const primaryCandidate = selectedCandidate || candidates[0];
 
   if (status === 'confirmed') {
@@ -249,7 +298,7 @@ export function LocationResolutionBlock({
             <CardTitle className="text-sm font-medium">Location</CardTitle>
             {primaryCandidate && (
               <Badge variant="secondary" className="text-xs">
-                {Math.round(primaryCandidate.confidence)}% confidence
+                {Math.round(parseFloat(primaryCandidate.confidence))}% confidence
               </Badge>
             )}
           </div>
@@ -290,11 +339,21 @@ export function LocationResolutionBlock({
                 className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/30 hover-elevate cursor-pointer"
                 onClick={() => {
                   if (primaryCandidate) {
-                    confirmMutation.mutate({
-                      candidateId: primaryCandidate.id,
-                      entityType: match.entityType,
-                      entityId: match.entityId
-                    });
+                    if (primaryCandidate.id.startsWith('search-')) {
+                      confirmMutation.mutate({
+                        entityType: match.entityType,
+                        entityId: match.entityId,
+                        manualAddressText: primaryCandidate.formattedAddress,
+                        lat: primaryCandidate.lat ? parseFloat(primaryCandidate.lat) : undefined,
+                        lng: primaryCandidate.lng ? parseFloat(primaryCandidate.lng) : undefined
+                      });
+                    } else {
+                      confirmMutation.mutate({
+                        candidateId: primaryCandidate.id,
+                        entityType: match.entityType,
+                        entityId: match.entityId
+                      });
+                    }
                   }
                 }}
                 data-testid={`match-${idx}`}
@@ -302,10 +361,9 @@ export function LocationResolutionBlock({
                 <div className="flex items-center gap-2">
                   {getEntityIcon(match.entityType)}
                   <div>
-                    <div className="text-sm font-medium">{match.entityName}</div>
+                    <div className="text-sm font-medium">{match.label}</div>
                     <div className="text-xs text-muted-foreground">
                       {match.entityType} · {getMatchTypeLabel(match.matchType)}
-                      {match.distance && ` · ${match.distance}m away`}
                     </div>
                   </div>
                 </div>
@@ -344,11 +402,22 @@ export function LocationResolutionBlock({
               <div className="space-y-1">
                 {searchResults.map((result, idx) => (
                   <div
-                    key={result.id}
-                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer ${
-                      selectedCandidate?.id === result.id ? 'bg-primary/10 border border-primary/30' : 'bg-muted/30 hover-elevate'
-                    }`}
-                    onClick={() => setSelectedCandidate(result)}
+                    key={idx}
+                    className="flex items-center gap-2 p-2 rounded-md cursor-pointer bg-muted/30 hover-elevate"
+                    onClick={() => {
+                      const stored: StoredCandidate = {
+                        id: `search-${idx}`,
+                        lat: result.lat?.toString() || null,
+                        lng: result.lng?.toString() || null,
+                        formattedAddress: result.formattedAddress,
+                        confidence: result.confidence.toString(),
+                        provider: result.provider,
+                        source: 'manual_search',
+                        addressComponents: {},
+                        normalizedAddressHash: result.normalizedAddressHash || ''
+                      };
+                      setSelectedCandidate(stored);
+                    }}
                     data-testid={`search-result-${idx}`}
                   >
                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -372,7 +441,24 @@ export function LocationResolutionBlock({
                   >
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm flex-1">{candidate.formattedAddress}</span>
-                    <Badge variant="outline" className="text-xs">{Math.round(candidate.confidence)}%</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {Math.round(parseFloat(candidate.confidence))}%
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {proposals.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">Suggestions:</div>
+                {proposals.map((proposal, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-start gap-2 p-2 rounded-md bg-primary/5 border border-primary/10 text-xs"
+                  >
+                    <AlertCircle className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                    <span>{proposal.reason}</span>
                   </div>
                 ))}
               </div>
@@ -403,7 +489,18 @@ export function LocationResolutionBlock({
               </Button>
               <Button
                 size="sm"
-                onClick={() => confirmMutation.mutate({ candidateId: primaryCandidate.id })}
+                onClick={() => {
+                  // Check if it's a manual search result (id starts with 'search-')
+                  if (primaryCandidate.id.startsWith('search-')) {
+                    confirmMutation.mutate({
+                      manualAddressText: primaryCandidate.formattedAddress,
+                      lat: primaryCandidate.lat ? parseFloat(primaryCandidate.lat) : undefined,
+                      lng: primaryCandidate.lng ? parseFloat(primaryCandidate.lng) : undefined
+                    });
+                  } else {
+                    confirmMutation.mutate({ candidateId: primaryCandidate.id });
+                  }
+                }}
                 disabled={confirmMutation.isPending}
                 data-testid="button-confirm-location"
               >
@@ -414,11 +511,11 @@ export function LocationResolutionBlock({
           )}
         </div>
 
-        {!resolution?.requiresConfirmation === false && matches.length === 0 && (
+        {matches.length === 0 && proposals.length === 0 && primaryCandidate && (
           <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs">
             <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
             <span className="text-amber-700">
-              This location doesn't match any existing customers or jobsites. Confirming will propose creating a new record.
+              This location doesn't match any existing customers or jobsites. Confirming will store the location for future matching.
             </span>
           </div>
         )}
