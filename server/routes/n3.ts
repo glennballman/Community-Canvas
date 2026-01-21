@@ -29,7 +29,8 @@ import {
   ccN3RunReadinessSnapshots,
   ccN3RunExecutionHandoffs,
   ccN3ExecutionContracts,
-  ccN3ExecutionReceipts
+  ccN3ExecutionReceipts,
+  ccN3ExecutionVerifications
 } from '@shared/schema';
 import { createHash } from 'crypto';
 import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
@@ -3537,6 +3538,312 @@ n3Router.get('/runs/:runId/execution-receipts', requireAuth, requireTenant, requ
     });
   } catch (err) {
     console.error('[N3 API] Error fetching execution receipts:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============ EXECUTION VERIFICATIONS (ADVISORY CONFIDENCE SCORING) ============
+
+// Verification signals interface (counts-only)
+interface VerificationSignals {
+  receipt_count: number;
+  hash_consistency_ratio: number;
+  time_alignment_ratio: number;
+  status_distribution: {
+    done: number;
+    attempted: number;
+    pending: number;
+  };
+  duplicate_payload_rate: number;
+  window_overrun: boolean;
+  coverage_ratio: number;
+}
+
+// Compute confidence score from signals (heuristic)
+function computeConfidenceScore(signals: VerificationSignals): number {
+  let score = 50; // Start at 50
+  
+  // Positive modifiers
+  if (signals.hash_consistency_ratio >= 0.95) score += 20;
+  if (signals.time_alignment_ratio >= 0.9) score += 15;
+  if (signals.status_distribution.done >= 
+      signals.status_distribution.attempted + signals.status_distribution.pending) score += 10;
+  if (signals.duplicate_payload_rate < 0.1) score += 5;
+  
+  // Negative modifiers
+  if (signals.window_overrun) score -= 20;
+  if (signals.duplicate_payload_rate >= 0.3) score -= 15;
+  if (signals.status_distribution.attempted + signals.status_distribution.pending > 
+      signals.status_distribution.done) score -= 10;
+  if (signals.receipt_count === 0) score -= 10;
+  
+  // Clamp to 0-100
+  return Math.max(0, Math.min(100, score));
+}
+
+// Determine confidence band from score
+function getConfidenceBand(score: number): 'low' | 'medium' | 'high' {
+  if (score >= 70) return 'high';
+  if (score >= 40) return 'medium';
+  return 'low';
+}
+
+/**
+ * POST /api/n3/runs/:runId/execution-verification
+ * 
+ * Evaluate/re-evaluate execution verification.
+ * Computes signals and confidence score from receipts.
+ * Advisory only - does not affect run status.
+ */
+n3Router.post('/runs/:runId/execution-verification', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const userId = tenantReq.user?.id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    const { notes } = req.body;
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ 
+        id: ccN3Runs.id,
+        startsAt: ccN3Runs.startsAt,
+        endsAt: ccN3Runs.endsAt
+      })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Get execution contract (required)
+    const contracts = await db
+      .select({
+        id: ccN3ExecutionContracts.id,
+        payloadHash: ccN3ExecutionContracts.payloadHash
+      })
+      .from(ccN3ExecutionContracts)
+      .where(and(
+        eq(ccN3ExecutionContracts.runId, runId),
+        eq(ccN3ExecutionContracts.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (contracts.length === 0) {
+      return res.status(400).json({ error: 'Execution contract required for verification' });
+    }
+    
+    const contract = contracts[0];
+    
+    // Get all receipts for this run
+    const receipts = await db
+      .select({
+        payloadHash: ccN3ExecutionReceipts.payloadHash,
+        reportedAt: ccN3ExecutionReceipts.reportedAt,
+        receiptPayload: ccN3ExecutionReceipts.receiptPayload
+      })
+      .from(ccN3ExecutionReceipts)
+      .where(eq(ccN3ExecutionReceipts.runId, runId));
+    
+    if (receipts.length === 0) {
+      return res.status(400).json({ error: 'At least one receipt required for verification' });
+    }
+    
+    // Compute signals (counts-only)
+    const receiptCount = receipts.length;
+    
+    // Hash consistency: % of receipts matching contract hash
+    const matchingHashes = receipts.filter(r => r.payloadHash === contract.payloadHash).length;
+    const hashConsistencyRatio = receiptCount > 0 ? matchingHashes / receiptCount : 0;
+    
+    // Time alignment: % of receipts within contract window
+    const runStart = run.startsAt ? new Date(run.startsAt).getTime() : 0;
+    const runEnd = run.endsAt ? new Date(run.endsAt).getTime() : Date.now();
+    const alignedReceipts = receipts.filter(r => {
+      if (!r.reportedAt) return false;
+      const reportedTime = new Date(r.reportedAt).getTime();
+      return reportedTime >= runStart && reportedTime <= runEnd;
+    }).length;
+    const timeAlignmentRatio = receiptCount > 0 ? alignedReceipts / receiptCount : 0;
+    
+    // Status distribution from receipt payloads
+    let doneCount = 0;
+    let attemptedCount = 0;
+    let pendingCount = 0;
+    
+    for (const r of receipts) {
+      const payload = r.receiptPayload as any;
+      if (payload?.summary) {
+        doneCount += payload.summary.tasks_completed || 0;
+        attemptedCount += payload.summary.tasks_attempted || 0;
+        pendingCount += payload.summary.tasks_deferred || 0;
+      }
+    }
+    
+    // Duplicate payload rate: % of identical payloads
+    const payloadHashes = receipts.map(r => JSON.stringify(r.receiptPayload));
+    const uniquePayloads = new Set(payloadHashes).size;
+    const duplicatePayloadRate = receiptCount > 1 ? 1 - (uniquePayloads / receiptCount) : 0;
+    
+    // Window overrun: any receipts after run end
+    const now = Date.now();
+    const windowOverrun = receipts.some(r => {
+      if (!r.reportedAt) return false;
+      return new Date(r.reportedAt).getTime() > runEnd;
+    });
+    
+    // Coverage ratio: receipts vs expected (use attempted as proxy)
+    const expectedAttempts = attemptedCount || 1;
+    const coverageRatio = Math.min(1, receiptCount / expectedAttempts);
+    
+    const signals: VerificationSignals = {
+      receipt_count: receiptCount,
+      hash_consistency_ratio: Math.round(hashConsistencyRatio * 100) / 100,
+      time_alignment_ratio: Math.round(timeAlignmentRatio * 100) / 100,
+      status_distribution: {
+        done: doneCount,
+        attempted: attemptedCount,
+        pending: pendingCount
+      },
+      duplicate_payload_rate: Math.round(duplicatePayloadRate * 100) / 100,
+      window_overrun: windowOverrun,
+      coverage_ratio: Math.round(coverageRatio * 100) / 100
+    };
+    
+    const confidenceScore = computeConfidenceScore(signals);
+    const confidenceBand = getConfidenceBand(confidenceScore);
+    const evaluatedAt = new Date();
+    
+    // Upsert verification record (one per run)
+    const existingVerification = await db
+      .select({ id: ccN3ExecutionVerifications.id })
+      .from(ccN3ExecutionVerifications)
+      .where(eq(ccN3ExecutionVerifications.runId, runId))
+      .limit(1);
+    
+    let verificationId: string;
+    
+    if (existingVerification.length > 0) {
+      // Update existing
+      await db
+        .update(ccN3ExecutionVerifications)
+        .set({
+          executionContractId: contract.id,
+          confidenceScore,
+          confidenceBand,
+          signals,
+          notes: notes || null,
+          evaluatedAt,
+          evaluatedBy: userId || null
+        })
+        .where(eq(ccN3ExecutionVerifications.runId, runId));
+      verificationId = existingVerification[0].id;
+    } else {
+      // Insert new
+      const [inserted] = await db
+        .insert(ccN3ExecutionVerifications)
+        .values({
+          runId,
+          executionContractId: contract.id,
+          confidenceScore,
+          confidenceBand,
+          signals,
+          notes: notes || null,
+          evaluatedAt,
+          evaluatedBy: userId || null
+        })
+        .returning({ id: ccN3ExecutionVerifications.id });
+      verificationId = inserted.id;
+    }
+    
+    console.log('[N3 AUDIT] n3_execution_verified', {
+      run_id: runId,
+      confidence_score: confidenceScore,
+      confidence_band: confidenceBand,
+      receipt_count: receiptCount,
+      evaluated_by: userId,
+      evaluated_at: evaluatedAt.toISOString()
+    });
+    
+    res.status(200).json({
+      ok: true,
+      verification_id: verificationId,
+      confidence_score: confidenceScore,
+      confidence_band: confidenceBand,
+      signals,
+      evaluated_at: evaluatedAt.toISOString()
+    });
+  } catch (err) {
+    console.error('[N3 API] Error evaluating execution verification:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/runs/:runId/execution-verification
+ * 
+ * Retrieve execution verification for a run.
+ * Advisory only - does not affect run status.
+ */
+n3Router.get('/runs/:runId/execution-verification', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Get verification
+    const verifications = await db
+      .select()
+      .from(ccN3ExecutionVerifications)
+      .where(eq(ccN3ExecutionVerifications.runId, runId))
+      .limit(1);
+    
+    if (verifications.length === 0) {
+      return res.status(404).json({ error: 'No verification exists for this run' });
+    }
+    
+    const v = verifications[0];
+    
+    res.json({
+      run_id: runId,
+      confidence_score: v.confidenceScore,
+      confidence_band: v.confidenceBand,
+      signals: v.signals,
+      evaluated_at: v.evaluatedAt?.toISOString(),
+      notes: v.notes
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching execution verification:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
