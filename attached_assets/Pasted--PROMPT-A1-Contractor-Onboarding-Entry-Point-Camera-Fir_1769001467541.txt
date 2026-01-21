@@ -1,0 +1,281 @@
+🔹 PROMPT A1 — Contractor Onboarding Entry Point (Camera-First)
+PURPOSE (NON-NEGOTIABLE)
+
+Create a camera-first contractor onboarding entry point that:
+
+Requires zero forms
+
+Delivers immediate operational value
+
+Feels easier than a sticky note
+
+Funnels contractors directly into:
+
+Fleet onboarding
+
+Tool onboarding
+
+Sticky-note → Service Run creation
+
+This is the first impression contractors get of the platform.
+If this is boring, we’ve already failed.
+
+SCOPE
+New Routes
+
+Frontend
+
+/contractor/onboard
+
+Backend
+
+No new business logic yet (this prompt wires UX + routing + session validation only)
+
+Who Can Access
+
+Authenticated users with:
+
+contractor_admin
+
+contractor_worker
+
+Invited but not yet “fully onboarded” contractors
+
+Platform admins impersonating contractors (for Cold Start testing)
+
+ENTRY CONDITIONS
+
+When a contractor logs in:
+
+If contractor_onboarding_complete = false
+
+Redirect automatically to /contractor/onboard
+
+If true
+
+Skip onboarding and go to contractor dashboard
+
+Add:
+
+contractor_onboarding_complete boolean default false
+
+
+to the contractor profile if not already present.
+
+UX REQUIREMENTS (ABSOLUTE)
+❌ DO NOT
+
+Show a form
+
+Ask for company name
+
+Ask for address
+
+Ask for skills
+
+Ask for certifications
+
+Ask for availability
+
+Ask for anything that smells like CRM
+
+✅ DO
+
+Show three giant actions
+
+Lead with the camera
+
+Allow skipping any step
+
+Allow steps in any order
+
+UI LAYOUT
+Page Title
+
+“Let’s get you working.”
+
+Subtext:
+
+This takes less time than writing a sticky note.
+
+Primary Actions (Cards / Buttons)
+
+Render three equal-weight action cards, each tappable, each camera-first.
+
+🟦 Action 1 — “Add My Truck & Trailer”
+
+Visual
+
+Camera icon
+
+Photo preview placeholder
+
+Tap Action
+
+Opens camera / photo picker
+
+Routes to:
+
+onboarding/vehicle-capture
+
+Copy
+
+Take a photo. We’ll figure out the rest.
+
+🟩 Action 2 — “Add My Tools”
+
+Visual
+
+Toolbox / drill icon
+
+Tap Action
+
+Opens camera / photo picker
+
+Routes to:
+
+onboarding/tool-capture
+
+Copy
+
+No lists. Just photos.
+
+🟨 Action 3 — “Add a Job From a Sticky Note”
+
+Visual
+
+Sticky note icon
+
+Slight emphasis / glow (this is the WOW path)
+
+Tap Action
+
+Opens camera
+
+Routes to:
+
+onboarding/sticky-note-capture
+
+Copy
+
+Snap a photo. We’ll turn it into a real job.
+
+SECONDARY UI (NON-BLOCKING)
+
+Below the cards:
+
+“Skip for now” (subtle text button)
+
+Allows contractor to explore
+
+Still marked as onboarding_incomplete
+
+Progress hint
+
+“You can do this anytime. Nothing here is permanent.”
+
+TECHNICAL IMPLEMENTATION
+Frontend
+
+New page component:
+ContractorOnboardingEntry.tsx
+
+Must:
+
+Detect role + onboarding state
+
+Be responsive (mobile-first)
+
+Support camera APIs
+
+Work inside existing auth/session system
+
+Routing Logic
+if (user.role in ['contractor_admin', 'contractor_worker']
+    && !user.contractor_onboarding_complete) {
+  redirect('/contractor/onboard');
+}
+
+State Tracking
+
+Create local onboarding state (frontend only for now):
+
+type ContractorOnboardingState = {
+  vehicle_started: boolean;
+  tools_started: boolean;
+  sticky_note_started: boolean;
+};
+
+
+Persist completion flags later (Prompt A4 / B3 / C4).
+
+MESSAGING INTEGRATION (YES, NOW)
+
+On first visit:
+
+Automatically create a system DM thread:
+
+Participants:
+
+Contractor
+
+Operator (Ellen)
+
+System message:
+
+“Contractor onboarding started.”
+
+This reinforces:
+
+Visibility
+
+Trust
+
+Audit trail
+
+Zero side-channel behavior
+
+ACCEPTANCE CRITERIA (MUST ALL PASS)
+Functional
+
+Contractor can reach onboarding without typing anything
+
+All three actions open the camera
+
+Contractor can skip onboarding
+
+No data is committed yet
+
+Experiential
+
+Entire page usable with one hand on a phone
+
+Contractor understands value in <10 seconds
+
+No cognitive load
+
+Architectural
+
+No schema changes beyond onboarding flag
+
+No asset creation yet
+
+No service runs created yet
+
+Clean separation of concerns
+
+OUT OF SCOPE (EXPLICITLY)
+
+AI recognition
+
+Asset creation
+
+Service run creation
+
+OCR
+
+Negotiation
+
+Billing
+
+Those start immediately next.

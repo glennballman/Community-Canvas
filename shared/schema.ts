@@ -7552,3 +7552,54 @@ export const ccCapacityPolicies = pgTable("cc_capacity_policies", {
 export const insertCapacityPolicySchema = createInsertSchema(ccCapacityPolicies).omit({ id: true, createdAt: true, updatedAt: true });
 export type CapacityPolicy = typeof ccCapacityPolicies.$inferSelect;
 export type InsertCapacityPolicy = z.infer<typeof insertCapacityPolicySchema>;
+
+// ============================================================================
+// CONTRACTOR PROFILES - Prompt A1: Contractor Onboarding Entry Point
+// ============================================================================
+
+/**
+ * Contractor Profiles - tracks contractor onboarding state and profile data
+ * 
+ * Contractors are users with contractor_admin or contractor_worker roles
+ * This table tracks their onboarding journey through camera-first experiences
+ * 
+ * Roles that can access:
+ * - contractor_admin: Full contractor access
+ * - contractor_worker: Worker-level contractor access
+ * - Platform admins impersonating contractors
+ */
+export const ccContractorProfiles = pgTable("cc_contractor_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  portalId: uuid("portal_id").notNull(),
+  tenantId: uuid("tenant_id"),
+  
+  // Onboarding state
+  onboardingComplete: boolean("onboarding_complete").notNull().default(false),
+  onboardingStartedAt: timestamp("onboarding_started_at", { withTimezone: true }),
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
+  
+  // Onboarding progress (frontend-tracked, backend-persisted)
+  vehicleStarted: boolean("vehicle_started").notNull().default(false),
+  toolsStarted: boolean("tools_started").notNull().default(false),
+  stickyNoteStarted: boolean("sticky_note_started").notNull().default(false),
+  
+  // Contractor role: contractor_admin or contractor_worker
+  contractorRole: varchar("contractor_role", { length: 30 }).notNull().default('contractor_worker'),
+  
+  // DM thread for operator communication
+  onboardingThreadId: uuid("onboarding_thread_id"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userPortalIdx: uniqueIndex("idx_contractor_profiles_user_portal").on(table.userId, table.portalId),
+  portalIdx: index("idx_contractor_profiles_portal").on(table.portalId),
+}));
+
+export const insertContractorProfileSchema = createInsertSchema(ccContractorProfiles).omit({ 
+  id: true, createdAt: true, updatedAt: true 
+});
+export type ContractorProfile = typeof ccContractorProfiles.$inferSelect;
+export type InsertContractorProfile = z.infer<typeof insertContractorProfileSchema>;
