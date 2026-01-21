@@ -13,7 +13,7 @@
  * - GET /api/work-requests/:id/notes - Get notes
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, requireTenant } from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
 import { 
@@ -25,6 +25,26 @@ import {
 } from '../lib/coordination';
 
 const router = Router();
+
+// Admin/owner guard for mutation endpoints
+function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
+  const tenantReq = req as TenantRequest;
+  const roles = tenantReq.ctx?.roles || [];
+  
+  const isAdminOrOwner = 
+    roles.includes('owner') || 
+    roles.includes('admin') || 
+    roles.includes('tenant_admin') ||
+    !!tenantReq.user?.isPlatformAdmin;
+  
+  if (!isAdminOrOwner) {
+    return res.status(403).json({ 
+      error: 'Owner or admin access required',
+      code: 'ADMIN_REQUIRED'
+    });
+  }
+  next();
+}
 
 // List work requests with optional status filter
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
@@ -1256,7 +1276,7 @@ router.put('/:id/coordination-intent', requireAuth, requireTenant, async (req: R
  * - 404: Maintenance request not found
  * - 400: Validation error
  */
-router.put('/maintenance/:id/coordination-opt-in', requireAuth, requireTenant, async (req: Request, res: Response) => {
+router.put('/maintenance/:id/coordination-opt-in', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   const { id } = req.params;
   const { coordination_opt_in, note } = req.body;
