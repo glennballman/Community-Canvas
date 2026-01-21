@@ -133,6 +133,7 @@ import { createParticipantTripsRouter } from "./routes/participant-trips";
 import participantRouter from "./routes/participant";
 import contractorRouter from "./routes/contractor";
 import contractorIngestionsRouter from "./routes/contractor-ingestions";
+import contractorGeoRouter from "./routes/contractor-geo";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -536,6 +537,9 @@ export async function registerRoutes(
   
   // Contractor Ingestions (Prompt A2)
   app.use('/api/contractor/ingestions', contractorIngestionsRouter);
+  
+  // Contractor Geo Resolution (Prompt A2.4)
+  app.use('/api/contractor/geo', contractorGeoRouter);
 
   // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {
