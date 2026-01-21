@@ -1410,6 +1410,7 @@ export const ccPortals = pgTable('cc_portals', {
   baseUrl: text('base_url'),
   siteConfig: jsonb('site_config').default({}),
   isActive: boolean('is_active').default(true),
+  defaultZoneId: uuid('default_zone_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

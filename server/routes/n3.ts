@@ -22,13 +22,15 @@ import {
   ccReplanBundles, 
   ccReplanOptions,
   ccReplanActions,
-  ccZones
+  ccZones,
+  ccPortals
 } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { computeZonePricingEstimate, ZonePricingModifiers } from '@shared/zonePricing';
 import { requireAuth, requireTenant } from '../middleware/guards';
 import type { TenantRequest } from '../middleware/tenantContext';
+import { resolveDefaultZoneIdForPortal, isZoneValidForPortal } from '../lib/n3-zone-defaults';
 
 /**
  * Owner/Admin gate for zone-sensitive N3 routes
@@ -359,6 +361,95 @@ n3Router.put('/runs/:runId/zone', requireAuth, requireTenant, requireTenantAdmin
     });
   } catch (err) {
     console.error('[N3 API] Error assigning zone:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+const portalAssignmentSchema = z.object({
+  portal_id: z.string().uuid(),
+});
+
+n3Router.put('/runs/:runId/portal', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  try {
+    const { runId } = req.params;
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const body = portalAssignmentSchema.parse(req.body);
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+
+    const run = await db.query.ccN3Runs.findFirst({
+      where: and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ),
+    });
+
+    if (!run) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+
+    const portal = await db.query.ccPortals.findFirst({
+      where: and(
+        eq(ccPortals.id, body.portal_id),
+        eq(ccPortals.owningTenantId, tenantId)
+      ),
+    });
+
+    if (!portal) {
+      return res.status(404).json({ error: 'Portal not found or does not belong to tenant' });
+    }
+
+    const previousPortalId = run.portalId;
+    const isPortalChange = previousPortalId !== null && previousPortalId !== body.portal_id;
+
+    let newZoneId: string | null = run.zoneId;
+    let zoneAuditAction: string | null = null;
+
+    if (isPortalChange && run.zoneId) {
+      const zoneStillValid = await isZoneValidForPortal(tenantId, body.portal_id, run.zoneId);
+      if (!zoneStillValid) {
+        newZoneId = null;
+        zoneAuditAction = 'zone_cleared_portal_change';
+      }
+    }
+
+    if (newZoneId === null) {
+      const defaultResult = await resolveDefaultZoneIdForPortal(tenantId, body.portal_id);
+      if (defaultResult.zoneId) {
+        newZoneId = defaultResult.zoneId;
+        zoneAuditAction = `zone_defaulted_${defaultResult.source}`;
+      }
+    }
+
+    await db
+      .update(ccN3Runs)
+      .set({ 
+        portalId: body.portal_id,
+        zoneId: newZoneId,
+        updatedAt: new Date(),
+      })
+      .where(eq(ccN3Runs.id, runId));
+
+    const portalAuditAction = previousPortalId === null ? 'portal_set' : 'portal_updated';
+
+    console.log(`[N3 API] Portal ${portalAuditAction}: run=${runId}, prev=${previousPortalId}, new=${body.portal_id}`);
+    if (zoneAuditAction) {
+      console.log(`[N3 API] Zone ${zoneAuditAction}: run=${runId}, zone=${newZoneId}`);
+    }
+
+    res.json({ 
+      success: true,
+      id: runId,
+      portal_id: body.portal_id,
+      zone_id: newZoneId,
+      portal_audit_action: portalAuditAction,
+      zone_audit_action: zoneAuditAction,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error assigning portal:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

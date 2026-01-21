@@ -1,0 +1,255 @@
+✅ REPLIT PROMPT 18 — N3 Service Runs: Portal Assignment + Zone Defaults (Frictionless, Secure)
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+N3 (cc_n3_runs) is the only Service Runs spine.
+
+Do not touch legacy service runs (cc_service_runs, p2-service-runs.ts, legacy UI).
+
+Portal + zone logic must be tenant-safe, portal-scoped, and auditable.
+
+Zone pricing modifiers remain advisory only (no billing/ledger/folio changes).
+
+Contractors must never see pricing_modifiers or zone impact summaries.
+
+GOAL
+
+Eliminate the operational friction where zone assignment fails because portal_id is missing by making N3 runs portal-aware at creation time, with safe admin controls and optional zone defaults.
+
+Deliverables:
+
+Ensure portal_id is set when creating N3 runs (or provide admin assign flow).
+
+Provide an owner/admin-only portal assignment endpoint for existing runs.
+
+Add optional zone defaulting logic:
+
+if portal has a configured default zone → set zone_id
+
+else if portal has exactly 1 zone → set zone_id
+
+else leave zone_id null
+
+No destructive refactors. Additive changes only.
+
+PART A — Data Model (Minimal, Non-breaking)
+A1) Add default zone configuration to portal (preferred)
+
+Find the canonical portal table (likely cc_portals or similar). Do not invent names — search for the portal table used by zones (cc_zones.portal_id references it logically).
+
+Add one nullable column:
+
+default_zone_id UUID NULL (FK to cc_zones(id) optional)
+
+Migration:
+
+Add column
+
+Add FK (ON DELETE SET NULL)
+
+Add index
+
+Example shape (adapt to actual portal table name):
+
+ALTER TABLE cc_portals
+ADD COLUMN IF NOT EXISTS default_zone_id UUID
+REFERENCES cc_zones(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_cc_portals_default_zone_id
+ON cc_portals(default_zone_id)
+WHERE default_zone_id IS NOT NULL;
+
+
+If portals already have a JSON settings column, you MAY store default zone there instead — but prefer the explicit column unless the project has a strong convention to keep portal settings in JSON.
+
+PART B — API (N3 + Portals)
+B1) Owner/Admin: Assign portal to an existing N3 run
+
+Add to server/routes/n3.ts:
+
+PUT /api/n3/runs/:runId/portal
+
+Middleware: requireAuth, requireTenant, requireTenantAdminOrOwner
+
+Body:
+
+{ portal_id: string }
+
+
+Validation:
+
+run exists and belongs to tenant
+
+portal exists and belongs to same tenant
+
+after assigning portal:
+
+optionally apply zone defaulting (see B3)
+
+audit log:
+
+portal_set (first time)
+
+portal_updated (changed)
+
+Return:
+
+updated run minimal fields: id, portal_id, zone_id
+
+B2) Ensure portal_id is set at N3 run creation
+
+Locate the N3 run creation path:
+
+Either in server/routes/n3.ts (if there is a POST route), or another module.
+
+Update creation so:
+
+If portal_id is provided in request → validate belongs to tenant and set it
+
+If portal_id is NOT provided:
+
+if tenant has exactly 1 portal, auto-set that portal (optional if easy)
+
+otherwise reject with a clear error:
+
+code: PORTAL_REQUIRED
+
+message: “Portal is required to schedule this run.”
+
+⚠️ Keep it deterministic and secure. Do not “guess” portals if multiple.
+
+B3) Zone defaulting logic (server-side, deterministic)
+
+Create a helper function in server/lib or near n3 routes:
+
+resolveDefaultZoneIdForPortal(tenantId, portalId): Promise<string | null>
+
+Algorithm:
+
+If portal has default_zone_id set → return it
+
+Else query zones for that portal:
+
+if exactly 1 zone exists → return that zone id
+
+Else return null
+
+Then apply this helper in:
+
+N3 run creation (when portal_id is set)
+
+PUT /api/n3/runs/:runId/portal (after portal assignment)
+
+When portal changes, you may:
+
+Set zone_id to default (if found)
+
+OR leave existing zone_id if it’s still portal-valid
+Rules:
+
+If existing zone_id belongs to old portal, clear it before defaulting.
+
+If existing zone_id belongs to new portal, keep it.
+
+Audit log:
+
+zone_defaulted when zone_id set automatically
+
+PART C — UI (N3 Monitor + Run Creation)
+C1) N3 Monitor: Portal assignment UI (owner/admin only)
+
+In client/src/pages/n3/ServiceRunMonitorPage.tsx:
+
+If run.portal_id is null:
+
+Show a Callout/Alert card:
+
+“Portal required for zone assignment”
+
+Dropdown to select portal (owner/admin only)
+
+Button: “Set Portal”
+
+On success:
+
+invalidate monitor query
+
+zones dropdown becomes enabled
+
+If portal assignment is out of scope for this page, add it to an admin N3 settings panel instead, but must exist in UI.
+
+C2) Portal default zone editor (owner/admin)
+
+Add to your portal admin page (where zones are managed):
+
+Dropdown “Default zone for N3 runs”
+
+Stores default_zone_id on portal
+
+Shows warning: “Used only for defaulting N3 run zones; advisory estimates only.”
+
+Do not show pricing modifiers here unless already part of zone editor.
+
+C3) N3 Run creation flow
+
+Wherever N3 runs are created:
+
+Require portal selection if multiple portals exist
+
+If only one portal exists, auto-select and hide the dropdown
+
+After creating, route user to monitor page; zone defaults should already apply
+
+PART D — Security / Guardrails
+
+All portal assignment routes: owner/admin only
+
+No contractor exposure
+
+No ledger/folio/payment changes
+
+No Bamfield-specific hardcoding
+
+PART E — Acceptance Criteria / QA
+
+Create N3 run with portal_id:
+
+run stored with portal_id ✅
+
+zone_id defaulted when portal default exists or single zone ✅
+
+Create N3 run without portal_id:
+
+if multiple portals → rejected with PORTAL_REQUIRED ✅
+
+if exactly one portal → auto-set (if implemented) ✅
+
+Assign portal to existing run:
+
+clears invalid zone_id if portal changed ✅
+
+applies zone defaulting deterministically ✅
+
+Monitor page:
+
+if portal missing → shows portal assignment UI ✅
+
+after set → zone dropdown works ✅
+
+DELIVERABLES
+
+Migration: portal default zone configuration (column or settings)
+
+API: PUT /api/n3/runs/:runId/portal
+
+Updated N3 run create path to enforce/set portal
+
+Zone defaulting helper
+
+UI: portal assignment UX + portal default zone editor
+
+Tests or QA steps documented
+
+END PROMPT 18
