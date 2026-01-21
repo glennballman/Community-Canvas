@@ -1,0 +1,253 @@
+✅ REPLIT PROMPT 24 — Suggested Service Run Windows (Advisory Only, No Auto-Creation)
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+Jobs = employment. Work Requests = maintenance/contractor work.
+
+No billing/ledger/folio/payment changes.
+
+No Service Run auto-creation. No persistence of “windows.” No side effects.
+
+No neighbor identity disclosure; counts-only and aggregated signals only.
+
+Contractors gain zero new visibility.
+
+Use Prompt 14 label logic for zone display (getZoneBadgeLabel / ZoneBadge).
+
+Must be portal-scoped, tenant-scoped, and admin/owner gated.
+
+GOAL
+
+From the Coordination Readiness Dashboard (Prompt 23), allow ops/admin to request advisory suggested schedule windows for coordination-dense clusters:
+
+Inputs:
+
+portalId (required)
+
+zoneId (optional / can be unzoned)
+
+category (optional)
+
+windowDays (context; e.g., 14)
+
+desiredRuns (default 3)
+
+Output:
+
+2–3 suggested “scheduled windows” (date ranges) with:
+
+expected coordination-ready count
+
+active count
+
+confidence score (simple heuristic)
+
+explanation text (counts + density + unzoned penalty)
+
+No persistence, no entities, no “create run” button in this prompt.
+
+PART A — Backend: Advisory Window Suggestion Endpoint
+A1) Add endpoint
+
+Route:
+POST /api/work-requests/coordination/suggest-windows
+
+Middleware:
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner (admin/owner only)
+
+Request body:
+
+{
+  portal_id: string,
+  zone_id?: string | null,      // null => unzoned
+  category?: string | null,     // optional bucket filter
+  lookahead_days?: number,      // default 21, clamp 7–60
+  window_size_days?: number,    // default 3, clamp 1–14
+  desired_windows?: number      // default 3, clamp 1–5
+}
+
+
+Response:
+
+{
+  ok: true,
+  portal_id: string,
+  zone_id: string | null,
+  category: string | null,
+  params: {
+    lookahead_days: number,
+    window_size_days: number,
+    desired_windows: number
+  },
+  windows: Array<{
+    start_date: string,        // YYYY-MM-DD
+    end_date: string,          // YYYY-MM-DD (inclusive or exclusive; be consistent)
+    coord_ready_count: number,
+    active_count: number,
+    readiness_ratio: number,   // coord_ready_count / active_count
+    confidence: number,        // 0–100 heuristic
+    explanation: string        // short advisory rationale
+  }>,
+  notes: string[]               // global disclaimers
+}
+
+A2) Heuristic model (simple, deterministic)
+
+We do NOT have full scheduling constraints here. We only propose windows based on density + readiness.
+
+Algorithm:
+
+Query eligible work requests for tenant+portal (+zone +category) with active statuses:
+
+new, contacted, quoted, scheduled
+
+Consider only those updated/created within last lookahead_days?
+Better: treat lookahead as future proposal horizon and compute counts from current backlog, not future timestamps.
+
+Generate desired_windows windows spaced across the next lookahead_days:
+
+Example: if lookahead 21 days and 3 windows, center them around days 5, 12, 19 with a window_size_days range.
+
+For each proposed window, compute:
+
+coord_ready_count = count where coordination_intent = true
+
+active_count = count of eligible active
+
+readiness_ratio
+
+Confidence heuristic (0–100):
+
+base = min(60, coord_ready_count * 10) // 1→10, 2→20, ... cap at 60
+
+add readiness bonus: + round(readiness_ratio * 30) (0–30)
+
+add density bonus: + min(10, floor(active_count / 5) * 2) (0–10)
+
+subtract unzoned penalty: if zone_id is null, -10
+
+clamp 0–100
+
+Explanation text:
+
+“X coordination-ready out of Y active requests in this area. Higher readiness increases the chance a scheduled window fills efficiently.”
+
+Important:
+
+This is advisory. Do not imply commitment or pricing.
+
+Return notes like:
+
+“Suggestions are advisory only.”
+
+“Counts are aggregated; no identities are shown.”
+
+“Actual scheduling depends on contractor availability and constraints.”
+
+A3) Performance & safety
+
+Counts-only queries; no IDs returned.
+
+Ensure portal and zone belong to tenant.
+
+If category is null/“uncategorized”, include category IS NULL/empty.
+
+PART B — Frontend: Integrate into Coordination Dashboard
+B1) UI entry point
+
+On /app/ops/coordination:
+
+In the zone table row actions or in the category panel, add a button:
+
+“Suggest scheduled windows” (advisory)
+
+Only enabled when portal is selected.
+
+If a zone is selected, apply that zone; otherwise “All zones” should require the user to pick a zone first (to avoid meaningless windows).
+
+B2) Suggestion panel/modal
+
+When clicked:
+
+Open a modal or side panel:
+
+Parameters:
+
+Lookahead: 14 / 21 / 30 (default 21)
+
+Window size: 2 / 3 / 5 days (default 3)
+
+Desired windows: 2 / 3 / 4 (default 3)
+
+Displays returned windows in a list:
+
+Date range
+
+coord_ready_count, active_count, readiness_ratio
+
+confidence badge (low/med/high)
+
+explanation
+
+Show disclaimers from notes
+
+Hard rule:
+
+No “Create Service Run” button in this prompt.
+
+No persistence of suggested windows.
+
+B3) Zone label display
+
+Show ZoneBadge using Prompt 14 label logic.
+
+If unzoned: show literal “Unzoned”.
+
+PART C — Hooks
+
+Add hook:
+
+useSuggestCoordinationWindows() mutation
+Inputs: portalId, zoneId, category, lookaheadDays, windowSizeDays, desiredWindows
+On success: display results in modal/panel
+
+PART D — Security & QA
+
+Security:
+
+Endpoint admin/owner only (403 for non-admin)
+
+Contractors cannot access
+
+Counts-only response
+
+QA:
+
+With portal+zone selected, request suggestions → returns 2–3 windows ✅
+
+Changing lookahead/window size updates output ✅
+
+Unzoned selection applies penalty and labels “Unzoned” ✅
+
+No IDs or PII in payload ✅
+
+No Service Run entities created; no DB writes ✅
+
+DELIVERABLES
+
+Backend: POST /api/work-requests/coordination/suggest-windows
+
+Frontend: modal/panel in /app/ops/coordination + controls + display
+
+Hook: useSuggestCoordinationWindows
+
+QA notes
+
+END PROMPT 24

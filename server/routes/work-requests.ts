@@ -965,6 +965,163 @@ router.get('/coordination/readiness/buckets', requireAuth, requireTenant, async 
 });
 
 /**
+ * POST /api/work-requests/coordination/suggest-windows
+ * Advisory: Suggest schedule windows based on coordination density
+ * 
+ * No persistence, no Service Run creation, no side effects.
+ * Admin/owner only.
+ */
+router.post('/coordination/suggest-windows', requireAuth, requireTenant, async (req: Request, res: Response) => {
+  const tenantReq = req as TenantRequest;
+  try {
+    const { 
+      portal_id, 
+      zone_id, 
+      category,
+      lookahead_days: lookaheadParam,
+      window_size_days: windowSizeParam,
+      desired_windows: desiredParam,
+    } = req.body;
+
+    if (!portal_id) {
+      return res.status(400).json({ error: 'portal_id is required' });
+    }
+
+    const roles = tenantReq.ctx?.roles || [];
+    const isAdminOrOwner = 
+      roles.includes('owner') || 
+      roles.includes('admin') || 
+      roles.includes('tenant_admin') ||
+      !!tenantReq.user?.isPlatformAdmin;
+    
+    if (!isAdminOrOwner) {
+      return res.status(403).json({ 
+        error: 'Suggest windows requires admin or owner access',
+        code: 'SUGGEST_WINDOWS_ACCESS_DENIED'
+      });
+    }
+
+    const lookaheadDays = Math.max(7, Math.min(60, parseInt(lookaheadParam) || 21));
+    const windowSizeDays = Math.max(1, Math.min(14, parseInt(windowSizeParam) || 3));
+    const desiredWindows = Math.max(1, Math.min(5, parseInt(desiredParam) || 3));
+
+    const activeStatusList = ACTIVE_STATUSES.map(s => `'${s}'`).join(',');
+
+    let zoneFilter = '';
+    const params: any[] = [portal_id];
+    let paramIndex = 2;
+
+    if (zone_id === null || zone_id === 'none') {
+      zoneFilter = 'AND zone_id IS NULL';
+    } else if (zone_id) {
+      zoneFilter = `AND zone_id = $${paramIndex}`;
+      params.push(zone_id);
+      paramIndex++;
+    }
+
+    let categoryFilter = '';
+    if (category === 'Uncategorized' || category === 'uncategorized') {
+      categoryFilter = `AND (category IS NULL OR TRIM(category) = '')`;
+    } else if (category) {
+      categoryFilter = `AND category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    const countsQuery = `
+      SELECT 
+        COUNT(*) FILTER (WHERE coordination_intent = true) as coord_ready_count,
+        COUNT(*) as active_count
+      FROM cc_work_requests
+      WHERE portal_id = $1
+        AND status IN (${activeStatusList})
+        ${zoneFilter}
+        ${categoryFilter}
+    `;
+
+    const countsResult = await tenantReq.tenantQuery!(countsQuery, params);
+    const coordReadyCount = parseInt(countsResult.rows[0]?.coord_ready_count || '0', 10);
+    const activeCount = parseInt(countsResult.rows[0]?.active_count || '0', 10);
+
+    const windows: Array<{
+      start_date: string;
+      end_date: string;
+      coord_ready_count: number;
+      active_count: number;
+      readiness_ratio: number;
+      confidence: number;
+      explanation: string;
+    }> = [];
+
+    if (activeCount > 0) {
+      const today = new Date();
+      const spacing = Math.floor(lookaheadDays / (desiredWindows + 1));
+
+      for (let i = 1; i <= desiredWindows; i++) {
+        const centerDay = spacing * i;
+        const startOffset = centerDay - Math.floor(windowSizeDays / 2);
+        const endOffset = startOffset + windowSizeDays - 1;
+
+        const startDate = new Date(today);
+        startDate.setDate(startDate.getDate() + Math.max(1, startOffset));
+        
+        const endDate = new Date(today);
+        endDate.setDate(endDate.getDate() + endOffset);
+
+        const readinessRatio = activeCount > 0 ? coordReadyCount / activeCount : 0;
+
+        let confidence = Math.min(60, coordReadyCount * 10);
+        confidence += Math.round(readinessRatio * 30);
+        confidence += Math.min(10, Math.floor(activeCount / 5) * 2);
+        if (zone_id === null || zone_id === 'none') {
+          confidence -= 10;
+        }
+        confidence = Math.max(0, Math.min(100, confidence));
+
+        let explanation = `${coordReadyCount} coordination-ready out of ${activeCount} active requests`;
+        if (zone_id === null || zone_id === 'none') {
+          explanation += ' (unzoned area).';
+        } else {
+          explanation += ' in this zone.';
+        }
+        explanation += ' Higher readiness increases the chance a scheduled window fills efficiently.';
+
+        windows.push({
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          coord_ready_count: coordReadyCount,
+          active_count: activeCount,
+          readiness_ratio: Math.round(readinessRatio * 100) / 100,
+          confidence,
+          explanation,
+        });
+      }
+    }
+
+    res.json({
+      ok: true,
+      portal_id,
+      zone_id: zone_id === 'none' ? null : (zone_id || null),
+      category: category || null,
+      params: {
+        lookahead_days: lookaheadDays,
+        window_size_days: windowSizeDays,
+        desired_windows: desiredWindows,
+      },
+      windows,
+      notes: [
+        'Suggestions are advisory only.',
+        'Counts are aggregated; no identities are shown.',
+        'Actual scheduling depends on contractor availability and constraints.',
+      ],
+    });
+  } catch (error) {
+    console.error('Error suggesting coordination windows:', error);
+    res.status(500).json({ error: 'Failed to suggest coordination windows' });
+  }
+});
+
+/**
  * PUT /api/work-requests/:id/coordination-intent
  * Set or clear coordination intent (opt-in flag for coordination)
  * 
