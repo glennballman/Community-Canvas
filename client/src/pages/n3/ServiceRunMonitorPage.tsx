@@ -1557,6 +1557,21 @@ export default function ServiceRunMonitorPage() {
                   </div>
                 )}
                 
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Note (optional, 280 chars max)</label>
+                  <Textarea
+                    placeholder="Add an optional note for re-evaluation..."
+                    value={verificationNote}
+                    onChange={(e) => setVerificationNote(e.target.value.slice(0, 280))}
+                    maxLength={280}
+                    className="resize-none"
+                    data-testid="input-reevaluation-note"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {verificationNote.length}/280
+                  </p>
+                </div>
+                
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
