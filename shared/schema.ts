@@ -3085,6 +3085,25 @@ export const ccN3RunReadinessSnapshots = pgTable('cc_n3_run_readiness_snapshots'
 
 export type N3RunReadinessSnapshot = typeof ccN3RunReadinessSnapshots.$inferSelect;
 
+// ============ N3 RUN EXECUTION HANDOFFS (Prompt 32) ============
+// Immutable, read-only contract capturing planning intent for execution reference
+export const ccN3RunExecutionHandoffs = pgTable('cc_n3_run_execution_handoffs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  runId: uuid('run_id').notNull(),
+  tenantId: uuid('tenant_id').notNull(),
+  portalId: uuid('portal_id'),
+  zoneId: uuid('zone_id'),
+  handoffPayload: jsonb('handoff_payload').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdBy: uuid('created_by').notNull(),
+  note: text('note'),
+}, (table) => [
+  uniqueIndex('uq_n3_run_execution_handoff_run').on(table.runId),
+  index('idx_n3_run_execution_handoff_tenant_run').on(table.tenantId, table.runId),
+]);
+
+export type N3RunExecutionHandoff = typeof ccN3RunExecutionHandoffs.$inferSelect;
+
 // ============ HOUSEKEEPING CHECKLISTS ============
 export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
   id: uuid('id').primaryKey().defaultRandom(),

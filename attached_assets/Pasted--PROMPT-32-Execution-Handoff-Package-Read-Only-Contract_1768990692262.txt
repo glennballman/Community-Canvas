@@ -1,0 +1,219 @@
+✅ PROMPT 32 — Execution Handoff Package (Read-Only Contract, No Notifications)
+PURPOSE
+
+Create a read-only, execution-ready handoff artifact that captures:
+
+the locked readiness snapshot
+
+the execution eligibility evaluation (Prompt 31)
+
+the current run configuration
+
+This artifact is not execution, not activation, and not notification.
+
+It is a sealed contract of intent that downstream execution systems may later reference — but cannot mutate.
+
+“This is what we believed, when we believed it, and why.”
+
+HARD INVARIANTS (NON-NEGOTIABLE)
+
+❌ No contractor notifications
+
+❌ No resident notifications
+
+❌ No billing / ledger / folio activity
+
+❌ No execution triggers
+
+❌ No run status change
+
+❌ No mutation of snapshot or run state
+
+✅ Admin/owner only
+
+✅ Read-only after creation
+
+✅ Counts-only, privacy-safe
+
+✅ Fully auditable
+
+CONCEPT
+
+This prompt freezes intent, not action.
+
+It produces a single immutable record that answers:
+
+What was locked?
+
+What changed since lock?
+
+What was the eligibility signal at handoff time?
+
+Execution engines can later consume this record, but cannot alter it.
+
+PART A — Database
+A1) New Table
+cc_n3_run_execution_handoffs
+
+id                uuid (pk)
+run_id            uuid (unique, fk → cc_n3_runs.id)
+tenant_id         uuid
+portal_id         uuid
+zone_id           uuid
+handoff_payload   jsonb (NOT NULL)
+created_at        timestamptz
+created_by        uuid
+note              text
+
+Constraints
+
+One handoff per run (unique run_id)
+
+Immutable once created (no UPDATEs)
+
+DELETE only allowed if run is reverted to draft
+
+PART B — Backend API
+B1) Create Handoff
+POST /api/n3/runs/:runId/execution-handoff
+
+Access
+requireAuth
+requireTenant
+requireTenantAdminOrOwner
+
+Preconditions
+
+Run exists and belongs to tenant
+
+Run status ∈ { draft, scheduled }
+
+Active readiness snapshot exists
+
+No existing handoff for this run (409 if exists)
+
+B2) Handoff Payload Composition
+
+The payload must embed verbatim copies of:
+
+{
+  "run": {
+    "id": "...",
+    "status": "draft | scheduled",
+    "portal_id": "...",
+    "zone_id": "...",
+    "starts_at": "...",
+    "ends_at": "..."
+  },
+  "readiness_snapshot": { ... },     // from Prompt 30
+  "execution_eligibility": { ... },  // from Prompt 31
+  "captured_at": "timestamp"
+}
+
+
+❌ No live recomputation
+❌ No IDs of work requests
+❌ No pricing beyond advisory totals
+
+B3) Response
+{
+  "success": true,
+  "handoff_id": "uuid",
+  "created_at": "timestamp"
+}
+
+B4) Audit Log
+console.log('[N3 AUDIT] n3_run_execution_handoff_created', {
+  event: 'n3_run_execution_handoff_created',
+  run_id,
+  tenant_id,
+  portal_id,
+  zone_id,
+  actor_id,
+  occurred_at,
+});
+
+PART C — Read Endpoint
+GET /api/n3/runs/:runId/execution-handoff
+
+
+Admin/owner only
+
+Returns the stored payload verbatim
+
+404 if none exists
+
+PART D — Frontend
+D1) Execution Handoff Card
+
+Visible when:
+
+readiness snapshot exists
+
+eligibility evaluated
+
+no handoff exists yet
+
+UI Elements
+
+“Create Execution Handoff” button
+
+Optional note (280 chars)
+
+Confirmation copy:
+
+“This records the current planning state for execution reference.
+No notifications or execution will occur.”
+
+D2) Post-Creation State
+
+Once created:
+
+Card becomes read-only
+
+Shows:
+
+created_at
+
+created_by
+
+eligibility classification at handoff
+
+Button replaced with:
+
+“Execution handoff recorded”
+
+PART E — Hooks
+useN3ExecutionHandoff(runId)
+useCreateN3ExecutionHandoff()
+
+
+Cache invalidation:
+
+/api/n3/runs/:id
+
+/api/n3/runs/:id/monitor
+
+LANGUAGE RULES
+
+Never say “execution started”
+
+Never say “approved”
+
+Use:
+
+“handoff”
+
+“recorded”
+
+“for execution reference”
+
+ACCEPTANCE CHECKLIST
+
+✅ Snapshot required
+✅ Eligibility evaluated
+✅ Admin/owner only
+✅ Immutable record
+✅ Counts-only payload
+✅ No execution or notifications
+✅ Fully auditable

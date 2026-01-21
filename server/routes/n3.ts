@@ -26,7 +26,8 @@ import {
   ccPortals,
   ccMaintenanceRequests,
   ccN3RunMaintenanceRequests,
-  ccN3RunReadinessSnapshots
+  ccN3RunReadinessSnapshots,
+  ccN3RunExecutionHandoffs
 } from '@shared/schema';
 import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -2640,6 +2641,388 @@ n3Router.get('/runs/:runId/execution-eligibility', requireAuth, requireTenant, r
     res.json(response);
   } catch (err) {
     console.error('[N3 API] Error evaluating execution eligibility:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============ EXECUTION HANDOFF (Prompt 32) ============
+
+/**
+ * POST /api/n3/runs/:runId/execution-handoff
+ * 
+ * Create an immutable execution handoff record that captures:
+ * - The locked readiness snapshot
+ * - The execution eligibility evaluation
+ * - The current run configuration
+ * 
+ * This is a read-only contract of intent - NOT execution or activation.
+ * Admin/owner only. Requires active readiness snapshot.
+ */
+n3Router.post('/runs/:runId/execution-handoff', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const actorId = tenantReq.user?.id || 'system';
+  const capturedAt = new Date().toISOString();
+  const { note } = req.body || {};
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({
+        id: ccN3Runs.id,
+        name: ccN3Runs.name,
+        status: ccN3Runs.status,
+        zoneId: ccN3Runs.zoneId,
+        portalId: ccN3Runs.portalId,
+        startsAt: ccN3Runs.startsAt,
+        endsAt: ccN3Runs.endsAt,
+      })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Only draft or scheduled runs
+    if (run.status !== 'draft' && run.status !== 'scheduled') {
+      return res.status(400).json({
+        error: 'Handoff only available for draft or scheduled runs',
+        code: 'INVALID_STATUS',
+      });
+    }
+    
+    // Check if handoff already exists (one per run)
+    const existingHandoff = await db
+      .select({ id: ccN3RunExecutionHandoffs.id })
+      .from(ccN3RunExecutionHandoffs)
+      .where(eq(ccN3RunExecutionHandoffs.runId, runId))
+      .limit(1);
+    
+    if (existingHandoff.length > 0) {
+      return res.status(409).json({
+        error: 'Execution handoff already exists for this run',
+        code: 'HANDOFF_EXISTS',
+      });
+    }
+    
+    // Get snapshot (required)
+    const snapshots = await db
+      .select()
+      .from(ccN3RunReadinessSnapshots)
+      .where(and(
+        eq(ccN3RunReadinessSnapshots.runId, runId),
+        eq(ccN3RunReadinessSnapshots.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (snapshots.length === 0) {
+      return res.status(409).json({
+        error: 'Readiness snapshot required before creating handoff',
+        code: 'SNAPSHOT_REQUIRED',
+      });
+    }
+    
+    const snapshot = snapshots[0];
+    
+    // --- Compute Execution Eligibility (same logic as GET endpoint) ---
+    const snapshotPayload = snapshot.snapshotPayload as {
+      run: {
+        id: string;
+        name: string;
+        status: string;
+        zone_id: string | null;
+        portal_id: string | null;
+        starts_at: string | null;
+        ends_at: string | null;
+      };
+      attached_requests: Array<{
+        maintenance_request_id: string;
+        attached_at: string;
+        status_at_lock: string;
+        zone_id_at_lock: string | null;
+        coordination_opt_in_at_lock: boolean;
+        coordination_opt_in_set_at: string | null;
+      }>;
+      summary: {
+        total_attached: number;
+        opted_in_count: number;
+        opted_out_count: number;
+      };
+    };
+    
+    // Live attached maintenance requests
+    const liveAttached = await db
+      .select({
+        maintenanceRequestId: ccN3RunMaintenanceRequests.maintenanceRequestId,
+        status: ccMaintenanceRequests.status,
+        category: ccMaintenanceRequests.category,
+        zoneId: ccMaintenanceRequests.zoneId,
+        coordinationOptIn: ccMaintenanceRequests.coordinationOptIn,
+        coordinationOptInSetAt: ccMaintenanceRequests.coordinationOptInSetAt,
+      })
+      .from(ccN3RunMaintenanceRequests)
+      .innerJoin(ccMaintenanceRequests, eq(ccN3RunMaintenanceRequests.maintenanceRequestId, ccMaintenanceRequests.id))
+      .where(eq(ccN3RunMaintenanceRequests.runId, runId));
+    
+    // Snapshot state
+    const snapshotAttachedCount = snapshotPayload.summary.total_attached;
+    const snapshotOptedInCount = snapshotPayload.summary.opted_in_count;
+    
+    // Live state
+    const liveAttachedCount = liveAttached.length;
+    const liveOptedInCount = liveAttached.filter(r => r.coordinationOptIn === true).length;
+    
+    // Deltas
+    const attachedCountDelta = liveAttachedCount - snapshotAttachedCount;
+    const coordReadyCountDelta = liveOptedInCount - snapshotOptedInCount;
+    
+    const snapshotOptInRatio = snapshotAttachedCount > 0 ? snapshotOptedInCount / snapshotAttachedCount : 0;
+    const liveOptInRatio = liveAttachedCount > 0 ? liveOptedInCount / liveAttachedCount : 0;
+    const optInRatioDelta = liveOptInRatio - snapshotOptInRatio;
+    
+    // Drift calculations
+    let liveOptOutDrift = 0;
+    let liveZoneMismatchDrift = 0;
+    let liveInactiveStatusDrift = 0;
+    let liveAgeExceededDrift = 0;
+    
+    const activeStatuses = ['open', 'pending', 'in_progress'];
+    
+    for (const req of liveAttached) {
+      if (req.coordinationOptIn === false) liveOptOutDrift++;
+      if (req.zoneId !== run.zoneId) liveZoneMismatchDrift++;
+      if (!activeStatuses.includes(req.status || '')) liveInactiveStatusDrift++;
+      
+      if (req.coordinationOptInSetAt) {
+        const setAt = new Date(req.coordinationOptInSetAt as any);
+        const now = new Date();
+        const daysSince = (now.getTime() - setAt.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSince > 14) liveAgeExceededDrift++;
+      }
+    }
+    
+    let snapshotOptOutDrift = 0;
+    let snapshotZoneMismatchDrift = 0;
+    let snapshotInactiveStatusDrift = 0;
+    let snapshotAgeExceededDrift = 0;
+    
+    const snapshotZoneId = snapshotPayload.run.zone_id;
+    const lockDate = new Date(snapshot.lockedAt);
+    
+    for (const req of snapshotPayload.attached_requests) {
+      if (!req.coordination_opt_in_at_lock) snapshotOptOutDrift++;
+      if (req.zone_id_at_lock !== snapshotZoneId) snapshotZoneMismatchDrift++;
+      if (!activeStatuses.includes(req.status_at_lock || '')) snapshotInactiveStatusDrift++;
+      
+      if (req.coordination_opt_in_set_at) {
+        const setAt = new Date(req.coordination_opt_in_set_at);
+        const daysSince = (lockDate.getTime() - setAt.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSince > 14) snapshotAgeExceededDrift++;
+      }
+    }
+    
+    const driftDeltas = {
+      coordination_opt_out: liveOptOutDrift - snapshotOptOutDrift,
+      zone_mismatch: liveZoneMismatchDrift - snapshotZoneMismatchDrift,
+      inactive_status: liveInactiveStatusDrift - snapshotInactiveStatusDrift,
+      age_exceeded: liveAgeExceededDrift - snapshotAgeExceededDrift,
+    };
+    
+    // Eligibility classification
+    const tolerances = {
+      optInRatioThreshold: 0.10,
+      attachedCountThreshold: 2,
+      driftThreshold: 1,
+    };
+    
+    let overall: 'unchanged' | 'improved' | 'degraded' = 'unchanged';
+    
+    const hasDegradation = 
+      optInRatioDelta < -tolerances.optInRatioThreshold ||
+      attachedCountDelta < -tolerances.attachedCountThreshold ||
+      driftDeltas.coordination_opt_out > 0 ||
+      driftDeltas.zone_mismatch > 0 ||
+      driftDeltas.inactive_status > 0 ||
+      driftDeltas.age_exceeded > 0;
+    
+    const hasImprovement = 
+      coordReadyCountDelta > 0 ||
+      optInRatioDelta > tolerances.optInRatioThreshold ||
+      driftDeltas.coordination_opt_out < 0 ||
+      driftDeltas.zone_mismatch < 0 ||
+      driftDeltas.inactive_status < 0 ||
+      driftDeltas.age_exceeded < 0;
+    
+    if (hasDegradation) {
+      overall = 'degraded';
+    } else if (hasImprovement) {
+      overall = 'improved';
+    }
+    
+    // --- Build Handoff Payload ---
+    const eligibilityDeltas: any = {};
+    
+    if (attachedCountDelta !== 0) {
+      eligibilityDeltas.attachments = { attached_count_delta: attachedCountDelta };
+    }
+    
+    if (coordReadyCountDelta !== 0 || Math.abs(optInRatioDelta) > 0.01) {
+      eligibilityDeltas.coordination = {
+        coord_ready_count_delta: coordReadyCountDelta,
+        opt_in_ratio_delta: Math.round(optInRatioDelta * 100) / 100,
+      };
+    }
+    
+    const hasNonZeroDrift = 
+      driftDeltas.coordination_opt_out !== 0 ||
+      driftDeltas.zone_mismatch !== 0 ||
+      driftDeltas.inactive_status !== 0 ||
+      driftDeltas.age_exceeded !== 0;
+    
+    if (hasNonZeroDrift) {
+      eligibilityDeltas.readiness_drift = {};
+      if (driftDeltas.coordination_opt_out !== 0) {
+        eligibilityDeltas.readiness_drift.coordination_opt_out = driftDeltas.coordination_opt_out;
+      }
+      if (driftDeltas.zone_mismatch !== 0) {
+        eligibilityDeltas.readiness_drift.zone_mismatch = driftDeltas.zone_mismatch;
+      }
+      if (driftDeltas.inactive_status !== 0) {
+        eligibilityDeltas.readiness_drift.inactive_status = driftDeltas.inactive_status;
+      }
+      if (driftDeltas.age_exceeded !== 0) {
+        eligibilityDeltas.readiness_drift.age_exceeded = driftDeltas.age_exceeded;
+      }
+    }
+    
+    const handoffPayload = {
+      run: {
+        id: run.id,
+        status: run.status,
+        portal_id: run.portalId,
+        zone_id: run.zoneId,
+        starts_at: run.startsAt?.toISOString() || null,
+        ends_at: run.endsAt?.toISOString() || null,
+      },
+      readiness_snapshot: {
+        locked_at: snapshot.lockedAt?.toISOString(),
+        locked_by: snapshot.lockedBy,
+        summary: snapshotPayload.summary,
+      },
+      execution_eligibility: {
+        evaluated_at: capturedAt,
+        overall,
+        deltas: eligibilityDeltas,
+      },
+      captured_at: capturedAt,
+    };
+    
+    // --- Create Handoff Record ---
+    const inserted = await db
+      .insert(ccN3RunExecutionHandoffs)
+      .values({
+        runId,
+        tenantId,
+        portalId: run.portalId,
+        zoneId: run.zoneId,
+        handoffPayload,
+        createdBy: actorId,
+        note: note?.slice(0, 280) || null,
+      })
+      .returning({ id: ccN3RunExecutionHandoffs.id, createdAt: ccN3RunExecutionHandoffs.createdAt });
+    
+    const handoff = inserted[0];
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_run_execution_handoff_created', {
+      event: 'n3_run_execution_handoff_created',
+      run_id: runId,
+      tenant_id: tenantId,
+      portal_id: run.portalId,
+      zone_id: run.zoneId,
+      actor_id: actorId,
+      occurred_at: capturedAt,
+    });
+    
+    res.status(201).json({
+      success: true,
+      handoff_id: handoff.id,
+      created_at: handoff.createdAt,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error creating execution handoff:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/runs/:runId/execution-handoff
+ * 
+ * Retrieve the stored execution handoff payload.
+ * Admin/owner only. 404 if none exists.
+ */
+n3Router.get('/runs/:runId/execution-handoff', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Get handoff
+    const handoffs = await db
+      .select()
+      .from(ccN3RunExecutionHandoffs)
+      .where(and(
+        eq(ccN3RunExecutionHandoffs.runId, runId),
+        eq(ccN3RunExecutionHandoffs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (handoffs.length === 0) {
+      return res.status(404).json({ error: 'No execution handoff exists for this run' });
+    }
+    
+    const handoff = handoffs[0];
+    
+    res.json({
+      id: handoff.id,
+      run_id: handoff.runId,
+      created_at: handoff.createdAt,
+      created_by: handoff.createdBy,
+      note: handoff.note,
+      payload: handoff.handoffPayload,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching execution handoff:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
