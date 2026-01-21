@@ -250,3 +250,57 @@ export function useWorkRequestCoordinationIntent(workRequestId: string) {
     },
   });
 }
+
+// =====================================
+// Suggested Windows (Advisory Only)
+// =====================================
+
+export interface SuggestWindowsParams {
+  portal_id: string;
+  zone_id?: string | null;
+  category?: string | null;
+  lookahead_days?: number;
+  window_size_days?: number;
+  desired_windows?: number;
+}
+
+export interface SuggestedWindow {
+  start_date: string;
+  end_date: string;
+  coord_ready_count: number;
+  active_count: number;
+  readiness_ratio: number;
+  confidence: number;
+  explanation: string;
+}
+
+export interface SuggestWindowsResponse {
+  ok: boolean;
+  portal_id: string;
+  zone_id: string | null;
+  category: string | null;
+  params: {
+    lookahead_days: number;
+    window_size_days: number;
+    desired_windows: number;
+  };
+  windows: SuggestedWindow[];
+  notes: string[];
+}
+
+/**
+ * Hook for requesting advisory suggested schedule windows.
+ * Admin/owner access only. No persistence, no auto-creation.
+ */
+export function useSuggestCoordinationWindows() {
+  return useMutation<SuggestWindowsResponse, Error, SuggestWindowsParams>({
+    mutationFn: async (params) => {
+      const res = await apiRequest(
+        'POST',
+        '/api/work-requests/coordination/suggest-windows',
+        params
+      );
+      return res.json();
+    },
+  });
+}
