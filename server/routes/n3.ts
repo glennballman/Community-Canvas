@@ -28,7 +28,8 @@ import {
   ccN3RunMaintenanceRequests,
   ccN3RunReadinessSnapshots,
   ccN3RunExecutionHandoffs,
-  ccN3ExecutionContracts
+  ccN3ExecutionContracts,
+  ccN3ExecutionReceipts
 } from '@shared/schema';
 import { createHash } from 'crypto';
 import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
@@ -3329,6 +3330,213 @@ n3Router.get('/runs/:runId/execution-contract', requireAuth, requireTenant, requ
     });
   } catch (err) {
     console.error('[N3 API] Error fetching execution contract:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============ EXECUTION RECEIPTS (APPEND-ONLY PROOF CHANNEL) ============
+
+// Forbidden keys that must not appear in receipt payloads (PII protection)
+const FORBIDDEN_RECEIPT_KEYS = [
+  'id', 'work_request_id', 'request_id', 'contractor_id', 'user_id',
+  'name', 'email', 'phone', 'address', 'price', 'amount', 'payment',
+  'resident', 'contractor', 'owner', 'tenant'
+];
+
+// Validate receipt payload contains no forbidden keys (recursive)
+function validateReceiptPayload(obj: unknown, path = ''): string[] {
+  const violations: string[] = [];
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    for (const key of Object.keys(obj)) {
+      const lowerKey = key.toLowerCase();
+      if (FORBIDDEN_RECEIPT_KEYS.some(forbidden => lowerKey.includes(forbidden))) {
+        violations.push(`${path}${key}`);
+      }
+      violations.push(...validateReceiptPayload((obj as Record<string, unknown>)[key], `${path}${key}.`));
+    }
+  } else if (Array.isArray(obj)) {
+    obj.forEach((item, idx) => {
+      violations.push(...validateReceiptPayload(item, `${path}[${idx}].`));
+    });
+  }
+  return violations;
+}
+
+/**
+ * POST /api/n3/runs/:runId/execution-receipts
+ * 
+ * Append-only endpoint for execution engines to submit evidence receipts.
+ * Receipts are immutable, counts-only, cryptographically bound to contracts.
+ * No UPDATE/DELETE - append-only design.
+ */
+n3Router.post('/runs/:runId/execution-receipts', requireAuth, requireTenant, requireExecutionConsumer, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    const { execution_contract_id, payload_hash, receipt_payload, reported_by } = req.body;
+    
+    // Validate required fields
+    if (!execution_contract_id) {
+      return res.status(400).json({ error: 'Missing execution_contract_id' });
+    }
+    if (!payload_hash) {
+      return res.status(400).json({ error: 'Missing payload_hash' });
+    }
+    if (!receipt_payload) {
+      return res.status(400).json({ error: 'Missing receipt_payload' });
+    }
+    if (!reported_by) {
+      return res.status(400).json({ error: 'Missing reported_by' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Verify execution contract exists and belongs to this run
+    const contracts = await db
+      .select({
+        id: ccN3ExecutionContracts.id,
+        runId: ccN3ExecutionContracts.runId,
+        payloadHash: ccN3ExecutionContracts.payloadHash
+      })
+      .from(ccN3ExecutionContracts)
+      .where(and(
+        eq(ccN3ExecutionContracts.id, execution_contract_id),
+        eq(ccN3ExecutionContracts.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (contracts.length === 0) {
+      return res.status(404).json({ error: 'Execution contract not found' });
+    }
+    
+    const contract = contracts[0];
+    
+    // Verify contract belongs to this run
+    if (contract.runId !== runId) {
+      return res.status(400).json({ error: 'Execution contract does not belong to this run' });
+    }
+    
+    // Verify payload hash matches contract (cryptographic binding)
+    if (contract.payloadHash !== payload_hash) {
+      return res.status(400).json({ error: 'Payload hash does not match execution contract' });
+    }
+    
+    // Validate receipt payload is valid JSON object
+    if (typeof receipt_payload !== 'object' || Array.isArray(receipt_payload) || receipt_payload === null) {
+      return res.status(400).json({ error: 'Receipt payload must be a JSON object' });
+    }
+    
+    // Validate no forbidden keys (PII protection)
+    const violations = validateReceiptPayload(receipt_payload);
+    if (violations.length > 0) {
+      return res.status(400).json({ 
+        error: 'Receipt payload contains forbidden keys',
+        violations 
+      });
+    }
+    
+    const reportedAt = new Date();
+    
+    // Insert receipt (append-only)
+    const [receipt] = await db
+      .insert(ccN3ExecutionReceipts)
+      .values({
+        runId,
+        executionContractId: execution_contract_id,
+        payloadHash: payload_hash,
+        receiptPayload: receipt_payload,
+        reportedBy: reported_by,
+        reportedAt,
+      })
+      .returning({ id: ccN3ExecutionReceipts.id });
+    
+    console.log('[N3 AUDIT] n3_execution_receipt_recorded', {
+      run_id: runId,
+      execution_contract_id,
+      reported_by,
+      reported_at: reportedAt.toISOString()
+    });
+    
+    res.status(201).json({
+      ok: true,
+      receipt_id: receipt.id,
+      reported_at: reportedAt.toISOString()
+    });
+  } catch (err) {
+    console.error('[N3 API] Error creating execution receipt:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/runs/:runId/execution-receipts
+ * 
+ * Retrieve execution receipts for admin review.
+ * Evidence only - non-authoritative, for review purposes.
+ */
+n3Router.get('/runs/:runId/execution-receipts', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Get all receipts for this run (ordered by reported_at desc)
+    const receipts = await db
+      .select()
+      .from(ccN3ExecutionReceipts)
+      .where(eq(ccN3ExecutionReceipts.runId, runId))
+      .orderBy(desc(ccN3ExecutionReceipts.reportedAt));
+    
+    res.json({
+      run_id: runId,
+      receipts: receipts.map(r => ({
+        id: r.id,
+        execution_contract_id: r.executionContractId,
+        payload_hash: r.payloadHash,
+        receipt_version: r.receiptVersion,
+        receipt_payload: r.receiptPayload,
+        reported_by: r.reportedBy,
+        reported_at: r.reportedAt?.toISOString()
+      }))
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching execution receipts:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
