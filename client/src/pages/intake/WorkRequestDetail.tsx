@@ -33,6 +33,7 @@ import { ContractorAssignmentPicker } from '@/components/ContractorAssignmentPic
 import { WorkDisclosureSelector, getDefaultDisclosureSelection, type DisclosureSelection } from '@/components/WorkDisclosureSelector';
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { BundleSimulationSlider } from '@/components/BundleSimulationSlider';
+import { CoordinationSignalCard } from '@/components/CoordinationSignalCard';
 import { getZoneBadgeLabel } from '@/components/ZoneBadge';
 import type { ZonePricingModifiers } from '@shared/zonePricing';
 
@@ -581,6 +582,13 @@ export default function WorkRequestDetail() {
                     const z = zonesData.zones.find(zn => zn.id === request.zone_id);
                     return z?.pricingModifiers || null;
                   })()}
+                />
+                
+                {/* Coordination Signal - Advisory counts only */}
+                <CoordinationSignalCard
+                  workRequestId={request.id}
+                  portalId={request.portal_id}
+                  zoneId={request.zone_id}
                 />
               </>
             )}
