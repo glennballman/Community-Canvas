@@ -18,13 +18,17 @@ import {
   useN3DismissBundle, 
   useN3Status, 
   useN3Filters,
+  useN3ZoneHeat,
   type AttentionBundleWithZone,
   type N3FilterZone,
+  type ZoneHeatData,
 } from '@/hooks/n3/useN3';
 import { AttentionQueueTable } from '@/components/n3/AttentionQueueTable';
 import { useToast } from '@/hooks/use-toast';
 import { getZoneBadgeLabel } from '@/components/ZoneBadge';
 import { useTenant } from '@/contexts/TenantContext';
+import { ZoneHeatRow } from '@/components/n3/ZoneHeatRow';
+import { Flame } from 'lucide-react';
 
 interface ZoneLike {
   id: string;
@@ -94,8 +98,10 @@ export default function ServiceRunAttentionPage() {
   
   const [selectedPortalId, setSelectedPortalId] = useState<string | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [windowDays, setWindowDays] = useState<number>(7);
   
   const { data: filtersData } = useN3Filters(tenantId, selectedPortalId);
+  const { data: heatData } = useN3ZoneHeat(tenantId, selectedPortalId, windowDays);
   
   const filters = useMemo(() => ({
     portalId: selectedPortalId,
@@ -126,6 +132,42 @@ export default function ServiceRunAttentionPage() {
     if (!selectedPortalId) return filtersData.zones;
     return filtersData.zones.filter(z => z.portal_id === selectedPortalId);
   }, [filtersData?.zones, selectedPortalId]);
+
+  const hotZones = useMemo(() => {
+    if (!heatData?.zones) return [];
+    
+    const sorted = [...heatData.zones].sort((a, b) => {
+      // Primary: attention_bundles_count desc
+      if (b.attention_bundles_count !== a.attention_bundles_count) {
+        return b.attention_bundles_count - a.attention_bundles_count;
+      }
+      // Secondary: runs_count desc
+      if (b.runs_count !== a.runs_count) {
+        return b.runs_count - a.runs_count;
+      }
+      // Tertiary: label asc
+      const aLabel = a.zone_name || a.zone_key || 'Unzoned';
+      const bLabel = b.zone_name || b.zone_key || 'Unzoned';
+      return aLabel.localeCompare(bLabel);
+    });
+    
+    // Get top 3 zoned + unzoned (always included if has activity)
+    const unzoned = sorted.find(z => z.zone_id === null);
+    const zoned = sorted.filter(z => z.zone_id !== null).slice(0, 3);
+    
+    // Combine: top 3 zoned, then unzoned last (if exists with activity)
+    const result = [...zoned];
+    if (unzoned && (unzoned.runs_count > 0 || unzoned.attention_bundles_count > 0)) {
+      result.push(unzoned);
+    }
+    
+    return result;
+  }, [heatData?.zones]);
+
+  const maxHeatCount = useMemo(() => {
+    if (!hotZones.length) return 1;
+    return Math.max(...hotZones.map(z => z.attention_bundles_count), 1);
+  }, [hotZones]);
 
   const handlePortalChange = (value: string) => {
     if (value === 'all') {
@@ -259,6 +301,78 @@ export default function ServiceRunAttentionPage() {
             </div>
           </div>
         </CardHeader>
+      </Card>
+
+      <Card data-testid="card-zone-heat">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Flame className="h-4 w-4 text-orange-500" />
+              Zone Heat
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Window:</span>
+              <Select
+                value={windowDays.toString()}
+                onValueChange={(v) => setWindowDays(parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-[100px]" data-testid="select-window-days">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7" data-testid="option-window-7">7 days</SelectItem>
+                  <SelectItem value="14" data-testid="option-window-14">14 days</SelectItem>
+                  <SelectItem value="30" data-testid="option-window-30">30 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Total attention:</span>
+              <Badge variant="outline" data-testid="text-total-attention">
+                {heatData?.rollups?.total_attention_bundles || 0}
+              </Badge>
+            </div>
+            {(heatData?.rollups?.unzoned_attention_bundles || 0) > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Unzoned:</span>
+                <Badge 
+                  variant="secondary" 
+                  className="text-amber-600 dark:text-amber-400"
+                  data-testid="text-unzoned-attention"
+                >
+                  {heatData?.rollups?.unzoned_attention_bundles}
+                </Badge>
+              </div>
+            )}
+          </div>
+
+          {hotZones.length > 0 && (
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-muted-foreground">Hot Zones</h4>
+              <div className="space-y-0">
+                {hotZones.map((zone) => (
+                  <ZoneHeatRow
+                    key={zone.zone_id || 'unzoned'}
+                    zone={zone}
+                    count={zone.attention_bundles_count}
+                    maxCount={maxHeatCount}
+                    label="attention"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hotZones.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              No zone activity in the last {windowDays} days.
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       {unzonedCount > 0 && !selectedZoneId && (
