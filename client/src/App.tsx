@@ -26,6 +26,8 @@ import { DebugPanel } from './components/dev/DebugPanel';
 import { TenantAppLayout } from './layouts/TenantAppLayout';
 import { PlatformAdminLayout } from './layouts/PlatformAdminLayout';
 import { PublicPortalLayout } from './layouts/PublicPortalLayout';
+import { PlatformLayout } from './layouts/PlatformLayout';
+import { FounderLayout } from './layouts/FounderLayout';
 
 // Pages - App
 import { TenantPicker } from './pages/app/TenantPicker';
@@ -34,6 +36,12 @@ import DashboardPage from './pages/app/DashboardPage';
 import FounderHomePage from './pages/app/FounderHomePage';
 import PlatformHomePage from './pages/app/PlatformHomePage';
 import { AppHomeRedirect } from './components/routing/AppHomeRedirect';
+import {
+  FounderOrganizationsPage,
+  FounderWorkPage,
+  FounderReservationsPage,
+  FounderAnalyticsPage,
+} from './pages/app/founder';
 import ReservationsIndexPage from './pages/app/ReservationsIndexPage';
 import ReservationDetailPage from './pages/app/ReservationDetailPage';
 
@@ -329,13 +337,36 @@ export default function App() {
               </Route>
 
               {/* ========================================== */}
+              {/* PLATFORM MODE - /app/platform/*           */}
+              {/* Dedicated layout for Platform Admin mode  */}
+              {/* ========================================== */}
+              <Route path="/app/platform" element={<PlatformLayout />}>
+                <Route index element={<PlatformHomePage />} />
+                <Route path="tenants" element={<TenantsListPage />} />
+                <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="users" element={<UsersManagement />} />
+              </Route>
+
+              {/* ========================================== */}
+              {/* FOUNDER MODE - /app/founder/*             */}
+              {/* Dedicated layout for Founder Solo mode    */}
+              {/* ========================================== */}
+              <Route path="/app/founder" element={<FounderLayout />}>
+                <Route index element={<FounderHomePage />} />
+                <Route path="organizations" element={<FounderOrganizationsPage />} />
+                <Route path="work" element={<FounderWorkPage />} />
+                <Route path="reservations" element={<FounderReservationsPage />} />
+                <Route path="analytics" element={<FounderAnalyticsPage />} />
+              </Route>
+
+              {/* ========================================== */}
               {/* TENANT APP - /app/*                       */}
+              {/* Tenant-scoped routes (requires tenant)    */}
               {/* ========================================== */}
               <Route path="/app" element={<TenantAppLayout />}>
                 <Route index element={<AppHomeRedirect />} />
                 <Route path="places" element={<TenantPicker />} />
-                <Route path="founder" element={<FounderHomePage />} />
-                <Route path="platform" element={<PlatformHomePage />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 
                 {/* V3 Operations */}
@@ -417,9 +448,6 @@ export default function App() {
                 <Route path="admin/portals/:portalId/appearance" element={<PortalAppearancePage />} />
                 <Route path="admin/portals/:portalId/zones" element={<PortalZonesPage />} />
                 <Route path="admin/tenants" element={<TenantsPageApp />} />
-                <Route path="platform/tenants" element={<TenantsListPage />} />
-                <Route path="platform/tenants/:tenantId" element={<TenantDetailPage />} />
-                <Route path="platform/analytics" element={<AnalyticsPage />} />
                 
                 {/* Community tenant routes */}
                 <Route path="availability" element={<AvailabilityConsole />} />
