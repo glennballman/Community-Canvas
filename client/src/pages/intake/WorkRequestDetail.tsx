@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ContractorAssignmentPicker } from '@/components/ContractorAssignmentPicker';
 import { WorkDisclosureSelector, getDefaultDisclosureSelection, type DisclosureSelection } from '@/components/WorkDisclosureSelector';
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
+import { BundleSimulationSlider } from '@/components/BundleSimulationSlider';
 import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 interface WorkRequest {
@@ -570,6 +571,16 @@ export default function WorkRequestDetail() {
                     viewerContext="resident"
                   />
                 )}
+                
+                {/* Bundle Simulation - Pure UI, no persistence */}
+                <BundleSimulationSlider
+                  baseEstimate={request.estimated_value || 0}
+                  zoneModifiers={(() => {
+                    if (!request.zone_id || !zonesData?.zones) return null;
+                    const z = zonesData.zones.find(zn => zn.id === request.zone_id);
+                    return z?.pricingModifiers || null;
+                  })()}
+                />
               </>
             )}
 
