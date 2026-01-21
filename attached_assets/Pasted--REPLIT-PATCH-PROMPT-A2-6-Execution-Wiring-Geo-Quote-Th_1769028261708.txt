@@ -1,0 +1,339 @@
+✅ REPLIT PATCH PROMPT — A2.6 Execution Wiring (Geo + Quote + Threads + N3) While Keeping Existing 7 Action Types
+CONTEXT
+
+A2.6 implemented cc_ingestion_next_actions with 7 action types and durable state tracking. Actions currently do not execute against production systems (geo resolution, quote drafts, messaging threads, N3 drafting). We need to wire confirmations to real endpoints and persist linkages.
+
+Existing action types (MUST KEEP)
+
+create_work_request
+
+attach_to_zone
+
+request_more_photos
+
+draft_n3_run
+
+open_quote_draft
+
+add_tool
+
+add_fleet
+
+Existing schema
+
+cc_ingestion_next_actions:
+
+id, tenantId, ingestionId
+
+actionType (7 types)
+
+priority 1–5
+
+status proposed|confirmed|dismissed|expired
+
+payload jsonb
+
+resolvedAt, resolvedBy, resolution
+
+cc_sticky_note_extractions exists.
+
+GOAL
+
+Make A2.6 actions production-real:
+
+Confirm executes the correct real behavior
+
+Uses A2.4 geo resolution + confirmed links
+
+Uses A2.5 quote drafts (create/attach/open)
+
+Uses messaging threads (mandatory)
+
+Generates N3 run draft payloads (confirm-gated)
+
+Keeps non-linear flows
+
+Preserves “AI proposes → human confirms”
+
+1) Action Execution Mapping (Backwards Compatible)
+
+Keep the 7 action types but treat them as execution targets:
+
+Existing actionType	Canonical intent	Confirm should do
+create_work_request	create_work_request_draft	Create a draft work request (or persist draft payload) + post to thread
+attach_to_zone	resolve_location + attach_to_zone	Ensure geo resolved, then attach ingestion/bundle to zone + post to thread
+request_more_photos	request_missing_info	Ensure thread, send message prompting before/after or specific missing items
+draft_n3_run	draft_n3_run_payload	Create draft N3 payload from bundle; do NOT start live run; store link + post
+open_quote_draft	open_or_create_quote_draft	Create/attach A2.5 draft quote and navigate to it; post thread message
+add_tool	add_tool_to_inventory	Create tool record from proposal (confirm-gated) + link media + post thread
+add_fleet	add_fleet_asset	Create fleet record from proposal (confirm-gated) + link media + post thread
+
+Do not rename actionType in DB. Add payload.canonicalIntent if helpful.
+
+2) Mandatory Thread Binding (Messaging-only invariant)
+Add ingestion→thread linkage if missing
+
+If cc_ai_ingestions does not have threadId, create a small link table:
+
+cc_ingestion_threads
+
+id uuid pk
+
+tenant_id uuid
+
+ingestion_id uuid unique
+
+thread_id uuid
+
+created_at timestamptz default now()
+
+Add endpoint
+
+POST /api/contractor/ingestions/:id/ensure-thread
+
+if link exists → return threadId
+
+else create a contractor-private thread “Ingestion Review”
+
+persist link
+
+return threadId
+
+Update UI
+
+UploadResultsPage must show:
+
+“Open Thread” button for every ingestion
+
+On click: open the thread UI (existing messaging UI)
+
+3) Wire Action Resolve → Real Execution
+
+Modify:
+POST /api/contractor/ingestions/:id/next-actions/:actionId/resolve
+
+Add support for:
+
+resolution: confirm|dismiss|edit
+(keep existing resolution field, add edit handling)
+
+REQUIRED: confirm behavior per actionType
+A) request_more_photos
+
+On confirm:
+
+ensure-thread
+
+send message in thread:
+
+include payload.prompts[] (or generate)
+
+example prompts:
+
+“Please add a ‘before’ photo from 5–10 steps back.”
+
+“Add a close-up of the damage.”
+
+“If possible, include a photo with a tape measure.”
+
+mark action confirmed
+
+No SMS/email.
+
+B) create_work_request
+
+On confirm:
+
+ensure-thread
+
+call existing endpoint (already created):
+
+POST /api/contractor/work-requests/draft-from-ingestion
+
+include extraction payload (todos, quantities, urgency)
+
+post message: “Draft Work Request created” with link/ref
+
+mark action confirmed
+
+If no Work Request table exists, persist draft payload and still post message.
+
+C) attach_to_zone
+
+On confirm:
+
+ensure-thread
+
+If payload has zoneId, attach ingestion (or photo bundle) to zone via existing zone linkage table/endpoint.
+
+If zone is missing but GPS exists:
+
+call A2.4 /api/contractor/geo/resolve to infer portal/zone candidate
+
+if still ambiguous, convert to “edit” flow and ask user to choose zone (do not auto-pick)
+
+post message: “Attached to Zone: {zoneLabel}”
+
+mark confirmed
+
+D) open_quote_draft
+
+On confirm:
+
+ensure-thread
+
+Create or attach A2.5 draft quote:
+
+If payload.existingQuoteDraftId exists, attach ingestion to it
+
+Else POST to create a new quote draft using A2.5 endpoint
+
+Persist a linkage:
+
+Prefer cc_quote_drafts.source_ingestion_ids[] OR create link table cc_ingestion_quote_links
+
+post message: “Draft Quote opened/created” with link
+
+mark confirmed
+UI: After confirm, navigate to /app/contractor/event/quotes/:id
+
+E) draft_n3_run
+
+On confirm:
+
+ensure-thread
+
+call existing endpoint:
+
+POST /api/contractor/n3/draft-from-ingestion
+
+Ensure it returns a draft payload only (no live run creation)
+
+Persist linkage (either store draft payload record id or store in action payload)
+
+post message: “Draft N3 run prepared (not started)” with summary
+
+mark confirmed
+
+F) add_tool
+
+On confirm:
+
+create tool record in cc_contractor_tools using A2.3 schema
+
+link media/ingestion to that tool (reuse existing entity-media linkage)
+
+ensure-thread + message “Tool added”
+
+mark confirmed
+
+G) add_fleet
+
+On confirm:
+
+create fleet record in cc_contractor_fleet
+
+link media/ingestion to that fleet asset
+
+ensure-thread + message “Fleet asset added”
+
+mark confirmed
+
+4) A2.4 Geo Resolution Integration (Tie into attach_to_zone)
+
+UploadResultsPage should render the existing LocationResolutionBlock and it should:
+
+if user confirms/changes/denies location:
+
+call A2.4 confirm/deny endpoints
+
+then update the action payload/status:
+
+resolving location should upgrade the attach_to_zone action confidence
+
+if location denied, do not auto-expire actions; allow manual zone pick
+
+5) “Dismiss stays dismissed” rule (critical)
+
+In recompute endpoint:
+POST /api/contractor/ingestions/:id/next-actions/recompute
+
+Implement:
+
+If an existing action exists with same ingestionId + actionType and status is dismissed or expired:
+
+do not recreate unless force=true
+
+Add stable key:
+
+payload.key string for each action
+
+recompute matches on (ingestionId, actionType, payload.key)
+
+6) Add “Edit” UX for 3 actions
+
+Support resolution='edit' and update payload without confirming:
+
+request_more_photos: allow editing prompts
+
+create_work_request: allow editing todos list
+
+open_quote_draft: allow editing category/address before create
+
+UI: Add “Edit” button on DurableActionCard (when supported)
+
+open modal/drawer
+
+save → calls resolve with resolution=edit
+
+confirm still required after edit
+
+7) Before/After bundling must reuse A2.3 photo bundles
+
+If your engine detects before/after proximity:
+
+persist into cc_contractor_photo_bundles (A2.3)
+
+do not create another bundle table
+
+store bundle id in action payload
+
+8) Acceptance Tests (must pass)
+
+Confirm request_more_photos → message appears in thread
+
+Confirm open_quote_draft → quote draft created/attached and page navigates to it
+
+Confirm create_work_request → draft created and message posted
+
+Confirm attach_to_zone → ingestion attached to chosen zone and message posted
+
+Confirm draft_n3_run → draft payload created (no live run) and message posted
+
+Dismiss action → recompute does not resurrect (unless force=true)
+
+Deliverables
+
+link table migration if needed (cc_ingestion_threads and/or cc_ingestion_quote_links)
+
+ensure-thread API endpoint
+
+resolve endpoint upgraded to execute behaviors above
+
+UploadResultsPage:
+
+Open Thread button
+
+LocationResolutionBlock integration
+
+Edit modals
+
+Quote draft action CTA routes to A2.5
+
+QA notes
+
+IMPORTANT GUARDRAIL
+
+Do not introduce any new notification channels. Messaging threads only.
+
+This patch upgrades your existing 7-type action system into a fully “production wired” contractor control surface without renaming types or refactoring schema.

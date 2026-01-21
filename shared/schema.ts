@@ -7748,6 +7748,48 @@ export type StickyNoteExtraction = typeof ccStickyNoteExtractions.$inferSelect;
 export type InsertStickyNoteExtraction = z.infer<typeof insertStickyNoteExtractionSchema>;
 
 // ============================================================================
+// A2.6: Ingestion Threads - Links ingestions to messaging threads
+// ============================================================================
+
+export const ccIngestionThreads = pgTable("cc_ingestion_threads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  ingestionId: uuid("ingestion_id").notNull().unique(),
+  threadId: uuid("thread_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_cc_ingestion_threads_ingestion").on(table.ingestionId),
+  index("idx_cc_ingestion_threads_thread").on(table.threadId),
+]);
+
+export const insertIngestionThreadSchema = createInsertSchema(ccIngestionThreads).omit({
+  id: true, createdAt: true
+});
+export type IngestionThread = typeof ccIngestionThreads.$inferSelect;
+export type InsertIngestionThread = z.infer<typeof insertIngestionThreadSchema>;
+
+// ============================================================================
+// A2.6: Ingestion Quote Links - Links ingestions to quote drafts
+// ============================================================================
+
+export const ccIngestionQuoteLinks = pgTable("cc_ingestion_quote_links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  ingestionId: uuid("ingestion_id").notNull(),
+  quoteDraftId: uuid("quote_draft_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_cc_ingestion_quote_links_ingestion").on(table.ingestionId),
+  index("idx_cc_ingestion_quote_links_quote").on(table.quoteDraftId),
+]);
+
+export const insertIngestionQuoteLinkSchema = createInsertSchema(ccIngestionQuoteLinks).omit({
+  id: true, createdAt: true
+});
+export type IngestionQuoteLink = typeof ccIngestionQuoteLinks.$inferSelect;
+export type InsertIngestionQuoteLink = z.infer<typeof insertIngestionQuoteLinkSchema>;
+
+// ============================================================================
 // A2.2: Contractor Service Areas - Where Contractors Work
 // ============================================================================
 
