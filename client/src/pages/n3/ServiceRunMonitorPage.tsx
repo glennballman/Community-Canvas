@@ -35,6 +35,7 @@ import {
   Unlock,
   Eye,
   ShieldCheck,
+  ScrollText,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -60,6 +61,7 @@ import {
   useCreateN3ExecutionHandoff,
   useN3ExecutionContract,
   useCreateN3ExecutionContract,
+  useN3ExecutionReceipts,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -180,6 +182,12 @@ export default function ServiceRunMonitorPage() {
     TEST_TENANT_ID
   );
   const createContractMutation = useCreateN3ExecutionContract(runId || '', TEST_TENANT_ID);
+  
+  // Execution Receipts (Prompt 34) - Only fetch if contract exists
+  const { data: receiptsData } = useN3ExecutionReceipts(
+    contractData ? runId : undefined,
+    TEST_TENANT_ID
+  );
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -1327,6 +1335,127 @@ export default function ServiceRunMonitorPage() {
                   Issue Execution Contract
                 </Button>
               </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Execution Receipts Card (Prompt 34) - Append-only evidence channel */}
+      {contractData && (
+        <Card data-testid="card-execution-receipts">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ScrollText className="h-5 w-5 text-muted-foreground" />
+                Execution Receipts
+              </CardTitle>
+              <Badge 
+                variant="outline" 
+                className="text-amber-600 border-amber-600 dark:text-amber-400 dark:border-amber-400"
+                data-testid="badge-evidence-only"
+              >
+                Evidence Only
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {receiptsData && receiptsData.receipts.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground italic">
+                  Execution-reported outcomes. Non-authoritative. For review only.
+                </p>
+                <div className="space-y-3">
+                  {receiptsData.receipts.map((receipt) => (
+                    <div 
+                      key={receipt.id}
+                      className="border rounded-md p-3 space-y-2"
+                      data-testid={`receipt-item-${receipt.id}`}
+                    >
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Reported:</span>
+                          <span className="font-medium">
+                            {format(new Date(receipt.reported_at), 'PPpp')}
+                          </span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {receipt.reported_by}
+                        </Badge>
+                      </div>
+                      
+                      {receipt.receipt_payload.window && (
+                        <div className="text-sm flex items-center gap-2">
+                          <span className="text-muted-foreground">Window:</span>
+                          <span>{receipt.receipt_payload.window.start} - {receipt.receipt_payload.window.end}</span>
+                        </div>
+                      )}
+                      
+                      {receipt.receipt_payload.summary && (
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div className="p-2 bg-muted rounded text-center">
+                            <p className="text-xs text-muted-foreground">Attempted</p>
+                            <p className="font-semibold">{receipt.receipt_payload.summary.tasks_attempted}</p>
+                          </div>
+                          <div className="p-2 bg-muted rounded text-center">
+                            <p className="text-xs text-muted-foreground">Completed</p>
+                            <p className="font-semibold text-green-600 dark:text-green-400">
+                              {receipt.receipt_payload.summary.tasks_completed}
+                            </p>
+                          </div>
+                          <div className="p-2 bg-muted rounded text-center">
+                            <p className="text-xs text-muted-foreground">Deferred</p>
+                            <p className="font-semibold text-amber-600 dark:text-amber-400">
+                              {receipt.receipt_payload.summary.tasks_deferred}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {receipt.receipt_payload.coordination && (
+                        <div className="text-sm">
+                          <p className="text-muted-foreground text-xs mb-1">Coordination</p>
+                          <div className="flex items-center gap-4">
+                            <span>Intent: {receipt.receipt_payload.coordination.coordination_intent_present}</span>
+                            <span>Utilized: {receipt.receipt_payload.coordination.coordination_utilized}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {receipt.receipt_payload.exceptions && Object.keys(receipt.receipt_payload.exceptions).length > 0 && (
+                        <div className="text-sm">
+                          <p className="text-muted-foreground text-xs mb-1">Exceptions</p>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(receipt.receipt_payload.exceptions).map(([key, value]) => (
+                              <Badge key={key} variant="outline" className="text-xs">
+                                {key.replace(/_/g, ' ')}: {value}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="text-xs text-muted-foreground pt-1 border-t">
+                        <span 
+                          className="font-mono cursor-pointer hover:text-foreground"
+                          onClick={() => {
+                            navigator.clipboard.writeText(receipt.payload_hash);
+                            toast({ title: 'Hash copied' });
+                          }}
+                          title="Click to copy hash"
+                        >
+                          Hash: {receipt.payload_hash.slice(0, 16)}...
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <ScrollText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No execution receipts recorded</p>
+                <p className="text-xs mt-1">Receipts will appear when execution engines report outcomes.</p>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -1055,3 +1055,99 @@ export function useCreateN3ExecutionContract(runId: string, tenantId: string) {
     },
   });
 }
+
+// ============ EXECUTION RECEIPTS (APPEND-ONLY PROOF CHANNEL) ============
+
+export interface ExecutionReceipt {
+  id: string;
+  execution_contract_id: string;
+  payload_hash: string;
+  receipt_version: number;
+  receipt_payload: {
+    window?: {
+      start: string;
+      end: string;
+    };
+    summary?: {
+      tasks_attempted: number;
+      tasks_completed: number;
+      tasks_deferred: number;
+    };
+    coordination?: {
+      coordination_intent_present: number;
+      coordination_utilized: number;
+    };
+    exceptions?: Record<string, number>;
+  };
+  reported_by: string;
+  reported_at: string;
+}
+
+export interface ExecutionReceiptsResponse {
+  run_id: string;
+  receipts: ExecutionReceipt[];
+}
+
+export interface CreateExecutionReceiptResponse {
+  ok: boolean;
+  receipt_id: string;
+  reported_at: string;
+}
+
+/**
+ * Hook to fetch execution receipts for a run.
+ * Evidence only - non-authoritative, for review purposes.
+ * Admin/owner only.
+ */
+export function useN3ExecutionReceipts(runId: string | undefined, tenantId: string) {
+  return useQuery<ExecutionReceiptsResponse>({
+    queryKey: ['/api/n3/runs', runId, 'execution-receipts'],
+    queryFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-receipts`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch execution receipts');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId,
+    staleTime: 30 * 1000, // 30 seconds
+  });
+}
+
+/**
+ * Hook to create an execution receipt (execution consumer only).
+ * Append-only - receipts are immutable once written.
+ */
+export function useCreateExecutionReceipt(runId: string, tenantId: string) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: {
+      execution_contract_id: string;
+      payload_hash: string;
+      receipt_payload: Record<string, unknown>;
+      reported_by: string;
+    }) => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-receipts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create execution receipt');
+      }
+      return res.json() as Promise<CreateExecutionReceiptResponse>;
+    },
+    onSuccess: () => {
+      // Invalidate receipts query
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', runId, 'execution-receipts'] });
+    },
+  });
+}
