@@ -40,11 +40,6 @@ const statusColors: Record<string, string> = {
   suspended: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
 };
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth_token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
-
 export default function TenantsListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -53,7 +48,7 @@ export default function TenantsListPage() {
   const { data, isLoading, error } = useQuery<{ success: boolean; tenants: Tenant[] }>({
     queryKey: ['/api/p2/platform/tenants'],
     queryFn: async () => {
-      const res = await fetch('/api/p2/platform/tenants', { headers: getAuthHeaders() });
+      const res = await fetch('/api/p2/platform/tenants', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch tenants');
       return res.json();
     },

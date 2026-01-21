@@ -66,11 +66,6 @@ const roleColors: Record<string, string> = {
   viewer: 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300',
 };
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth_token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-}
-
 export default function TenantDetailPage() {
   const [, params] = useRoute('/app/platform/tenants/:tenantId');
   const tenantId = params?.tenantId;
@@ -78,7 +73,7 @@ export default function TenantDetailPage() {
   const { data, isLoading, error } = useQuery<TenantDetailResponse>({
     queryKey: ['/api/p2/platform/tenants', tenantId],
     queryFn: async () => {
-      const res = await fetch(`/api/p2/platform/tenants/${tenantId}`, { headers: getAuthHeaders() });
+      const res = await fetch(`/api/p2/platform/tenants/${tenantId}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch tenant');
       return res.json();
     },
