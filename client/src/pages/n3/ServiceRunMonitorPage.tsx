@@ -47,7 +47,8 @@ import { ReplanOptionCard } from '@/components/n3/ReplanOptionCard';
 import { ZoneBadge } from '@/components/ZoneBadge';
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { useToast } from '@/hooks/use-toast';
-import { usePromoteN3Run } from '@/hooks/useCoordination';
+import { usePromoteN3Run, useDemoteN3Run } from '@/hooks/useCoordination';
+import { RotateCcw } from 'lucide-react';
 import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
@@ -61,6 +62,10 @@ export default function ServiceRunMonitorPage() {
   const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
   const [promoteNote, setPromoteNote] = useState('');
   const [promoteWarnings, setPromoteWarnings] = useState<string[]>([]);
+  
+  // Demote flow state
+  const [showDemoteConfirm, setShowDemoteConfirm] = useState(false);
+  const [demoteNote, setDemoteNote] = useState('');
 
   const { 
     data, 
@@ -75,6 +80,7 @@ export default function ServiceRunMonitorPage() {
   const assignZoneMutation = useN3AssignZone(TEST_TENANT_ID);
   const assignPortalMutation = useN3AssignPortal(TEST_TENANT_ID);
   const promoteMutation = usePromoteN3Run();
+  const demoteMutation = useDemoteN3Run();
   
   const portalId = data?.run?.portal_id || null;
   const { data: portalsData } = useN3Portals(TEST_TENANT_ID);
@@ -178,6 +184,30 @@ export default function ServiceRunMonitorPage() {
     } catch (err) {
       toast({
         title: 'Promotion failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDemote = async () => {
+    if (!runId) return;
+    try {
+      await demoteMutation.mutateAsync({ 
+        runId, 
+        note: demoteNote || undefined,
+      });
+      
+      toast({
+        title: 'Run reverted to draft',
+        description: 'Draft runs are internal only and do not notify contractors.',
+      });
+      setShowDemoteConfirm(false);
+      setDemoteNote('');
+      refetch();
+    } catch (err) {
+      toast({
+        title: 'Demotion failed',
         description: err instanceof Error ? err.message : 'Unknown error',
         variant: 'destructive',
       });
@@ -351,6 +381,90 @@ export default function ServiceRunMonitorPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {run.status === 'scheduled' && (
+        <Card className="border-amber-200 dark:border-amber-800" data-testid="card-demote-run">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2 text-amber-700 dark:text-amber-300">
+              <RotateCcw className="h-5 w-5" />
+              Revert to Draft
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will return the service run to draft. Draft runs are not visible to contractors 
+              and do not trigger execution.
+            </p>
+
+            {!showDemoteConfirm ? (
+              <Button 
+                variant="outline"
+                onClick={() => setShowDemoteConfirm(true)}
+                data-testid="button-demote-run"
+              >
+                Revert to Draft
+              </Button>
+            ) : (
+              <div className="space-y-4 border-t pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Why are you reverting this run? (optional)
+                  </label>
+                  <Textarea
+                    placeholder="Why are you reverting this run?"
+                    value={demoteNote}
+                    onChange={(e) => setDemoteNote(e.target.value.slice(0, 280))}
+                    className="resize-none"
+                    rows={2}
+                    data-testid="input-demote-note"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {demoteNote.length}/280 characters
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 space-y-1">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Confirm revert to draft?
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    This action is reversible. No contractors will be notified.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleDemote}
+                    disabled={demoteMutation.isPending}
+                    data-testid="button-confirm-demote"
+                  >
+                    {demoteMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Reverting...
+                      </>
+                    ) : (
+                      'Confirm'
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowDemoteConfirm(false);
+                      setDemoteNote('');
+                    }}
+                    disabled={demoteMutation.isPending}
+                    data-testid="button-cancel-demote"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
