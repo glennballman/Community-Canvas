@@ -1,0 +1,254 @@
+🧾 PROMPT 36 — Operator Attestation (Human-in-the-Loop, Advisory Only)
+Purpose
+
+Introduce a human attestation layer on top of execution verification that allows an admin/owner to record a formal, timestamped judgment about a Service Run.
+
+This is not approval, not execution, not billing, and not enforcement.
+
+It is a governance artifact answering the question:
+
+“Given the available evidence and verification signals, what is the operator’s assessment?”
+
+This completes the planning → execution → evidence → verification → human accountability arc without collapsing any sovereignty boundaries.
+
+🔒 Core Invariants (Non-Negotiable)
+
+Advisory only
+
+Human-authored
+
+No automation
+
+No execution effects
+
+No billing
+
+No notifications
+
+No contractor visibility
+
+Counts-only context
+
+Immutable after submission
+
+Admin/Owner only
+
+🗄️ Data Model
+New Table: cc_n3_execution_attestations
+export const ccN3ExecutionAttestations = pgTable(
+  'cc_n3_execution_attestations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    runId: uuid('run_id').notNull().unique(),
+    tenantId: uuid('tenant_id').notNull(),
+    portalId: uuid('portal_id'),
+    zoneId: uuid('zone_id'),
+
+    assessment: varchar('assessment').notNull(), 
+    // allowed: 'acceptable' | 'questionable' | 'requires_follow_up'
+
+    rationale: text('rationale'), // optional human explanation (max 500 chars)
+
+    basedOnVerificationId: uuid('based_on_verification_id'),
+    basedOnContractId: uuid('based_on_contract_id'),
+
+    attestedBy: uuid('attested_by').notNull(),
+    attestedAt: timestamp('attested_at', { withTimezone: true }).defaultNow(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  }
+);
+
+Constraints
+
+UNIQUE(run_id) — only one attestation per run
+
+Immutable by design (no UPDATE / DELETE routes)
+
+🔌 Backend API
+1. Create Attestation
+
+POST /api/n3/runs/:runId/attestation
+
+Guards
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner
+
+Prerequisites
+
+Execution Contract exists
+
+Execution Verification exists
+
+Run belongs to tenant
+
+Body
+
+{
+  "assessment": "acceptable | questionable | requires_follow_up",
+  "rationale": "optional text, max 500 chars"
+}
+
+
+Behavior
+
+Validates enum values
+
+Persists attestation immutably
+
+Emits audit log
+
+console.log('[N3 AUDIT] n3_execution_attested', {
+  event: 'n3_execution_attested',
+  run_id: runId,
+  assessment,
+  actor_id: userId,
+  tenant_id: tenantId,
+  portal_id: run.portalId,
+  zone_id: run.zoneId,
+  occurred_at: now.toISOString(),
+});
+
+
+Responses
+
+201 Created — attestation stored
+
+409 Conflict — attestation already exists
+
+400 — missing prerequisites
+
+403 — insufficient role
+
+2. Get Attestation
+
+GET /api/n3/runs/:runId/attestation
+
+Guards
+
+requireAuth
+
+requireTenant
+
+requireTenantAdminOrOwner
+
+Returns
+
+{
+  "run_id": "uuid",
+  "assessment": "acceptable",
+  "rationale": "optional",
+  "attested_by": "uuid",
+  "attested_at": "timestamp",
+  "based_on_verification_id": "uuid",
+  "based_on_contract_id": "uuid"
+}
+
+🧠 Frontend
+Hooks
+
+useN3ExecutionAttestation(runId)
+
+useCreateN3ExecutionAttestation()
+
+UI Component: Execution Attestation Card
+
+Visibility
+
+Only when:
+
+Execution Contract exists
+
+Execution Verification exists
+
+Admin/owner only
+
+States
+
+1. No Attestation Yet
+
+Dropdown selector:
+
+✅ Acceptable
+
+⚠️ Questionable
+
+🚩 Requires Follow-Up
+
+Optional rationale input (max 500 chars)
+
+“Record Attestation” button
+
+Disclaimer text:
+
+“This is a human advisory assessment. It does not approve execution, billing, or outcomes.”
+
+2. Attestation Recorded (Read-Only)
+
+Badge with assessment (color-coded):
+
+Green: acceptable
+
+Amber: questionable
+
+Red-gray: requires follow-up
+
+Displays:
+
+Attested by
+
+Timestamp
+
+Rationale (if provided)
+
+Lock icon + text:
+
+“This attestation is immutable.”
+
+🎨 UX Language Rules
+
+Use careful, non-authoritative language only:
+
+✅ “Assessment”
+❌ “Approval”
+
+✅ “Operator judgment”
+❌ “Verification passed”
+
+✅ “Advisory record”
+❌ “Final decision”
+
+🧪 QA Acceptance Criteria
+
+❌ No status changes on runs
+
+❌ No execution triggers
+
+❌ No billing artifacts
+
+❌ No contractor access
+
+❌ No edit/delete routes
+
+✅ One attestation per run
+
+✅ Audit log emitted
+
+✅ Read-only after creation
+
+✅ Advisory language everywhere
+
+📌 Outcome
+
+Prompt 36 completes the human governance loop:
+
+Evidence can exist.
+Verification can score it.
+Only a human can attest.
+
+Without collapsing any system boundaries.

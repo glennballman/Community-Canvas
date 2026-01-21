@@ -3191,6 +3191,38 @@ export const ccN3ExecutionVerifications = pgTable('cc_n3_execution_verifications
 
 export type N3ExecutionVerification = typeof ccN3ExecutionVerifications.$inferSelect;
 
+// ============ N3 EXECUTION ATTESTATIONS ============
+// Human-in-the-loop advisory assessment layer
+// One attestation per run, immutable after creation
+// Advisory only - does not approve execution, billing, or outcomes
+export const ccN3ExecutionAttestations = pgTable('cc_n3_execution_attestations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  runId: uuid('run_id').notNull(),
+  tenantId: uuid('tenant_id').notNull(),
+  portalId: uuid('portal_id'),
+  zoneId: uuid('zone_id'),
+  
+  // Assessment: acceptable | questionable | requires_follow_up
+  assessment: varchar('assessment').notNull(),
+  
+  // Optional human explanation (max 500 chars)
+  rationale: text('rationale'),
+  
+  // References to verification and contract for audit trail
+  basedOnVerificationId: uuid('based_on_verification_id'),
+  basedOnContractId: uuid('based_on_contract_id'),
+  
+  attestedBy: uuid('attested_by').notNull(),
+  attestedAt: timestamp('attested_at', { withTimezone: true }).defaultNow(),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  uniqueIndex('uniq_attestation_run').on(table.runId),
+]);
+
+export type N3ExecutionAttestation = typeof ccN3ExecutionAttestations.$inferSelect;
+
 // ============ HOUSEKEEPING CHECKLISTS ============
 export const ccHousekeepingChecklists = pgTable('cc_housekeeping_checklists', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -30,7 +30,8 @@ import {
   ccN3RunExecutionHandoffs,
   ccN3ExecutionContracts,
   ccN3ExecutionReceipts,
-  ccN3ExecutionVerifications
+  ccN3ExecutionVerifications,
+  ccN3ExecutionAttestations
 } from '@shared/schema';
 import { createHash } from 'crypto';
 import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
@@ -3844,6 +3845,203 @@ n3Router.get('/runs/:runId/execution-verification', requireAuth, requireTenant, 
     });
   } catch (err) {
     console.error('[N3 API] Error fetching execution verification:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============ N3 EXECUTION ATTESTATIONS (PROMPT 36) ============
+// Human-in-the-loop advisory assessment layer
+// Immutable after creation - no UPDATE/DELETE routes
+// Advisory only - does not approve execution, billing, or outcomes
+
+const attestationAssessmentSchema = z.object({
+  assessment: z.enum(['acceptable', 'questionable', 'requires_follow_up']),
+  rationale: z.string().max(500).optional()
+});
+
+/**
+ * POST /api/n3/runs/:runId/attestation
+ * 
+ * Create a human attestation for a run (one per run, immutable).
+ * Prerequisites: Contract and Verification must exist.
+ * Advisory only - does not affect run status, billing, or notifications.
+ */
+n3Router.post('/runs/:runId/attestation', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  const userId = tenantReq.ctx.user_id;
+  
+  try {
+    if (!tenantId || !userId) {
+      return res.status(400).json({ error: 'Missing tenant or user context' });
+    }
+    
+    // Validate body
+    const parsed = attestationAssessmentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid request body', details: parsed.error.errors });
+    }
+    const { assessment, rationale } = parsed.data;
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ 
+        id: ccN3Runs.id,
+        portalId: ccN3Runs.portalId,
+        zoneId: ccN3Runs.zoneId
+      })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    const run = runRows[0];
+    
+    // Prerequisite: Execution Contract must exist
+    const contractRows = await db
+      .select({ id: ccN3ExecutionContracts.id })
+      .from(ccN3ExecutionContracts)
+      .where(eq(ccN3ExecutionContracts.runId, runId))
+      .limit(1);
+    
+    if (contractRows.length === 0) {
+      return res.status(400).json({ error: 'Execution contract must exist before attestation' });
+    }
+    
+    // Prerequisite: Execution Verification must exist
+    const verificationRows = await db
+      .select({ id: ccN3ExecutionVerifications.id })
+      .from(ccN3ExecutionVerifications)
+      .where(eq(ccN3ExecutionVerifications.runId, runId))
+      .limit(1);
+    
+    if (verificationRows.length === 0) {
+      return res.status(400).json({ error: 'Execution verification must exist before attestation' });
+    }
+    
+    // Check if attestation already exists (immutable)
+    const existingAttestation = await db
+      .select({ id: ccN3ExecutionAttestations.id })
+      .from(ccN3ExecutionAttestations)
+      .where(eq(ccN3ExecutionAttestations.runId, runId))
+      .limit(1);
+    
+    if (existingAttestation.length > 0) {
+      return res.status(409).json({ error: 'Attestation already exists for this run and is immutable' });
+    }
+    
+    const now = new Date();
+    
+    // Create attestation
+    const [attestation] = await db
+      .insert(ccN3ExecutionAttestations)
+      .values({
+        runId,
+        tenantId,
+        portalId: run.portalId,
+        zoneId: run.zoneId,
+        assessment,
+        rationale: rationale || null,
+        basedOnVerificationId: verificationRows[0].id,
+        basedOnContractId: contractRows[0].id,
+        attestedBy: userId,
+        attestedAt: now,
+        createdAt: now
+      })
+      .returning();
+    
+    // Audit log
+    console.log('[N3 AUDIT] n3_execution_attested', {
+      event: 'n3_execution_attested',
+      run_id: runId,
+      assessment,
+      actor_id: userId,
+      tenant_id: tenantId,
+      portal_id: run.portalId,
+      zone_id: run.zoneId,
+      occurred_at: now.toISOString(),
+    });
+    
+    res.status(201).json({
+      run_id: runId,
+      assessment: attestation.assessment,
+      rationale: attestation.rationale,
+      attested_by: attestation.attestedBy,
+      attested_at: attestation.attestedAt?.toISOString(),
+      based_on_verification_id: attestation.basedOnVerificationId,
+      based_on_contract_id: attestation.basedOnContractId
+    });
+  } catch (err: any) {
+    // Handle unique constraint violation
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Attestation already exists for this run' });
+    }
+    console.error('[N3 API] Error creating attestation:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/runs/:runId/attestation
+ * 
+ * Retrieve execution attestation for a run.
+ * Advisory only - governance artifact.
+ */
+n3Router.get('/runs/:runId/attestation', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req, res) => {
+  const tenantReq = req as TenantRequest;
+  const { runId } = req.params;
+  const tenantId = tenantReq.ctx.tenant_id;
+  
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+    
+    // Verify run exists and belongs to tenant
+    const runRows = await db
+      .select({ id: ccN3Runs.id })
+      .from(ccN3Runs)
+      .where(and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ))
+      .limit(1);
+    
+    if (runRows.length === 0) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    
+    // Get attestation
+    const attestations = await db
+      .select()
+      .from(ccN3ExecutionAttestations)
+      .where(eq(ccN3ExecutionAttestations.runId, runId))
+      .limit(1);
+    
+    if (attestations.length === 0) {
+      return res.status(404).json({ error: 'No attestation exists for this run' });
+    }
+    
+    const a = attestations[0];
+    
+    res.json({
+      run_id: runId,
+      assessment: a.assessment,
+      rationale: a.rationale,
+      attested_by: a.attestedBy,
+      attested_at: a.attestedAt?.toISOString(),
+      based_on_verification_id: a.basedOnVerificationId,
+      based_on_contract_id: a.basedOnContractId
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching attestation:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
