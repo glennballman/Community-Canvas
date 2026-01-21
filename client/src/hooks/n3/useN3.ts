@@ -138,11 +138,104 @@ export interface MonitorStatus {
   isEnabled: boolean;
 }
 
-export function useN3Attention(tenantId: string) {
-  return useQuery<{ bundles: AttentionBundle[] }>({
-    queryKey: ['/api/n3/attention', tenantId],
+export interface N3FilterPortal {
+  id: string;
+  name: string;
+  slug: string | null;
+}
+
+export interface N3FilterZone {
+  id: string;
+  portal_id: string;
+  key: string;
+  name: string;
+  badge_label_resident: string | null;
+  badge_label_contractor: string | null;
+  badge_label_visitor: string | null;
+}
+
+export interface N3FiltersData {
+  portals: N3FilterPortal[];
+  zones: N3FilterZone[];
+}
+
+export interface AttentionBundleWithZone extends AttentionBundle {
+  portal_id: string | null;
+  zone_id: string | null;
+  zone_name: string | null;
+  zone_key: string | null;
+  badge_label_resident: string | null;
+  badge_label_contractor: string | null;
+  badge_label_visitor: string | null;
+}
+
+export interface N3RunWithZone {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  status: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  metadata: Record<string, unknown>;
+  portal_id: string | null;
+  zone_id: string | null;
+  zone_name: string | null;
+  zone_key: string | null;
+  badge_label_resident: string | null;
+  badge_label_contractor: string | null;
+  badge_label_visitor: string | null;
+}
+
+export interface N3RunsFilters {
+  portalId?: string | null;
+  zoneId?: string | null;
+}
+
+export function useN3Filters(tenantId: string, portalId?: string | null) {
+  return useQuery<N3FiltersData>({
+    queryKey: ['/api/n3/filters', tenantId, portalId],
     queryFn: async () => {
-      const res = await fetch('/api/n3/attention', {
+      const params = new URLSearchParams();
+      if (portalId) params.set('portalId', portalId);
+      const url = `/api/n3/filters${params.toString() ? `?${params}` : ''}`;
+      const res = await fetch(url, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) throw new Error('Failed to fetch filters');
+      return res.json();
+    },
+    enabled: !!tenantId,
+  });
+}
+
+export function useN3Runs(tenantId: string, filters?: N3RunsFilters) {
+  return useQuery<N3RunWithZone[]>({
+    queryKey: ['/api/n3/runs', tenantId, filters?.portalId, filters?.zoneId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.portalId) params.set('portalId', filters.portalId);
+      if (filters?.zoneId) params.set('zoneId', filters.zoneId);
+      const url = `/api/n3/runs${params.toString() ? `?${params}` : ''}`;
+      const res = await fetch(url, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) throw new Error('Failed to fetch runs');
+      return res.json();
+    },
+    enabled: !!tenantId,
+  });
+}
+
+export function useN3Attention(tenantId: string, filters?: N3RunsFilters) {
+  return useQuery<{ bundles: AttentionBundleWithZone[] }>({
+    queryKey: ['/api/n3/attention', tenantId, filters?.portalId, filters?.zoneId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.portalId) params.set('portalId', filters.portalId);
+      if (filters?.zoneId) params.set('zoneId', filters.zoneId);
+      const url = `/api/n3/attention${params.toString() ? `?${params}` : ''}`;
+      const res = await fetch(url, {
         headers: { 'x-tenant-id': tenantId },
       });
       if (!res.ok) throw new Error('Failed to fetch attention queue');
