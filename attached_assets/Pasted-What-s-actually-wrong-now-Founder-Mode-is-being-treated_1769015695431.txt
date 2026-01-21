@@ -1,0 +1,179 @@
+What’s actually wrong now
+
+Founder Mode is being treated like “no-tenant selected” instead of a real, stable view mode (Founder Solo ≠ “no tenant”).
+
+The app is mixing Platform Admin nav and Founder nav inside the same layout, and then hiding items based on tenant selection. That’s why you “fall back” into the wrong nav again and why the mode feels unstable.
+
+Founder Solo needs to be a first-class app shell, not a UI toggle that just changes which items appear.
+
+✅ Correct Fix (Architectural): Split the Shells + Make Mode Routing Authoritative
+Target behavior (locked)
+
+Mode = Platform Admin
+
+Routes live under: /app/platform/*
+
+Nav = platform-only
+
+Never shows tenant-required sections unless explicitly in tenant context
+
+Mode = Founder Solo
+
+Routes live under: /app/founder/*
+
+Nav = founder-only (works even when no tenant selected)
+
+If Founder wants tenant workflows, they go via “My Places” → select tenant → then to /app/t/:tenantId/* (or whatever your tenant prefix is)
+
+Tenant context is not a mode.
+
+It’s a scope.
+
+✅ Replit Prompt to Fix This Properly (Paste This)
+REPLIT PROMPT — Make Founder Solo a real app shell (stop mixing nav + tenant filtering)
+
+Problem: Founder mode is currently implemented as a founderNavEnabled toggle that only changes sidebar items. This causes unstable behavior:
+
+Founder mode breaks when no tenant is selected
+
+Tenant-required routes redirect back to /app/platform
+
+Nav collapses back into Platform Admin nav unexpectedly
+
+Goal: Implement Founder Solo as a first-class route group + layout, separate from Platform Admin. Mode must control routing, not just visibility filtering.
+
+1) Implement authoritative “view mode” routing
+
+Add a single source of truth:
+
+localStorage: cc_view_mode = 'platform' | 'founder'
+
+default for platform_admin users = 'platform'
+
+Create helper:
+
+getViewMode() and setViewMode(mode)
+
+On toggle, navigate immediately:
+
+platform → /app/platform
+
+founder → /app/founder
+
+Remove any logic that treats founder as “no tenant.”
+
+2) Split layouts (NO mixed nav)
+
+Create/ensure these layouts exist:
+
+PlatformLayout (or PlatformAdminLayout)
+
+base path: /app/platform/*
+
+sidebar uses only PLATFORM_NAV
+
+never shows tenant-requiring sections
+
+FounderLayout
+
+base path: /app/founder/*
+
+sidebar uses only FOUNDER_NAV
+
+may show “My Places” entry, but tenant-specific sections must not appear unless user explicitly enters tenant scope
+
+TenantLayout
+
+base path: /app/t/:tenantId/* (or your existing tenant scope path)
+
+sidebar uses tenant nav
+
+Each layout MUST render <Outlet />.
+
+3) Remove the brittle “hide items if no tenant” fallback hack
+
+Delete or stop using any logic like:
+
+returning <></> when tenant missing
+
+redirecting all unknown routes back to /app/platform
+
+filtering large sections based on “tenant selected” while still in founder mode
+
+Instead:
+
+If a tenant route is hit without tenantId: redirect to /app/places (tenant picker)
+
+If founder mode user wants tenant functions: they go to /app/places and select a tenant (enter /app/t/:tenantId/...)
+
+4) Fix route registration so each nav link has a real route
+
+Verify router definitions exist:
+
+/app/platform (dashboard)
+
+/app/platform/tenants
+
+/app/platform/users
+
+/app/platform/system-explorer
+
+/app/founder (dashboard)
+
+/app/founder/* pages per founder nav
+
+/app/places tenant picker
+
+/app/t/:tenantId/* tenant-scoped modules
+
+Make sure the sidebar links match these EXACTLY.
+
+5) Update the toggle UI (header)
+
+Toggle appears for platform admins:
+
+“Platform Admin”
+
+“Founder Solo”
+
+On click:
+
+set localStorage
+
+navigate to the base route
+
+do NOT attempt to preserve current path across modes unless there is an explicit mapping
+
+6) Acceptance Criteria (must pass)
+
+Switching to Founder Solo always lands on /app/founder and stays there
+
+Founder nav never collapses into platform nav
+
+Clicking founder nav items changes URL and renders correct pages
+
+Platform Admin mode always lands on /app/platform
+
+Tenant-required routes never “silently fail”; they redirect to /app/places
+
+No redirects /app → /app/platform unless explicitly in platform mode
+
+Deliverables
+
+File list of changes
+
+Proof: screenshots of working founder nav + working platform nav + switching
+
+Why this is the correct approach
+
+Replit’s “filter tenant-required items when no tenant selected” is a band-aid. It keeps you from clicking dead links, but it does not implement Founder Solo as a real mode — it just hides the symptoms.
+
+Founder Solo is a separate operator role UX and must have:
+
+its own route base
+
+its own layout
+
+its own nav source of truth
+
+Otherwise you’ll keep getting “nav drift” every time a new section is added.
