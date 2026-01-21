@@ -46,9 +46,9 @@ export const PLATFORM_NAV: PlatformNavSection[] = [
       { icon: Building2, label: 'All Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants' },
       { icon: Users, label: 'All Users', href: '/app/platform/users', testId: 'nav-platform-users' },
       { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics' },
-      { icon: Search, label: 'System Explorer', href: '/admin/system-explorer', testId: 'nav-system-explorer' },
-      { icon: Database, label: 'Data Management', href: '/admin/data/infrastructure', testId: 'nav-data-mgmt' },
-      { icon: Settings, label: 'Platform Settings', href: '/admin/settings', testId: 'nav-platform-settings' },
+      { icon: Search, label: 'System Explorer', href: '/app/platform/system-explorer', testId: 'nav-system-explorer' },
+      { icon: Database, label: 'Data Management', href: '/app/platform/data-management', testId: 'nav-data-mgmt' },
+      { icon: Settings, label: 'Platform Settings', href: '/app/platform/settings', testId: 'nav-platform-settings' },
     ],
   },
 ];

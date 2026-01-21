@@ -1,0 +1,135 @@
+✅ REPLIT PROMPT — Fix Legacy /admin/* Links in New Platform Admin UI
+
+Paste exactly this to Replit:
+
+REPLIT PROMPT — Remove Legacy /admin/* Links from New Platform Admin UI
+
+Problem:
+The new Platform Admin shell (/app/platform/*) is working, but in-page links (cards, CTAs, buttons) still point to legacy routes under /admin/*.
+Clicking these links drops users into the old admin UI, breaking navigation consistency.
+
+Goal:
+Ensure all Platform Admin navigation and in-page links route exclusively through /app/platform/*.
+The legacy /admin/* UI must no longer be reachable from the new UI.
+
+1️⃣ Find all legacy /admin/* links (GLOBAL SEARCH)
+
+Search the entire client codebase for:
+
+"/admin/"
+"/admin/system-explorer"
+"/admin/tenants"
+"/admin/analytics"
+"/admin/settings"
+
+
+This will likely appear in:
+
+Dashboard cards
+
+Analytics page CTAs
+
+“View more” buttons
+
+Stat cards
+
+<a href> strings
+
+navigate("/admin/...") calls
+
+2️⃣ Replace legacy links with canonical Platform routes
+
+Apply these replacements everywhere in the new Platform Admin UI:
+
+Old Link	New Link
+/admin/system-explorer	/app/platform/system-explorer
+/admin/tenants	/app/platform/tenants
+/admin/analytics	/app/platform/analytics
+/admin/settings	/app/platform/settings
+/admin/users	/app/platform/users
+
+Rule:
+
+If the user is in Platform Admin mode, all links MUST stay under /app/platform/*.
+
+3️⃣ Use router navigation — NOT raw <a href>
+
+Wherever possible:
+
+Replace <a href="..."> with:
+
+<NavLink to="/app/platform/system-explorer">
+
+
+or
+
+navigate("/app/platform/system-explorer")
+
+
+This ensures:
+
+no full page reload
+
+layout remains mounted
+
+left navigation stays intact
+
+4️⃣ Fix the Analytics → System Explorer card specifically
+
+In Platform Analytics page:
+
+Locate the “System Explorer” card or CTA
+
+It is currently linking to:
+
+/admin/system-explorer
+
+
+Change it to:
+
+/app/platform/system-explorer
+
+
+Verify:
+
+URL changes correctly
+
+PlatformLayout remains mounted
+
+Left nav stays highlighted on “System Explorer”
+
+5️⃣ Add a guardrail to prevent regression (VERY IMPORTANT)
+
+Add a small dev-only assertion:
+
+if (href?.startsWith("/admin/")) {
+  console.error("❌ Legacy admin link detected:", href);
+}
+
+
+Or a lint comment / TODO note:
+
+// DO NOT use /admin/* routes — use /app/platform/*
+
+
+This prevents future contributors (or Replit itself) from re-introducing the bug.
+
+6️⃣ Acceptance Criteria (must all pass)
+
+Clicking System Explorer from Analytics stays inside /app/platform
+
+URL never changes to /admin/*
+
+Platform left nav remains visible
+
+No legacy admin UI is reachable from new UI
+
+Global search shows zero /admin/ links inside Platform Admin pages
+
+7️⃣ Deliverables
+
+List of files where /admin/* links were replaced
+
+Confirmation that Platform Analytics, Dashboard, and Tenants cards route correctly
+
+Screenshot proof: /app/platform/system-explorer loaded from Analytics page

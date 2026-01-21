@@ -119,25 +119,25 @@ export default function PlatformHomePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link to="/admin/tenants">
+            <Link to="/app/platform/tenants">
               <Button variant="outline" className="w-full justify-start gap-2" data-testid="button-manage-tenants">
                 <Building2 className="h-4 w-4" />
                 Manage Tenants
               </Button>
             </Link>
-            <Link to="/admin/users">
+            <Link to="/app/platform/users">
               <Button variant="outline" className="w-full justify-start gap-2" data-testid="button-manage-users">
                 <Users className="h-4 w-4" />
                 Manage Users
               </Button>
             </Link>
-            <Link to="/admin/system-explorer">
+            <Link to="/app/platform/system-explorer">
               <Button variant="outline" className="w-full justify-start gap-2" data-testid="button-system-explorer">
                 <Search className="h-4 w-4" />
                 System Explorer
               </Button>
             </Link>
-            <Link to="/admin/settings">
+            <Link to="/app/platform/settings">
               <Button variant="outline" className="w-full justify-start gap-2" data-testid="button-settings">
                 <Settings className="h-4 w-4" />
                 Platform Settings

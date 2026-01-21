@@ -346,6 +346,9 @@ export default function App() {
                 <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="users" element={<UsersManagement />} />
+                <Route path="system-explorer" element={<SystemExplorerPage />} />
+                <Route path="data-management" element={<AdminInfrastructure />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
               </Route>
 
               {/* ========================================== */}
