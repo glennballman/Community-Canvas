@@ -126,8 +126,10 @@ export function DebugPanel() {
 
   if (!isDev) return null;
 
+  const TOKEN_KEY = 'cc_token';
   const authState = {
-    tokenPresent: !!localStorage.getItem('cc_token'),
+    tokenPresent: !!localStorage.getItem(TOKEN_KEY),
+    tokenKey: TOKEN_KEY,
     cookiePresent: document.cookie.includes('tenant_sid'),
   };
 
@@ -180,6 +182,10 @@ export function DebugPanel() {
               Cookie: {authState.cookiePresent ? 'Yes' : 'No'}
             </Badge>
           </div>
+        </div>
+        <div className="flex items-center justify-between opacity-70">
+          <span>Token key:</span>
+          <span className="font-semibold">{authState.tokenKey}</span>
         </div>
         <div className="flex gap-1">
           <Button size="sm" variant="outline" onClick={copyState} className="flex-1 h-6 text-xs">

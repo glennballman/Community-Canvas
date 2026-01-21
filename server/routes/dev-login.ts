@@ -18,6 +18,15 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'cc-dev-secret-change-in-prod';
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
+// Allowlist of emails that can be used with dev login
+// This prevents accidental "log in as real user" flows that hide auth issues
+const DEV_LOGIN_ALLOWLIST = new Set([
+  'tester@example.com',
+  'platformadmin@example.com',
+  'contractor@example.com',
+  'guest@example.com'
+]);
+
 interface JWTPayload {
   userId: string;
   email: string;
@@ -106,6 +115,14 @@ router.post('/login-as', async (req: Request, res: Response) => {
 
     if (!email) {
       return res.status(400).json({ ok: false, error: 'Email required' });
+    }
+
+    // Check email is in allowlist to prevent accidental real user login
+    if (!DEV_LOGIN_ALLOWLIST.has(email.toLowerCase())) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: `Email not in dev login allowlist. Allowed: ${Array.from(DEV_LOGIN_ALLOWLIST).join(', ')}`
+      });
     }
 
     // Find user by email
