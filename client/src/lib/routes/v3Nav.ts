@@ -250,9 +250,18 @@ function hasAnyRole(userRole: string | undefined, allowedRoles: string[] | undef
  * Check if an item should be visible based on context
  */
 function isItemVisible(item: NavItem, ctx: NavFilterContext): boolean {
+  // Founder nav shows more items, but still respects tenant requirements
+  // This prevents showing tenant-requiring nav items when no tenant is selected
   if (ctx.founderNavEnabled) {
+    // Still hide items that require a tenant if no tenant is selected
+    if (item.requiresTenant && !ctx.hasTenant) {
+      return false;
+    }
+    // Show dev/hidden items in founder mode
     if (item.hiddenInProduction) return true;
+    // Show platform admin items in founder mode
     if (item.platformAdminOnly) return true;
+    // Show all other items
     return true;
   }
   
@@ -287,7 +296,12 @@ function isItemVisible(item: NavItem, ctx: NavFilterContext): boolean {
  * Check if a section should be visible based on context
  */
 function isSectionVisible(section: NavSection, ctx: NavFilterContext): boolean {
+  // Founder nav shows more sections, but still respects tenant requirements
   if (ctx.founderNavEnabled) {
+    // Still hide sections that require a tenant if no tenant is selected
+    if (section.requiresTenant && !ctx.hasTenant) {
+      return false;
+    }
     return true;
   }
   
