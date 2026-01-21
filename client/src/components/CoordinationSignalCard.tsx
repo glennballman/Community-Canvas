@@ -129,6 +129,28 @@ export function CoordinationSignalCard({
           </div>
         )}
 
+        {(data?.totals?.coordination_ready_similar_count ?? 0) > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Coordination-ready requests nearby:
+            </span>
+            <Badge 
+              variant="default" 
+              data-testid="text-coordination-ready-count"
+            >
+              {data?.totals?.coordination_ready_similar_count}
+            </Badge>
+          </div>
+        )}
+
+        {(data?.totals?.coordination_ready_similar_count ?? 0) >= 2 && (
+          <div className="p-2 rounded-md bg-green-500/10 border border-green-500/20">
+            <p className="text-xs text-green-600 dark:text-green-400" data-testid="text-coordination-ready-nudge">
+              Consider a coordinated schedule window to reduce travel overhead.
+            </p>
+          </div>
+        )}
+
         {data?.message && (
           <p className="text-xs text-muted-foreground" data-testid="text-coordination-message">
             {data.message}

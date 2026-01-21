@@ -34,6 +34,7 @@ import { WorkDisclosureSelector, getDefaultDisclosureSelection, type DisclosureS
 import { ZoneImpactSummary } from '@/components/ZoneImpactSummary';
 import { BundleSimulationSlider } from '@/components/BundleSimulationSlider';
 import { CoordinationSignalCard } from '@/components/CoordinationSignalCard';
+import { CoordinationIntentCard } from '@/components/CoordinationIntentCard';
 import { getZoneBadgeLabel } from '@/components/ZoneBadge';
 import type { ZonePricingModifiers } from '@shared/zonePricing';
 
@@ -62,6 +63,9 @@ interface WorkRequest {
   assigned_contractor_person_id: string | null;
   zone_id: string | null;
   zone_name: string | null;
+  coordination_intent: boolean;
+  coordination_intent_set_at: string | null;
+  coordination_intent_note: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -589,6 +593,15 @@ export default function WorkRequestDetail() {
                   workRequestId={request.id}
                   portalId={request.portal_id}
                   zoneId={request.zone_id}
+                />
+                
+                {/* Coordination Intent - Opt-in toggle */}
+                <CoordinationIntentCard
+                  workRequestId={request.id}
+                  portalId={request.portal_id}
+                  currentIntent={request.coordination_intent || false}
+                  currentNote={request.coordination_intent_note}
+                  intentSetAt={request.coordination_intent_set_at}
                 />
               </>
             )}

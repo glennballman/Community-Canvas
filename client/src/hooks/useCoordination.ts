@@ -5,7 +5,8 @@
  * Shows counts of similar work in the same zone (advisory only).
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export interface SimilarityKey {
   subsystem_id?: string | null;
@@ -17,6 +18,7 @@ export interface CoordinationTotals {
   similar_active_count: number;
   similar_new_count: number;
   unzoned_similar_count?: number;
+  coordination_ready_similar_count?: number;
 }
 
 export interface WorkRequestCoordinationData {
@@ -99,5 +101,41 @@ export function useZoneCoordinationRollup(
     },
     enabled: !!portalId && !!tenantId,
     staleTime: 60 * 1000,
+  });
+}
+
+export interface CoordinationIntentPayload {
+  coordination_intent: boolean;
+  note?: string | null;
+}
+
+export interface CoordinationIntentResponse {
+  ok: boolean;
+  work_request_id: string;
+  coordination_intent: boolean;
+  coordination_intent_set_at: string | null;
+  coordination_intent_note: string | null;
+  portal_required_for_matching?: boolean;
+}
+
+/**
+ * Hook for setting/clearing coordination intent on a work request.
+ * Invalidates both the work request detail and coordination queries.
+ */
+export function useWorkRequestCoordinationIntent(workRequestId: string) {
+  return useMutation<CoordinationIntentResponse, Error, CoordinationIntentPayload>({
+    mutationFn: async (payload) => {
+      const res = await apiRequest(
+        'PUT',
+        `/api/work-requests/${workRequestId}/coordination-intent`,
+        payload
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/work-requests', workRequestId] 
+      });
+    },
   });
 }
