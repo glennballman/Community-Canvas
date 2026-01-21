@@ -1,13 +1,21 @@
 /**
  * APP ROUTES
  * 
- * Three route trees:
+ * Two primary route trees:
  * 1. /c/:slug/* - Public portal (no auth)
- * 2. /app/* - Tenant app (auth required)
- * 3. /admin/* - Platform admin (admin only)
+ * 2. /app/* - All authenticated routes including:
+ *    - /app/platform/* - Platform Admin mode
+ *    - /app/founder/* - Founder Solo mode
+ *    - /app/* - Tenant app (auth required)
  * 
- * DO NOT MODIFY THIS STRUCTURE.
+ * DEPRECATED (V3.5): /admin/* routes are permanently retired.
+ * All Platform Admin functionality MUST live under /app/platform/*.
  */
+
+// DEV ONLY: Warn about legacy /admin/* routes
+if (import.meta.env.DEV && typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+  console.error('❌ Legacy /admin route accessed — this path is retired. Use /app/platform/* instead.');
+}
 
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -349,6 +357,7 @@ export default function App() {
                 <Route path="system-explorer" element={<SystemExplorerPage />} />
                 <Route path="data-management" element={<AdminInfrastructure />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
+                <Route path="impersonation" element={<ImpersonationConsole />} />
               </Route>
 
               {/* ========================================== */}

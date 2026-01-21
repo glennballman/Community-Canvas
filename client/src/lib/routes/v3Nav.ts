@@ -198,7 +198,7 @@ export const V3_NAV: NavSection[] = [
     items: [
       { icon: Building2, label: 'All Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants', platformAdminOnly: true },
       { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics', platformAdminOnly: true },
-      { icon: Search, label: 'System Explorer', href: '/admin/system-explorer', testId: 'nav-system-explorer', platformAdminOnly: true },
+      { icon: Search, label: 'System Explorer', href: '/app/platform/system-explorer', testId: 'nav-system-explorer', platformAdminOnly: true },
     ],
   },
   {

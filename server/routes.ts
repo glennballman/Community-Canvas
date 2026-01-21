@@ -162,6 +162,20 @@ export async function registerRoutes(
   // Register sitemap routes (at root level for SEO)
   app.use('/', sitemapRouter);
 
+  // =========================================================================
+  // DEPRECATED /admin/* ROUTES (V3.5)
+  // All Platform Admin functionality has moved to /app/platform/*
+  // This redirect catches any legacy links and sends users to the new UI
+  // =========================================================================
+  app.use('/admin', (req, res) => {
+    console.warn('[DEPRECATED /admin HIT]', {
+      path: req.originalUrl,
+      userId: (req as any).session?.userId,
+      ts: new Date().toISOString(),
+    });
+    res.redirect(301, '/app/platform');
+  });
+
   // Register fleet management routes
   app.use('/api/v1/fleet', createFleetRouter(pool));
 

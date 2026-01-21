@@ -1,0 +1,238 @@
+“Follow this exactly. Do not skip steps. Do not invent alternatives.”
+
+This is written to force safe execution, observable checkpoints, and clean rollback points.
+
+🔥 SCRIPTED CHECKLIST — One-Time Kill-Switch to Retire /admin/* (V3.5)
+
+Audience: Replit agent
+Mode: Deterministic execution only
+Scope: UI + Server
+Goal: Permanently retire legacy /admin/* without regressions
+
+⚠️ GLOBAL RULES (READ FIRST)
+
+❌ Do NOT add new auth systems
+
+❌ Do NOT keep /admin/* as a fallback
+
+❌ Do NOT “temporarily” leave links
+
+❌ Do NOT change tenant/founder/platform layouts
+
+✅ Follow steps in order
+
+✅ Stop and report if any step fails
+
+PHASE 0 — Pre-Flight Verification (MUST PASS)
+Step 0.1 — Confirm new Platform Admin works
+
+Manually verify:
+
+/app/platform
+
+/app/platform/tenants
+
+/app/platform/analytics
+
+/app/platform/system-explorer
+
+If any of these fail → STOP and report.
+
+PHASE 1 — UI Link Eradication (HARD REQUIREMENT)
+Step 1.1 — Global search for legacy routes
+
+Run a full-repo search for:
+
+/admin/
+navigate("/admin")
+href="/admin"
+
+
+📌 Output:
+
+List every file containing /admin/*
+
+Step 1.2 — Replace all legacy links
+
+For each occurrence found:
+
+Legacy	Replace With
+/admin/system-explorer	/app/platform/system-explorer
+/admin/tenants	/app/platform/tenants
+/admin/analytics	/app/platform/analytics
+/admin/settings	/app/platform/settings
+/admin/users	/app/platform/users
+
+Rules:
+
+Use navigate() or <NavLink to> (no raw <a href>)
+
+Do not add conditionals
+
+Do not preserve legacy behavior
+
+Step 1.3 — Re-run search
+
+Re-run the same search.
+
+✅ PASS condition: zero matches.
+
+If any remain → STOP and fix.
+
+PHASE 2 — Dev Guardrail (Prevents Regression)
+Step 2.1 — Add dev-only runtime guard
+
+In a central client entry (router or App root), add:
+
+if (import.meta.env.DEV && window.location.pathname.startsWith("/admin")) {
+  console.error("❌ Legacy /admin route accessed — this path is retired.");
+}
+
+
+This must:
+
+not affect prod
+
+not redirect
+
+only log
+
+PHASE 3 — Server Soft Kill (Temporary Redirect)
+Step 3.1 — Add legacy redirect handler
+
+In server routing (top-level, before other routes):
+
+app.use("/admin", (req, res) => {
+  console.warn("[DEPRECATED /admin HIT]", {
+    path: req.originalUrl,
+    userId: req.session?.user?.id,
+    ts: new Date().toISOString(),
+  });
+  res.redirect(301, "/app/platform");
+});
+
+
+Rules:
+
+No auth
+
+No layout rendering
+
+No feature logic
+
+Step 3.2 — Restart server
+
+Confirm:
+
+Visiting /admin/system-explorer redirects to /app/platform
+
+No legacy UI loads
+
+PHASE 4 — Verification Window (MANDATORY WAIT)
+
+⏳ Wait 7–14 days (or simulate if instructed).
+
+During this period:
+
+Monitor logs for [DEPRECATED /admin HIT]
+
+Count unique users
+
+Decision Gate:
+
+If hits are still occurring → investigate who/what
+
+If hits are near-zero → proceed
+
+PHASE 5 — HARD KILL (POINT OF NO RETURN)
+Step 5.1 — Remove redirect
+
+Delete the /admin redirect handler entirely.
+
+Replace with:
+
+app.use("/admin", (_req, res) => {
+  res.status(410).send("This admin interface has been permanently retired.");
+});
+
+Step 5.2 — Restart server
+
+Verify:
+
+/admin/* returns 410
+
+/app/platform/* works
+
+No redirects occur
+
+PHASE 6 — Delete Legacy Code (CLEANUP)
+Step 6.1 — Identify legacy admin code
+
+Delete:
+
+old /admin layout components
+
+old admin nav definitions
+
+old admin pages
+
+routes only reachable via /admin/*
+
+Do NOT touch:
+
+/app/platform/*
+
+/app/founder/*
+
+tenant layouts
+
+Step 6.2 — Run build
+
+Ensure:
+
+no missing imports
+
+no dead references
+
+PHASE 7 — Lock the Invariant (PREVENT RESURRECTION)
+Step 7.1 — Document invariant
+
+Add to architecture docs (or README):
+
+/admin/* routes are permanently retired as of V3.5.
+All Platform Admin functionality MUST live under /app/platform/*.
+
+Step 7.2 — Optional build-time check
+
+Add a simple script:
+
+grep -R "/admin/" client/ && exit 1
+
+
+Wire to CI or pre-commit if desired.
+
+FINAL ACCEPTANCE CRITERIA (ALL MUST PASS)
+
+/admin/* unreachable (410)
+
+No /admin/* links exist in code
+
+Platform Admin fully functional at /app/platform/*
+
+Founder + Tenant modes unaffected
+
+No redirects mask errors
+
+No duplicate admin systems exist
+
+📌 REQUIRED REPORT FROM REPLIT
+
+At completion, Replit must provide:
+
+List of files modified (links replaced)
+
+Confirmation of zero /admin/* references
+
+Screenshot of /admin/system-explorer → 410 response
+
+Screenshot of /app/platform/system-explorer working
