@@ -403,3 +403,42 @@ export function usePromoteN3Run() {
     },
   });
 }
+
+interface DemoteN3RunParams {
+  runId: string;
+  note?: string;
+}
+
+interface DemoteN3RunResponse {
+  success: boolean;
+  id: string;
+  status: string;
+  audit_action: string;
+}
+
+/**
+ * Hook for demoting a scheduled N3 Service Run back to draft.
+ * Admin/owner only. Explicit action, auditable, fully reversible.
+ * No side effects: no contractor notifications, no billing, no execution.
+ */
+export function useDemoteN3Run() {
+  return useMutation<DemoteN3RunResponse, Error, DemoteN3RunParams>({
+    mutationFn: async ({ runId, note }) => {
+      const res = await apiRequest(
+        'POST',
+        `/api/n3/runs/${runId}/demote`,
+        note ? { note } : {}
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to demote run');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/runs', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/n3/attention'] });
+    },
+  });
+}
