@@ -37,6 +37,7 @@ import {
   Zap,
   Search,
   Image,
+  Map,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -88,9 +89,9 @@ export interface NavSection {
 export const V3_NAV: NavSection[] = [
   {
     title: 'Personal',
-    requiresTenant: true,
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', href: '/app', testId: 'nav-dashboard', requiresTenant: true },
+      { icon: LayoutDashboard, label: 'Dashboard', href: '/app/dashboard', testId: 'nav-dashboard', requiresTenant: true },
+      { icon: Map, label: 'Your Places', href: '/app/places', testId: 'nav-places-picker' },
       { icon: Plane, label: 'My Trips', href: '/app/participant/trips', testId: 'nav-my-trips', participantOnly: true },
       { icon: FileText, label: 'My Applications', href: '/app/participant/applications', testId: 'nav-my-applications', participantOnly: true },
     ],

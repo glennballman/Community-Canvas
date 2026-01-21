@@ -1,0 +1,129 @@
+✅ REPLIT PROMPT — Fix Default Routing + Wire V3.5 Nav + Founder Solo Toggle
+
+Goal: Stop landing in legacy Tenant Picker (“Your Places”). Default into new V3.5 Platform Admin, with a Founder Solo view toggle always available. Ensure V3.5 navigation config (v3Nav.ts) is the active source, not legacy arrays.
+
+0) Confirm current routing & layouts
+
+Search codebase for:
+
+route handler for /app (likely in client/src/App.tsx, client/src/router.tsx, or wouter route config)
+
+“Your Places”, “Tenant Picker”, TenantPicker, YourPlaces, TenantSelector
+
+TenantAppLayout.tsx and how it chooses nav arrays
+
+PlatformAdminLayout.tsx and ADMIN_NAV
+
+client/src/lib/routes/v3Nav.ts (already exists)
+
+1) Make /app land in the NEW system by default
+
+Implement deterministic routing:
+
+Rule:
+
+If user has platform_admin role → redirect /app → /app/admin (or whatever the V3.5 Platform Admin home is)
+
+Else if user has Founder Solo mode enabled → /app → /app/founder
+
+Else if user has tenant memberships → /app → /app/places (tenant picker)
+
+Else → /app → onboarding / access denied
+
+Important: Move the legacy tenant picker page off /app and make it explicitly /app/places.
+
+2) Wire the V3.5 nav definition as the single source of truth
+
+Per nav-wiring-targets.md:
+
+client/src/lib/routes/v3Nav.ts is authoritative but not wired
+
+TenantAppLayout.tsx is still using legacy arrays
+
+Fix:
+
+Update TenantAppLayout.tsx to use V3_NAV from v3Nav.ts (and remove legacy nav selection logic)
+
+Ensure all hrefs match the actual route registry
+
+Keep PlatformAdminLayout.tsx using ADMIN_NAV, but unify rendering so sidebar component is shared (same styling + test ids)
+
+3) Add the Platform Admin / Founder Solo toggle (always visible for platform admins)
+
+Add a top-right header toggle (or user-menu switch) available when user has platform_admin:
+
+Toggle options:
+
+Platform Admin
+
+Founder Solo
+
+Persist selection:
+
+localStorage key: cc_view_mode = 'admin' | 'founder'
+
+default = 'admin' for platform admins
+
+Behavior:
+
+switching mode redirects:
+
+admin → /app/admin
+
+founder → /app/founder
+
+4) Founder Solo view should not be blocked by tenant memberships
+
+Even if the user is an owner/admin of multiple tenants, Founder Solo must still work.
+
+So:
+
+Founder Solo uses V3_NAV
+
+Platform Admin uses ADMIN_NAV
+
+Tenant picker is only used when entering tenant-scoped workflows, not as the default app home.
+
+5) Add an explicit “Go to Places” entry inside both modes
+
+In both modes, provide a clear nav item:
+
+“Your Places” → /app/places
+So the picker remains accessible, but not the default landing.
+
+6) Make a clean Platform Admin account optional (but not required)
+
+If easiest for testing, add a seeded user (or manual create path) with:
+
+role: platform_admin
+
+no tenant memberships
+So /app routing is unambiguous.
+
+But routing fix must still work for your current account.
+
+7) Acceptance Criteria (must pass)
+
+Visiting /app as platform admin never shows the legacy tenant picker
+
+You land on new V3.5 Platform Admin home by default
+
+Founder Solo toggle is visible + functional
+
+Switching modes changes nav + redirects correctly
+
+/app/places still works and shows the tenant picker
+
+TenantAppLayout.tsx no longer references legacy nav arrays
+
+v3Nav.ts is definitively wired
+
+8) Deliverables
+
+Code changes with file list
+
+Updated routes for /app, /app/admin, /app/founder, /app/places
+
+Toggle component + persistence
+
+Notes on any renamed routes needed to align hrefs

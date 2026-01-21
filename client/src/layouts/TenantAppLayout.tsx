@@ -30,6 +30,7 @@ import {
 import { useTenant } from '../contexts/TenantContext';
 import { PortalSelector } from '../components/PortalSelector';
 import { ContextIndicator } from '../components/context/ContextIndicator';
+import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getFilteredNavSections, NavSection, NavItem } from '../lib/routes/v3Nav';
 
 // ============================================================================
@@ -97,7 +98,12 @@ export function TenantAppLayout(): React.ReactElement {
   // --------------------------------------------------------------------------
   
   const isAtRoot = location.pathname === '/app' || location.pathname === '/app/';
-  const needsRedirectToRoot = !isAtRoot && !currentTenant && initialized && !loading;
+  
+  // Routes that can be accessed without a tenant selected
+  const noTenantRoutes = ['/app/places', '/app/founder', '/app/platform'];
+  const isNoTenantRoute = noTenantRoutes.some(r => location.pathname.startsWith(r));
+  
+  const needsRedirectToRoot = !isAtRoot && !isNoTenantRoute && !currentTenant && initialized && !loading;
 
   // --------------------------------------------------------------------------
   // Auth redirect
@@ -163,8 +169,7 @@ export function TenantAppLayout(): React.ReactElement {
   // Route handling
   // --------------------------------------------------------------------------
   
-  // If at /app and no tenant selected, render Outlet WITHOUT sidebar
-  // The Outlet will render TenantPicker
+  // If at /app root, render the redirect component (without sidebar)
   if (isAtRoot && !currentTenant) {
     return (
       <div style={{
@@ -177,8 +182,9 @@ export function TenantAppLayout(): React.ReactElement {
     );
   }
 
-  // If not at root and no tenant, show loading while redirect happens via useEffect
-  if (!isAtRoot && !currentTenant) {
+  // Routes that don't require a tenant (places, founder, platform) render with sidebar
+  // Other routes require a tenant; if none selected, show loading while redirect happens
+  if (!isNoTenantRoute && !isAtRoot && !currentTenant) {
     return <></>;
   }
 
@@ -743,18 +749,23 @@ export function TenantAppLayout(): React.ReactElement {
 
       {/* ====== MAIN CONTENT ====== */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Top Bar with Context Indicator */}
+        {/* Top Bar with Context Indicator and View Mode Toggle */}
         <header style={{
           height: '48px',
           borderBottom: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           padding: '0 16px',
           backgroundColor: '#0a1628',
           flexShrink: 0,
+          gap: '16px',
         }}>
-          <ContextIndicator />
+          <div style={{ flex: 1 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <ViewModeToggle />
+            <ContextIndicator />
+          </div>
         </header>
         
         <main style={styles.main}>

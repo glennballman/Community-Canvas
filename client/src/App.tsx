@@ -31,6 +31,9 @@ import { PublicPortalLayout } from './layouts/PublicPortalLayout';
 import { TenantPicker } from './pages/app/TenantPicker';
 import { Dashboard } from './pages/app/Dashboard';
 import DashboardPage from './pages/app/DashboardPage';
+import FounderHomePage from './pages/app/FounderHomePage';
+import PlatformHomePage from './pages/app/PlatformHomePage';
+import { AppHomeRedirect } from './components/routing/AppHomeRedirect';
 import ReservationsIndexPage from './pages/app/ReservationsIndexPage';
 import ReservationDetailPage from './pages/app/ReservationDetailPage';
 
@@ -329,7 +332,10 @@ export default function App() {
               {/* TENANT APP - /app/*                       */}
               {/* ========================================== */}
               <Route path="/app" element={<TenantAppLayout />}>
-                <Route index element={<TenantPicker />} />
+                <Route index element={<AppHomeRedirect />} />
+                <Route path="places" element={<TenantPicker />} />
+                <Route path="founder" element={<FounderHomePage />} />
+                <Route path="platform" element={<PlatformHomePage />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 
                 {/* V3 Operations */}
