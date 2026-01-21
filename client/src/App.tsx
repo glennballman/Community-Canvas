@@ -193,6 +193,12 @@ import StickyNoteCapturePage from './pages/contractor/StickyNoteCapturePage';
 import IngestionReviewPage from './pages/contractor/IngestionReviewPage';
 import ServiceAreasPage from './pages/contractor/ServiceAreasPage';
 import UploadResultsPage from './pages/contractor/UploadResultsPage';
+import EventModePage from './pages/contractor/EventModePage';
+import EventQuotesListPage from './pages/contractor/EventQuotesListPage';
+import EventQuoteDetailPage from './pages/contractor/EventQuoteDetailPage';
+
+// Pages - Public Event (A2.5)
+import EventQuotePage from './pages/public/EventQuotePage';
 
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
@@ -331,6 +337,9 @@ export default function App() {
               {/* PUBLIC RESERVATION - /reserve/*           */}
               {/* ========================================== */}
               <Route path="/reserve/*" element={<PublicReserveRoutes />} />
+              
+              {/* Public Event Lead Capture (A2.5) */}
+              <Route path="/event/quote" element={<EventQuotePage />} />
 
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}
@@ -518,6 +527,11 @@ export default function App() {
                 <Route path="contractor/onboard/ingestions/:id" element={<IngestionReviewPage />} />
                 <Route path="contractor/onboard/service-areas" element={<ServiceAreasPage />} />
                 <Route path="contractor/onboard/results" element={<UploadResultsPage />} />
+                
+                {/* Contractor Event Mode (A2.5) */}
+                <Route path="contractor/event" element={<EventModePage />} />
+                <Route path="contractor/event/quotes" element={<EventQuotesListPage />} />
+                <Route path="contractor/event/quotes/:id" element={<EventQuoteDetailPage />} />
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />
