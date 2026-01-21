@@ -166,8 +166,12 @@ import TripDetailPage from './pages/app/participant/TripDetailPage';
 import MyApplicationsPage from './pages/app/participant/MyApplicationsPage';
 import ApplicationDetailPage from './pages/app/participant/ApplicationDetailPage';
 
-// Pages - Contractor (Prompt A1)
+// Pages - Contractor (Prompt A1, A2)
 import ContractorOnboardingEntry from './pages/contractor/ContractorOnboardingEntry';
+import VehicleCapturePage from './pages/contractor/VehicleCapturePage';
+import ToolCapturePage from './pages/contractor/ToolCapturePage';
+import StickyNoteCapturePage from './pages/contractor/StickyNoteCapturePage';
+import IngestionReviewPage from './pages/contractor/IngestionReviewPage';
 
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
@@ -458,8 +462,12 @@ export default function App() {
                 <Route path="participant/applications" element={<MyApplicationsPage />} />
                 <Route path="participant/applications/:appId" element={<ApplicationDetailPage />} />
                 
-                {/* Contractor Onboarding (Prompt A1) */}
+                {/* Contractor Onboarding (Prompt A1, A2) */}
                 <Route path="contractor/onboard" element={<ContractorOnboardingEntry />} />
+                <Route path="contractor/onboard/vehicle" element={<VehicleCapturePage />} />
+                <Route path="contractor/onboard/tools" element={<ToolCapturePage />} />
+                <Route path="contractor/onboard/sticky-note" element={<StickyNoteCapturePage />} />
+                <Route path="contractor/onboard/ingestions/:id" element={<IngestionReviewPage />} />
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />

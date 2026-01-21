@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useTenant } from '@/contexts/TenantContext';
+import { usePortal } from '@/contexts/PortalContext';
 
 interface ContractorIngestionCaptureProps {
   sourceType: 'vehicle_photo' | 'tool_photo' | 'sticky_note';
@@ -42,6 +44,8 @@ export default function ContractorIngestionCapture({
   allowMultiple = false,
 }: ContractorIngestionCaptureProps) {
   const navigate = useNavigate();
+  const { currentTenant } = useTenant();
+  const { currentPortal } = usePortal();
   
   const [cameraOpen, setCameraOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -61,10 +65,20 @@ export default function ContractorIngestionCapture({
       formData.append('source_type', sourceType);
       files.forEach(file => formData.append('media', file));
       
+      // Build headers with tenant/portal context
+      const headers: Record<string, string> = {};
+      if (currentPortal?.id) {
+        headers['x-portal-id'] = currentPortal.id;
+      }
+      if (currentTenant?.tenant_id) {
+        headers['x-tenant-id'] = currentTenant.tenant_id;
+      }
+      
       const res = await fetch('/api/contractor/ingestions', {
         method: 'POST',
         body: formData,
         credentials: 'include',
+        headers,
       });
       
       if (!res.ok) {

@@ -1,18 +1,18 @@
 /**
- * Contractor Onboarding Entry Point - Prompt A1
+ * Contractor Onboarding Entry Point - Prompt A1/A2
  * 
  * Camera-first onboarding experience that:
  * - Requires zero forms
  * - Delivers immediate operational value
  * - Feels easier than a sticky note
  * 
- * Three giant action cards, each tappable, each camera-first:
+ * Three giant action cards, each tappable, navigating to camera-first capture pages:
  * 1. "Add My Truck & Trailer" → vehicle capture
  * 2. "Add My Tools" → tool capture
  * 3. "Add a Job From a Sticky Note" → sticky note capture (WOW path)
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,7 @@ import {
   StickyNote, 
   Camera, 
   ChevronRight,
-  Sparkles,
-  X
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
@@ -48,13 +47,6 @@ export default function ContractorOnboardingEntry() {
   const { user } = useAuth();
   const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
-  
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [currentAction, setCurrentAction] = useState<OnboardingAction | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch contractor profile
   const { data: profileData, isLoading } = useQuery<{ success: boolean; profile?: ContractorProfile }>({
@@ -112,97 +104,33 @@ export default function ContractorOnboardingEntry() {
     }
   }, [profile, navigate]);
 
-  // Open camera for photo capture
-  const openCamera = useCallback(async (action: OnboardingAction) => {
-    setCurrentAction(action);
-    
+  // Navigate to capture pages (Prompt A2)
+  const navigateToCapture = useCallback((action: OnboardingAction) => {
+    switch (action) {
+      case 'vehicle':
+        navigate('/app/contractor/onboard/vehicle');
+        break;
+      case 'tools':
+        navigate('/app/contractor/onboard/tools');
+        break;
+      case 'sticky-note':
+        navigate('/app/contractor/onboard/sticky-note');
+        break;
+    }
+  }, [navigate]);
+
+  // Handle action card click - navigate to capture page and update progress
+  const handleActionClick = useCallback((action: OnboardingAction) => {
     // Mark the step as started
     const updates: Partial<{ vehicleStarted: boolean; toolsStarted: boolean; stickyNoteStarted: boolean }> = {};
     if (action === 'vehicle') updates.vehicleStarted = true;
     if (action === 'tools') updates.toolsStarted = true;
     if (action === 'sticky-note') updates.stickyNoteStarted = true;
     updateProgressMutation.mutate(updates);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setCameraOpen(true);
-    } catch (err) {
-      console.error('Camera access denied, falling back to file picker:', err);
-      // Fall back to file picker
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-    }
-  }, [updateProgressMutation]);
-
-  // Close camera
-  const closeCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setCameraOpen(false);
-    setCurrentAction(null);
-    setCapturedImage(null);
-  }, []);
-
-  // Capture photo from camera
-  const capturePhoto = useCallback(() => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0);
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        setCapturedImage(dataUrl);
-        
-        // For now, just close and navigate to appropriate capture page
-        // (Asset creation happens in later prompts)
-        closeCamera();
-        navigateToCapture(currentAction!);
-      }
-    }
-  }, [currentAction]);
-
-  // Handle file input
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && currentAction) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setCapturedImage(event.target?.result as string);
-        // Navigate to capture page
-        navigateToCapture(currentAction);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, [currentAction]);
-
-  // Navigate to capture pages (stub for now - full implementation in later prompts)
-  const navigateToCapture = (action: OnboardingAction) => {
-    switch (action) {
-      case 'vehicle':
-        // Will be /contractor/onboard/vehicle-capture in later prompts
-        console.log('[ONBOARDING] Vehicle capture started');
-        break;
-      case 'tools':
-        // Will be /contractor/onboard/tool-capture in later prompts
-        console.log('[ONBOARDING] Tool capture started');
-        break;
-      case 'sticky-note':
-        // Will be /contractor/onboard/sticky-note-capture in later prompts
-        console.log('[ONBOARDING] Sticky note capture started');
-        break;
-    }
-  };
+    
+    // Navigate to capture page
+    navigateToCapture(action);
+  }, [updateProgressMutation, navigateToCapture]);
 
   // Skip onboarding
   const handleSkip = () => {
@@ -217,55 +145,8 @@ export default function ContractorOnboardingEntry() {
     );
   }
 
-  // Camera overlay
-  if (cameraOpen) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col">
-        <div className="absolute top-4 right-4 z-10">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={closeCamera}
-            className="bg-black/50 border-white/30 text-white"
-            data-testid="button-close-camera"
-          >
-            <X className="h-6 w-6" />
-          </Button>
-        </div>
-        
-        <video 
-          ref={videoRef}
-          autoPlay 
-          playsInline
-          className="flex-1 object-cover"
-        />
-        
-        <div className="p-6 flex justify-center">
-          <button 
-            onClick={capturePhoto}
-            className="w-20 h-20 rounded-full bg-white flex items-center justify-center hover-elevate active-elevate-2"
-            data-testid="button-capture-photo"
-          >
-            <Camera className="h-8 w-8 text-black" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Hidden file input for fallback */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileInput}
-        className="hidden"
-        data-testid="input-file-capture"
-      />
-
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-lg mx-auto">
         {/* Header */}
@@ -283,7 +164,7 @@ export default function ContractorOnboardingEntry() {
           {/* Action 1: Add My Truck & Trailer */}
           <Card 
             className="cursor-pointer hover-elevate active-elevate-2 border-2 transition-all"
-            onClick={() => openCamera('vehicle')}
+            onClick={() => handleActionClick('vehicle')}
             data-testid="card-action-vehicle"
           >
             <CardContent className="p-6 flex items-center gap-4">
@@ -303,7 +184,7 @@ export default function ContractorOnboardingEntry() {
           {/* Action 2: Add My Tools */}
           <Card 
             className="cursor-pointer hover-elevate active-elevate-2 border-2 transition-all"
-            onClick={() => openCamera('tools')}
+            onClick={() => handleActionClick('tools')}
             data-testid="card-action-tools"
           >
             <CardContent className="p-6 flex items-center gap-4">
@@ -323,7 +204,7 @@ export default function ContractorOnboardingEntry() {
           {/* Action 3: Add a Job From a Sticky Note (WOW path) */}
           <Card 
             className="cursor-pointer hover-elevate active-elevate-2 border-2 border-amber-300 dark:border-amber-600 transition-all relative overflow-visible"
-            onClick={() => openCamera('sticky-note')}
+            onClick={() => handleActionClick('sticky-note')}
             data-testid="card-action-sticky-note"
           >
             {/* Glow effect */}
