@@ -252,15 +252,13 @@ function DurableActionCard({
   onConfirm,
   onDismiss,
   onEdit,
-  isLoading,
-  isLocationConfirmed = false
+  isLoading
 }: { 
   action: DurableNextAction;
   onConfirm: (payload?: Record<string, any>) => void;
   onDismiss: () => void;
   onEdit?: (updatedPayload: Record<string, any>) => void;
   isLoading: boolean;
-  isLocationConfirmed?: boolean;
 }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editedPrompts, setEditedPrompts] = useState<string>('');
@@ -268,6 +266,13 @@ function DurableActionCard({
   const [editedCategory, setEditedCategory] = useState<string>('');
   const [editedAddress, setEditedAddress] = useState<string>('');
   const [selectedZoneId, setSelectedZoneId] = useState<string>(action.actionPayload?.selectedZoneId || '');
+  
+  // Sync selectedZoneId state with action.actionPayload updates (after refetch)
+  useEffect(() => {
+    if (action.actionPayload?.selectedZoneId) {
+      setSelectedZoneId(action.actionPayload.selectedZoneId);
+    }
+  }, [action.actionPayload?.selectedZoneId]);
   
   const meta = ACTION_TYPE_META[action.actionType] || {
     icon: <Sparkles className="h-4 w-4" />,
@@ -390,13 +395,6 @@ function DurableActionCard({
           {/* Zone selection for attach_to_zone */}
           {action.actionType === 'attach_to_zone' && (
             <div className="mt-2 space-y-2">
-              {!isLocationConfirmed && payload.geo?.lat && (
-                <div className="flex items-center gap-2 p-2 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <span className="text-amber-700 dark:text-amber-300">Confirm location first</span>
-                </div>
-              )}
-              
               {payload.proposedAddress && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-3 w-3" />
