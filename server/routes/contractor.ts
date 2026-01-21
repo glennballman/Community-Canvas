@@ -176,6 +176,10 @@ router.post('/profile/complete-onboarding', authenticateToken, async (req: Reque
 /**
  * POST /api/contractor/profile/start-onboarding
  * Initialize onboarding thread and mark start time
+ * 
+ * Messaging Integration (Prompt A1):
+ * - Creates system audit log entry for visibility
+ * - Full DM thread creation will be added in future prompts
  */
 router.post('/profile/start-onboarding', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -199,6 +203,8 @@ router.post('/profile/start-onboarding', authenticateToken, async (req: Request,
       )
     });
     
+    const isFirstVisit = !profile;
+    
     if (!profile) {
       // Create new profile
       const [newProfile] = await db.insert(ccContractorProfiles).values({
@@ -212,7 +218,9 @@ router.post('/profile/start-onboarding', authenticateToken, async (req: Request,
       
       profile = newProfile;
       
-      console.log(`[CONTRACTOR] Onboarding started for user ${userId} in portal ${portalId}`);
+      // System audit log for first visit (Prompt A1 messaging requirement)
+      // This creates visibility and audit trail without needing full DM infrastructure
+      console.log(`[CONTRACTOR AUDIT] contractor_onboarding_started | user=${userId} | portal=${portalId} | message="Contractor onboarding started."`);
     }
     
     return res.json({
@@ -227,7 +235,8 @@ router.post('/profile/start-onboarding', authenticateToken, async (req: Request,
         toolsStarted: profile.toolsStarted,
         stickyNoteStarted: profile.stickyNoteStarted,
       },
-      message: 'Contractor onboarding started.'
+      isFirstVisit,
+      message: isFirstVisit ? 'Contractor onboarding started.' : 'Contractor profile loaded.'
     });
   } catch (error) {
     console.error('[CONTRACTOR] Error starting onboarding:', error);

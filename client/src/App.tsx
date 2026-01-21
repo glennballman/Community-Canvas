@@ -166,6 +166,9 @@ import TripDetailPage from './pages/app/participant/TripDetailPage';
 import MyApplicationsPage from './pages/app/participant/MyApplicationsPage';
 import ApplicationDetailPage from './pages/app/participant/ApplicationDetailPage';
 
+// Pages - Contractor (Prompt A1)
+import ContractorOnboardingEntry from './pages/contractor/ContractorOnboardingEntry';
+
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
 
@@ -454,6 +457,9 @@ export default function App() {
                 <Route path="participant/trips/:tripId" element={<TripDetailPage />} />
                 <Route path="participant/applications" element={<MyApplicationsPage />} />
                 <Route path="participant/applications/:appId" element={<ApplicationDetailPage />} />
+                
+                {/* Contractor Onboarding (Prompt A1) */}
+                <Route path="contractor/onboard" element={<ContractorOnboardingEntry />} />
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />
