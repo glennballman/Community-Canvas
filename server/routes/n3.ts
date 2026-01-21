@@ -5,6 +5,8 @@
  * Endpoints:
  * - GET /api/n3/attention - Get runs requiring attention (open bundles)
  * - GET /api/n3/runs/:runId/monitor - Get monitor detail for a run
+ * - GET /api/n3/zones - Get portal-scoped zones for zone assignment (owner/admin only)
+ * - PUT /api/n3/runs/:runId/zone - Assign zone to a run (owner/admin only)
  * - POST /api/n3/bundles/:bundleId/dismiss - Dismiss a bundle
  * - POST /api/n3/bundles/:bundleId/action - Take action on a bundle
  * - POST /api/n3/runs/:runId/evaluate - Trigger immediate evaluation
@@ -19,10 +21,12 @@ import {
   ccMonitorState, 
   ccReplanBundles, 
   ccReplanOptions,
-  ccReplanActions 
+  ccReplanActions,
+  ccZones
 } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
+import { computeZonePricingEstimate, ZonePricingModifiers } from '@shared/zonePricing';
 import { 
   evaluateServiceRun, 
   saveEvaluationResult,
@@ -126,14 +130,182 @@ n3Router.get('/runs/:runId/monitor', async (req, res) => {
       })
     );
 
+    let zoneData: {
+      zone_id: string | null;
+      zone_name: string | null;
+      zone_key: string | null;
+      badge_label_resident: string | null;
+      badge_label_contractor: string | null;
+      badge_label_visitor: string | null;
+      pricing_modifiers: ZonePricingModifiers | null;
+      zone_pricing_estimate: ReturnType<typeof computeZonePricingEstimate> | null;
+    } = {
+      zone_id: run.zoneId || null,
+      zone_name: null,
+      zone_key: null,
+      badge_label_resident: null,
+      badge_label_contractor: null,
+      badge_label_visitor: null,
+      pricing_modifiers: null,
+      zone_pricing_estimate: null,
+    };
+
+    if (run.zoneId) {
+      const zone = await db.query.ccZones.findFirst({
+        where: eq(ccZones.id, run.zoneId),
+      });
+
+      if (zone) {
+        const pricingModifiers = (zone.pricingModifiers as ZonePricingModifiers) || null;
+        zoneData = {
+          zone_id: zone.id,
+          zone_name: zone.name,
+          zone_key: zone.key,
+          badge_label_resident: zone.badgeLabelResident,
+          badge_label_contractor: zone.badgeLabelContractor,
+          badge_label_visitor: zone.badgeLabelVisitor,
+          pricing_modifiers: pricingModifiers,
+          zone_pricing_estimate: null,
+        };
+
+        const baseEstimate = (run.metadata as any)?.estimated_value;
+        if (typeof baseEstimate === 'number' && baseEstimate > 0 && pricingModifiers) {
+          zoneData.zone_pricing_estimate = computeZonePricingEstimate(baseEstimate, pricingModifiers);
+        }
+      }
+    }
+
     res.json({
-      run,
+      run: {
+        ...run,
+        portal_id: run.portalId,
+        zone_id: run.zoneId,
+      },
       segments,
       monitorState: state,
       bundles: bundlesWithOptions,
+      ...zoneData,
     });
   } catch (err) {
     console.error('[N3 API] Error fetching monitor detail:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+n3Router.get('/zones', async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const portalId = req.query.portalId as string;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant ID' });
+    }
+
+    if (!portalId) {
+      return res.status(400).json({ error: 'Missing portalId query parameter' });
+    }
+
+    const zones = await db
+      .select({
+        id: ccZones.id,
+        key: ccZones.key,
+        name: ccZones.name,
+        badge_label_resident: ccZones.badgeLabelResident,
+        badge_label_contractor: ccZones.badgeLabelContractor,
+        badge_label_visitor: ccZones.badgeLabelVisitor,
+        pricing_modifiers: ccZones.pricingModifiers,
+      })
+      .from(ccZones)
+      .where(and(
+        eq(ccZones.tenantId, tenantId),
+        eq(ccZones.portalId, portalId)
+      ))
+      .orderBy(ccZones.name);
+
+    res.json({ zones });
+  } catch (err) {
+    console.error('[N3 API] Error fetching zones:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+const zoneAssignmentSchema = z.object({
+  zone_id: z.string().uuid().nullable(),
+});
+
+n3Router.put('/runs/:runId/zone', async (req, res) => {
+  try {
+    const { runId } = req.params;
+    const tenantId = req.headers['x-tenant-id'] as string;
+    const body = zoneAssignmentSchema.parse(req.body);
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant ID' });
+    }
+
+    const run = await db.query.ccN3Runs.findFirst({
+      where: and(
+        eq(ccN3Runs.id, runId),
+        eq(ccN3Runs.tenantId, tenantId)
+      ),
+    });
+
+    if (!run) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+
+    if (!run.portalId) {
+      return res.status(400).json({ 
+        error: 'Run must have portal_id set before zone assignment',
+        code: 'PORTAL_REQUIRED'
+      });
+    }
+
+    const previousZoneId = run.zoneId;
+
+    if (body.zone_id !== null) {
+      const zone = await db.query.ccZones.findFirst({
+        where: eq(ccZones.id, body.zone_id),
+      });
+
+      if (!zone) {
+        return res.status(404).json({ error: 'Zone not found' });
+      }
+
+      if (zone.portalId !== run.portalId) {
+        return res.status(400).json({ 
+          error: 'Zone must belong to the same portal as the run',
+          code: 'PORTAL_MISMATCH'
+        });
+      }
+    }
+
+    await db
+      .update(ccN3Runs)
+      .set({ 
+        zoneId: body.zone_id,
+        updatedAt: new Date(),
+      })
+      .where(eq(ccN3Runs.id, runId));
+
+    let auditAction: string;
+    if (previousZoneId === null && body.zone_id !== null) {
+      auditAction = 'zone_set';
+    } else if (previousZoneId !== null && body.zone_id === null) {
+      auditAction = 'zone_cleared';
+    } else {
+      auditAction = 'zone_updated';
+    }
+
+    console.log(`[N3 API] Zone ${auditAction}: run=${runId}, prev=${previousZoneId}, new=${body.zone_id}`);
+
+    res.json({ 
+      success: true,
+      zone_id: body.zone_id,
+      audit_action: auditAction,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error assigning zone:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1429,6 +1429,7 @@ export const ccZones = pgTable('cc_zones', {
   badgeLabelResident: text('badge_label_resident'),
   badgeLabelContractor: text('badge_label_contractor'),
   badgeLabelVisitor: text('badge_label_visitor'),
+  pricingModifiers: jsonb('pricing_modifiers').notNull().default({}),
   theme: jsonb('theme').notNull().default({}),
   accessProfile: jsonb('access_profile').notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
