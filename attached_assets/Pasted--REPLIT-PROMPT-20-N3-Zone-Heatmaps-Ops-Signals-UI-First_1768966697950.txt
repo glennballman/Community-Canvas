@@ -1,0 +1,248 @@
+✅ REPLIT PROMPT 20 — N3 Zone Heatmaps & Ops Signals (UI-First, No New Economics)
+NON-NEGOTIABLE RULES
+
+❌ Never use: booking / bookings / booked
+✅ Use: reservation / reserved / scheduled
+
+N3 (cc_n3_runs) is the only Service Runs spine.
+
+Do not touch legacy service runs (cc_service_runs, p2-service-runs.ts, legacy UI).
+
+No billing/ledger/folio/payment changes.
+
+No new economics. Do NOT add or change pricing modifiers.
+
+No contractor exposure of internal ops data.
+
+Use Prompt 14 label logic (getZoneBadgeLabel) for zone display.
+
+GOAL
+
+Add operator situational awareness using zone “heat” signals without changing scheduling logic:
+
+Zone heat metrics for:
+
+Runs
+
+Attention bundles
+
+UI badges and lightweight visual indicators:
+
+“Hot zones” callouts
+
+Zone density bars (not a map)
+
+Optional: “Unzoned heat” to show operational debt
+
+This is UI-first: compute counts server-side and render simple visuals client-side.
+
+PART A — Backend: Zone Heat Metrics Endpoint (N3)
+A1) Add endpoint
+
+Add to server/routes/n3.ts:
+
+GET /api/n3/zone-heat
+
+Middleware:
+
+requireAuth
+
+requireTenant
+
+(NOT platform admin only; this is tenant ops data)
+
+If your tenant roles exist, you MAY require admin/owner, but it’s acceptable for authenticated tenant users if it contains only counts.
+
+Query params (optional):
+
+portalId?: string
+
+windowDays?: number default 7, clamp 1–60
+
+Return counts grouped by zone:
+
+zone_id (nullable)
+
+zone_key, zone_name, badge labels (resident/contractor/visitor)
+
+runs_count in window
+
+attention_bundles_count in window (open bundles only)
+
+unresolved_bundles_count (optional if you track dismissed/actioned)
+
+last_activity_at (max timestamp across runs/bundles in window)
+
+Also return rollups:
+
+total_runs
+
+total_attention_bundles
+
+unzoned_runs
+
+unzoned_attention_bundles
+
+A1 Implementation guidance
+
+Use tenant-scoped context (TenantRequest, tenantReq.ctx.tenant_id)
+
+Use portalId filter if provided:
+
+runs where cc_n3_runs.portal_id = portalId
+
+zones where cc_zones.portal_id = portalId
+
+Window definition:
+
+startsAt >= now() - interval 'X days' OR use createdAt if startsAt null (choose a consistent fallback)
+
+Zone join:
+
+LEFT JOIN zones on cc_n3_runs.zone_id
+
+“Unzoned” is where zone_id IS NULL
+
+A1 Important
+
+Do NOT return pricing_modifiers from this endpoint.
+
+This endpoint is counts only.
+
+PART B — Frontend: Zone Heat UI
+B1) Hook
+
+In client/src/hooks/n3/useN3.ts add:
+
+useN3ZoneHeat(tenantId: string | null, portalId?: string | null, windowDays?: number)
+
+Disabled when tenantId missing
+
+Query key includes portalId + windowDays
+
+B2) Attention Page: Zone Heat Banner + Hot Zones
+
+In client/src/pages/n3/ServiceRunAttentionPage.tsx:
+
+Add a “Zone Heat” panel above the grouped attention list:
+
+Dropdown / toggle:
+
+“Window: 7 days / 14 days / 30 days”
+
+Show rollups:
+
+Total attention bundles
+
+Unzoned bundles (with warning styling)
+
+Show “Hot Zones” list:
+
+Top 3 zones by attention_bundles_count
+
+Each row shows:
+
+ZoneBadge using Prompt 14 label logic
+
+Count badge “X attention”
+
+Small horizontal bar (relative width) as a density indicator
+
+Sorting:
+
+Primary: attention_bundles_count desc
+
+Secondary: runs_count desc
+
+Then label asc
+
+Unzoned:
+
+Always included as a row if it has any activity
+
+Display label: “Unzoned” (not from zone label logic)
+
+Always show it last in “Hot Zones” list
+
+B3) Runs List Page: Zone Heat Summary (if page exists)
+
+If there is an N3 runs list page in client/src/pages/n3/*:
+
+Add a compact heat strip at top:
+
+“Zones active this week: X”
+
+“Hot zones: A, B, C” (ZoneBadges)
+
+If there isn’t, skip this step.
+
+PART C — Visual Components (Simple, Reusable)
+C1) Create ZoneHeatRow component
+
+Create client/src/components/n3/ZoneHeatRow.tsx (or similar).
+
+Props:
+
+zone display model (nullable zone)
+
+counts
+
+maxCount for scaling
+
+Renders:
+
+ZoneBadge / “Unzoned”
+
+numeric count
+
+density bar (div with width % based on count/maxCount)
+
+no charts library; simple HTML
+
+C2) Create ZoneHeatPanel
+
+Optional wrapper component for the banner.
+
+PART D — Acceptance Criteria / QA
+
+/api/n3/zone-heat returns:
+
+tenant-scoped counts ✅
+
+respects portalId filter ✅
+
+clamps windowDays ✅
+
+no pricing_modifiers ✅
+
+UI:
+
+Heat panel appears on Attention page ✅
+
+Hot zones list shows top 3 + optional Unzoned ✅
+
+Density bars scale correctly ✅
+
+Window selector refetches data ✅
+
+Zone labels use Prompt 14 fallback chain ✅
+
+Security:
+
+Requires auth + tenant ✅
+
+No sensitive modifier leakage ✅
+
+No changes to billing ✅
+
+DELIVERABLES
+
+Backend: GET /api/n3/zone-heat
+
+Frontend: hook + Attention page heat panel + density rows
+
+Components: ZoneHeatRow (+ optional ZoneHeatPanel)
+
+QA notes in PR description/comments
+
+END PROMPT 20

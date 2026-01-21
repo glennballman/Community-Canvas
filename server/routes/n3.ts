@@ -25,7 +25,7 @@ import {
   ccZones,
   ccPortals
 } from '@shared/schema';
-import { eq, and, desc, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull, gte, count, max, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { computeZonePricingEstimate, ZonePricingModifiers } from '@shared/zonePricing';
 import { requireAuth, requireTenant } from '../middleware/guards';
@@ -130,6 +130,140 @@ n3Router.get('/filters', requireAuth, requireTenant, async (req, res) => {
     res.json({ portals, zones });
   } catch (err) {
     console.error('[N3 API] Error fetching filters:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/n3/zone-heat - Get zone heat metrics (activity counts)
+ * Returns counts of runs and attention bundles grouped by zone for ops awareness.
+ * Query params:
+ *   - portalId?: string - Filter by portal
+ *   - windowDays?: number - Time window (default 7, clamped 1-60)
+ */
+n3Router.get('/zone-heat', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const { portalId, windowDays: windowDaysParam } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenant context' });
+    }
+
+    // Parse and clamp windowDays (default 7, range 1-60)
+    let windowDays = 7;
+    if (windowDaysParam) {
+      const parsed = parseInt(windowDaysParam as string, 10);
+      if (!isNaN(parsed)) {
+        windowDays = Math.max(1, Math.min(60, parsed));
+      }
+    }
+
+    // Calculate the window start date
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - windowDays);
+
+    // Build conditions for runs query
+    const runsConditions = [
+      eq(ccN3Runs.tenantId, tenantId),
+      // Use startsAt if available, fallback to createdAt
+      sql`COALESCE(${ccN3Runs.startsAt}, ${ccN3Runs.createdAt}) >= ${windowStart}`,
+    ];
+    if (portalId && typeof portalId === 'string') {
+      runsConditions.push(eq(ccN3Runs.portalId, portalId));
+    }
+
+    // Get runs grouped by zone with counts
+    const zoneRunCounts = await db
+      .select({
+        zone_id: ccN3Runs.zoneId,
+        zone_key: ccZones.key,
+        zone_name: ccZones.name,
+        badge_label_resident: ccZones.badgeLabelResident,
+        badge_label_contractor: ccZones.badgeLabelContractor,
+        badge_label_visitor: ccZones.badgeLabelVisitor,
+        runs_count: count(ccN3Runs.id),
+        last_activity_at: max(sql`COALESCE(${ccN3Runs.startsAt}, ${ccN3Runs.createdAt})`),
+      })
+      .from(ccN3Runs)
+      .leftJoin(ccZones, eq(ccN3Runs.zoneId, ccZones.id))
+      .where(and(...runsConditions))
+      .groupBy(
+        ccN3Runs.zoneId,
+        ccZones.key,
+        ccZones.name,
+        ccZones.badgeLabelResident,
+        ccZones.badgeLabelContractor,
+        ccZones.badgeLabelVisitor
+      );
+
+    // Get attention bundles (open only) grouped by zone
+    // We need to join through runs to get zone info
+    const bundleConditions = [
+      eq(ccReplanBundles.tenantId, tenantId),
+      eq(ccReplanBundles.status, 'open'),
+      gte(ccReplanBundles.createdAt, windowStart),
+    ];
+
+    // Subquery to get open bundle counts per run, then aggregate by zone
+    const zoneBundleCounts = await db
+      .select({
+        zone_id: ccN3Runs.zoneId,
+        attention_bundles_count: count(ccReplanBundles.id),
+      })
+      .from(ccReplanBundles)
+      .innerJoin(ccN3Runs, eq(ccReplanBundles.runId, ccN3Runs.id))
+      .where(
+        and(
+          eq(ccReplanBundles.tenantId, tenantId),
+          eq(ccReplanBundles.status, 'open'),
+          gte(ccReplanBundles.createdAt, windowStart),
+          portalId && typeof portalId === 'string' 
+            ? eq(ccN3Runs.portalId, portalId) 
+            : undefined
+        )
+      )
+      .groupBy(ccN3Runs.zoneId);
+
+    // Merge counts into a map
+    const bundleCountMap = new Map<string | null, number>();
+    for (const row of zoneBundleCounts) {
+      bundleCountMap.set(row.zone_id, Number(row.attention_bundles_count));
+    }
+
+    // Build zone heat data
+    const zones = zoneRunCounts.map(row => ({
+      zone_id: row.zone_id,
+      zone_key: row.zone_key,
+      zone_name: row.zone_name,
+      badge_label_resident: row.badge_label_resident,
+      badge_label_contractor: row.badge_label_contractor,
+      badge_label_visitor: row.badge_label_visitor,
+      runs_count: Number(row.runs_count),
+      attention_bundles_count: bundleCountMap.get(row.zone_id) || 0,
+      last_activity_at: row.last_activity_at,
+    }));
+
+    // Calculate rollups
+    const totalRuns = zones.reduce((sum, z) => sum + z.runs_count, 0);
+    const totalAttentionBundles = zones.reduce((sum, z) => sum + z.attention_bundles_count, 0);
+    const unzonedZone = zones.find(z => z.zone_id === null);
+    const unzonedRuns = unzonedZone?.runs_count || 0;
+    const unzonedAttentionBundles = unzonedZone?.attention_bundles_count || 0;
+
+    res.json({
+      zones,
+      rollups: {
+        total_runs: totalRuns,
+        total_attention_bundles: totalAttentionBundles,
+        unzoned_runs: unzonedRuns,
+        unzoned_attention_bundles: unzonedAttentionBundles,
+      },
+      window_days: windowDays,
+    });
+  } catch (err) {
+    console.error('[N3 API] Error fetching zone heat:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
