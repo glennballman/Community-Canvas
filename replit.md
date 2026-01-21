@@ -88,6 +88,8 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **A2.2 Service Area & Route Intelligence**: Consent-first service coverage inference from uploads.
 - **A2.3 Unified Upload Classifier + Asset Router**: Any-media classification pipeline for contractor uploads.
 - **A2.4 Geo Resolution + Business Graph Binding**: Geocodes EXIF/OCR data to place candidates, resolves against contractor's business graph (customers/jobsites/work requests), proposes draft entities but never auto-creates without explicit confirmation. Features Nominatim integration with rate limiting, address normalization with SHA-256 hashing, and UI confirm/change/deny/skip workflow.
+- **A2.5 Event Mode**: Contractor lead capture at booths/events with non-linear flow, public lead capture, and quote drafts system. Unclaimed leads (tenantId IS NULL) visible to contractors, auto-claimed on edit/publish.
+- **A2.6 Ingestion Intelligence Layer**: Durable next actions engine for sticky note→execution flows. Derives 7 action types (create_work_request, attach_to_zone, request_more_photos, draft_n3_run, open_quote_draft, add_tool, add_fleet) from A2.3 outputs. Features cc_ingestion_next_actions table for durable tracking, cc_sticky_note_extractions for OCR analysis, confirm/dismiss workflow, and tenant-scoped security. UI workspace in UploadResultsPage.
 
 ## External Dependencies
 
