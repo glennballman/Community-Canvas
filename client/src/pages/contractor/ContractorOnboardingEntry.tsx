@@ -96,14 +96,14 @@ export default function ContractorOnboardingEntry() {
     },
   });
 
-  // Initialize onboarding on first visit
+  const profile = profileData?.profile;
+
+  // Initialize onboarding on first visit (when profile exists but onboarding not started)
   useEffect(() => {
-    if (user && currentTenant && profileData?.success === false) {
+    if (user && currentTenant && profile && !profile.onboardingStartedAt) {
       startOnboardingMutation.mutate();
     }
-  }, [user, currentTenant, profileData]);
-
-  const profile = profileData?.profile;
+  }, [user, currentTenant, profile]);
 
   // Redirect if already completed
   useEffect(() => {
@@ -223,10 +223,10 @@ export default function ContractorOnboardingEntry() {
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
         <div className="absolute top-4 right-4 z-10">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="icon" 
             onClick={closeCamera}
-            className="text-white hover:bg-white/20"
+            className="bg-black/50 border-white/30 text-white"
             data-testid="button-close-camera"
           >
             <X className="h-6 w-6" />
@@ -241,14 +241,13 @@ export default function ContractorOnboardingEntry() {
         />
         
         <div className="p-6 flex justify-center">
-          <Button 
-            size="lg"
+          <button 
             onClick={capturePhoto}
-            className="w-20 h-20 rounded-full bg-white hover:bg-gray-200"
+            className="w-20 h-20 rounded-full bg-white flex items-center justify-center hover-elevate active-elevate-2"
             data-testid="button-capture-photo"
           >
             <Camera className="h-8 w-8 text-black" />
-          </Button>
+          </button>
         </div>
       </div>
     );

@@ -40,14 +40,14 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       )
     });
     
-    // Auto-create profile if doesn't exist
+    // Auto-create profile if doesn't exist (but don't set onboardingStartedAt yet)
     if (!profile) {
       const [newProfile] = await db.insert(ccContractorProfiles).values({
         userId,
         portalId,
         tenantId: tenantId || null,
         onboardingComplete: false,
-        onboardingStartedAt: new Date(),
+        onboardingStartedAt: null, // Set by start-onboarding endpoint
         contractorRole: 'contractor_worker',
       }).returning();
       
