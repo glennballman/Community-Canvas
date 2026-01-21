@@ -87,6 +87,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **A2.1 Contractor Identity Enrichment**: Camera-first identity extraction from vehicle photos.
 - **A2.2 Service Area & Route Intelligence**: Consent-first service coverage inference from uploads.
 - **A2.3 Unified Upload Classifier + Asset Router**: Any-media classification pipeline for contractor uploads.
+- **A2.4 Geo Resolution + Business Graph Binding**: Geocodes EXIF/OCR data to place candidates, resolves against contractor's business graph (customers/jobsites/work requests), proposes draft entities but never auto-creates without explicit confirmation. Features Nominatim integration with rate limiting, address normalization with SHA-256 hashing, and UI confirm/change/deny/skip workflow.
 
 ## External Dependencies
 
