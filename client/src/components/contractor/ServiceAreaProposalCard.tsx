@@ -274,10 +274,7 @@ export function ServiceAreaProposalCard({
       accepted: Array<{ proposal: ServiceAreaProposal; is_published: boolean }>;
       dismissed: string[];
     }) => {
-      return apiRequest('/api/contractor/profile/service-areas/confirm', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
+      return apiRequest('POST', '/api/contractor/profile/service-areas/confirm', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contractor/profile/service-areas'] });

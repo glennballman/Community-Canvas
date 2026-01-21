@@ -172,6 +172,7 @@ import VehicleCapturePage from './pages/contractor/VehicleCapturePage';
 import ToolCapturePage from './pages/contractor/ToolCapturePage';
 import StickyNoteCapturePage from './pages/contractor/StickyNoteCapturePage';
 import IngestionReviewPage from './pages/contractor/IngestionReviewPage';
+import ServiceAreasPage from './pages/contractor/ServiceAreasPage';
 
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
@@ -468,6 +469,7 @@ export default function App() {
                 <Route path="contractor/onboard/tools" element={<ToolCapturePage />} />
                 <Route path="contractor/onboard/sticky-note" element={<StickyNoteCapturePage />} />
                 <Route path="contractor/onboard/ingestions/:id" element={<IngestionReviewPage />} />
+                <Route path="contractor/onboard/service-areas" element={<ServiceAreasPage />} />
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />
