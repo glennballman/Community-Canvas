@@ -28,6 +28,9 @@ import {
   FileText,
   Loader2,
   CheckCircle2,
+  Lock,
+  Unlock,
+  Eye,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -45,6 +48,9 @@ import {
   useN3AttachMaintenanceRequests,
   useN3DetachMaintenanceRequests,
   useN3ReadinessDrift,
+  useN3ReadinessSnapshot,
+  useLockN3Readiness,
+  useUnlockN3Readiness,
 } from '@/hooks/n3/useN3';
 import { SegmentList } from '@/components/n3/SegmentList';
 import { SignalBadges, RiskScoreBadge } from '@/components/n3/SignalBadges';
@@ -130,6 +136,17 @@ export default function ServiceRunMonitorPage() {
     shouldFetchDrift ? runId : undefined,
     TEST_TENANT_ID
   );
+  
+  // Readiness lock/snapshot (Prompt 30)
+  const [showSnapshotDialog, setShowSnapshotDialog] = useState(false);
+  const [lockNote, setLockNote] = useState('');
+  const shouldFetchSnapshot = runId && (runStatus === 'draft' || runStatus === 'scheduled');
+  const { data: snapshotData, refetch: refetchSnapshot } = useN3ReadinessSnapshot(
+    shouldFetchSnapshot ? runId : undefined,
+    TEST_TENANT_ID
+  );
+  const lockMutation = useLockN3Readiness(runId || '', TEST_TENANT_ID);
+  const unlockMutation = useUnlockN3Readiness(runId || '', TEST_TENANT_ID);
 
   const handlePortalChange = async (selectedPortalId: string) => {
     if (!runId || selectedPortalId === 'none') return;
@@ -753,6 +770,219 @@ export default function ServiceRunMonitorPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Readiness Lock Card (Prompt 30) - Pre-execution snapshot */}
+      {(run.status === 'draft' || run.status === 'scheduled') && snapshotData && (
+        <Card data-testid="card-readiness-lock">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                {snapshotData.locked ? (
+                  <Lock className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Unlock className="h-5 w-5 text-muted-foreground" />
+                )}
+                Readiness Lock
+              </CardTitle>
+              {snapshotData.locked && (
+                <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                  Locked
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!snapshotData.locked ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Lock the current state as a planning snapshot before execution. This captures what you believed was true at this moment.
+                </p>
+                <div className="space-y-2">
+                  <label htmlFor="lock-note" className="text-sm font-medium">
+                    Note (optional)
+                  </label>
+                  <Textarea
+                    id="lock-note"
+                    placeholder="Any notes about this lock..."
+                    value={lockNote}
+                    onChange={(e) => setLockNote(e.target.value)}
+                    className="resize-none"
+                    maxLength={500}
+                    data-testid="input-lock-note"
+                  />
+                </div>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await lockMutation.mutateAsync(lockNote || undefined);
+                      toast({
+                        title: 'Readiness locked',
+                        description: 'A snapshot of the current state has been captured.',
+                      });
+                      setLockNote('');
+                      refetchSnapshot();
+                    } catch (err: any) {
+                      toast({
+                        title: 'Failed to lock',
+                        description: err.message,
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  disabled={lockMutation.isPending}
+                  data-testid="button-lock-readiness"
+                >
+                  {lockMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4 mr-2" />
+                  )}
+                  Lock Readiness
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      Locked {snapshotData.snapshot?.locked_at ? formatDistanceToNow(new Date(snapshotData.snapshot.locked_at), { addSuffix: true }) : 'recently'}
+                    </span>
+                  </div>
+                  {snapshotData.snapshot?.note && (
+                    <div className="p-2 rounded bg-muted text-sm">
+                      {snapshotData.snapshot.note}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>
+                      {snapshotData.snapshot?.payload.summary.total_attached} requests captured
+                      ({snapshotData.snapshot?.payload.summary.opted_in_count} opted-in, {snapshotData.snapshot?.payload.summary.opted_out_count} opted-out)
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowSnapshotDialog(true)}
+                    data-testid="button-view-snapshot"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Snapshot
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={async () => {
+                      try {
+                        await unlockMutation.mutateAsync();
+                        toast({
+                          title: 'Readiness unlocked',
+                          description: 'The snapshot has been deleted.',
+                        });
+                        refetchSnapshot();
+                      } catch (err: any) {
+                        toast({
+                          title: 'Failed to unlock',
+                          description: err.message,
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                    disabled={unlockMutation.isPending}
+                    data-testid="button-unlock-readiness"
+                  >
+                    {unlockMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Unlock className="h-4 w-4 mr-2" />
+                    )}
+                    Unlock
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Snapshot View Dialog (Prompt 30) */}
+      <Dialog open={showSnapshotDialog} onOpenChange={setShowSnapshotDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-green-500" />
+              Readiness Snapshot
+            </DialogTitle>
+          </DialogHeader>
+          
+          {snapshotData?.snapshot && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Locked At:</span>
+                  <p className="font-medium">
+                    {format(new Date(snapshotData.snapshot.locked_at), 'PPpp')}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Total Attached:</span>
+                  <p className="font-medium">{snapshotData.snapshot.payload.summary.total_attached}</p>
+                </div>
+              </div>
+              
+              {snapshotData.snapshot.note && (
+                <div>
+                  <span className="text-sm text-muted-foreground">Note:</span>
+                  <p className="text-sm mt-1 p-2 bg-muted rounded">{snapshotData.snapshot.note}</p>
+                </div>
+              )}
+              
+              <div>
+                <span className="text-sm font-medium">Run State at Lock</span>
+                <div className="mt-2 p-3 rounded bg-muted/50 border text-sm space-y-1">
+                  <div><span className="text-muted-foreground">Name:</span> {snapshotData.snapshot.payload.run.name}</div>
+                  <div><span className="text-muted-foreground">Status:</span> {snapshotData.snapshot.payload.run.status}</div>
+                  {snapshotData.snapshot.payload.run.zone_id && (
+                    <div><span className="text-muted-foreground">Zone ID:</span> {snapshotData.snapshot.payload.run.zone_id}</div>
+                  )}
+                  {snapshotData.snapshot.payload.run.starts_at && (
+                    <div><span className="text-muted-foreground">Starts:</span> {format(new Date(snapshotData.snapshot.payload.run.starts_at), 'PPpp')}</div>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <span className="text-sm font-medium">Attached Requests at Lock ({snapshotData.snapshot.payload.attached_requests.length})</span>
+                <div className="mt-2 max-h-48 overflow-y-auto space-y-2">
+                  {snapshotData.snapshot.payload.attached_requests.map((req, idx) => (
+                    <div 
+                      key={req.maintenance_request_id} 
+                      className="p-2 rounded bg-muted/30 border text-xs"
+                      data-testid={`snapshot-request-${idx}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-muted-foreground">{req.maintenance_request_id.slice(0, 8)}...</span>
+                        <Badge variant={req.coordination_opt_in_at_lock ? "default" : "secondary"} className="text-xs">
+                          {req.coordination_opt_in_at_lock ? 'Opted In' : 'Opted Out'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">{req.status_at_lock}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSnapshotDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showAttachModal} onOpenChange={setShowAttachModal}>
         <DialogContent className="max-w-2xl">
