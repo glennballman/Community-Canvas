@@ -254,12 +254,19 @@ export async function deriveNextActions(
 /**
  * Recompute next actions for an ingestion
  * Clears existing proposed actions and creates new ones
+ * 
+ * IMPORTANT: "Dismiss stays dismissed" rule
+ * - If an action was dismissed or expired, don't recreate it unless force=true
+ * - Uses stable key (actionType + payload.key) for matching
  */
 export async function recomputeNextActions(
   ingestionId: string,
   tenantId: string,
-  contractorProfileId: string
+  contractorProfileId: string,
+  options?: { force?: boolean }
 ): Promise<IngestionNextAction[]> {
+  const force = options?.force ?? false;
+  
   // Fetch the ingestion
   const ingestion = await db.query.ccAiIngestions.findFirst({
     where: eq(ccAiIngestions.id, ingestionId)
@@ -267,6 +274,26 @@ export async function recomputeNextActions(
   
   if (!ingestion) {
     throw new Error('Ingestion not found');
+  }
+  
+  // Get existing dismissed/expired actions to avoid recreating them
+  const dismissedActions = await db.query.ccIngestionNextActions.findMany({
+    where: and(
+      eq(ccIngestionNextActions.ingestionId, ingestionId),
+      eq(ccIngestionNextActions.tenantId, tenantId)
+    )
+  });
+  
+  // Build a set of dismissed action keys (actionType + payload.key)
+  const dismissedKeys = new Set<string>();
+  if (!force) {
+    for (const action of dismissedActions) {
+      if (action.status === 'dismissed' || action.status === 'expired') {
+        const payload = action.payload as any || {};
+        const key = `${action.actionType}:${payload.key || 'default'}`;
+        dismissedKeys.add(key);
+      }
+    }
   }
   
   // Clear existing proposed actions (keep confirmed/dismissed)
@@ -279,16 +306,34 @@ export async function recomputeNextActions(
   // Derive new proposals
   const proposals = await deriveNextActions(ingestion);
   
+  // Filter out proposals that match dismissed keys
+  const filteredProposals = proposals.filter(proposal => {
+    const payloadKey = proposal.actionPayload?.key || 'default';
+    const key = `${proposal.actionType}:${payloadKey}`;
+    
+    if (dismissedKeys.has(key)) {
+      console.log(`[A2.6] Skipping dismissed action: ${key}`);
+      return false;
+    }
+    return true;
+  });
+  
   // Insert new actions
   const insertedActions: IngestionNextAction[] = [];
   
-  for (const proposal of proposals) {
+  for (const proposal of filteredProposals) {
+    // Add stable key to payload
+    const payloadWithKey = {
+      ...proposal.actionPayload,
+      key: proposal.actionPayload?.key || `${proposal.actionType}_${ingestionId}`
+    };
+    
     const [action] = await db.insert(ccIngestionNextActions).values({
       tenantId,
       contractorProfileId,
       ingestionId,
       actionType: proposal.actionType,
-      actionPayload: proposal.actionPayload,
+      payload: payloadWithKey,
       confidence: String(proposal.confidence),
       status: 'proposed'
     }).returning();
