@@ -794,3 +794,66 @@ export function useUnlockN3Readiness(runId: string, tenantId: string) {
     },
   });
 }
+
+// ============ EXECUTION ELIGIBILITY (Prompt 31) ============
+
+export interface ExecutionEligibilityResponse {
+  run_id: string;
+  evaluated_at: string;
+  snapshot: {
+    locked_at: string;
+    locked_by: string;
+  };
+  eligibility: {
+    overall: 'unchanged' | 'improved' | 'degraded';
+  };
+  deltas: {
+    attachments?: {
+      attached_count_delta: number;
+      category_deltas?: Record<string, number>;
+    };
+    coordination?: {
+      coord_ready_count_delta: number;
+      opt_in_ratio_delta: number;
+    };
+    readiness_drift?: {
+      coordination_opt_out?: number;
+      zone_mismatch?: number;
+      inactive_status?: number;
+      age_exceeded?: number;
+    };
+    zone_pricing?: {
+      final_estimate_delta?: number;
+    };
+  };
+}
+
+/**
+ * Hook to fetch execution eligibility comparison (snapshot vs live).
+ * Returns advisory deltas only (no PII, no IDs).
+ * Admin/owner only. Requires active snapshot.
+ * 
+ * Cache key includes snapshotLockedAt to force re-eval when relocked.
+ */
+export function useN3ExecutionEligibility(
+  runId: string | undefined, 
+  tenantId: string,
+  snapshotLockedAt?: string | null
+) {
+  return useQuery<ExecutionEligibilityResponse>({
+    queryKey: ['/api/n3/runs', runId, 'execution-eligibility', snapshotLockedAt],
+    queryFn: async () => {
+      const res = await fetch(`/api/n3/runs/${runId}/execution-eligibility`, {
+        headers: { 'x-tenant-id': tenantId },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to fetch execution eligibility');
+      }
+      return res.json();
+    },
+    enabled: !!runId && !!tenantId && !!snapshotLockedAt,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
+}
