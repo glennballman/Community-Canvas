@@ -209,7 +209,7 @@ export function useN3Filters(tenantId: string | null, portalId?: string | null) 
   });
 }
 
-export function useN3Runs(tenantId: string, filters?: N3RunsFilters) {
+export function useN3Runs(tenantId: string | null, filters?: N3RunsFilters) {
   return useQuery<N3RunWithZone[]>({
     queryKey: ['/api/n3/runs', tenantId, filters?.portalId, filters?.zoneId],
     queryFn: async () => {
@@ -218,7 +218,7 @@ export function useN3Runs(tenantId: string, filters?: N3RunsFilters) {
       if (filters?.zoneId) params.set('zoneId', filters.zoneId);
       const url = `/api/n3/runs${params.toString() ? `?${params}` : ''}`;
       const res = await fetch(url, {
-        headers: { 'x-tenant-id': tenantId },
+        headers: { 'x-tenant-id': tenantId! },
       });
       if (!res.ok) throw new Error('Failed to fetch runs');
       return res.json();
