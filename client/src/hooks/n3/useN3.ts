@@ -192,7 +192,7 @@ export interface N3RunsFilters {
   zoneId?: string | null;
 }
 
-export function useN3Filters(tenantId: string, portalId?: string | null) {
+export function useN3Filters(tenantId: string | null, portalId?: string | null) {
   return useQuery<N3FiltersData>({
     queryKey: ['/api/n3/filters', tenantId, portalId],
     queryFn: async () => {
@@ -200,7 +200,7 @@ export function useN3Filters(tenantId: string, portalId?: string | null) {
       if (portalId) params.set('portalId', portalId);
       const url = `/api/n3/filters${params.toString() ? `?${params}` : ''}`;
       const res = await fetch(url, {
-        headers: { 'x-tenant-id': tenantId },
+        headers: { 'x-tenant-id': tenantId! },
       });
       if (!res.ok) throw new Error('Failed to fetch filters');
       return res.json();
@@ -227,7 +227,7 @@ export function useN3Runs(tenantId: string, filters?: N3RunsFilters) {
   });
 }
 
-export function useN3Attention(tenantId: string, filters?: N3RunsFilters) {
+export function useN3Attention(tenantId: string | null, filters?: N3RunsFilters) {
   return useQuery<{ bundles: AttentionBundleWithZone[] }>({
     queryKey: ['/api/n3/attention', tenantId, filters?.portalId, filters?.zoneId],
     queryFn: async () => {
@@ -236,7 +236,7 @@ export function useN3Attention(tenantId: string, filters?: N3RunsFilters) {
       if (filters?.zoneId) params.set('zoneId', filters.zoneId);
       const url = `/api/n3/attention${params.toString() ? `?${params}` : ''}`;
       const res = await fetch(url, {
-        headers: { 'x-tenant-id': tenantId },
+        headers: { 'x-tenant-id': tenantId! },
       });
       if (!res.ok) throw new Error('Failed to fetch attention queue');
       return res.json();
@@ -260,11 +260,12 @@ export function useN3MonitorDetail(runId: string, tenantId: string) {
   });
 }
 
-export function useN3DismissBundle(tenantId: string) {
+export function useN3DismissBundle(tenantId: string | null) {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async ({ bundleId, reason }: { bundleId: string; reason?: string }) => {
+      if (!tenantId) throw new Error('Tenant ID is required');
       const res = await fetch(`/api/n3/bundles/${bundleId}/dismiss`, {
         method: 'POST',
         headers: { 

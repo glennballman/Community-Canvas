@@ -24,8 +24,7 @@ import {
 import { AttentionQueueTable } from '@/components/n3/AttentionQueueTable';
 import { useToast } from '@/hooks/use-toast';
 import { getZoneBadgeLabel } from '@/components/ZoneBadge';
-
-const TEST_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface ZoneLike {
   id: string;
@@ -89,11 +88,14 @@ function groupBundlesByZone(bundles: AttentionBundleWithZone[]): ZoneGroup[] {
 export default function ServiceRunAttentionPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { currentTenant } = useTenant();
+  
+  const tenantId = currentTenant?.tenant_id || null;
   
   const [selectedPortalId, setSelectedPortalId] = useState<string | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   
-  const { data: filtersData } = useN3Filters(TEST_TENANT_ID, selectedPortalId);
+  const { data: filtersData } = useN3Filters(tenantId, selectedPortalId);
   
   const filters = useMemo(() => ({
     portalId: selectedPortalId,
@@ -105,10 +107,10 @@ export default function ServiceRunAttentionPage() {
     isLoading,
     refetch,
     isRefetching 
-  } = useN3Attention(TEST_TENANT_ID, filters);
+  } = useN3Attention(tenantId, filters);
   
   const { data: status } = useN3Status();
-  const dismissMutation = useN3DismissBundle(TEST_TENANT_ID);
+  const dismissMutation = useN3DismissBundle(tenantId);
 
   const zoneGroups = useMemo(() => {
     if (!attentionData?.bundles) return [];
