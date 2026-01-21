@@ -7590,6 +7590,16 @@ export const ccContractorProfiles = pgTable("cc_contractor_profiles", {
   // DM thread for operator communication
   onboardingThreadId: uuid("onboarding_thread_id"),
   
+  // A2.1: Identity enrichment fields (confirmed contractor identity)
+  companyName: text("company_name"),
+  companyPhone: text("company_phone"),
+  companyWebsite: text("company_website"),
+  companyLocationHint: text("company_location_hint"),
+  brandHints: jsonb("brand_hints").notNull().default({}),
+  identityEnrichmentState: varchar("identity_enrichment_state", { length: 20 }).notNull().default('not_started'),
+  identityEnrichmentLastProposedAt: timestamp("identity_enrichment_last_proposed_at", { withTimezone: true }),
+  identityEnrichmentLastConfirmedAt: timestamp("identity_enrichment_last_confirmed_at", { withTimezone: true }),
+  
   // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -7633,6 +7643,10 @@ export const ccAiIngestions = pgTable("cc_ai_ingestions", {
   
   // Error message if status = 'error'
   errorMessage: text("error_message"),
+  
+  // A2.1: Identity proposal from vehicle photos
+  identityProposal: jsonb("identity_proposal").notNull().default({}),
+  identityProposalStatus: varchar("identity_proposal_status", { length: 20 }).notNull().default('none'),
   
   // Timestamps
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

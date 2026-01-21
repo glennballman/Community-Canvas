@@ -1,0 +1,305 @@
+✅ REPLIT PROMPT A2.1 — Contractor Identity Enrichment from Truck/Trailer Media (Consent-First, Privacy-Safe)
+Purpose
+
+When a contractor uploads photos of their truck/trailer, we often can visually detect:
+
+company name / branding / phone / website / social handles
+
+province/state from plates (or other cues)
+
+likely home base from EXIF GPS (if present) — but we must treat this as “where photo was taken”, not “office address”
+
+We want to generate a candidate contractor identity with confidence, then ask the contractor to:
+
+Confirm / Deny / Change / Dismiss (“I just want to view a work request”)
+
+This is a core onboarding WOW moment.
+
+A) Data Model (minimal additions)
+1) Extend cc_contractor_profiles
+
+Add fields (nullable) if not present:
+
+company_name text
+
+company_phone text
+
+company_website text
+
+company_location_hint text (free-text display only; do not treat as canonical address)
+
+brand_hints jsonb not null default '{}' (colors/logos later)
+
+identity_enrichment_state text not null default 'not_started' // not_started | proposed | confirmed | dismissed
+
+identity_enrichment_last_proposed_at timestamptz
+
+identity_enrichment_last_confirmed_at timestamptz
+
+2) Extend cc_ai_ingestions
+
+If not already present from Prompt A2:
+
+identity_proposal jsonb not null default '{}'
+
+identity_proposal_status text not null default 'none' // none | proposed | confirmed | denied | dismissed
+
+B) Privacy & Security Invariants (HARD)
+
+No auto-doxxing
+
+Never present an address as “fact” unless the contractor confirms it.
+
+Use wording like: “Possible match” / “We found a likely website” / “Photo appears taken near … (from GPS metadata).”
+
+License plate handling
+
+Do NOT store raw license plates long-term.
+
+If you detect plate region, store only plate_region (e.g., “SK”, “BC”, “WA”) and an optional one-way hash of the plate string for dedupe/debug (not reversible).
+
+Never display the full plate back to the user.
+
+Consent-first web lookup
+
+Only do online lookups if the contractor explicitly taps “Find my company automatically” (toggle/button).
+
+Without consent: only use text extracted from the image itself (website/phone printed on truck).
+
+Role gating
+
+Contractor can see their own identity proposal.
+
+Tenant admins/operators can see only identity_enrichment_state and a boolean “has_confirmed_identity” unless explicitly granted more.
+
+C) Backend Services
+1) server/services/contractorIdentityService.ts
+
+Create functions:
+
+extractIdentitySignalsFromMedia(images: Media[]): IdentitySignals
+
+Uses existing ingestion media list
+
+Performs lightweight OCR on the image to find:
+
+phone numbers
+
+domains/URLs
+
+social handles
+
+company name tokens
+
+Returns:
+
+{
+  detected_company_name?: string,
+  detected_phone?: string,
+  detected_domain?: string,
+  detected_social?: string[],
+  plate_region?: string,
+  gps?: { lat: number, lng: number, captured_at?: string } | null
+}
+
+proposeIdentityCandidate(signals, options): IdentityProposal
+
+Creates a proposal object with confidence and evidence
+
+Never claims certainty
+
+Proposal shape:
+
+{
+  "company_name": "UrbanScape Designs",
+  "phone": "306-555-1212",
+  "website": "https://www.urbanscapedesigns.ca",
+  "location_hint": "Photo captured near Saskatoon, SK (GPS metadata)",
+  "likely_person": "Todd Kozack",
+  "confidence": 0.82,
+  "evidence": [
+    {"type":"ocr_domain","value":"urbanscapedesigns.ca"},
+    {"type":"ocr_phone","value":"306-555-1212"},
+    {"type":"gps_hint","value":"Saskatoon, SK"}
+  ],
+  "requires_consent_for_web_lookup": true
+}
+
+Optional: enrichFromWeb(websiteOrDomain): WebEnrichmentResult
+
+ONLY called if contractor gave consent
+
+Fetch minimal metadata (title, logo URL, dominant colors later)
+
+Must be robust, timeouts, and fail gracefully
+
+Return:
+
+{
+  "website_title": "...",
+  "logo_url": "...",
+  "brand_colors": ["#...","#..."],
+  "about_snippet": "..."
+}
+
+
+IMPORTANT: Do not scrape aggressively; keep it minimal and cache per domain.
+
+D) API Routes
+
+Add routes under /api/contractor/profile:
+
+1) POST /api/contractor/profile/identity/propose
+
+Requires auth + tenant context
+
+Input:
+
+{
+  "ingestion_id": "uuid",
+  "allow_web_lookup": false
+}
+
+
+Uses extractIdentitySignalsFromMedia and builds identity_proposal
+
+Saves proposal to both:
+
+cc_ai_ingestions.identity_proposal
+
+cc_contractor_profiles.identity_enrichment_state='proposed'
+
+2) POST /api/contractor/profile/identity/enrich-web
+
+Requires auth
+
+Input:
+
+{
+  "ingestion_id":"uuid",
+  "domain_or_website":"urbanscapedesigns.ca"
+}
+
+
+Only allowed if contractor explicitly triggers it
+
+Attaches enrichment metadata into proposal under web_enrichment
+
+3) POST /api/contractor/profile/identity/confirm
+
+Input:
+
+{
+  "ingestion_id":"uuid",
+  "company_name":"...",
+  "phone":"...",
+  "website":"...",
+  "location_hint":"...",
+  "person_name":"..."
+}
+
+
+Writes to cc_contractor_profiles canonical fields
+
+Sets identity_enrichment_state='confirmed'
+
+Sets ingestion proposal status to confirmed
+
+4) POST /api/contractor/profile/identity/deny
+
+Sets states to denied (do not keep proposing automatically unless new media)
+
+5) POST /api/contractor/profile/identity/dismiss
+
+Sets identity_enrichment_state='dismissed'
+
+Must support: “I just want to view a work request right now”
+
+E) Frontend UX (Contractor)
+Route
+
+/app/contractor/intake/:ingestionId
+
+Add Identity Card that appears when classification contains vehicle or mixed with vehicle signals.
+
+Identity Card states
+
+Propose
+
+Button: “Find my company automatically”
+
+Subtext: “We’ll only use what’s visible on your truck/trailer unless you allow a website lookup.”
+
+Proposal shown
+Display exactly like your spec, but with safer language:
+
+“Possible match”
+
+Confidence meter (e.g., 82%)
+
+Evidence chips: “Website on vehicle”, “Phone on vehicle”, “GPS metadata”
+
+Buttons:
+
+✅ Confirm
+
+❌ Deny
+
+✏️ Change (edit fields inline)
+
+⏭ Dismiss (“I just want to view a work request”)
+
+Web lookup consent
+If proposal has a domain but not confirmed yet:
+
+Toggle: “Yes, check the website for logo/branding”
+
+Explain: “Used later to match photos when quoting. Optional.”
+
+Test IDs
+
+card-identity-proposal
+
+btn-identity-propose
+
+btn-identity-enrich-web
+
+btn-identity-confirm
+
+btn-identity-deny
+
+btn-identity-change
+
+btn-identity-dismiss
+
+F) Acceptance Criteria
+
+Upload truck/trailer photo with website printed:
+
+Proposal shows website + company guess
+
+No web lookup unless user clicks
+
+Upload truck photo with GPS EXIF:
+
+Location shown as “Photo captured near …” not “your office is …”
+
+No exact street address shown by default
+
+Contractor dismisses:
+
+No blocking; user can continue to work request view immediately
+
+Contractor confirms:
+
+Profile is updated with confirmed company fields
+
+Proposal becomes read-only + “confirmed” badge
+
+G) Non-Goals (explicit)
+
+Do not build full fleet dashboard here
+
+Do not permanently store license plate strings
+
+Do not auto-create service areas yet (that comes after confirmation)
