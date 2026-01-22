@@ -24,7 +24,8 @@ import {
   X,
   ImageIcon,
   Upload,
-  AlertCircle
+  AlertCircle,
+  MapPin
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -544,6 +545,29 @@ export default function OnboardWorkspacePage() {
               {noteItems.length > 3 && (
                 <p className="text-xs text-muted-foreground">+{noteItems.length - 3} more</p>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Zones Card - RES-ONB-01: Only show in place mode */}
+        {isPlaceMode && (
+          <Card data-testid="card-zones">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">Define work zones</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Link to={`/onboard/w/${token}/zones`}>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-muted-foreground"
+                  data-testid="button-add-zones"
+                >
+                  + Add zones where work needs to happen
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         )}

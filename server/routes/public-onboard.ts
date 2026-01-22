@@ -226,9 +226,11 @@ router.patch('/workspaces/:token', async (req: Request, res: Response) => {
 /**
  * POST /api/public/onboard/workspaces/:token/items
  * Add an item to the workspace
+ * 
+ * RES-ONB-01: Added zone_definition item type for resident zone definitions
  */
 const createItemSchema = z.object({
-  itemType: z.enum(['typed_note', 'media', 'form', 'qr_payload']),
+  itemType: z.enum(['typed_note', 'media', 'form', 'qr_payload', 'zone_definition']),
   payload: z.record(z.any()).default({})
 });
 
@@ -300,6 +302,46 @@ router.get('/workspaces/:token/items', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching items:', error);
     return res.status(500).json({ ok: false, error: 'Failed to fetch items' });
+  }
+});
+
+/**
+ * DELETE /api/public/onboard/workspaces/:token/items/:itemId
+ * Remove an item from the workspace (RES-ONB-01)
+ */
+router.delete('/workspaces/:token/items/:itemId', async (req: Request, res: Response) => {
+  try {
+    const { token, itemId } = req.params;
+    
+    const workspace = await getWorkspaceByToken(token);
+    
+    if (!workspace) {
+      return res.status(404).json({ ok: false, error: 'Workspace not found' });
+    }
+    
+    if (new Date(workspace.expiresAt) < new Date()) {
+      return res.status(410).json({ ok: false, error: 'expired' });
+    }
+    
+    // Verify item belongs to this workspace
+    const item = await db.query.ccOnboardingItems.findFirst({
+      where: and(
+        eq(ccOnboardingItems.id, itemId),
+        eq(ccOnboardingItems.workspaceId, workspace.id)
+      )
+    });
+    
+    if (!item) {
+      return res.status(404).json({ ok: false, error: 'Item not found' });
+    }
+    
+    await db.delete(ccOnboardingItems)
+      .where(eq(ccOnboardingItems.id, itemId));
+    
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('Error deleting item:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to delete item' });
   }
 });
 

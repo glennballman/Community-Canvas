@@ -210,6 +210,7 @@ import OnboardWorkspacePage from './pages/public/onboard/OnboardWorkspacePage';
 import OnboardReviewPage from './pages/public/onboard/OnboardReviewPage';
 import OnboardClaimPage from './pages/public/onboard/OnboardClaimPage';
 import OnboardPlacePage from './pages/public/onboard/OnboardPlacePage';
+import OnboardZonesPage from './pages/public/onboard/OnboardZonesPage';
 import OnboardingResultsPage from './pages/app/OnboardingResultsPage';
 
 // Pages - Dev Tools (M-2)
@@ -360,6 +361,7 @@ export default function App() {
               <Route path="/onboard/place" element={<OnboardPlacePage />} />
               <Route path="/onboard/place/:portalSlug" element={<OnboardPlacePage />} />
               <Route path="/onboard/w/:token" element={<OnboardWorkspacePage />} />
+              <Route path="/onboard/w/:token/zones" element={<OnboardZonesPage />} />
               <Route path="/onboard/w/:token/review" element={<OnboardReviewPage />} />
               <Route path="/onboard/w/:token/claim" element={<OnboardClaimPage />} />
               <Route path="/onboard/results" element={<OnboardingResultsPage />} />
