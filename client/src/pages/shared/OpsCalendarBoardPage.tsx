@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { MessageCircle, Camera, ExternalLink, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
+import { PortalConditionsBar } from '@/components/portal/PortalConditionsBar';
 import { useToast } from '@/hooks/use-toast';
 
 export type OpsCalendarMode = 'contractor' | 'resident' | 'portal';
@@ -367,6 +368,9 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
       className="h-full flex flex-col" 
       data-testid={getTestId()}
     >
+      {mode === 'portal' && portalSlug && (
+        <PortalConditionsBar portalSlug={portalSlug} compact />
+      )}
       <ScheduleBoard
         resources={resources}
         groupedResources={groupedResources}
