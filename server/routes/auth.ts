@@ -198,9 +198,15 @@ router.post('/refresh', async (req: Request, res: Response) => {
     }
 });
 
-router.post('/logout', authenticateToken, async (req: AuthRequest, res: Response) => {
+/**
+ * COMPATIBILITY LOGOUT ENDPOINT
+ * Backward-compatible logout that works without requiring authentication.
+ * Safe no-op if already logged out. Supports both POST and GET.
+ * Used by test harnesses, debug panels, and legacy browser flows.
+ */
+async function handleLogout(req: Request, res: Response) {
     try {
-        const { refreshToken } = req.body;
+        const refreshToken = req.body?.refreshToken;
 
         if (refreshToken) {
             await serviceQuery(
@@ -209,13 +215,21 @@ router.post('/logout', authenticateToken, async (req: AuthRequest, res: Response
             );
         }
 
-        res.json({ success: true, message: 'Logged out successfully' });
+        // Return 204 No Content for compatibility
+        res.status(204).send();
 
     } catch (error: any) {
         console.error('Logout error:', error);
-        res.status(500).json({ success: false, error: 'Logout failed' });
+        // Still return 204 for compatibility - logout should never fail from client perspective
+        res.status(204).send();
     }
-});
+}
+
+// POST /api/auth/logout - main compatibility endpoint (no auth required)
+router.post('/logout', handleLogout);
+
+// GET /api/auth/logout - additional compatibility for browser redirects (no auth required)
+router.get('/logout', handleLogout);
 
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

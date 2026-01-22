@@ -1,0 +1,194 @@
+REPLIT PROMPT — P-PLATFORM-ACCTMGMT-01
+ROLE: Lead platform engineer for Community Canvas V3.5.
+GOAL: Make Platform Admin capable of deterministic test setup for contractor photo uploads by adding:
+(A) clickable tenant list + row action buttons (view / portals / impersonate)
+(B) create tenant + create user + assign tenant admin
+(C) dev-only password set/reset + invite/claim flow
+(D) stable “Test Personas” (Ellen contractor admin) to keep testing consistent
+
+NON-NEGOTIABLES
+- No /admin/* routes. Platform UI is /app/platform/*, APIs are /api/platform/* (or existing platform router namespace if already used).
+- All endpoints must require platform admin authorization (NOT tenant admin).
+- Password setting/reset MUST be dev-only OR require a platform admin capability gate. Never expose to public.
+- No refactors; additive changes only.
+
+--------------------------------------------
+1) FIX: TENANT LIST ROWS NOT CLICKABLE
+--------------------------------------------
+Problem: Tenant rows are not clickable; user can’t open tenant detail. Also missing row actions.
+
+Action:
+- In Platform Tenants page component (All Tenants list):
+  - Ensure each row has a proper <button> or <Link to={`/app/platform/tenants/${tenant.id}`}> wrapper.
+  - Remove/avoid absolute overlays that capture clicks.
+  - If row currently uses onClick but a child is stopping propagation, fix it: only stopPropagation on action buttons.
+
+Add explicit "Actions" column with right-side buttons that always work:
+- View (go to tenant detail)
+- Portals (go to tenant portals list view)
+- Impersonate (platform admin sets session context to that tenant + optionally user)
+- Open Tenant App (opens /app/dashboard after setting tenant context)
+
+--------------------------------------------
+2) PLATFORM ACTION BUTTONS ON TENANT ROW
+--------------------------------------------
+UI additions on /app/platform/tenants:
+For each tenant row show buttons on the far-right:
+- "Portals" (navigates to /app/platform/tenants/:id/portals)
+- "Users" (navigates to /app/platform/tenants/:id/users)
+- "Impersonate" (opens modal: choose user within tenant; default = first tenant admin; confirm)
+- "Open Tenant" (sets tenant context, then navigates to /app/dashboard)
+
+Implementation details:
+- Clicking row navigates to tenant detail
+- Clicking buttons must not trigger row navigation (stopPropagation on the buttons)
+
+--------------------------------------------
+3) PLATFORM USER MANAGEMENT: CREATE USER + SET PASSWORD (DEV SAFE)
+--------------------------------------------
+We need deterministic accounts for testing contractor uploads.
+
+Add Platform Admin APIs:
+
+3.1 POST /api/platform/users
+Body:
+{
+  email: string,
+  name?: string,
+  role?: "platform_admin"|"user" (default "user")
+}
+Returns created user id.
+
+3.2 POST /api/platform/users/:id/set-password   (DEV ONLY)
+Body: { password: string }
+Guards:
+- Only enabled when (process.env.NODE_ENV !== 'production') OR CC_DEV_SEED === "true"
+- Must also require platform admin auth
+Effect:
+- Set the user's password in the same auth system used by /foundation/auth/login
+
+3.3 POST /api/platform/users/:id/reset-password (DEV ONLY)
+- Generates a random password and returns it to the platform admin (for testing)
+- Same guards as set-password
+
+UI additions:
+- On /app/platform/users page:
+  - Add "Create User" modal
+  - Add per-user row "Set Password" (dev only)
+  - Add per-user row "Make Tenant Admin" (select tenant)
+
+--------------------------------------------
+4) PLATFORM TENANT MANAGEMENT: CREATE TENANT + ASSIGN ADMIN + DBA LABELS
+--------------------------------------------
+Add Platform Admin APIs:
+
+4.1 POST /api/platform/tenants
+Body:
+{
+  name: string,
+  slug: string,
+  tenantType?: "business"|"government"|"property"|"individual"|"platform",
+  legalName?: string,
+  dbaNames?: string[]   // ex: ["Enviropaving", "Remote Services Inc"]
+}
+Effect:
+- Create tenant record
+- Store dbaNames in tenant metadata JSON if there is no dedicated column (additive only)
+
+4.2 POST /api/platform/tenants/:tenantId/assign-admin
+Body:
+{
+  userId: string,
+  actorRole: "tenant_admin"
+}
+Effect:
+- Create the tenant-user role mapping using the canonical join table used by V3.5 (do NOT create a new role system).
+
+4.3 POST /api/platform/tenants/:tenantId/create-portal (optional shortcut)
+Body: { name, slug, portalType }
+If portal creation already exists elsewhere, call the existing service.
+
+UI additions on /app/platform/tenants:
+- "Create Tenant" modal
+- In tenant detail: "Add Admin User" (search users or create new)
+
+--------------------------------------------
+5) IMPERSONATION (PLATFORM ADMIN)
+--------------------------------------------
+We need a deterministic way to impersonate Ellen for contractor upload testing.
+
+Add Platform Admin API:
+
+POST /api/platform/impersonate
+Body:
+{
+  tenantId: string,
+  userId?: string,      // optional; if absent, impersonate tenant context only
+  mode: "tenant"|"user"
+}
+Effect:
+- Set server-side session context OR mint a short-lived impersonation token (whichever is consistent with existing auth).
+- Must be auditable: log [PLATFORM AUDIT] { event:"impersonate", actorUserId, targetTenantId, targetUserId }
+
+UI:
+- Impersonation modal on tenant row: lists users in tenant (API: GET /api/platform/tenants/:id/users)
+- After impersonate:
+  - Show a persistent banner: "IMPERSONATING: {user} in {tenant}" + "Stop"
+  - Stop calls POST /api/platform/stop-impersonation
+
+--------------------------------------------
+6) TEST PERSONA: ELLEN (CONTRACTOR ADMIN) FOR 1252093 BC LTD
+--------------------------------------------
+Create a deterministic dev persona used for testing A2.* contractor photo uploads.
+
+Add a Platform Admin UI shortcut button somewhere (Platform Settings or Dev Tools):
+"Ensure Test Persona: Ellen"
+
+Backend:
+POST /api/platform/dev/ensure-test-personas (DEV ONLY)
+- Ensures tenant exists: "1252093 BC LTD"
+- Adds metadata dbaNames: ["Enviropaving", "Remote Services Inc"]
+- Ensures user exists:
+  email: "ellen+dev@example.com" (use this exact email for dev consistency)
+  name: "Ellen"
+- Sets password (dev only): "Ellen123!"
+- Assigns Ellen as tenant_admin for that tenant
+- Ensures contractor profile exists for Ellen in that tenant (whatever table is used by contractor module)
+- Returns summary payload: tenantId, userId, contractorProfileId, password
+
+This is for internal testing only and must be hard-guarded by CC_DEV_SEED or non-production.
+
+--------------------------------------------
+7) CLICKABLE TENANTS + PORTAL LINKS
+--------------------------------------------
+On tenant row, "Portals" button must open a platform-scoped portals view.
+Implement UI routes:
+- /app/platform/tenants/:id/portals
+- /app/platform/tenants/:id/users
+
+Each portal row should have:
+- View portal config
+- Open public portal (/p/:slug)
+- Open tenant-scoped portal admin (if exists)
+
+--------------------------------------------
+8) ACCEPTANCE CRITERIA (HARD)
+--------------------------------------------
+A) Tenant list rows are clickable and open tenant detail.
+B) Each tenant row has working Actions: Portals, Users, Impersonate, Open Tenant.
+C) Platform Admin can create tenant, create user, assign tenant_admin.
+D) In dev mode, Platform Admin can set/reset passwords (guarded).
+E) "Ensure Test Persona: Ellen" creates a stable test account usable for contractor upload testing.
+F) Impersonation shows a banner and can be stopped.
+G) No new /admin/* usage introduced.
+
+--------------------------------------------
+9) WHAT TO EDIT / WHERE TO LOOK
+--------------------------------------------
+- client/src/app/platform/pages/TenantsPage.tsx (or equivalent)
+- client/src/app/platform/pages/UsersPage.tsx
+- server/routes/platform.ts (or wherever platform router is)
+- server/middleware/requirePlatformAdmin.ts (or existing guard)
+- foundation auth user/password storage (reuse existing functions; do NOT invent a new auth store)
+
+Proceed implementing now.

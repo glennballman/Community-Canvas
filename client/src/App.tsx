@@ -163,6 +163,8 @@ import FolioDetailPage from './pages/app/admin/FolioDetailPage';
 import UsageSummaryPage from './pages/app/admin/UsageSummaryPage';
 import TenantsListPage from './pages/app/platform/TenantsListPage';
 import TenantDetailPage from './pages/app/platform/TenantDetailPage';
+import TenantPortalsPage from './pages/app/platform/TenantPortalsPage';
+import TenantUsersPage from './pages/app/platform/TenantUsersPage';
 import AnalyticsPage from './pages/app/platform/AnalyticsPage';
 import CertificationsPage from './pages/app/admin/CertificationsPage';
 import OperatorHomePage from './pages/app/operator/OperatorHomePage';
@@ -364,6 +366,8 @@ export default function App() {
                 <Route index element={<PlatformHomePage />} />
                 <Route path="tenants" element={<TenantsListPage />} />
                 <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
+                <Route path="tenants/:tenantId/portals" element={<TenantPortalsPage />} />
+                <Route path="tenants/:tenantId/users" element={<TenantUsersPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="users" element={<UsersManagement />} />
                 <Route path="system-explorer" element={<SystemExplorerPage />} />

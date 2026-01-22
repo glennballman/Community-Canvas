@@ -12,9 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Search, Users, Globe, Calendar, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Building2, Search, Users, Globe, Calendar, ArrowRight, Eye, UserCog, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { getAuthHeaders } from '@/lib/api';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 
 interface Tenant {
   id: string;
@@ -45,6 +49,8 @@ export default function TenantsListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery<{ success: boolean; tenants: Tenant[] }>({
     queryKey: ['/api/p2/platform/tenants'],
@@ -170,46 +176,116 @@ export default function TenantsListPage() {
           ) : (
             <div className="space-y-2">
               {filteredTenants.map((tenant) => (
-                <Link key={tenant.id} href={`/app/platform/tenants/${tenant.id}`}>
-                  <div className="flex items-center justify-between p-4 rounded-lg border hover-elevate cursor-pointer" data-testid={`tenant-row-${tenant.id}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{tenant.name}</div>
-                        <div className="text-sm text-muted-foreground">{tenant.slug}</div>
-                      </div>
+                <div 
+                  key={tenant.id} 
+                  className="flex items-center justify-between p-4 rounded-lg border hover-elevate cursor-pointer"
+                  data-testid={`tenant-row-${tenant.id}`}
+                  onClick={() => setLocation(`/app/platform/tenants/${tenant.id}`)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="flex gap-2">
-                        <Badge className={typeColors[tenant.type] || 'bg-gray-100'}>{tenant.type}</Badge>
-                        <Badge className={statusColors[tenant.status] || 'bg-gray-100'}>{tenant.status}</Badge>
-                      </div>
-                      <div className="text-right text-sm min-w-24">
-                        <div className="flex items-center gap-1">
-                          <Globe className="h-3 w-3" />
-                          {tenant.portalsCount} portals
-                        </div>
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Users className="h-3 w-3" />
-                          {tenant.activeUsers} users
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground min-w-32 text-right">
-                        {tenant.lastActivity ? (
-                          <div className="flex items-center gap-1 justify-end">
-                            <Calendar className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(tenant.lastActivity), { addSuffix: true })}
-                          </div>
-                        ) : (
-                          <span>No activity</span>
-                        )}
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">{tenant.name}</div>
+                      <div className="text-sm text-muted-foreground">{tenant.slug}</div>
                     </div>
                   </div>
-                </Link>
+                  <div className="flex items-center gap-4">
+                    <div className="flex gap-2">
+                      <Badge className={typeColors[tenant.type] || 'bg-gray-100'}>{tenant.type}</Badge>
+                      <Badge className={statusColors[tenant.status] || 'bg-gray-100'}>{tenant.status}</Badge>
+                    </div>
+                    <div className="text-right text-sm min-w-24">
+                      <div className="flex items-center gap-1">
+                        <Globe className="h-3 w-3" />
+                        {tenant.portalsCount} portals
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        {tenant.activeUsers} users
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground min-w-24 text-right">
+                      {tenant.lastActivity ? (
+                        <div className="flex items-center gap-1 justify-end">
+                          <Calendar className="h-3 w-3" />
+                          {formatDistanceToNow(new Date(tenant.lastActivity), { addSuffix: true })}
+                        </div>
+                      ) : (
+                        <span>No activity</span>
+                      )}
+                    </div>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setLocation(`/app/platform/tenants/${tenant.id}/portals`)}
+                        data-testid={`button-portals-${tenant.id}`}
+                        title="View Portals"
+                      >
+                        <Globe className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setLocation(`/app/platform/tenants/${tenant.id}/users`)}
+                        data-testid={`button-users-${tenant.id}`}
+                        title="View Users"
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/p2/platform/impersonate', {
+                              method: 'POST',
+                              headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({ tenantId: tenant.id, mode: 'tenant' })
+                            });
+                            if (res.ok) {
+                              toast({ title: 'Impersonating', description: `Now acting as ${tenant.name}` });
+                              setLocation('/app/dashboard');
+                            }
+                          } catch (err) {
+                            toast({ title: 'Error', description: 'Failed to start impersonation', variant: 'destructive' });
+                          }
+                        }}
+                        data-testid={`button-impersonate-${tenant.id}`}
+                        title="Impersonate Tenant"
+                      >
+                        <UserCog className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/p2/platform/impersonate', {
+                              method: 'POST',
+                              headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({ tenantId: tenant.id, mode: 'tenant' })
+                            });
+                            if (res.ok) {
+                              setLocation('/app/dashboard');
+                            }
+                          } catch (err) {
+                            toast({ title: 'Error', description: 'Failed to open tenant', variant: 'destructive' });
+                          }
+                        }}
+                        data-testid={`button-open-tenant-${tenant.id}`}
+                        title="Open Tenant App"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
               ))}
             </div>
           )}
