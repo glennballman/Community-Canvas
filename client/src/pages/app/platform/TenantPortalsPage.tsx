@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useRoute, Link } from 'wouter';
+import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -52,8 +52,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function TenantPortalsPage() {
-  const [, params] = useRoute('/app/platform/tenants/:tenantId/portals');
-  const tenantId = params?.tenantId;
+  const { tenantId } = useParams<{ tenantId: string }>();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -93,7 +92,7 @@ export default function TenantPortalsPage() {
   if (error || !tenant) {
     return (
       <div className="p-6" data-testid="error-container">
-        <Link href="/app/platform/tenants">
+        <Link to="/app/platform/tenants">
           <Button variant="ghost" className="mb-4" data-testid="button-back-error">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Tenants
@@ -108,7 +107,7 @@ export default function TenantPortalsPage() {
 
   return (
     <div className="p-6 space-y-6" data-testid="page-platform-tenant-portals">
-      <Link href="/app/platform/tenants">
+      <Link to="/app/platform/tenants">
         <Button variant="ghost" className="mb-2" data-testid="button-back-tenants">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Tenants
@@ -236,7 +235,7 @@ export default function TenantPortalsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 ml-4">
-                    <Link href={`/app/platform/tenants/${tenantId}/portals/${portal.id}`}>
+                    <Link to={`/app/platform/tenants/${tenantId}/portals/${portal.id}`}>
                       <Button
                         size="icon"
                         variant="ghost"

@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'wouter';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,7 +17,6 @@ import { Building2, Search, Users, Globe, Calendar, ArrowRight, Eye, UserCog, Ex
 import { formatDistanceToNow } from 'date-fns';
 import { getAuthHeaders } from '@/lib/api';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
 interface Tenant {
@@ -49,7 +48,7 @@ export default function TenantsListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery<{ success: boolean; tenants: Tenant[] }>({
@@ -180,7 +179,7 @@ export default function TenantsListPage() {
                   key={tenant.id} 
                   className="flex items-center justify-between p-4 rounded-lg border hover-elevate cursor-pointer"
                   data-testid={`tenant-row-${tenant.id}`}
-                  onClick={() => setLocation(`/app/platform/tenants/${tenant.id}`)}
+                  onClick={() => navigate(`/app/platform/tenants/${tenant.id}`)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -220,7 +219,7 @@ export default function TenantsListPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => setLocation(`/app/platform/tenants/${tenant.id}/portals`)}
+                        onClick={() => navigate(`/app/platform/tenants/${tenant.id}/portals`)}
                         data-testid={`button-portals-${tenant.id}`}
                         title="View Portals"
                       >
@@ -229,7 +228,7 @@ export default function TenantsListPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => setLocation(`/app/platform/tenants/${tenant.id}/users`)}
+                        onClick={() => navigate(`/app/platform/tenants/${tenant.id}/users`)}
                         data-testid={`button-users-${tenant.id}`}
                         title="View Users"
                       >
@@ -248,7 +247,7 @@ export default function TenantsListPage() {
                             });
                             if (res.ok) {
                               toast({ title: 'Impersonating', description: `Now acting as ${tenant.name}` });
-                              setLocation('/app/dashboard');
+                              navigate('/app/dashboard');
                             } else {
                               const errData = await res.json().catch(() => ({}));
                               toast({ title: 'Error', description: errData.message || 'Failed to start impersonation', variant: 'destructive' });
@@ -274,7 +273,7 @@ export default function TenantsListPage() {
                               body: JSON.stringify({ tenantId: tenant.id, mode: 'tenant' })
                             });
                             if (res.ok) {
-                              setLocation('/app/dashboard');
+                              navigate('/app/dashboard');
                             } else {
                               const errData = await res.json().catch(() => ({}));
                               toast({ title: 'Error', description: errData.message || 'Failed to open tenant', variant: 'destructive' });

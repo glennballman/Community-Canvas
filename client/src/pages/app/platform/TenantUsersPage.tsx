@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useRoute, Link } from 'wouter';
+import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -53,8 +53,7 @@ const isDevMode = () => {
 };
 
 export default function TenantUsersPage() {
-  const [, params] = useRoute('/app/platform/tenants/:tenantId/users');
-  const tenantId = params?.tenantId;
+  const { tenantId } = useParams<{ tenantId: string }>();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -149,7 +148,7 @@ export default function TenantUsersPage() {
   if (error) {
     return (
       <div className="p-6" data-testid="error-container">
-        <Link href="/app/platform/tenants">
+        <Link to="/app/platform/tenants">
           <Button variant="ghost" className="mb-4" data-testid="button-back-error">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Tenants
@@ -164,7 +163,7 @@ export default function TenantUsersPage() {
 
   return (
     <div className="p-6 space-y-6" data-testid="page-platform-tenant-users">
-      <Link href="/app/platform/tenants">
+      <Link to="/app/platform/tenants">
         <Button variant="ghost" className="mb-2" data-testid="button-back-tenants">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Tenants
