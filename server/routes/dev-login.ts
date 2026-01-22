@@ -26,6 +26,7 @@ const DEV_LOGIN_ALLOWLIST = new Set([
   'contractor@example.com',
   'guest@example.com',
   'ellen@example.com',
+  'wade@example.com',
   'pavel@example.com',
   'rita@example.com'
 ]);

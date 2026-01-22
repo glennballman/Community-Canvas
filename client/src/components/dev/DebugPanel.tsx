@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Bug, ChevronDown, ChevronUp, Copy, Check, LogIn, Loader2, LogOut, Building2, RefreshCw, ExternalLink } from 'lucide-react';
+import { X, Bug, ChevronDown, ChevronUp, Copy, Check, LogIn, Loader2, LogOut, Building2, RefreshCw, ExternalLink, Play, RotateCcw, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -125,6 +125,10 @@ export function DebugPanel() {
   
   // Context state
   const [context, setContext] = useState<ContextData | null>(null);
+  
+  // Demo state
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoResult, setDemoResult] = useState<{ ok: boolean; message: string } | null>(null);
   
   const isDev = import.meta.env.DEV;
   const TOKEN_KEY = 'cc_token';
@@ -256,6 +260,91 @@ export function DebugPanel() {
       setTenantError(err instanceof Error ? err.message : 'Network error');
     } finally {
       setSetTenantLoading(false);
+    }
+  };
+
+  const seedDemoData = async () => {
+    setDemoLoading(true);
+    setDemoResult(null);
+    try {
+      const res = await fetch('/api/dev/demo-seed', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        setDemoResult({ ok: true, message: `Seeded: ${data.summary.runs} runs, ${data.summary.zones} zones` });
+      } else {
+        setDemoResult({ ok: false, message: data.error || 'Seed failed' });
+      }
+    } catch (err) {
+      setDemoResult({ ok: false, message: err instanceof Error ? err.message : 'Network error' });
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
+  const resetDemoData = async () => {
+    setDemoLoading(true);
+    setDemoResult(null);
+    try {
+      const res = await fetch('/api/dev/demo-reset', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        const total = Object.values(data.summary as Record<string, number>).reduce((a, b) => a + b, 0);
+        setDemoResult({ ok: true, message: `Reset: ${total} rows deleted` });
+      } else {
+        setDemoResult({ ok: false, message: data.error || 'Reset failed' });
+      }
+    } catch (err) {
+      setDemoResult({ ok: false, message: err instanceof Error ? err.message : 'Network error' });
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
+  const loginAsEllen = async () => {
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const res = await fetch('/api/dev/login-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'ellen@example.com' }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.ok && data.token) {
+        localStorage.setItem(TOKEN_KEY, data.token);
+        window.location.href = '/app/contractor/calendar';
+      } else {
+        setLoginError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const loginAsWade = async () => {
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const res = await fetch('/api/dev/login-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'wade@example.com' }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.ok && data.token) {
+        localStorage.setItem(TOKEN_KEY, data.token);
+        window.location.href = '/app/my-place/calendar';
+      } else {
+        setLoginError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Network error');
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -554,6 +643,91 @@ export function DebugPanel() {
               )}
             </div>
           )}
+
+          <Separator />
+
+          {/* Demo Data Section */}
+          <div className="space-y-2">
+            <div className="text-xs font-mono font-medium flex items-center gap-1">
+              <Calendar className="h-3 w-3" /> Demo Data (N3-CAL-04)
+            </div>
+            
+            <div className="flex gap-1">
+              <Button 
+                size="sm" 
+                variant="default" 
+                onClick={seedDemoData}
+                disabled={demoLoading}
+                className="flex-1 h-7 text-xs"
+                data-testid="button-seed-demo"
+              >
+                {demoLoading ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Play className="h-3 w-3 mr-1" />
+                )}
+                Seed Demo
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={resetDemoData}
+                disabled={demoLoading}
+                className="flex-1 h-7 text-xs"
+                data-testid="button-reset-demo"
+              >
+                {demoLoading ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                )}
+                Reset Demo
+              </Button>
+            </div>
+            
+            {demoResult && (
+              <div className={`text-xs ${demoResult.ok ? 'text-green-600' : 'text-destructive'}`}>
+                {demoResult.message}
+              </div>
+            )}
+
+            <div className="text-xs font-mono opacity-50 mt-2">Quick Login:</div>
+            <div className="flex gap-1">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={loginAsEllen}
+                disabled={loginLoading}
+                className="flex-1 h-6 text-xs"
+                data-testid="button-login-ellen"
+              >
+                <LogIn className="h-3 w-3 mr-1" />
+                Ellen (Contractor)
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={loginAsWade}
+                disabled={loginLoading}
+                className="flex-1 h-6 text-xs"
+                data-testid="button-login-wade"
+              >
+                <LogIn className="h-3 w-3 mr-1" />
+                Wade (Resident)
+              </Button>
+            </div>
+            
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => window.open('/p/bamfield/calendar', '_blank')}
+              className="w-full h-6 text-xs"
+              data-testid="button-open-portal"
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Open Bamfield Portal Calendar
+            </Button>
+          </div>
 
           <Separator />
 

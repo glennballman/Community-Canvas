@@ -14,6 +14,7 @@ import { db } from '../db';
 import { 
   ccN3Runs, 
   ccPortals,
+  ccZones,
   ccProperties,
   ccContractorFleet,
   ccContractorTools,
@@ -344,6 +345,9 @@ interface OpsEvent {
   notes?: string;
   meta?: {
     runId?: string;
+    runCount?: number;
+    zoneId?: string;
+    category?: string;
     feasibility?: { status: 'ok' | 'risky' | 'blocked'; reasons: string[]; severity?: string };
     evidence?: { status: 'none' | 'partial' | 'complete' | 'confirmed'; bundleId?: string };
     severity?: string;
@@ -880,10 +884,12 @@ calendarRouter.get('/resident/ops-calendar', requireAuth, async (req, res) => {
  * GET /api/portal/:portalId/ops-calendar
  * Returns ops board format for public portal view.
  * N3-CAL-02: Includes dependencies + zone feasibility roll-up (privacy-filtered)
+ * N3-CAL-04: Zone-based roll-up aggregation with runCount (rollup=1 default)
  */
 calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
   try {
     const { portalId } = req.params;
+    const rollup = req.query.rollup !== '0';
     
     if (!portalId) {
       return res.status(400).json({ error: 'Portal ID required' });
@@ -909,7 +915,25 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
       return res.status(404).json({ error: 'Portal not found' });
     }
 
-    // 1) Service Runs (redacted)
+    const tenantId = portal[0].owningTenantId;
+
+    // Get actual zones from database for this portal
+    const dbZones = await db
+      .select({
+        id: ccZones.id,
+        name: ccZones.name,
+        key: ccZones.key,
+      })
+      .from(ccZones)
+      .where(eq(ccZones.portalId, portalId));
+
+    const portalZones = dbZones.length > 0 
+      ? dbZones.map(z => z.name)
+      : ['East Bamfield', 'West Bamfield', 'Helby Island', 'Deer Group'];
+
+    const zoneMap = new Map(dbZones.map(z => [z.id, z.name]));
+
+    // 1) Service Runs (with zoneId for roll-up)
     const runs = await db
       .select({
         id: ccN3Runs.id,
@@ -918,12 +942,13 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
         status: ccN3Runs.status,
         startsAt: ccN3Runs.startsAt,
         endsAt: ccN3Runs.endsAt,
+        zoneId: ccN3Runs.zoneId,
         metadata: ccN3Runs.metadata,
       })
       .from(ccN3Runs)
       .where(
         and(
-          eq(ccN3Runs.tenantId, portal[0].owningTenantId),
+          eq(ccN3Runs.tenantId, tenantId),
           or(
             and(gte(ccN3Runs.startsAt, startDate), lte(ccN3Runs.startsAt, endDate)),
             and(gte(ccN3Runs.endsAt, startDate), lte(ccN3Runs.endsAt, endDate)),
@@ -933,26 +958,94 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
       )
       .orderBy(desc(ccN3Runs.startsAt));
 
-    const { resources: runResources, events: runEvents } = mapRunsToOpsFormat(runs);
-    
-    // Redact all identities
-    runResources.forEach(r => {
-      r.name = 'Community Service';
-      r.group = 'Scheduled Work';
-    });
-
     // 2) Dependencies (Weather + Travel)
     const dependencyWindows = await getDependencyWindowsForPortal(portalId, startDate, endDate);
     const dependencyResources = createDependencyResources();
     const dependencyEvents = mapDependencyWindowsToEvents(dependencyWindows);
 
     // 3) Zone Feasibility Roll-up
-    // Define zones for the portal area (Bamfield example)
-    const portalZones = ['East Bamfield', 'West Bamfield', 'Helby Island', 'Deer Group'];
     const zoneFeasibility = computeZoneFeasibility(dependencyWindows, portalZones);
 
+    let runResources: OpsResource[] = [];
+    let runEvents: OpsEvent[] = [];
+
+    if (rollup) {
+      // Zone-based roll-up: 1 resource per zone, aggregate runs
+      const zoneRunMap = new Map<string, { count: number; events: any[] }>();
+
+      portalZones.forEach(zone => {
+        zoneRunMap.set(zone, { count: 0, events: [] });
+      });
+
+      runs.forEach(run => {
+        const zoneName = run.zoneId ? zoneMap.get(run.zoneId) : null;
+        const targetZone = zoneName || portalZones[0] || 'Unknown';
+        
+        if (!zoneRunMap.has(targetZone)) {
+          zoneRunMap.set(targetZone, { count: 0, events: [] });
+        }
+        
+        const zoneData = zoneRunMap.get(targetZone)!;
+        zoneData.count++;
+        if (run.startsAt) {
+          zoneData.events.push({
+            start: run.startsAt,
+            end: run.endsAt || new Date(run.startsAt.getTime() + 3600000),
+            status: run.status,
+          });
+        }
+      });
+
+      runResources = portalZones.map(zone => ({
+        id: `zone:${zone.toLowerCase().replace(/\s+/g, '-')}`,
+        name: `${zone} — Scheduled Work`,
+        asset_type: 'zone-work',
+        status: 'active',
+        group: 'Scheduled Work',
+      }));
+
+      zoneRunMap.forEach((data, zone) => {
+        const resourceId = `zone:${zone.toLowerCase().replace(/\s+/g, '-')}`;
+        
+        const aggregated = aggregateOverlappingEvents(data.events);
+        
+        aggregated.forEach((agg, idx) => {
+          runEvents.push({
+            id: `rollup-${zone}-${idx}`,
+            resource_id: resourceId,
+            event_type: 'reserved',
+            start_date: agg.start.toISOString(),
+            end_date: agg.end.toISOString(),
+            status: 'scheduled',
+            title: agg.count > 1 ? `Community Service (${agg.count})` : 'Community Service',
+            meta: {
+              runCount: agg.count,
+              zoneId: zone,
+            },
+          });
+        });
+      });
+    } else {
+      const mapped = mapRunsToOpsFormat(runs);
+      runResources = mapped.resources;
+      runEvents = mapped.events;
+      
+      runResources.forEach(r => {
+        r.name = 'Community Service';
+        r.group = 'Scheduled Work';
+      });
+      
+      runEvents.forEach(e => {
+        e.title = 'Community Service';
+        if (e.meta) {
+          delete (e.meta as any).runId;
+        }
+      });
+    }
+
+    // Zone Feasibility Resources
     const zoneResources: OpsResource[] = portalZones.map(zone => ({
-      id: `zone:${zone.toLowerCase().replace(/\s+/g, '-')}`,
+      id: `feasibility:${zone.toLowerCase().replace(/\s+/g, '-')}`,
       name: `Zone: ${zone}`,
       asset_type: 'zone',
       status: zoneFeasibility.get(zone)?.status || 'ok',
@@ -968,7 +1061,7 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
         if (feasibility && feasibility.status !== 'ok') {
           zoneEvents.push({
             id: `zone-event-${zone}-${index}`,
-            resource_id: `zone:${zone.toLowerCase().replace(/\s+/g, '-')}`,
+            resource_id: `feasibility:${zone.toLowerCase().replace(/\s+/g, '-')}`,
             event_type: feasibility.status === 'blocked' ? 'maintenance' : 'hold',
             start_date: window.startAt.toISOString(),
             end_date: window.endAt.toISOString(),
@@ -1007,6 +1100,7 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
     ];
 
     res.json({
+      ok: true,
       resources: allResources,
       events: allEvents,
       portal: {
@@ -1019,6 +1113,7 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
         endDate: endDate.toISOString(),
         laneGroups: ['Scheduled Work', 'Staff', 'Dependencies', 'Zone Feasibility'],
         zones: portalZones,
+        rollup,
       }
     });
   } catch (err) {
@@ -1026,6 +1121,29 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+function aggregateOverlappingEvents(events: Array<{ start: Date; end: Date; status: string }>): Array<{ start: Date; end: Date; count: number }> {
+  if (events.length === 0) return [];
+  
+  const sorted = [...events].sort((a, b) => a.start.getTime() - b.start.getTime());
+  const result: Array<{ start: Date; end: Date; count: number }> = [];
+  
+  let current = { start: sorted[0].start, end: sorted[0].end, count: 1 };
+  
+  for (let i = 1; i < sorted.length; i++) {
+    const event = sorted[i];
+    if (event.start.getTime() <= current.end.getTime()) {
+      current.end = new Date(Math.max(current.end.getTime(), event.end.getTime()));
+      current.count++;
+    } else {
+      result.push(current);
+      current = { start: event.start, end: event.end, count: 1 };
+    }
+  }
+  
+  result.push(current);
+  return result;
+}
 
 // ============================================================================
 // N3-CAL-03: Run → Thread Endpoints
