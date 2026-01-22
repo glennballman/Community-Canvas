@@ -838,16 +838,21 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
     }
     
     // Step 2: Create ingestions for items and link to workspace
-    const items = await db.query.ccOnboardingItems.findMany({
+    const allItems = await db.query.ccOnboardingItems.findMany({
       where: and(
         eq(ccOnboardingItems.workspaceId, workspace.id),
         isNull(ccOnboardingItems.promotedIngestionId)
       )
     });
     
+    // RES-ONB-01: Separate zone_definition items from other items
+    const zoneItems = allItems.filter(item => item.itemType === 'zone_definition');
+    const otherItems = allItems.filter(item => item.itemType !== 'zone_definition');
+    
     const createdIngestionLinks: Array<{ workspaceId: string; tenantId: string; ingestionId: string }> = [];
     
-    for (const item of items) {
+    // Process non-zone items as ingestions
+    for (const item of otherItems) {
       // Extract payload fields safely
       const itemPayload = (item.payload || {}) as Record<string, any>;
       
@@ -899,8 +904,84 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
         .values(createdIngestionLinks);
     }
     
+    // RES-ONB-01: Process zone definitions and create work request for resident mode
+    const workspaceModeHints = workspace.modeHints as { intent?: string; entry?: string; portalSlug?: string } || {};
+    const isResidentMode = workspaceModeHints.intent === 'need' || workspaceModeHints.entry === 'place';
+    let workRequestId: string | null = null;
+    let zoneCount = 0;
+    
+    if (isResidentMode && zoneItems.length > 0) {
+      // Mark zone items as promoted
+      for (const zoneItem of zoneItems) {
+        await db.update(ccOnboardingItems)
+          .set({ promotedAt: new Date() })
+          .where(eq(ccOnboardingItems.id, zoneItem.id));
+      }
+      zoneCount = zoneItems.length;
+    }
+    
+    // RES-ONB-01: Create draft work request for resident mode
+    if (isResidentMode) {
+      // Collect notes from typed_note items
+      const noteItems = otherItems.filter(item => item.itemType === 'typed_note');
+      const notesText = noteItems
+        .map(item => (item.payload as any)?.text || '')
+        .filter(Boolean)
+        .join('\n\n');
+      
+      // Build zone definitions array for description
+      const zoneDefinitions = zoneItems.map(item => {
+        const payload = (item.payload || {}) as { zoneType?: string; name?: string; notes?: string };
+        return `- ${payload.name || payload.zoneType || 'Zone'}${payload.notes ? `: ${payload.notes}` : ''}`;
+      }).join('\n');
+      
+      // Create draft work request via raw SQL (table not in Drizzle)
+      try {
+        const userEmail = req.user!.email || 'unknown';
+        const description = [
+          notesText,
+          zoneDefinitions ? `\nWork Zones:\n${zoneDefinitions}` : '',
+          `\nPhotos: ${mediaCount}`
+        ].filter(Boolean).join('\n');
+        
+        const wrResult = await serviceQuery(`
+          INSERT INTO cc_work_requests (
+            tenant_id, contact_channel_value, contact_channel_type,
+            summary, description, source, status, created_by_actor_id
+          ) VALUES (
+            $1, $2, 'email', $3, $4, 'onboarding', 'intake'::work_request_status, $5
+          ) RETURNING id
+        `, [
+          tenantId,
+          userEmail,
+          workspace.displayName || 'Work request from onboarding',
+          description,
+          userId
+        ]);
+        
+        if (wrResult.rows.length > 0) {
+          workRequestId = wrResult.rows[0].id;
+        }
+      } catch (wrError) {
+        console.error('Failed to create work request:', wrError);
+        // Continue with promotion even if work request fails
+      }
+    }
+    
     // Update workspace with promotion summary
-    const promotionSummary = { mediaCount, ingestionCount, promotedAt: new Date().toISOString() };
+    const promotionSummary: Record<string, any> = { 
+      mediaCount, 
+      ingestionCount, 
+      promotedAt: new Date().toISOString() 
+    };
+    
+    // RES-ONB-01: Add resident-specific summary fields
+    if (isResidentMode) {
+      promotionSummary.zoneCount = zoneCount;
+      if (workRequestId) {
+        promotionSummary.workRequestId = workRequestId;
+      }
+    }
     
     await db.update(ccOnboardingWorkspaces)
       .set({
