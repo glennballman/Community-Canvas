@@ -87,6 +87,53 @@ export function useTenant(): TenantContextValue {
 }
 
 // ============================================================================
+// LOADING OVERLAY HELPERS
+// ============================================================================
+
+function showLoadingOverlay(message: string) {
+  // Create overlay element if it doesn't exist
+  let overlay = document.getElementById('impersonation-loading-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'impersonation-loading-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+    `;
+    document.body.appendChild(overlay);
+  }
+  
+  overlay.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+      <div style="width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <div style="font-size: 18px; font-weight: 500;">${message}</div>
+    </div>
+    <style>
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  `;
+  overlay.style.display = 'flex';
+}
+
+function hideLoadingOverlay() {
+  const overlay = document.getElementById('impersonation-loading-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+}
+
+// ============================================================================
 // PROVIDER
 // ============================================================================
 
@@ -237,6 +284,9 @@ export function TenantProvider({ children }: TenantProviderProps) {
 
   const startImpersonation = useCallback(async (tenantId: string, reason?: string) => {
     try {
+      // Show loading overlay immediately for visual feedback
+      showLoadingOverlay('Switching to tenant...');
+      
       const token = localStorage.getItem('cc_token');
       const response = await fetch('/api/admin/impersonation/start', {
         method: 'POST',
@@ -249,6 +299,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       });
       
       if (!response.ok) {
+        hideLoadingOverlay();
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || 'Failed to start impersonation');
       }
@@ -265,6 +316,9 @@ export function TenantProvider({ children }: TenantProviderProps) {
 
   const stopImpersonation = useCallback(async () => {
     try {
+      // Show loading overlay immediately for visual feedback
+      showLoadingOverlay('Ending impersonation...');
+      
       const token = localStorage.getItem('cc_token');
       await fetch('/api/admin/impersonation/stop', {
         method: 'POST',
@@ -279,6 +333,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       window.location.href = '/app/platform/tenants';
       
     } catch (error) {
+      hideLoadingOverlay();
       console.error('Failed to stop impersonation:', error);
       throw error;
     }
