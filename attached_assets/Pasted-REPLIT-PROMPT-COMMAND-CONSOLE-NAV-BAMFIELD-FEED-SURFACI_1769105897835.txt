@@ -1,0 +1,150 @@
+REPLIT PROMPT — COMMAND CONSOLE NAV + BAMFIELD FEED SURFACING (V3.5 DEMO)
+
+ROLE
+You are the platform engineer working on Community Canvas V3.5. Goal: restore V1 “Data Feeds / Command Console” visibility in the new Platform UI and surface Bamfield-relevant live feed outputs in the Bamfield Community Portal for an in-person demo.
+
+HARD REQUIREMENTS
+- Do NOT create a new calendar UI. The canonical calendar/time spine is ScheduleBoard.
+- Reuse existing feed pipelines already implemented (DriveBC, BC Ferries, Weather, BC Hydro, Earthquakes) and existing dependency windows integration (N3-CAL-03).
+- This is DEV demo data; changes must be reversible and safe. Prefer feature flags and seeded demo-only sections.
+- UI routes must follow V3.5 invariants: NO /admin/* UI routes. Platform UI is /app/platform/* and public portal is /p/:portalSlug/*.
+- Do not leak PII in the public portal.
+
+DELIVERABLES
+A) PLATFORM NAV: “Command Console” section with feed links
+B) PLATFORM PAGES: each feed page shows useful data (table/list) and supports Bamfield filtering
+C) BAMFIELD PORTAL SURFACING: show Bamfield-relevant feeds + dependency summaries in portal
+D) DEMO PATH: exact click-by-click instructions appear in docs/DEMO_COMMAND_CONSOLE.md
+
+A) PLATFORM NAV — ADD THESE LINKS (NEW PLATFORM VIEW)
+In the new Platform left nav (the one used by /app/platform/*), add a collapsible section named:
+
+1) "Command Console"
+Inside it add these nav items + routes:
+
+- "BC Roads (DriveBC)"       → /app/platform/command-console/roads
+- "BC Ferries"               → /app/platform/command-console/ferries
+- "Weather"                  → /app/platform/command-console/weather
+- "BC Hydro"                 → /app/platform/command-console/hydro
+- "Earthquakes"              → /app/platform/command-console/earthquakes
+- "Dependency Rules"         → /app/platform/command-console/dependency-rules
+- "Bamfield Snapshot"        → /app/platform/command-console/bamfield
+
+Placement:
+- Put "Command Console" in the left nav near System Explorer / Data Management.
+- Ensure it is visible for Platform Admin. Do not hide behind feature flags for the demo.
+
+Implementation notes:
+- Locate the canonical platform nav definition (likely client/src/lib/routes/platformNav.ts or wherever PlatformLayout derives nav).
+- Add the above items there.
+- Confirm they appear in the left nav and are clickable.
+
+B) PLATFORM PAGES — BUILD MINIMAL BUT REAL PAGES (NO PLACEHOLDERS)
+Create a small page component for each route above. Each page must:
+
+- Show a page title and a short subtitle explaining what it is.
+- Provide a filter control with preset “Bamfield” + “All BC”.
+- Render a list/table of the most recent items from the feed adapter/service.
+- Use existing server services; if no direct endpoint exists yet, add minimal GET endpoints that return the latest cached/pulled feed data already used by dependencyWindowsService.
+
+Required server endpoints (platform admin only):
+- GET /api/p2/platform/command-console/roads?scope=bamfield|all
+- GET /api/p2/platform/command-console/ferries?scope=bamfield|all
+- GET /api/p2/platform/command-console/weather?scope=bamfield|all
+- GET /api/p2/platform/command-console/hydro?scope=bamfield|all
+- GET /api/p2/platform/command-console/earthquakes?scope=bamfield|all
+- GET /api/p2/platform/command-console/dependency-rules?portalId=...
+- GET /api/p2/platform/command-console/bamfield (aggregated snapshot across all feeds)
+
+Auth:
+- authenticateToken + requirePlatformAdmin
+
+Data sourcing:
+- Reuse the same data sources / adapters used by N3-CAL-03 feed discovery. Do not create new scrapers.
+- If some adapters aren’t directly callable, expose a thin wrapper that calls into the same internal functions.
+
+“Bamfield scope” definition:
+- Provide hardcoded demo filters if necessary (ex: Vancouver Island, Alberni-Clayoquot, Bamfield vicinity).
+- It’s OK if this is approximate for demo, but must be consistent and documented.
+
+UI components:
+- Use existing table components if available.
+- Keep it readable, dark-theme consistent.
+
+C) BAMFIELD COMMUNITY PORTAL — SURFACE FEEDS IN THE RIGHT PLACES
+We need the Bamfield community portal to show:
+- A public “Community Conditions” panel (privacy safe) sourced from the same feeds.
+- A public “Today / Next 48 hours” summary relevant to feasibility: roads, ferries, weather, hydro outages, quakes.
+- The portal ops-calendar already shows zone feasibility overlays; add a small summary above the calendar that explains why zones are blocked/risky today (no PII).
+
+Add to Bamfield portal:
+1) Route: /p/:portalSlug/services
+Currently shows “Content coming soon”.
+Replace with a proper page:
+
+Title: "Community Services"
+Sections:
+- "Community Conditions" (shows feed summary cards)
+- "Access & Travel" (DriveBC + Ferries summaries)
+- "Weather & Marine" (Weather summary)
+- "Infrastructure Alerts" (Hydro outages)
+- "Seismic Activity" (recent quakes)
+- Link CTA: "View Operations Calendar" → /p/:portalSlug/calendar
+
+2) Route: /p/:portalSlug/calendar
+Above the ScheduleBoard calendar, add a slim “Conditions affecting service” bar:
+- Items: Weather, Roads, Ferries, Hydro, Quakes
+- Each shows status: OK / Advisory / Blocked
+- Clicking opens a small modal/drawer with the last few events (privacy-safe, no addresses, no contractor names).
+
+Data wiring:
+- Add a public endpoint (no auth) that returns a privacy-safe Bamfield feed summary:
+  GET /api/public/portal/:portalId/conditions
+- This should internally reuse the dependencyWindowsService / feed adapters and return only redacted, aggregate data.
+- The portal already has dependency rules table (cc_portal_dependency_rules); use that to determine which feeds matter for this portal/zones.
+
+Privacy:
+- Never include person names, contractor names, exact addresses, pricing, phone numbers.
+- Titles like “Road closure near Port Alberni” are fine; “Mike stuck on Hwy 4” is not.
+- If any source content contains sensitive details, strip it.
+
+D) DEMO SEED + RESET (IF EXISTS, HOOK IT UP)
+There are already Demo Seed/Reset buttons in DebugPanel from N3-CAL-04.
+Extend demo seed so it also seeds:
+- cc_portal_dependency_rules for Bamfield portal (mapping zones -> seaplane/ferry/roads triggers)
+- Enough feed summary sample entries IF live feeds return empty (DEV only fallback)
+
+Rules:
+- Only seed when CC_DEV_SEED=true OR NODE_ENV=development.
+- Provide a Reset that removes seeded demo rules and seeded demo feed cache rows (if you store any).
+
+E) DOCUMENTATION — “BABY STEPS” FOR GLENN
+Create docs/DEMO_COMMAND_CONSOLE.md that contains:
+1) How to seed demo data (exact clicks or endpoint calls)
+2) How to view Platform Command Console pages
+3) How to view Bamfield portal “Community Services” + Calendar
+4) How to login as Ellen (contractor) and Wade (resident) using DebugPanel shortcuts
+5) URLs to open directly for the demo
+
+Include direct URLs:
+- /app/platform/command-console/bamfield
+- /app/platform/command-console/roads
+- /app/platform/command-console/ferries
+- /p/bamfield/services
+- /p/bamfield/calendar
+- /app/contractor/calendar (after login as Ellen)
+- /app/my-place/calendar (after login as Wade)
+
+QA CHECKS (MUST PASS)
+1) Left nav shows Command Console section with all links and they navigate (no 404).
+2) Platform pages load and display data (or “No live data available; showing demo fallback” in DEV only).
+3) Bamfield /p/bamfield/services is no longer “coming soon” and shows conditions.
+4) Bamfield /p/bamfield/calendar shows conditions bar and does not leak PII.
+5) No /admin/* UI routes introduced.
+
+OUTPUT
+After implementation, respond with:
+- List of files changed
+- Confirm all routes exist
+- Copy/paste contents of docs/DEMO_COMMAND_CONSOLE.md
+- Screenshots not required, but include any important notes about missing live feed data.

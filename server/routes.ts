@@ -143,6 +143,7 @@ import publicEventRouter from "./routes/public-event";
 import publicOnboardRouter from "./routes/public-onboard";
 import onboardingRouter from "./routes/onboarding";
 import calendarRouter from "./routes/calendar";
+import commandConsoleRouter from "./routes/command-console";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -379,6 +380,9 @@ export async function registerRoutes(
   
   // P2 platform console API (platform admin only)
   app.use('/api/p2/platform', p2PlatformRouter);
+  
+  // Command Console API (live feed data for platform admin)
+  app.use('/', commandConsoleRouter);
   
   // P2 work catalog API (access constraints, work areas, work media)
   app.use('/api/p2/app', p2WorkCatalogRouter);

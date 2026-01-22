@@ -14,6 +14,14 @@ import {
   Map,
   Shield,
   Database,
+  Terminal,
+  Route,
+  Ship,
+  Cloud,
+  Zap,
+  Activity,
+  FileText,
+  MapPin,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -49,6 +57,18 @@ export const PLATFORM_NAV: PlatformNavSection[] = [
       { icon: Search, label: 'System Explorer', href: '/app/platform/system-explorer', testId: 'nav-system-explorer' },
       { icon: Database, label: 'Data Management', href: '/app/platform/data-management', testId: 'nav-data-mgmt' },
       { icon: Settings, label: 'Platform Settings', href: '/app/platform/settings', testId: 'nav-platform-settings' },
+    ],
+  },
+  {
+    title: 'Command Console',
+    items: [
+      { icon: Route, label: 'BC Roads (DriveBC)', href: '/app/platform/command-console/roads', testId: 'nav-cc-roads' },
+      { icon: Ship, label: 'BC Ferries', href: '/app/platform/command-console/ferries', testId: 'nav-cc-ferries' },
+      { icon: Cloud, label: 'Weather', href: '/app/platform/command-console/weather', testId: 'nav-cc-weather' },
+      { icon: Zap, label: 'BC Hydro', href: '/app/platform/command-console/hydro', testId: 'nav-cc-hydro' },
+      { icon: Activity, label: 'Earthquakes', href: '/app/platform/command-console/earthquakes', testId: 'nav-cc-earthquakes' },
+      { icon: FileText, label: 'Dependency Rules', href: '/app/platform/command-console/dependency-rules', testId: 'nav-cc-dependency-rules' },
+      { icon: MapPin, label: 'Bamfield Snapshot', href: '/app/platform/command-console/bamfield', testId: 'nav-cc-bamfield' },
     ],
   },
 ];

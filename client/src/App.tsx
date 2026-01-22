@@ -166,6 +166,13 @@ import TenantDetailPage from './pages/app/platform/TenantDetailPage';
 import TenantPortalsPage from './pages/app/platform/TenantPortalsPage';
 import TenantUsersPage from './pages/app/platform/TenantUsersPage';
 import AnalyticsPage from './pages/app/platform/AnalyticsPage';
+import CommandConsoleRoadsPage from './pages/app/platform/command-console/CommandConsoleRoadsPage';
+import CommandConsoleFerriesPage from './pages/app/platform/command-console/CommandConsoleFerriesPage';
+import CommandConsoleWeatherPage from './pages/app/platform/command-console/CommandConsoleWeatherPage';
+import CommandConsoleHydroPage from './pages/app/platform/command-console/CommandConsoleHydroPage';
+import CommandConsoleEarthquakesPage from './pages/app/platform/command-console/CommandConsoleEarthquakesPage';
+import CommandConsoleDependencyRulesPage from './pages/app/platform/command-console/CommandConsoleDependencyRulesPage';
+import CommandConsoleBamfieldPage from './pages/app/platform/command-console/CommandConsoleBamfieldPage';
 import CertificationsPage from './pages/app/admin/CertificationsPage';
 import OperatorHomePage from './pages/app/operator/OperatorHomePage';
 import OperatorEmergencyIndexPage from './pages/app/operator/OperatorEmergencyIndexPage';
@@ -398,6 +405,13 @@ export default function App() {
                 <Route path="data-management" element={<AdminInfrastructure />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
                 <Route path="impersonation" element={<ImpersonationConsole />} />
+                <Route path="command-console/roads" element={<CommandConsoleRoadsPage />} />
+                <Route path="command-console/ferries" element={<CommandConsoleFerriesPage />} />
+                <Route path="command-console/weather" element={<CommandConsoleWeatherPage />} />
+                <Route path="command-console/hydro" element={<CommandConsoleHydroPage />} />
+                <Route path="command-console/earthquakes" element={<CommandConsoleEarthquakesPage />} />
+                <Route path="command-console/dependency-rules" element={<CommandConsoleDependencyRulesPage />} />
+                <Route path="command-console/bamfield" element={<CommandConsoleBamfieldPage />} />
               </Route>
 
               {/* ========================================== */}
