@@ -1,0 +1,67 @@
+REPLIT PROMPT — P-AUTH-COMPAT-LOGOUT-01
+ROLE: Platform engineer maintaining Community Canvas V3.5.
+GOAL: Add a backward-compatible logout endpoint so test harnesses and debug flows do not break, without re-introducing legacy auth paths.
+
+CONSTRAINTS
+- This is a compatibility shim only.
+- Do NOT add any new auth logic.
+- Do NOT add /admin/* routes.
+- Must reuse existing logout/session/token clearing behavior.
+- Must be safe in production.
+
+--------------------------------------------
+PROBLEM
+Some tools and test flows attempt to call:
+
+POST or GET /api/auth/logout
+
+This endpoint currently returns 404, even though logout is supported elsewhere in the system.
+
+--------------------------------------------
+SOLUTION
+Add a minimal compatibility route that forwards to the existing logout logic.
+
+--------------------------------------------
+IMPLEMENTATION
+1) In the main auth router (where /foundation/auth/* or equivalent lives):
+   - Add a route handler for:
+     POST /api/auth/logout
+     GET  /api/auth/logout   (optional but recommended)
+
+2) Inside the handler:
+   - Call the same function used by the current logout implementation:
+     - clear session cookie (if used)
+     - or invalidate token (if token-based)
+     - or both, depending on current system
+   - Do NOT duplicate logout logic.
+   - Do NOT require authentication to call logout (safe no-op if already logged out).
+
+3) Response:
+   - Return HTTP 204 No Content
+   - No body
+
+--------------------------------------------
+GUARDS
+- This route must not:
+  - create sessions
+  - change auth state other than logout
+  - redirect
+
+--------------------------------------------
+ACCEPTANCE CRITERIA
+- Visiting /api/auth/logout no longer returns 404.
+- Auth state is cleared if present.
+- Calling logout when already logged out is a no-op.
+- No changes to existing login or auth flows.
+- No legacy /admin paths introduced.
+
+--------------------------------------------
+NOTES
+This route exists purely for compatibility with:
+- test harnesses
+- debug panels
+- older browser flows
+
+It should be documented as "compatibility only" in code comments.
+
+Proceed.
