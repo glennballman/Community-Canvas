@@ -13,13 +13,11 @@ import { Router } from 'express';
 import { db } from '../db';
 import { 
   ccN3Runs, 
-  ccN3Segments,
-  ccZones,
   ccPortals,
   ccProperties,
   type CalendarRunDTO
 } from '@shared/schema';
-import { eq, and, gte, lte, or, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, gte, lte, or, desc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAuth, requireTenant } from '../middleware/guards';
 import type { TenantRequest } from '../middleware/tenantContext';
@@ -82,19 +80,16 @@ calendarRouter.get('/contractor/calendar', requireAuth, requireTenant, async (re
         status: ccN3Runs.status,
         startsAt: ccN3Runs.startsAt,
         endsAt: ccN3Runs.endsAt,
-        zoneName: ccZones.name,
-        portalName: ccPortals.name,
         metadata: ccN3Runs.metadata,
       })
       .from(ccN3Runs)
-      .leftJoin(ccZones, eq(ccN3Runs.zoneId, ccZones.id))
-      .leftJoin(ccPortals, eq(ccN3Runs.portalId, ccPortals.id))
       .where(
         and(
           eq(ccN3Runs.tenantId, tenantId),
           or(
-            gte(ccN3Runs.startsAt, startDate),
-            gte(ccN3Runs.endsAt, startDate)
+            and(gte(ccN3Runs.startsAt, startDate), lte(ccN3Runs.startsAt, endDate)),
+            and(gte(ccN3Runs.endsAt, startDate), lte(ccN3Runs.endsAt, endDate)),
+            and(lte(ccN3Runs.startsAt, startDate), gte(ccN3Runs.endsAt, endDate))
           )
         )
       )
@@ -106,8 +101,6 @@ calendarRouter.get('/contractor/calendar', requireAuth, requireTenant, async (re
       status: normalizeStatus(run.status),
       startAt: run.startsAt?.toISOString() || null,
       endAt: run.endsAt?.toISOString() || null,
-      zoneLabel: run.zoneName || undefined,
-      portalLabel: run.portalName || undefined,
       evidenceStatus: 'none' as const,
     }));
 
@@ -144,7 +137,7 @@ calendarRouter.get('/resident/calendar', requireAuth, async (req, res) => {
     const endDate = endParam ? new Date(endParam) : defaults.endDate;
 
     const residentProperties = await db
-      .select({ id: ccProperties.id, portalId: ccProperties.portalId })
+      .select({ id: ccProperties.id, tenantId: ccProperties.tenantId })
       .from(ccProperties)
       .where(eq(ccProperties.ownerId, userId));
 
@@ -159,9 +152,9 @@ calendarRouter.get('/resident/calendar', requireAuth, async (req, res) => {
       });
     }
 
-    const portalIds = residentProperties.map(p => p.portalId).filter(Boolean) as string[];
+    const tenantIds = residentProperties.map(p => p.tenantId).filter(Boolean) as string[];
     
-    if (portalIds.length === 0) {
+    if (tenantIds.length === 0) {
       return res.json({
         runs: [],
         meta: {
@@ -179,16 +172,15 @@ calendarRouter.get('/resident/calendar', requireAuth, async (req, res) => {
         status: ccN3Runs.status,
         startsAt: ccN3Runs.startsAt,
         endsAt: ccN3Runs.endsAt,
-        zoneName: ccZones.name,
       })
       .from(ccN3Runs)
-      .leftJoin(ccZones, eq(ccN3Runs.zoneId, ccZones.id))
       .where(
         and(
-          inArray(ccN3Runs.portalId, portalIds),
+          inArray(ccN3Runs.tenantId, tenantIds),
           or(
-            gte(ccN3Runs.startsAt, startDate),
-            gte(ccN3Runs.endsAt, startDate)
+            and(gte(ccN3Runs.startsAt, startDate), lte(ccN3Runs.startsAt, endDate)),
+            and(gte(ccN3Runs.endsAt, startDate), lte(ccN3Runs.endsAt, endDate)),
+            and(lte(ccN3Runs.startsAt, startDate), gte(ccN3Runs.endsAt, endDate))
           )
         )
       )
@@ -200,7 +192,6 @@ calendarRouter.get('/resident/calendar', requireAuth, async (req, res) => {
       status: normalizeStatus(run.status),
       startAt: run.startsAt?.toISOString() || null,
       endAt: run.endsAt?.toISOString() || null,
-      zoneLabel: run.zoneName || undefined,
     }));
 
     res.json({
@@ -252,7 +243,7 @@ calendarRouter.get('/portal/:portalId/calendar', async (req, res) => {
     const endDate = endParam ? new Date(endParam) : defaults.endDate;
 
     const portal = await db
-      .select({ id: ccPortals.id, name: ccPortals.name })
+      .select({ id: ccPortals.id, name: ccPortals.name, owningTenantId: ccPortals.owningTenantId })
       .from(ccPortals)
       .where(eq(ccPortals.id, portalId))
       .limit(1);
@@ -261,22 +252,30 @@ calendarRouter.get('/portal/:portalId/calendar', async (req, res) => {
       return res.status(404).json({ error: 'Portal not found' });
     }
 
+    const portalTenantId = portal[0].owningTenantId;
+    if (!portalTenantId) {
+      return res.json({
+        runs: [],
+        portal: { id: portal[0].id, name: portal[0].name },
+        meta: { count: 0, startDate: startDate.toISOString(), endDate: endDate.toISOString() }
+      });
+    }
+
     const runs = await db
       .select({
         id: ccN3Runs.id,
         status: ccN3Runs.status,
         startsAt: ccN3Runs.startsAt,
         endsAt: ccN3Runs.endsAt,
-        zoneName: ccZones.name,
       })
       .from(ccN3Runs)
-      .leftJoin(ccZones, eq(ccN3Runs.zoneId, ccZones.id))
       .where(
         and(
-          eq(ccN3Runs.portalId, portalId),
+          eq(ccN3Runs.tenantId, portalTenantId),
           or(
-            gte(ccN3Runs.startsAt, startDate),
-            gte(ccN3Runs.endsAt, startDate)
+            and(gte(ccN3Runs.startsAt, startDate), lte(ccN3Runs.startsAt, endDate)),
+            and(gte(ccN3Runs.endsAt, startDate), lte(ccN3Runs.endsAt, endDate)),
+            and(lte(ccN3Runs.startsAt, startDate), gte(ccN3Runs.endsAt, endDate))
           )
         )
       )
@@ -288,7 +287,6 @@ calendarRouter.get('/portal/:portalId/calendar', async (req, res) => {
       status: normalizeStatus(run.status),
       startAt: run.startsAt?.toISOString() || null,
       endAt: run.endsAt?.toISOString() || null,
-      zoneLabel: run.zoneName || undefined,
       portalLabel: portal[0].name || undefined,
     }));
 

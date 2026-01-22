@@ -4,7 +4,7 @@ import { CalendarDays, AlertTriangle, Camera } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import type { CalendarRunDTO } from "@shared/schema";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 
 interface CalendarResponse {
   runs: CalendarRunDTO[];
@@ -16,7 +16,7 @@ interface CalendarResponse {
 }
 
 export default function ContractorCalendarPage() {
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = useQuery<CalendarResponse>({
     queryKey: ['/api/contractor/calendar'],
@@ -28,7 +28,7 @@ export default function ContractorCalendarPage() {
   const incompleteEvidence = runs.filter(r => r.evidenceStatus === 'partial');
 
   const handleRunClick = (run: CalendarRunDTO) => {
-    setLocation(`/app/n3/runs/${run.runId}`);
+    navigate(`/app/n3/runs/${run.runId}`);
   };
 
   return (

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Home, CalendarDays, MessageSquare, Eye } from "lucide-react";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import type { CalendarRunDTO } from "@shared/schema";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 
 interface CalendarResponse {
   runs: CalendarRunDTO[];
@@ -16,7 +16,7 @@ interface CalendarResponse {
 }
 
 export default function ResidentCalendarPage() {
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = useQuery<CalendarResponse>({
     queryKey: ['/api/resident/calendar'],
@@ -28,7 +28,7 @@ export default function ResidentCalendarPage() {
   const completedRuns = runs.filter(r => r.status === 'completed');
 
   const handleRunClick = (run: CalendarRunDTO) => {
-    setLocation(`/app/my-place/requests/${run.runId}`);
+    navigate(`/app/my-place/requests/${run.runId}`);
   };
 
   return (
@@ -61,7 +61,7 @@ export default function ResidentCalendarPage() {
             <p className="text-sm text-muted-foreground mb-4">
               You don't have any service work scheduled yet.
             </p>
-            <Button onClick={() => setLocation('/onboard/place')} data-testid="button-request-service">
+            <Button onClick={() => navigate('/onboard/place')} data-testid="button-request-service">
               Request Service
             </Button>
           </CardContent>

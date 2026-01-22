@@ -198,6 +198,11 @@ import UploadResultsPage from './pages/contractor/UploadResultsPage';
 import PhotoBundleDetailPage from './pages/contractor/PhotoBundleDetailPage';
 import PhotoBundlesListPage from './pages/contractor/PhotoBundlesListPage';
 import EventModePage from './pages/contractor/EventModePage';
+
+// Pages - Calendar (N3-CAL-01)
+import ContractorCalendarPage from './pages/app/ContractorCalendarPage';
+import ResidentCalendarPage from './pages/app/ResidentCalendarPage';
+import PortalCalendarPage from './pages/public/PortalCalendarPage';
 import EventQuotesListPage from './pages/contractor/EventQuotesListPage';
 import EventQuoteDetailPage from './pages/contractor/EventQuoteDetailPage';
 import EventScanPage from './pages/contractor/EventScanPage';
@@ -324,6 +329,7 @@ export default function App() {
               <Route path="/p/:portalSlug/onboarding" element={<PortalOnboardingPage />} />
               <Route path="/p/:portalSlug/reserve" element={<PortalReservePage />} />
               <Route path="/p/:portalSlug/reserve/:assetId" element={<PortalReservePage />} />
+              <Route path="/p/:portalSlug/calendar" element={<PortalCalendarPage />} />
               
               {/* Public Trip Portal - guest-facing trip view */}
               <Route path="/trip/:accessCode" element={<TripPortalPage />} />
@@ -566,6 +572,12 @@ export default function App() {
                 <Route path="contractor/event/capture" element={<EventCapturePage />} />
                 <Route path="contractor/event/quotes" element={<EventQuotesListPage />} />
                 <Route path="contractor/event/quotes/:id" element={<EventQuoteDetailPage />} />
+                
+                {/* N3-CAL-01: Contractor Calendar */}
+                <Route path="contractor/calendar" element={<ContractorCalendarPage />} />
+                
+                {/* Resident Calendar (my-place) */}
+                <Route path="my-place/calendar" element={<ResidentCalendarPage />} />
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />
