@@ -1,0 +1,216 @@
+REPLIT PROMPT — N3-CAL-02: Add Dependencies + Staff + Asset Lanes + Portal Zone Feasibility (Operations Grid Completion)
+
+ROLE
+Lead Platform Architect. Implement missing lane groups and feasibility overlays in OpsCalendarBoardPage projections.
+Keep ScheduleBoard time spine. Additive only. No new calendar system.
+
+CURRENT STATE (from proof pack)
+- Routes + ScheduleBoard usage: PASS
+- Only service runs lane group is implemented
+- Portal privacy filtering: PASS
+- Feasibility windows + staff blockers + asset lanes: NOT IMPLEMENTED
+
+GOAL
+For contractor/resident/portal ops calendars, return ScheduleBoard-compatible { resources, events } that include:
+- dependencies lanes (weather + travel)
+- staff availability lanes (future blocks)
+- fleet/tools/materials/accommodations lanes (real if data exists, otherwise placeholders)
+- portal zone feasibility roll-up (zone-specific blocked/risky/ok windows)
+
+HARD RULES
+1) Do NOT introduce per-minute row materialization; return intervals only (events with start/end).
+2) Do NOT create new scheduling tables.
+3) Do NOT leak identities in portal/public views.
+4) Prefer existing live data feeds system. If not wired to these endpoints, add a minimal adapter.
+5) All additions must be safe even when underlying data is missing (return empty lanes, not errors).
+
+================================================================================
+A) RESOURCE GROUPING MODEL (ScheduleBoard compatible)
+================================================================================
+ScheduleBoard Resource must support grouping headers. If it doesn’t already:
+- Add optional field to Resource type:
+  group?: string
+- Update ScheduleBoard rendering to show group headers when group changes (minimal UI):
+  e.g., render a divider row with group label.
+
+Standard group order:
+1) Service Runs
+2) Staff
+3) Fleet
+4) Tools
+5) Materials
+6) Accommodations
+7) Dependencies
+8) Payments
+
+Each resource row:
+- id: stable string e.g. `group:staff:pavel` or `dep:weather`
+- name: visible lane label
+- group: one of the group labels above
+
+================================================================================
+B) STAFF AVAILABILITY (BLOCKERS)
+================================================================================
+Implement minimal additive table ONLY if not already present:
+cc_staff_availability_blocks
+- id uuid pk defaultRandom()
+- tenant_id uuid not null
+- person_id uuid not null   // use cc_users.id (or existing people table if already canonical)
+- start_at timestamptz not null
+- end_at timestamptz not null
+- kind varchar(20) not null default 'unavailable'
+- reason text null
+- created_at timestamptz default now()
+Indexes: (tenant_id, person_id, start_at)
+
+Seed in DEV (only) if empty:
+- Create one user-based staff block for tomorrow 9am–5pm for a known dev user (e.g., Pavel or Ellen) so QA can see it.
+Guard dev seed behind IS_DEV or CC_DEV_SEED.
+
+API (tenant-scoped):
+GET /api/tenant/staff-availability?from&to
+Returns blocks grouped by person_id.
+
+Projection behavior:
+- Contractor endpoint (/api/contractor/ops-calendar):
+  - include individual staff resources (names allowed)
+  - create ScheduleEvents for each unavailable block
+  - event.title: `Unavailable` (include reason in meta)
+- Resident endpoint:
+  - include a single staff resource `Assigned Staff` (no names)
+  - if ANY required staff is unavailable for a run window, mark run blocked/risky; otherwise do not show staff details.
+- Portal endpoint:
+  - include role-based staff or a single lane `Staff availability` (no names)
+  - may show aggregated “staff shortage” windows if no staff available (optional)
+  - never expose person names.
+
+================================================================================
+C) DEPENDENCIES LANES (WEATHER + TRAVEL)
+================================================================================
+We need dependency “risk windows” as events. Use existing feeds system if present.
+Find existing feed ingestion/storage code and reuse.
+
+Implement adapter service:
+server/services/dependencyWindowsService.ts
+
+Functions:
+getDependencyWindowsForPortal(portalId, from, to) -> Array<{ type, startAt, endAt, severity, reasonCodes, affectedZones?, confidence? }>
+
+At minimum implement TWO sources (even if mocked/stubbed behind existing feeds):
+1) Weather windows
+2) Travel windows (ferry/highway/air)
+
+If live feeds exist but are complex:
+- Implement a minimal deterministic fallback for now:
+  - For each day in range, if forecast indicates high wind (or if feed unavailable), return no windows (safe).
+  - BUT provide a DEV seed window so QA can see feasibility working:
+    - Create a dependency window tomorrow 12pm–6pm severity=critical reasonCodes=['wind'] affectedZones=[West Bamfield, Helby] type='seaplane'
+    - East Bamfield not affected.
+This DEV seed must be behind IS_DEV/CC_DEV_SEED.
+
+Resources required:
+- Dependencies: Weather
+- Dependencies: Lucky Lander (Seaplane) (or generic `Seaplane`)
+- Dependencies: Ferry
+- Dependencies: Highway
+
+Events:
+- each window becomes a ScheduleEvent on its dependency resource row.
+
+================================================================================
+D) PORTAL ZONE FEASIBILITY ROLL-UP
+================================================================================
+Add zone feasibility resources (portal only):
+- One resource per zone: `Zone: {zoneLabel}`
+Group: `Zone Feasibility`
+
+Compute feasibility by overlaying dependency windows:
+Rule:
+- If a dependency window overlaps and lists affectedZones including this zone -> zone window status:
+  - critical => blocked
+  - warn => risky
+- If no overlapping dependency windows => ok (don’t need explicit event)
+
+Implement:
+- If there is a critical dependency window affecting a zone: create a zone event (same time range) titled `Blocked`
+- If warn: title `Risky`
+
+Privacy:
+- Zone labels are allowed.
+- No names/addresses/pricing.
+
+================================================================================
+E) SERVICE RUN FEASIBILITY OVERLAY (ALL MODES)
+================================================================================
+Modify run events in contractor/resident/portal endpoints to include feasibility markers:
+- For each run event, check overlap with:
+  - staff unavailable windows (if staff mapping exists / or global staff shortage)
+  - dependency windows affecting the run’s zone (if zone known)
+If overlap with critical => set event.meta.feasibility = { status:'blocked', reasons:[...], severity:'critical' }
+If warn only => status:'risky'
+
+UI (minimal):
+- In ScheduleBoard event render (or wrapper), show a small badge:
+  - ⛔ Blocked
+  - ⚠ Risk
+Only for contractor/resident; portal can show minimal.
+
+Do not alter DB run states.
+
+================================================================================
+F) FLEET / TOOLS / MATERIALS / ACCOMMODATIONS LANES (PLACEHOLDERS OK)
+================================================================================
+Contractor endpoint should include these resource groups:
+
+Fleet:
+- If cc_contractor_fleet exists, create one resource per fleet item (label: make/model or “Truck”)
+- If none, include one placeholder resource “Fleet (none yet)” with no events.
+
+Tools:
+- Same pattern using cc_contractor_tools.
+
+Materials:
+- Single resource “Materials”
+- If you have per-run materials flag (existing or add minimal cc_n3_run_annotations), show a small per-run overlay in event meta only.
+- If not available, omit flag and keep lane empty.
+
+Accommodations:
+- If lodging assets exist for tenant, include lanes; else placeholder.
+
+Portal/resident views:
+- do not expose fleet/tools specifics; at most show pooled “Assets” availability lane if you have it, otherwise omit.
+
+================================================================================
+G) ENDPOINT UPDATES
+================================================================================
+Update the three endpoints in server/routes/calendar.ts:
+
+1) /api/contractor/ops-calendar
+- include service runs + staff resources + dependency resources + fleet/tools/materials placeholders
+
+2) /api/resident/ops-calendar
+- narrowed runs + dependency resources + redacted staff lane (no names)
+
+3) /api/portal/:portalId/ops-calendar
+- redacted service activity
+- dependency resources/events
+- zone feasibility resources/events
+
+Return shape must remain:
+{ ok:true, resources: Resource[], events: ScheduleEvent[], meta?: {...} }
+
+================================================================================
+H) QA PROOF UPDATE
+================================================================================
+Update docs/N3-CAL-01_PROOF_PACK.md (append N3-CAL-02 section) OR create docs/N3-CAL-02_PROOF_PACK.md with:
+
+- Example payload snippets showing:
+  - at least 1 dependency window event
+  - at least 1 staff unavailable event (contractor view)
+  - at least 2 zone feasibility rows with different results in same window (East ok, West blocked)
+- Confirm portal payload still redacts identities.
+
+Also add a DEV seed note:
+- which seed windows were created and when
+
+Proceed now.

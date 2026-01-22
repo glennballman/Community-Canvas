@@ -8560,3 +8560,49 @@ export const calendarRunDTOSchema = z.object({
 });
 
 export type CalendarRunDTO = z.infer<typeof calendarRunDTOSchema>;
+
+// ============================================================================
+// N3-CAL-02: Staff Availability Blocks
+// ============================================================================
+
+/**
+ * Staff unavailability blocks for calendar feasibility overlays.
+ * Used to mark when staff are unavailable (PTO, appointments, etc.)
+ */
+export const ccStaffAvailabilityBlocks = pgTable("cc_staff_availability_blocks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  personId: uuid("person_id").notNull(),
+  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+  endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+  kind: varchar("kind", { length: 20 }).notNull().default('unavailable'),
+  reason: text("reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_staff_availability_tenant_person").on(table.tenantId, table.personId, table.startAt),
+]);
+
+export const insertStaffAvailabilityBlockSchema = createInsertSchema(ccStaffAvailabilityBlocks).omit({
+  id: true, createdAt: true
+});
+export type StaffAvailabilityBlock = typeof ccStaffAvailabilityBlocks.$inferSelect;
+export type InsertStaffAvailabilityBlock = z.infer<typeof insertStaffAvailabilityBlockSchema>;
+
+// ============================================================================
+// N3-CAL-02: Dependency Window DTO
+// ============================================================================
+
+/**
+ * Dependency window for weather, travel, and other external factors.
+ */
+export const dependencyWindowDTOSchema = z.object({
+  type: z.enum(['weather', 'ferry', 'highway', 'seaplane', 'air']),
+  startAt: z.string(),
+  endAt: z.string(),
+  severity: z.enum(['info', 'warn', 'critical']),
+  reasonCodes: z.array(z.string()),
+  affectedZones: z.array(z.string()).optional(),
+  confidence: z.number().optional(),
+});
+
+export type DependencyWindowDTO = z.infer<typeof dependencyWindowDTOSchema>;

@@ -15,12 +15,22 @@ import {
   ccN3Runs, 
   ccPortals,
   ccProperties,
+  ccContractorFleet,
+  ccContractorTools,
+  ccStaffAvailabilityBlocks,
   type CalendarRunDTO
 } from '@shared/schema';
 import { eq, and, gte, lte, or, desc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAuth, requireTenant } from '../middleware/guards';
 import type { TenantRequest } from '../middleware/tenantContext';
+import {
+  getDependencyWindowsForTenant,
+  getDependencyWindowsForPortal,
+  createDependencyResources,
+  mapDependencyWindowsToEvents,
+  computeZoneFeasibility,
+} from '../services/dependencyWindowsService';
 
 export const calendarRouter = Router();
 
@@ -331,6 +341,13 @@ interface OpsEvent {
   status: string;
   title: string;
   notes?: string;
+  meta?: {
+    feasibility?: { status: 'ok' | 'risky' | 'blocked'; reasons: string[]; severity?: string };
+    severity?: string;
+    reasonCodes?: string[];
+    affectedZones?: string[];
+    confidence?: number;
+  };
 }
 
 function mapRunsToOpsFormat(runs: Array<{
@@ -380,6 +397,7 @@ function mapRunsToOpsFormat(runs: Array<{
 /**
  * GET /api/contractor/ops-calendar
  * Returns ops board format (Resource[] + ScheduleEvent[]) for contractors.
+ * N3-CAL-02: Includes service runs + staff + dependencies + fleet/tools/materials lanes
  */
 calendarRouter.get('/contractor/ops-calendar', requireAuth, requireTenant, async (req, res) => {
   try {
@@ -396,6 +414,7 @@ calendarRouter.get('/contractor/ops-calendar', requireAuth, requireTenant, async
     const startDate = startParam ? new Date(startParam) : defaults.startDate;
     const endDate = endParam ? new Date(endParam) : defaults.endDate;
 
+    // 1) Service Runs
     const runs = await db
       .select({
         id: ccN3Runs.id,
@@ -419,15 +438,201 @@ calendarRouter.get('/contractor/ops-calendar', requireAuth, requireTenant, async
       )
       .orderBy(desc(ccN3Runs.startsAt));
 
-    const { resources, events } = mapRunsToOpsFormat(runs);
+    const { resources: runResources, events: runEvents } = mapRunsToOpsFormat(runs);
+
+    // 2) Staff Availability Blocks
+    const staffBlocks = await db
+      .select()
+      .from(ccStaffAvailabilityBlocks)
+      .where(
+        and(
+          eq(ccStaffAvailabilityBlocks.tenantId, tenantId),
+          or(
+            and(gte(ccStaffAvailabilityBlocks.startAt, startDate), lte(ccStaffAvailabilityBlocks.startAt, endDate)),
+            and(gte(ccStaffAvailabilityBlocks.endAt, startDate), lte(ccStaffAvailabilityBlocks.endAt, endDate)),
+            and(lte(ccStaffAvailabilityBlocks.startAt, startDate), gte(ccStaffAvailabilityBlocks.endAt, endDate))
+          )
+        )
+      );
+
+    const staffResourceMap = new Map<string, OpsResource>();
+    const staffEvents: OpsEvent[] = [];
+
+    staffBlocks.forEach((block, index) => {
+      const resourceId = `staff:${block.personId}`;
+      if (!staffResourceMap.has(resourceId)) {
+        staffResourceMap.set(resourceId, {
+          id: resourceId,
+          name: `Staff ${index + 1}`, // TODO: Join with user table for real names
+          asset_type: 'staff',
+          status: 'active',
+          group: 'Staff',
+        });
+      }
+      staffEvents.push({
+        id: `staff-block-${block.id}`,
+        resource_id: resourceId,
+        event_type: 'maintenance',
+        start_date: block.startAt.toISOString(),
+        end_date: block.endAt.toISOString(),
+        status: 'unavailable',
+        title: 'Unavailable',
+        notes: block.reason || undefined,
+        meta: { severity: 'warn', reasonCodes: [block.kind] },
+      });
+    });
+
+    const staffResources = Array.from(staffResourceMap.values());
+    if (staffResources.length === 0) {
+      staffResources.push({
+        id: 'staff:placeholder',
+        name: 'Staff (none configured)',
+        asset_type: 'staff',
+        status: 'placeholder',
+        group: 'Staff',
+      });
+    }
+
+    // 3) Dependencies (Weather + Travel)
+    const dependencyWindows = await getDependencyWindowsForTenant(tenantId, startDate, endDate);
+    const dependencyResources = createDependencyResources();
+    const dependencyEvents = mapDependencyWindowsToEvents(dependencyWindows);
+
+    // 4) Fleet
+    const fleetItems = await db
+      .select()
+      .from(ccContractorFleet)
+      .where(eq(ccContractorFleet.tenantId, tenantId))
+      .limit(10);
+
+    const fleetResources: OpsResource[] = fleetItems.length > 0 
+      ? fleetItems.map(item => ({
+          id: `fleet:${item.id}`,
+          name: item.make && item.model ? `${item.make} ${item.model}` : item.assetType,
+          asset_type: 'fleet',
+          status: item.isActive ? 'active' : 'inactive',
+          group: 'Fleet',
+        }))
+      : [{
+          id: 'fleet:placeholder',
+          name: 'Fleet (none yet)',
+          asset_type: 'fleet',
+          status: 'placeholder',
+          group: 'Fleet',
+        }];
+
+    // 5) Tools
+    const toolItems = await db
+      .select()
+      .from(ccContractorTools)
+      .where(eq(ccContractorTools.tenantId, tenantId))
+      .limit(10);
+
+    const toolResources: OpsResource[] = toolItems.length > 0
+      ? toolItems.map(item => ({
+          id: `tool:${item.id}`,
+          name: item.name,
+          asset_type: 'tool',
+          status: item.isActive ? 'active' : 'inactive',
+          group: 'Tools',
+        }))
+      : [{
+          id: 'tool:placeholder',
+          name: 'Tools (none yet)',
+          asset_type: 'tool',
+          status: 'placeholder',
+          group: 'Tools',
+        }];
+
+    // 6) Materials (placeholder)
+    const materialsResources: OpsResource[] = [{
+      id: 'materials:placeholder',
+      name: 'Materials',
+      asset_type: 'materials',
+      status: 'active',
+      group: 'Materials',
+    }];
+
+    // 7) Accommodations (placeholder)
+    const accommodationsResources: OpsResource[] = [{
+      id: 'accom:placeholder',
+      name: 'Accommodations (none configured)',
+      asset_type: 'accommodation',
+      status: 'placeholder',
+      group: 'Accommodations',
+    }];
+
+    // 8) Payments (placeholder)
+    const paymentsResources: OpsResource[] = [{
+      id: 'payments:placeholder',
+      name: 'Payments',
+      asset_type: 'payments',
+      status: 'active',
+      group: 'Payments',
+    }];
+
+    // Apply feasibility overlay to run events
+    const enhancedRunEvents = runEvents.map(event => {
+      const overlappingDeps = dependencyWindows.filter(w => {
+        const eventStart = new Date(event.start_date);
+        const eventEnd = new Date(event.end_date);
+        return w.startAt < eventEnd && w.endAt > eventStart;
+      });
+
+      if (overlappingDeps.some(d => d.severity === 'critical')) {
+        return {
+          ...event,
+          meta: {
+            ...event.meta,
+            feasibility: {
+              status: 'blocked' as const,
+              reasons: overlappingDeps.flatMap(d => d.reasonCodes),
+              severity: 'critical',
+            },
+          },
+        };
+      } else if (overlappingDeps.some(d => d.severity === 'warn')) {
+        return {
+          ...event,
+          meta: {
+            ...event.meta,
+            feasibility: {
+              status: 'risky' as const,
+              reasons: overlappingDeps.flatMap(d => d.reasonCodes),
+              severity: 'warn',
+            },
+          },
+        };
+      }
+      return event;
+    });
+
+    // Combine all resources and events in group order
+    const allResources = [
+      ...runResources,
+      ...staffResources,
+      ...fleetResources,
+      ...toolResources,
+      ...materialsResources,
+      ...accommodationsResources,
+      ...dependencyResources,
+      ...paymentsResources,
+    ];
+
+    const allEvents = [
+      ...enhancedRunEvents,
+      ...staffEvents,
+      ...dependencyEvents,
+    ];
 
     res.json({
-      resources,
-      events,
+      resources: allResources,
+      events: allEvents,
       meta: {
         count: runs.length,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
+        laneGroups: ['Service Runs', 'Staff', 'Fleet', 'Tools', 'Materials', 'Accommodations', 'Dependencies', 'Payments'],
       }
     });
   } catch (err) {
@@ -485,6 +690,7 @@ calendarRouter.get('/resident/ops-calendar', requireAuth, async (req, res) => {
       });
     }
 
+    // 1) Service Runs for resident's properties
     const runs = await db
       .select({
         id: ccN3Runs.id,
@@ -508,19 +714,92 @@ calendarRouter.get('/resident/ops-calendar', requireAuth, async (req, res) => {
       )
       .orderBy(desc(ccN3Runs.startsAt));
 
-    const { resources, events } = mapRunsToOpsFormat(runs);
+    const { resources: runResources, events: runEvents } = mapRunsToOpsFormat(runs);
     
-    resources.forEach(r => {
+    // Redact contractor names
+    runResources.forEach(r => {
       r.name = r.name.replace(/internal|contractor/gi, 'Service');
     });
 
+    // 2) Redacted staff lane (no names)
+    const staffResources: OpsResource[] = [{
+      id: 'staff:assigned',
+      name: 'Assigned Staff',
+      asset_type: 'staff',
+      status: 'active',
+      group: 'Staff',
+    }];
+
+    // 3) Dependencies
+    const dependencyWindows = await getDependencyWindowsForTenant(tenantIds[0] || '', startDate, endDate);
+    const dependencyResources = createDependencyResources();
+    const dependencyEvents = mapDependencyWindowsToEvents(dependencyWindows);
+
+    // 4) Payments lane (placeholder)
+    const paymentsResources: OpsResource[] = [{
+      id: 'payments:resident',
+      name: 'Payments',
+      asset_type: 'payments',
+      status: 'active',
+      group: 'Payments',
+    }];
+
+    // Apply feasibility overlay to run events
+    const enhancedRunEvents = runEvents.map(event => {
+      const overlappingDeps = dependencyWindows.filter(w => {
+        const eventStart = new Date(event.start_date);
+        const eventEnd = new Date(event.end_date);
+        return w.startAt < eventEnd && w.endAt > eventStart;
+      });
+
+      if (overlappingDeps.some(d => d.severity === 'critical')) {
+        return {
+          ...event,
+          meta: {
+            ...event.meta,
+            feasibility: {
+              status: 'blocked' as const,
+              reasons: overlappingDeps.flatMap(d => d.reasonCodes),
+              severity: 'critical',
+            },
+          },
+        };
+      } else if (overlappingDeps.some(d => d.severity === 'warn')) {
+        return {
+          ...event,
+          meta: {
+            ...event.meta,
+            feasibility: {
+              status: 'risky' as const,
+              reasons: overlappingDeps.flatMap(d => d.reasonCodes),
+              severity: 'warn',
+            },
+          },
+        };
+      }
+      return event;
+    });
+
+    const allResources = [
+      ...runResources,
+      ...staffResources,
+      ...dependencyResources,
+      ...paymentsResources,
+    ];
+
+    const allEvents = [
+      ...enhancedRunEvents,
+      ...dependencyEvents,
+    ];
+
     res.json({
-      resources,
-      events,
+      resources: allResources,
+      events: allEvents,
       meta: {
         count: runs.length,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
+        laneGroups: ['Service Runs', 'Staff', 'Dependencies', 'Payments'],
       }
     });
   } catch (err) {
@@ -532,6 +811,7 @@ calendarRouter.get('/resident/ops-calendar', requireAuth, async (req, res) => {
 /**
  * GET /api/portal/:portalId/ops-calendar
  * Returns ops board format for public portal view.
+ * N3-CAL-02: Includes dependencies + zone feasibility roll-up (privacy-filtered)
  */
 calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
   try {
@@ -561,6 +841,7 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
       return res.status(404).json({ error: 'Portal not found' });
     }
 
+    // 1) Service Runs (redacted)
     const runs = await db
       .select({
         id: ccN3Runs.id,
@@ -584,16 +865,82 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
       )
       .orderBy(desc(ccN3Runs.startsAt));
 
-    const { resources, events } = mapRunsToOpsFormat(runs);
+    const { resources: runResources, events: runEvents } = mapRunsToOpsFormat(runs);
     
-    resources.forEach(r => {
+    // Redact all identities
+    runResources.forEach(r => {
       r.name = 'Community Service';
       r.group = 'Scheduled Work';
     });
 
+    // 2) Dependencies (Weather + Travel)
+    const dependencyWindows = await getDependencyWindowsForPortal(portalId, startDate, endDate);
+    const dependencyResources = createDependencyResources();
+    const dependencyEvents = mapDependencyWindowsToEvents(dependencyWindows);
+
+    // 3) Zone Feasibility Roll-up
+    // Define zones for the portal area (Bamfield example)
+    const portalZones = ['East Bamfield', 'West Bamfield', 'Helby Island', 'Deer Group'];
+    const zoneFeasibility = computeZoneFeasibility(dependencyWindows, portalZones);
+
+    const zoneResources: OpsResource[] = portalZones.map(zone => ({
+      id: `zone:${zone.toLowerCase().replace(/\s+/g, '-')}`,
+      name: `Zone: ${zone}`,
+      asset_type: 'zone',
+      status: zoneFeasibility.get(zone)?.status || 'ok',
+      group: 'Zone Feasibility',
+    }));
+
+    // Create zone events for blocked/risky windows
+    const zoneEvents: OpsEvent[] = [];
+    dependencyWindows.forEach((window, index) => {
+      const affectedZones = window.affectedZones || [];
+      affectedZones.forEach(zone => {
+        const feasibility = zoneFeasibility.get(zone);
+        if (feasibility && feasibility.status !== 'ok') {
+          zoneEvents.push({
+            id: `zone-event-${zone}-${index}`,
+            resource_id: `zone:${zone.toLowerCase().replace(/\s+/g, '-')}`,
+            event_type: feasibility.status === 'blocked' ? 'maintenance' : 'hold',
+            start_date: window.startAt.toISOString(),
+            end_date: window.endAt.toISOString(),
+            status: feasibility.status,
+            title: feasibility.status === 'blocked' ? 'Blocked' : 'Risky',
+            notes: feasibility.reasons.join(', '),
+            meta: {
+              severity: window.severity,
+              reasonCodes: window.reasonCodes,
+            },
+          });
+        }
+      });
+    });
+
+    // 4) Staff availability lane (redacted, no names)
+    const staffResources: OpsResource[] = [{
+      id: 'staff:availability',
+      name: 'Staff Availability',
+      asset_type: 'staff',
+      status: 'active',
+      group: 'Staff',
+    }];
+
+    const allResources = [
+      ...runResources,
+      ...staffResources,
+      ...dependencyResources,
+      ...zoneResources,
+    ];
+
+    const allEvents = [
+      ...runEvents,
+      ...dependencyEvents,
+      ...zoneEvents,
+    ];
+
     res.json({
-      resources,
-      events,
+      resources: allResources,
+      events: allEvents,
       portal: {
         id: portal[0].id,
         name: portal[0].name,
@@ -602,6 +949,8 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
         count: runs.length,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
+        laneGroups: ['Scheduled Work', 'Staff', 'Dependencies', 'Zone Feasibility'],
+        zones: portalZones,
       }
     });
   } catch (err) {
