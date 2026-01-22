@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useParams, useNavigate } from 'react-router-dom';
 import ScheduleBoard, { 
   Resource, 
   ScheduleEvent, 
@@ -9,6 +9,19 @@ import ScheduleBoard, {
   snapTo15Min 
 } from '@/components/schedule/ScheduleBoard';
 import type { CalendarRunDTO } from '@shared/schema';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { MessageCircle, Camera, ExternalLink, MoreVertical, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 export type OpsCalendarMode = 'contractor' | 'resident' | 'portal';
 
@@ -90,6 +103,8 @@ function groupResourcesByType(resources: Resource[]): Record<string, Resource[]>
 
 export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps) {
   const { portalSlug } = useParams<{ portalSlug: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [dateRange, setDateRange] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -97,6 +112,33 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
     const to = new Date(now);
     to.setDate(to.getDate() + 1);
     return { from, to };
+  });
+  
+  // Selected event for detail panel
+  const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
+  
+  // Mutation to create/get thread for a run
+  const ensureThreadMutation = useMutation({
+    mutationFn: async (runId: string) => {
+      const response = await apiRequest('POST', `/api/contractor/n3/runs/${runId}/ensure-thread`);
+      return response.json();
+    },
+    onSuccess: (data: { ok: boolean; threadId: string }) => {
+      if (data.ok && data.threadId) {
+        toast({
+          title: "Thread opened",
+          description: "Navigating to conversation...",
+        });
+        navigate(`/app/messages/${data.threadId}`);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to open thread",
+        description: error.message || "Could not create conversation thread",
+        variant: "destructive",
+      });
+    },
   });
 
   const { data: portalData } = useQuery<{ id: string; name: string; slug: string }>({
@@ -190,7 +232,40 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
 
   const handleEventClick = useCallback((event: ScheduleEvent) => {
     console.log('[OpsCalendar] Event clicked:', event);
+    setSelectedEvent(event);
   }, []);
+  
+  // Extract run ID from event (events are formatted as event-{runId}-{index})
+  const getRunIdFromEvent = (event: ScheduleEvent): string | null => {
+    const match = event.id.match(/^event-([a-f0-9-]+)-\d+$/);
+    return match ? match[1] : null;
+  };
+  
+  // Handle opening thread for a run event
+  const handleOpenThread = useCallback((event: ScheduleEvent) => {
+    const runId = getRunIdFromEvent(event);
+    if (runId) {
+      ensureThreadMutation.mutate(runId);
+    }
+  }, [ensureThreadMutation]);
+  
+  // Handle navigating to run details
+  const handleViewRunDetails = useCallback((event: ScheduleEvent) => {
+    const runId = getRunIdFromEvent(event);
+    if (runId) {
+      navigate(`/app/n3/runs/${runId}`);
+    }
+  }, [navigate]);
+  
+  // Get evidence status from event meta
+  const getEvidenceStatus = (event: ScheduleEvent): 'none' | 'partial' | 'complete' | 'confirmed' => {
+    return (event as any).meta?.evidence?.status || 'none';
+  };
+  
+  // Get feasibility status from event meta
+  const getFeasibilityStatus = (event: ScheduleEvent): 'ok' | 'risky' | 'blocked' => {
+    return (event as any).meta?.feasibility?.status || 'ok';
+  };
 
   const getTitle = () => {
     switch (mode) {
@@ -257,6 +332,34 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
     }
   };
 
+  // Render evidence badge
+  const renderEvidenceBadge = (status: 'none' | 'partial' | 'complete' | 'confirmed') => {
+    switch (status) {
+      case 'confirmed':
+        return <Badge variant="default" className="gap-1"><CheckCircle className="h-3 w-3" /> Confirmed</Badge>;
+      case 'complete':
+        return <Badge variant="secondary" className="gap-1"><Camera className="h-3 w-3" /> Complete</Badge>;
+      case 'partial':
+        return <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600"><Camera className="h-3 w-3" /> Partial</Badge>;
+      case 'none':
+      default:
+        return <Badge variant="outline" className="gap-1 text-muted-foreground"><Clock className="h-3 w-3" /> No Evidence</Badge>;
+    }
+  };
+  
+  // Render feasibility badge
+  const renderFeasibilityBadge = (status: 'ok' | 'risky' | 'blocked') => {
+    switch (status) {
+      case 'blocked':
+        return <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" /> Blocked</Badge>;
+      case 'risky':
+        return <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600"><AlertTriangle className="h-3 w-3" /> Risky</Badge>;
+      case 'ok':
+      default:
+        return null;
+    }
+  };
+
   return (
     <div 
       className="h-full flex flex-col" 
@@ -286,6 +389,80 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
             : 'No scheduled service runs'
         }
       />
+      
+      {/* Event Detail Panel - shows when an event is selected */}
+      {selectedEvent && mode === 'contractor' && (
+        <div 
+          className="fixed bottom-4 right-4 w-80 bg-card border rounded-lg shadow-lg p-4 z-50"
+          data-testid="panel-event-detail"
+        >
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold truncate" data-testid="text-event-title">
+                {selectedEvent.title || 'Service Run'}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {new Date(selectedEvent.start_date).toLocaleString()}
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 shrink-0"
+              onClick={() => setSelectedEvent(null)}
+              data-testid="button-close-event-detail"
+            >
+              <span className="sr-only">Close</span>
+              ×
+            </Button>
+          </div>
+          
+          {/* Status badges */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {renderEvidenceBadge(getEvidenceStatus(selectedEvent))}
+            {renderFeasibilityBadge(getFeasibilityStatus(selectedEvent))}
+          </div>
+          
+          {/* Actions */}
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => handleOpenThread(selectedEvent)}
+              disabled={ensureThreadMutation.isPending}
+              data-testid="button-open-thread"
+            >
+              <MessageCircle className="h-4 w-4" />
+              {ensureThreadMutation.isPending ? 'Opening...' : 'Open Thread'}
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => handleViewRunDetails(selectedEvent)}
+              data-testid="button-view-run-details"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View Run Details
+            </Button>
+            
+            {getEvidenceStatus(selectedEvent) !== 'confirmed' && (
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => {
+                  const runId = getRunIdFromEvent(selectedEvent);
+                  if (runId) navigate(`/app/n3/runs/${runId}/evidence`);
+                }}
+                data-testid="button-add-evidence"
+              >
+                <Camera className="h-4 w-4" />
+                {getEvidenceStatus(selectedEvent) === 'none' ? 'Add Evidence' : 'Complete Evidence'}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
