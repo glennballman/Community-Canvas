@@ -1,0 +1,131 @@
+Below is the exact scripted checklist you (or Replit) can follow without getting lost, plus the one Replit prompt to force it to stop “inventing” and instead collect hard evidence.
+
+The Only QA You Must Run (A2.7 Certification = 5 checks)
+Preconditions (2 minutes)
+
+Login as ellen@example.com
+ / ellen123! (contractor-admin persona)
+
+Go to /app/contractor/photo-bundles and ensure list loads.
+
+Pick any bundle (doesn’t matter which) and open it.
+
+QA-1 Back-compat render + recompute (mandatory)
+
+Goal: old ingestion IDs don’t break rendering.
+
+Steps:
+
+Open a bundle detail page.
+
+Click Recompute.
+
+Pass if:
+
+thumbnails render
+
+timeline renders
+
+no “missing media” error toast
+
+page does not crash
+
+If it fails: we don’t guess. We capture:
+
+failing API response (status + JSON error)
+
+console error
+
+the bundle record (beforeMediaIds/afterMediaIds)
+
+QA-2 Completeness + confirm gating (mandatory)
+
+Steps:
+
+Ensure bundle is incomplete (missing after).
+
+If not incomplete, use Move to move the only “after” item out of after → during.
+
+Click Recompute.
+
+Expect:
+
+status = incomplete
+
+missingStage = after
+
+Move an item back into after so you have before+after.
+
+Click Recompute.
+
+Expect:
+
+status becomes complete
+
+Try Confirm while incomplete (force it incomplete again) → must be blocked.
+
+Pass if:
+
+confirm is blocked when incomplete (UI + server)
+
+confirm succeeds only when complete
+
+QA-3 Move integrity (mandatory)
+
+Steps:
+
+Pick a single item and move it:
+
+before → during → after
+
+After each move:
+
+verify it appears exactly once across all stages.
+
+Pass if:
+
+no duplicates
+
+no disappearance
+
+recompute doesn’t reintroduce duplicates
+
+QA-4 Messaging invariant (mandatory)
+
+This is the one Replit keeps bungling.
+
+Steps (in bundle detail page):
+
+Click Recompute
+
+Click Confirm (only if complete)
+
+Click Request Missing
+
+Pass if:
+
+all 3 actions post into the same thread
+
+each message includes bundleId + action + status/missing prompts
+
+no second thread created
+
+If this fails, it’s automatically not certified.
+
+QA-5 Quality score sanity (mandatory quick check)
+
+Steps:
+
+Compare two items:
+
+one with timestamp+geo
+
+one missing both
+
+Pass if:
+
+timestamp+geo meaningfully higher
+
+resolution/size don’t dominate
+
+No deep math required. Just “feels right.”

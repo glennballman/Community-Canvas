@@ -196,6 +196,7 @@ import IngestionReviewPage from './pages/contractor/IngestionReviewPage';
 import ServiceAreasPage from './pages/contractor/ServiceAreasPage';
 import UploadResultsPage from './pages/contractor/UploadResultsPage';
 import PhotoBundleDetailPage from './pages/contractor/PhotoBundleDetailPage';
+import PhotoBundlesListPage from './pages/contractor/PhotoBundlesListPage';
 import EventModePage from './pages/contractor/EventModePage';
 import EventQuotesListPage from './pages/contractor/EventQuotesListPage';
 import EventQuoteDetailPage from './pages/contractor/EventQuoteDetailPage';
@@ -534,6 +535,7 @@ export default function App() {
                 <Route path="contractor/onboard/ingestions/:id" element={<IngestionReviewPage />} />
                 <Route path="contractor/onboard/service-areas" element={<ServiceAreasPage />} />
                 <Route path="contractor/onboard/results" element={<UploadResultsPage />} />
+                <Route path="contractor/photo-bundles" element={<PhotoBundlesListPage />} />
                 <Route path="contractor/photo-bundles/:id" element={<PhotoBundleDetailPage />} />
                 
                 {/* Contractor Event Mode (A2.5) */}

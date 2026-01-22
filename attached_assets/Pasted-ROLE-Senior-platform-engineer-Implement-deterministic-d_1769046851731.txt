@@ -1,0 +1,87 @@
+ROLE: Senior platform engineer. Implement deterministic dev-only debug controls to prevent E2E test stalls.
+
+CONTEXT
+We already have:
+- /api/dev/login-as (POST { email }) returns token + user info (dev-only, 404 in prod).
+- Debug Panel exists and can store cc_token in localStorage.
+- Multi-mode routing (/app/platform, /app/founder, /app/*).
+Problem:
+- Automated tests stall because current_tenant_id is null and there is no reliable way to log in as a specific persona (ellen@example.com) or set tenant context.
+- Tenant-scoped routes return 404 when current_tenant_id is null.
+
+GOAL
+Add two dev-only controls to the Debug Panel:
+A) Login-as selector: pick a seeded user (ellen@example.com, tester@example.com, glenn@envirogroupe.com) and click “Login as …”.
+B) Tenant selector: pick a tenant membership for the current user and click “Set Tenant”.
+
+REQUIREMENTS
+1) Dev-only: controls visible only when devMode=true (same gating as existing dev features). Never show in production.
+2) Must not depend on UI navigation to My Places.
+3) Must handle BOTH causes of 404:
+   - not authenticated
+   - authenticated but tenant context null
+
+IMPLEMENTATION DETAILS
+A) LOGIN AS (Debug Panel)
+- UI: add a dropdown list of known users + a freeform email input.
+- Button “Login as” calls POST /api/dev/login-as with email.
+- On success:
+  - set localStorage[cc_token] = returned token
+  - optionally set localStorage[cc_view_mode] unchanged
+  - hard reload window.location.reload()
+- Also add “Logout (dev)” button that clears cc_token and reloads to /login or / (whichever exists).
+- IMPORTANT: Do not navigate to /api/auth/logout because it may not exist; just clear token.
+
+B) TENANT CONTEXT SETTER (Debug Panel)
+We need an API to set tenant context deterministically.
+
+Server:
+- Add dev-only endpoint: POST /api/dev/set-tenant
+  body: { tenantId: string }
+  auth: requireAuth (must be logged in)
+  behavior:
+    - validate user is member of tenant OR is platform admin
+    - update the user’s current tenant context using the same mechanism /api/me/context uses.
+      If context is stored in a DB table or in session, update that. If it’s stored in user preference table, update that.
+      If existing endpoint exists to set it (e.g. POST /api/me/tenant or /api/me/context), call the shared service used there.
+  return: { ok:true, tenantId }
+
+Client:
+- Debug Panel shows current /api/me/context response (already does) including current_tenant_id.
+- Add “Load Tenants” button that calls GET /api/platform/users/:id/tenants OR existing membership endpoint you already built:
+  - Use the current user id from /foundation/auth/me or /api/me/context.
+  - If platform endpoint requires platform mode, fall back to a new endpoint:
+    GET /api/me/tenants  (returns memberships for current user)
+- Populate a dropdown with tenant name + tenantId.
+- Button “Set Tenant” calls POST /api/dev/set-tenant with selected tenantId.
+- On success:
+  - re-fetch /api/me/context
+  - show a green “Tenant set” indicator
+  - offer quick links:
+    - “Go Contractor Bundles” -> navigate to /app/contractor/photo-bundles
+    - “Go Dashboard” -> /app/dashboard
+
+C) ROUTING/404 IMPROVEMENT (small but critical)
+When tenant-scoped pages 404 due to missing tenant context, show a helpful empty state instead of hard 404:
+- In the main App router / tenant layout guard:
+  if authenticated AND route requires tenant AND current_tenant_id is null:
+    render a “Select Tenant” screen with:
+      - a button “Open Debug Panel -> Set Tenant” (just instructional text)
+      - link to /app/places (Your Places) if it exists
+    Do NOT navigate to /admin/*.
+This prevents tests from landing on an unrecoverable 404.
+
+FILES TO TOUCH (approx)
+- client Debug Panel component (where token/copy state UI lives)
+- server routes: add /api/dev/set-tenant and optionally /api/me/tenants
+- shared context setter service used by “Places” selection (reuse it)
+- tenant route guard UI fallback
+
+ACCEPTANCE TESTS
+1) On any screen, open Debug Panel -> select ellen@example.com -> Login as -> page reloads -> Auth State token yes.
+2) In Debug Panel, Load Tenants -> select “1252093 BC LTD” -> Set Tenant -> /api/me/context shows non-null current_tenant_id.
+3) Click “Go Contractor Bundles” -> loads /app/contractor/photo-bundles (no 404).
+4) If current_tenant_id is null and you visit a tenant route, you see the “Select Tenant” screen (not raw 404).
+5) In production build, /api/dev/set-tenant returns 404 and debug controls are hidden.
+
+Proceed. Implement with minimal changes and reuse existing membership/context code.

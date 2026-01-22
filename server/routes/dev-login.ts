@@ -327,8 +327,109 @@ router.post('/login-as', async (req: Request, res: Response) => {
 router.get('/status', (req: Request, res: Response) => {
   res.json({
     devMode: IS_DEV || process.env.CC_DEV_SEED === 'true',
-    testUserEmail: 'tester@example.com'
+    testUserEmail: 'tester@example.com',
+    allowedUsers: Array.from(DEV_LOGIN_ALLOWLIST)
   });
+});
+
+/**
+ * DEV-ONLY: Set current tenant context
+ * POST /api/dev/set-tenant
+ * 
+ * Sets the session's current_tenant_id for testing tenant-scoped routes.
+ * User must be a member of the tenant OR be a platform admin.
+ */
+router.post('/set-tenant', async (req: Request, res: Response) => {
+  // Hard guard: NEVER allow in production
+  if (!IS_DEV && process.env.CC_DEV_SEED !== 'true') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  try {
+    const { tenantId } = req.body;
+    const session = (req as any).session;
+    
+    // Get user from token
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ ok: false, error: 'Authentication required' });
+    }
+    
+    const token = authHeader.substring(7);
+    let decoded: JWTPayload;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    } catch (err) {
+      return res.status(401).json({ ok: false, error: 'Invalid token' });
+    }
+    
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'tenantId required' });
+    }
+    
+    // Validate tenant exists
+    const tenantResult = await serviceQuery(
+      'SELECT id, name, slug FROM cc_tenants WHERE id = $1 AND status = \'active\'',
+      [tenantId]
+    );
+    
+    if (tenantResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Tenant not found' });
+    }
+    
+    const tenant = tenantResult.rows[0];
+    
+    // Check if user is member of tenant OR is platform admin
+    const memberCheck = await serviceQuery(
+      'SELECT role FROM cc_tenant_users WHERE user_id = $1 AND tenant_id = $2 AND status = \'active\'',
+      [decoded.userId, tenantId]
+    );
+    
+    const isPlatformAdmin = decoded.isPlatformAdmin === true;
+    const isMember = memberCheck.rows.length > 0;
+    
+    if (!isMember && !isPlatformAdmin) {
+      return res.status(403).json({ ok: false, error: 'Not a member of this tenant' });
+    }
+    
+    // Set session current_tenant_id
+    if (session) {
+      session.current_tenant_id = tenantId;
+    }
+    
+    console.log(`[DEV SET-TENANT] Set tenant to ${tenant.name} (${tenantId}) for user ${decoded.userId}`);
+    
+    res.json({
+      ok: true,
+      tenantId,
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug
+      }
+    });
+  } catch (error: any) {
+    console.error('[DEV SET-TENANT] Error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to set tenant' });
+  }
+});
+
+/**
+ * DEV-ONLY: Clear tenant context (for testing)
+ * POST /api/dev/clear-tenant
+ */
+router.post('/clear-tenant', async (req: Request, res: Response) => {
+  if (!IS_DEV && process.env.CC_DEV_SEED !== 'true') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  const session = (req as any).session;
+  if (session) {
+    session.current_tenant_id = null;
+    delete session.impersonation;
+  }
+  
+  res.json({ ok: true, message: 'Tenant context cleared' });
 });
 
 export default router;

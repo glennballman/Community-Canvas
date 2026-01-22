@@ -167,9 +167,69 @@ export function TenantAppLayout(): React.ReactElement {
   }
 
   // Routes that don't require a tenant (places, founder, platform) render with sidebar
-  // Other routes require a tenant; if none selected, show loading while redirect happens
+  // Other routes require a tenant; if none selected, show helpful fallback
   if (!isNoTenantRoute && !isAtRoot && !currentTenant) {
-    return <></>;
+    // Instead of empty fragment, show a helpful "Select Tenant" screen
+    const isDev = import.meta.env.DEV;
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#060b15',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        padding: '1rem',
+      }}>
+        <div style={{
+          maxWidth: '400px',
+          width: '100%',
+          backgroundColor: 'rgba(255,255,255,0.05)',
+          borderRadius: '8px',
+          padding: '2rem',
+          textAlign: 'center',
+        }}>
+          <div style={{ marginBottom: '1rem' }}>
+            <Building2 style={{ width: 48, height: 48, margin: '0 auto', opacity: 0.5 }} />
+          </div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Select a Tenant
+          </h2>
+          <p style={{ color: '#9ca3af', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+            You need to select a tenant/organization to access this page.
+          </p>
+          <button
+            onClick={() => navigate('/app/places')}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              marginBottom: '1rem',
+            }}
+            data-testid="button-go-places"
+          >
+            Go to Your Places
+          </button>
+          {isDev && (
+            <div style={{ 
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              paddingTop: '1rem',
+              fontSize: '0.75rem',
+              color: '#9ca3af',
+            }}>
+              <p style={{ fontWeight: 500, marginBottom: '0.5rem' }}>Dev Mode:</p>
+              <p>Use Debug Panel (bug icon) → Load Tenants → Set Tenant</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   // --------------------------------------------------------------------------

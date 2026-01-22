@@ -159,6 +159,41 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
 });
 
 /**
+ * GET /api/me/tenants
+ * 
+ * Returns the current user's tenant memberships.
+ * Simpler endpoint than /me/context for just getting tenant list.
+ */
+router.get('/me/tenants', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    
+    const membershipsResult = await serviceQuery(`
+      SELECT 
+        tu.tenant_id as id,
+        t.name,
+        t.slug,
+        t.tenant_type as type,
+        tu.role
+      FROM cc_tenant_users tu
+      JOIN cc_tenants t ON t.id = tu.tenant_id
+      WHERE tu.user_id = $1
+        AND t.status = 'active'
+        AND tu.status = 'active'
+      ORDER BY t.tenant_type, t.name ASC
+    `, [userId]);
+    
+    res.json({
+      ok: true,
+      tenants: membershipsResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching user tenants:', error);
+    res.status(500).json({ error: 'Failed to fetch tenants' });
+  }
+});
+
+/**
  * POST /api/me/switch-tenant
  * 
  * Switches the current tenant for the session.
