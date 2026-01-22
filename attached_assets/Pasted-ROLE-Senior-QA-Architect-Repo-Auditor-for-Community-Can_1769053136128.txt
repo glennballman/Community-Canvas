@@ -1,0 +1,109 @@
+ROLE: Senior QA Architect + Repo Auditor for Community Canvas V3.5 (Replit)
+GOAL: Determine if any instructions/QA from the full chat thread were missed. Produce a structured “Paste-Back Report” with proofs (files/lines, routes, queries, logs), not speculation.
+
+CONTEXT SUMMARY (what must be true based on chat)
+A) Routing / Layout invariants
+- /app/platform/* uses PlatformLayout + PLATFORM_NAV only
+- /app/founder/* uses FounderLayout + FOUNDER_NAV only
+- /app/* uses TenantAppLayout + V3_NAV only
+- All /admin/* legacy routes must be fully retired (or hard-disabled) with a kill-switch plan
+- No UI link should route to /admin/* anymore; all Platform links must use /app/platform/*
+
+B) Platform Admin capabilities
+- Tenants list page supports row-level action buttons (impersonate, view portals, etc.) WITHOUT requiring click-into detail
+- Users page supports Invite/Create User and password set/reset in dev mode
+- Tenant membership management exists and works:
+  - Add user to tenant with role, active or invite mode
+  - Remove membership
+  - Search/autocomplete users/tenants
+  - Ellen persona exists: ellen@example.com / ellen123! admin of 1252093 BC LTD tenant
+  - Migration 166 adds invite columns to cc_tenant_users
+
+C) Dev auth + Debug Panel
+- /api/dev/login-as exists (dev-only, 404 in prod)
+- Debug Panel has “Login as tester” and (if required) “Login as Ellen”
+- Auth middleware supports backward compat user.id vs user.userId
+- Tenant selection sets current tenant properly (TenantMembership with tenant_id)
+
+D) Contractor ingestion pipeline
+- A2.6 Next Actions: 7 action types + edit/confirm/dismiss semantics correct
+- A2.6 Patch #7 attach_to_zone integrates LocationResolutionBlock and persists cc_ingestion_zone_links
+- A2.7 Photo Bundles: /app/contractor/photo-bundles route exists and renders list page
+- A2.7 API: 8 endpoints exist under /api/contractor/photo-bundles
+- A2.7 Hardening expected (if implemented): confirmed freeze unless force, ID normalization on recompute, request-missing idempotency, confirm gating
+
+TASKS
+1) Generate a ROUTE MAP & LINK AUDIT
+- Grep for any remaining references to "/admin/" in:
+  client/src, server, shared
+- List each reference with file path + line numbers
+- Confirm all platform UI navigation uses /app/platform/* routes
+- Confirm System Explorer link from Platform Analytics goes to /app/platform/system-explorer (NOT /admin/system-explorer)
+
+2) Verify PLATFORM PAGES & ENDPOINTS exist + respond
+- Identify backend routes for:
+  /api/platform/tenants*, /api/platform/users*, /api/platform/memberships*, /api/platform/tenants/:id/members, /api/platform/users/:id/tenants
+- For each: show handler file path, route registration location, auth guard used
+- Run minimal smoke calls (using existing local dev auth token pattern) OR show how frontend calls them and expected response shapes
+
+3) DB MIGRATIONS + SCHEMA PROOF
+- Confirm migration 166 exists and applied; show the migration file and resulting columns in cc_tenant_users
+- Confirm cc_ingestion_zone_links table exists
+- Confirm cc_contractor_photo_bundles schema matches the latest expected shape
+
+4) UI QA (manual checklist + automation where possible)
+- Confirm Tenants page has working:
+  - Create Tenant modal
+  - Row action buttons: impersonate, view portals, view users/members
+- Confirm Users page:
+  - Invite/Create User modal opens and submit works
+  - Reset Password action works (dev mode)
+  - “Add to Tenant” / membership modal works end-to-end
+
+5) DEV LOGIN/DEBUG PANEL QA
+- Confirm /api/dev/login-as returns token and debug panel sets localStorage cc_token
+- Confirm there is a one-click login-as Ellen, OR a tenant-set helper so E2E tests never require human steps
+- Confirm /api/auth/logout is either implemented or the UI does not direct to it (404 avoidance)
+
+6) A2.7 PHOTO BUNDLES QA (the exact high-signal items)
+- Confirm /app/contractor/photo-bundles renders (no 404)
+- Confirm “Recompute”, “Move item”, “Confirm”, “Request missing” all:
+  - call the correct endpoints
+  - succeed without duplicate actions/messages
+  - respect confirmed freeze rule if present
+  - do not leak /admin links
+
+OUTPUT FORMAT (PASTE-BACK REPORT)
+Return a single markdown report with these sections:
+
+# 1) Route & Link Audit
+- Findings: (list every /admin reference remaining, or “none”)
+- Platform Analytics → System Explorer link target: (show exact route)
+
+# 2) Platform API Proof
+- Table of endpoints with handler file + auth guard + response example
+
+# 3) DB Proof
+- Migration 166: file + columns present (SQL output)
+- cc_ingestion_zone_links: schema + constraints
+- cc_contractor_photo_bundles: schema excerpt
+
+# 4) UI Actions Proof
+- Tenants page: evidence of row action buttons (file + component)
+- Users page: Invite modal wired (file + onClick handler) + request URL
+- Membership modal: add/remove flows (file + endpoints)
+
+# 5) Dev Auth Proof
+- /api/dev/login-as: route file + production guard behavior
+- Debug Panel: buttons present (which users) + localStorage key
+
+# 6) A2.7 QA Results
+- Checklist results with PASS/FAIL + reason
+- If FAIL: exact file + patch suggestion
+
+IMPORTANT RULES
+- Do NOT “assume” something works. Show proof (grep, file references, minimal query outputs).
+- If a test requires credentials, use the dev seed personas (tester@example.com / tester123!, ellen@example.com / ellen123!) or explain exactly why they are missing.
+- If anything is ambiguous, mark it as FAIL and explain what evidence is missing.
+
+Proceed now.
