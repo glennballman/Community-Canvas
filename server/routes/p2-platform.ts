@@ -951,4 +951,324 @@ router.post('/dev/ensure-test-personas', async (req: AuthRequest, res: Response)
   }
 });
 
+// ============================================================================
+// MEMBERSHIP MANAGEMENT ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/p2/platform/tenants/:tenantId/members
+ * Get all members for a specific tenant
+ */
+router.get('/tenants/:tenantId/members', async (req: AuthRequest, res: Response) => {
+  try {
+    const { tenantId } = req.params;
+    
+    const result = await serviceQuery(`
+      SELECT 
+        tu.id as membership_id,
+        tu.user_id,
+        u.email,
+        COALESCE(u.given_name || ' ' || u.family_name, u.email) as name,
+        tu.role,
+        tu.status,
+        tu.title,
+        tu.invited_at,
+        tu.joined_at,
+        tu.invited_email,
+        tu.invite_expires_at,
+        tu.created_at
+      FROM cc_tenant_users tu
+      JOIN cc_users u ON u.id = tu.user_id
+      WHERE tu.tenant_id = $1
+      ORDER BY tu.created_at DESC
+    `, [tenantId]);
+    
+    res.json({
+      ok: true,
+      members: result.rows.map(row => ({
+        membershipId: row.membership_id,
+        userId: row.user_id,
+        email: row.email,
+        name: row.name?.trim() || row.email,
+        role: row.role,
+        status: row.status,
+        title: row.title,
+        invitedAt: row.invited_at,
+        joinedAt: row.joined_at,
+        invitedEmail: row.invited_email,
+        inviteExpiresAt: row.invite_expires_at,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching tenant members:', error);
+    res.status(500).json({ error: 'Failed to fetch members' });
+  }
+});
+
+/**
+ * GET /api/p2/platform/users/:userId/tenants
+ * Get all tenant memberships for a specific user
+ */
+router.get('/users/:userId/tenants', async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const result = await serviceQuery(`
+      SELECT 
+        tu.id as membership_id,
+        tu.tenant_id,
+        t.name as tenant_name,
+        t.slug as tenant_slug,
+        t.tenant_type,
+        tu.role,
+        tu.status,
+        tu.title,
+        tu.invited_at,
+        tu.joined_at,
+        tu.created_at
+      FROM cc_tenant_users tu
+      JOIN cc_tenants t ON t.id = tu.tenant_id
+      WHERE tu.user_id = $1
+      ORDER BY tu.created_at DESC
+    `, [userId]);
+    
+    res.json({
+      ok: true,
+      tenants: result.rows.map(row => ({
+        membershipId: row.membership_id,
+        tenantId: row.tenant_id,
+        tenantName: row.tenant_name,
+        tenantSlug: row.tenant_slug,
+        tenantType: row.tenant_type,
+        role: row.role,
+        status: row.status,
+        title: row.title,
+        invitedAt: row.invited_at,
+        joinedAt: row.joined_at,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching user tenants:', error);
+    res.status(500).json({ error: 'Failed to fetch tenants' });
+  }
+});
+
+/**
+ * POST /api/p2/platform/memberships
+ * Create or update a membership between user and tenant
+ */
+router.post('/memberships', async (req: AuthRequest, res: Response) => {
+  try {
+    const { tenantId, userId, role = 'member', mode = 'active', inviteEmail, setPassword } = req.body;
+    
+    if (!tenantId || !userId) {
+      return res.status(400).json({ error: 'tenantId and userId are required' });
+    }
+    
+    // Verify tenant exists
+    const tenantCheck = await serviceQuery('SELECT id, name FROM cc_tenants WHERE id = $1', [tenantId]);
+    if (tenantCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+    
+    // Verify user exists
+    const userCheck = await serviceQuery('SELECT id, email FROM cc_users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const userEmail = userCheck.rows[0].email;
+    
+    // Set password if provided (platform admin power tool)
+    if (setPassword && isDevMode()) {
+      const passwordHash = await bcrypt.hash(setPassword, 12);
+      await serviceQuery('UPDATE cc_users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+      console.log(`[PLATFORM AUDIT] password_set user=${userId} by=${req.user?.userId}`);
+    }
+    
+    // Check for existing membership
+    const existing = await serviceQuery(
+      'SELECT id FROM cc_tenant_users WHERE tenant_id = $1 AND user_id = $2',
+      [tenantId, userId]
+    );
+    
+    let membership;
+    let inviteLink: string | undefined;
+    
+    if (mode === 'invited') {
+      // Generate invite token
+      const inviteToken = crypto.randomBytes(32).toString('hex');
+      const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      
+      if (existing.rows.length > 0) {
+        // Update existing membership to invited
+        const updateResult = await serviceQuery(`
+          UPDATE cc_tenant_users 
+          SET role = $1, status = 'invited', invited_email = $2, invite_token = $3, 
+              invite_expires_at = $4, invited_at = NOW(), updated_at = NOW()
+          WHERE tenant_id = $5 AND user_id = $6
+          RETURNING id, role, status, invite_token
+        `, [role, inviteEmail || userEmail, inviteToken, inviteExpiresAt, tenantId, userId]);
+        membership = updateResult.rows[0];
+      } else {
+        // Create new invited membership
+        const insertResult = await serviceQuery(`
+          INSERT INTO cc_tenant_users (tenant_id, user_id, role, status, invited_email, invite_token, invite_expires_at, invited_at, created_at)
+          VALUES ($1, $2, $3, 'invited', $4, $5, $6, NOW(), NOW())
+          RETURNING id, role, status, invite_token
+        `, [tenantId, userId, role, inviteEmail || userEmail, inviteToken, inviteExpiresAt]);
+        membership = insertResult.rows[0];
+      }
+      
+      inviteLink = `/claim/${inviteToken}`;
+    } else {
+      // Active mode
+      if (existing.rows.length > 0) {
+        // Update existing membership to active
+        const updateResult = await serviceQuery(`
+          UPDATE cc_tenant_users 
+          SET role = $1, status = 'active', joined_at = COALESCE(joined_at, NOW()), updated_at = NOW()
+          WHERE tenant_id = $2 AND user_id = $3
+          RETURNING id, role, status
+        `, [role, tenantId, userId]);
+        membership = updateResult.rows[0];
+      } else {
+        // Create new active membership
+        const insertResult = await serviceQuery(`
+          INSERT INTO cc_tenant_users (tenant_id, user_id, role, status, joined_at, created_at)
+          VALUES ($1, $2, $3, 'active', NOW(), NOW())
+          RETURNING id, role, status
+        `, [tenantId, userId, role]);
+        membership = insertResult.rows[0];
+      }
+    }
+    
+    console.log(`[PLATFORM AUDIT] membership_upserted tenant=${tenantId} user=${userId} role=${role} mode=${mode} by=${req.user?.userId}`);
+    
+    res.json({
+      ok: true,
+      membership: {
+        id: membership.id,
+        tenantId,
+        userId,
+        role: membership.role,
+        status: membership.status,
+      },
+      inviteLink,
+    });
+  } catch (error) {
+    console.error('Error creating membership:', error);
+    res.status(500).json({ error: 'Failed to create membership' });
+  }
+});
+
+/**
+ * DELETE /api/p2/platform/memberships
+ * Remove a membership between user and tenant
+ */
+router.delete('/memberships', async (req: AuthRequest, res: Response) => {
+  try {
+    const { tenantId, userId } = req.body;
+    
+    if (!tenantId || !userId) {
+      return res.status(400).json({ error: 'tenantId and userId are required' });
+    }
+    
+    const result = await serviceQuery(
+      'DELETE FROM cc_tenant_users WHERE tenant_id = $1 AND user_id = $2 RETURNING id',
+      [tenantId, userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Membership not found' });
+    }
+    
+    console.log(`[PLATFORM AUDIT] membership_removed tenant=${tenantId} user=${userId} by=${req.user?.userId}`);
+    
+    res.json({ ok: true, message: 'Membership removed' });
+  } catch (error) {
+    console.error('Error removing membership:', error);
+    res.status(500).json({ error: 'Failed to remove membership' });
+  }
+});
+
+/**
+ * GET /api/p2/platform/users/search
+ * Search users by email or name for membership assignment
+ */
+router.get('/users/search', async (req: AuthRequest, res: Response) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || typeof q !== 'string' || q.length < 2) {
+      return res.json({ ok: true, users: [] });
+    }
+    
+    const searchTerm = `%${q.toLowerCase()}%`;
+    
+    const result = await serviceQuery(`
+      SELECT id, email, given_name, family_name, status
+      FROM cc_users
+      WHERE LOWER(email) LIKE $1 
+         OR LOWER(given_name) LIKE $1 
+         OR LOWER(family_name) LIKE $1
+      ORDER BY email
+      LIMIT 20
+    `, [searchTerm]);
+    
+    res.json({
+      ok: true,
+      users: result.rows.map(row => ({
+        id: row.id,
+        email: row.email,
+        name: [row.given_name, row.family_name].filter(Boolean).join(' ') || row.email,
+        status: row.status,
+      })),
+    });
+  } catch (error) {
+    console.error('Error searching users:', error);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+/**
+ * GET /api/p2/platform/tenants/search
+ * Search tenants by name or slug for membership assignment
+ */
+router.get('/tenants/search', async (req: AuthRequest, res: Response) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || typeof q !== 'string' || q.length < 2) {
+      return res.json({ ok: true, tenants: [] });
+    }
+    
+    const searchTerm = `%${q.toLowerCase()}%`;
+    
+    const result = await serviceQuery(`
+      SELECT id, name, slug, tenant_type, status
+      FROM cc_tenants
+      WHERE LOWER(name) LIKE $1 OR LOWER(slug) LIKE $1
+      ORDER BY name
+      LIMIT 20
+    `, [searchTerm]);
+    
+    res.json({
+      ok: true,
+      tenants: result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        type: row.tenant_type,
+        status: row.status,
+      })),
+    });
+  } catch (error) {
+    console.error('Error searching tenants:', error);
+    res.status(500).json({ error: 'Failed to search tenants' });
+  }
+});
+
 export default router;

@@ -1,0 +1,284 @@
+✅ REPLIT PROMPT — Platform Admin: Connect User ↔ Tenant (Membership + Role) + Claimable Invite
+
+ROLE: Senior full-stack engineer. Work only in V3.5 platform admin routing (/app/platform/*, /api/platform/*). Do not touch /admin/*.
+
+Goal
+
+Implement the missing capability: connect a user to a tenant with a role (Admin/Member/etc.), and support an optional claim/invite style workflow.
+
+Constraints / Guardrails
+
+Use existing data model if there is already a membership/join table (likely something like cc_tenant_members, cc_memberships, cc_tenant_users, cc_membership etc.). Do not create a second join table if one exists.
+
+Platform Admin endpoints must be protected with the same auth mechanism your new platform pages use (the same helper used for Analytics/System Explorer that you recently fixed).
+
+No legacy /admin/* routes, no legacy nav.
+
+Keep UI minimal: a “Connect” modal reachable from:
+
+Tenant row action icons (👤 user+ icon), and
+
+User detail panel (“Add to tenant”)
+
+1) Find the canonical membership table + role shape (NO INVENTING)
+Step A — schema discovery
+
+Search Drizzle schema for tables matching:
+
+membership, member, tenant_user, tenant_member, user_tenant, actor_role, tenant_actor_roles
+
+Also search server routes/services for:
+
+“add member”, “invite”, “membership create”, “tenant roles”, “assign role”
+
+If a membership table already exists: use it.
+If none exists: create one canonical table:
+
+cc_tenant_memberships
+
+id uuid pk defaultRandom
+
+tenant_id uuid not null
+
+user_id uuid not null
+
+role varchar(30) not null default 'member' // 'admin'|'member'|'staff' etc.
+
+status varchar(20) not null default 'active' // 'invited'|'active'|'suspended'
+
+invited_email text null
+
+invite_token text null
+
+invite_expires_at timestamptz null
+
+created_at timestamptz default now()
+
+updated_at timestamptz default now()
+
+Unique constraint: (tenant_id, user_id)
+Index: tenant_id, user_id, status
+
+NOTE: If you discover an existing join table, add missing columns via migration only if necessary (additive).
+
+2) Platform Admin API endpoints
+
+Create/extend router: server/routes/platform.ts (or wherever platform routes live now), under:
+
+/api/platform/*
+
+A) List tenants + their user count (already exists) — ensure includes id/slug
+B) List users + their tenant count (already exists)
+C) NEW: Get memberships for a tenant
+
+GET /api/platform/tenants/:tenantId/members
+Return:
+
+{ "ok": true, "members": [{ "userId": "...", "email": "...", "name": "...", "role": "...", "status": "..." }] }
+
+D) NEW: Get memberships for a user
+
+GET /api/platform/users/:userId/tenants
+Return same shape.
+
+E) NEW: Connect user ↔ tenant (create/update membership)
+
+POST /api/platform/memberships
+Body:
+
+{
+  "tenantId": "uuid",
+  "userId": "uuid",
+  "role": "admin|member|staff",
+  "mode": "active|invited",
+  "inviteEmail": "optional if invited",
+  "setPassword": "optional string"
+}
+
+
+Behavior:
+
+If membership exists → update role/status.
+
+If mode=active:
+
+status = active
+
+ignore invite token
+
+If mode=invited:
+
+set invited_email, invite_token, invite_expires_at (e.g., 7 days)
+
+status = invited
+
+If setPassword is provided:
+
+set user password immediately (platform admin power tool)
+
+do not email in this prompt; just return token/info
+
+Return:
+
+{ "ok": true, "membership": { ... }, "inviteLink": "optional" }
+
+F) NEW: Remove membership (optional but useful)
+
+DELETE /api/platform/memberships
+Body: { "tenantId": "...", "userId": "..." }
+
+Auth
+
+All /api/platform/*:
+
+require authenticated user
+
+require platform_admin privilege (reuse existing check used by Platform Analytics page)
+
+Add audit logs:
+
+[PLATFORM AUDIT] membership_upserted
+
+[PLATFORM AUDIT] membership_removed
+
+3) UI changes
+
+Target pages:
+
+/app/platform/tenants (All Tenants list)
+
+/app/platform/users (All Users list)
+
+A) Tenant row action: “Manage members”
+
+On each tenant row, add an icon/button: Members
+
+opens modal: “Manage Tenant Members”
+Modal includes:
+
+list existing members (email, role, status)
+
+“Add user” section:
+
+user search dropdown (reuse existing search input style)
+
+role dropdown (Admin/Member/Staff)
+
+toggle: Active now vs Invite to claim
+
+if Active now: optional “Set password” field (platform admin only)
+
+submit → calls POST /api/platform/memberships
+
+B) User detail panel: “Add to tenant”
+
+On the user detail panel (right side), add:
+
+“Add to tenant” button
+Same modal but tenant-first.
+
+C) Tenant list row click
+
+Tenants should remain clickable to view detail, but the membership action must be possible without drilling in.
+
+4) Seed canonical test persona: Ellen (contractor admin) on 1252093 BC Ltd
+
+Add a dev-only helper in seed logic (guarded by CC_DEV_SEED=true):
+
+Ensure user:
+
+email: ellen@example.com
+
+name: Ellen Test
+
+password: ellen123!
+
+Ensure membership:
+
+tenant: 1252093 BC LTD (use existing tenant id)
+
+role: admin
+
+Ensure contractor profile exists for Ellen (reuse your contractor-profile auto-create logic used for tester@example.com)
+
+Log:
+[DEV SEED] ensured ellen@example.com is admin of tenant 1252093...
+
+5) Acceptance tests (must pass)
+
+From /app/platform/users, select a user → click Add to tenant → choose tenant → role Admin → Active now → success → user tenant count increments.
+
+From /app/platform/tenants, click Members → add existing user → role Member → Active now → appears in member list.
+
+Invite mode:
+
+Create membership with status invited
+
+Response returns inviteLink/token
+
+Ellen:
+
+login as ellen@example.com
+ (dev)
+
+can access tenant-scoped contractor flows for Enviropaving/Remote Services and upload photos
+
+No /admin/* navigation is used anywhere.
+
+Deliverables
+
+migration if needed
+
+endpoints above
+
+modal UI for memberships
+
+dev seed for Ellen + membership
+
+audit logs
+
+Proceed.
+
+If you want the tiny second prompt right after this one (to keep Replit focused), paste this immediately after it finishes:
+
+Tiny follow-up prompt
+
+“Add a ‘View Portals’ icon on each tenant row that navigates to /app/platform/tenants/:tenantId/portals (create a simple page listing portals for that tenant). Do not add any new data model; reuse existing portals query.”
+
+Canonical test personas (so testing stops being chaotic)
+
+Use these as the fixed “names” in seed + docs:
+
+Glenn (Platform Admin)
+
+Full power: platform routes + impersonation + seed toggles
+
+Email: your real account (already)
+
+Ellen (Tenant Admin + Contractor Admin)
+
+Admin of: 1252093 BC LTD (DBA Enviropaving + Remote Services)
+
+Primary contractor upload tester
+
+Email: ellen@example.com
+
+Pavel (Contractor Staff)
+
+Member (not admin) of same tenant
+
+Tests “staff can upload but can’t change tenant config”
+
+Email: pavel@example.com
+
+Resident Rita (Resident user)
+
+Tests resident photo uploads / zone definition / notes (the mirrored system)
+
+Email: rita@example.com
+
+Event Lead (Anonymous)
+
+No account; submits /event/quote
+
+Converted into lead/claim flow
