@@ -910,9 +910,19 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
     let workRequestId: string | null = null;
     let zoneCount = 0;
     
+    // Build zone definitions JSON for storage
+    const zoneDefinitionsJson: Array<{ zoneType: string; name: string; notes?: string }> = [];
+    
     if (isResidentMode && zoneItems.length > 0) {
-      // Mark zone items as promoted
+      // Mark zone items as promoted and collect as JSON
       for (const zoneItem of zoneItems) {
+        const payload = (zoneItem.payload || {}) as { zoneType?: string; name?: string; notes?: string };
+        zoneDefinitionsJson.push({
+          zoneType: payload.zoneType || 'general',
+          name: payload.name || payload.zoneType || 'Zone',
+          notes: payload.notes
+        });
+        
         await db.update(ccOnboardingItems)
           .set({ promotedAt: new Date() })
           .where(eq(ccOnboardingItems.id, zoneItem.id));
@@ -949,7 +959,7 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
             tenant_id, contact_channel_value, contact_channel_type,
             summary, description, source, status, created_by_actor_id
           ) VALUES (
-            $1, $2, 'email', $3, $4, 'onboarding', 'intake'::work_request_status, $5
+            $1, $2, 'email', $3, $4, 'onboarding', 'draft'::work_request_status, $5
           ) RETURNING id
         `, [
           tenantId,
@@ -975,9 +985,10 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
       promotedAt: new Date().toISOString() 
     };
     
-    // RES-ONB-01: Add resident-specific summary fields
+    // RES-ONB-01: Add resident-specific summary fields (store zone definitions as JSON)
     if (isResidentMode) {
       promotionSummary.zoneCount = zoneCount;
+      promotionSummary.zoneDefinitions = zoneDefinitionsJson;
       if (workRequestId) {
         promotionSummary.workRequestId = workRequestId;
       }

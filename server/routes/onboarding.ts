@@ -176,6 +176,19 @@ router.get('/results', async (req: Request, res: Response) => {
     const actionsPending = nextActions.filter(a => a.status === 'pending').length;
     const actionsCompleted = nextActions.filter(a => a.status === 'confirmed').length;
     
+    // RES-ONB-01: Extract promotion summary for resident mode
+    const promotionSummary = (workspace.promotionSummary || {}) as { 
+      zoneCount?: number; 
+      workRequestId?: string;
+      mediaCount?: number;
+      ingestionCount?: number;
+    };
+    const modeHints = (workspace.modeHints || {}) as { 
+      intent?: string; 
+      entry?: string; 
+      portalSlug?: string; 
+    };
+    
     // Format response to match client expectations
     const response = {
       ok: true,
@@ -183,15 +196,19 @@ router.get('/results', async (req: Request, res: Response) => {
         id: workspace.id,
         guestToken: workspace.accessToken,
         status: workspace.status,
-        intent: workspace.intent || 'unsure',
+        intent: workspace.intent || modeHints.intent || 'unsure',
         claimedAt: workspace.claimedAt,
-        promotedAt: workspace.promotedAt
+        promotedAt: workspace.promotedAt,
+        modeHints,
+        promotionSummary
       },
       summary: {
         mediaCount,
         ingestionCount: ingestions.length,
         actionsPending,
-        actionsCompleted
+        actionsCompleted,
+        zoneCount: promotionSummary.zoneCount,
+        workRequestId: promotionSummary.workRequestId
       },
       nextActions: nextActions.map(a => ({
         id: a.id,

@@ -60,12 +60,23 @@ interface WorkspaceResult {
     intent: string;
     claimedAt?: string;
     promotedAt?: string;
+    modeHints?: {
+      intent?: string;
+      entry?: string;
+      portalSlug?: string;
+    };
+    promotionSummary?: {
+      zoneCount?: number;
+      workRequestId?: string;
+    };
   };
   summary: {
     mediaCount: number;
     ingestionCount: number;
     actionsPending: number;
     actionsCompleted: number;
+    zoneCount?: number;
+    workRequestId?: string;
   };
   nextActions: NextAction[];
   photoBundles: PhotoBundle[];
@@ -215,6 +226,12 @@ export default function OnboardingResultsPage() {
 
   const { workspace, summary, nextActions, photoBundles } = results;
   const pendingActions = nextActions.filter(a => a.status === 'pending');
+  
+  // RES-ONB-01: Detect resident mode for different UI copy
+  const modeHints = workspace.modeHints || {};
+  const isResidentMode = modeHints.intent === 'need' || modeHints.entry === 'place';
+  const zoneCount = summary.zoneCount || workspace.promotionSummary?.zoneCount || 0;
+  const workRequestId = summary.workRequestId || workspace.promotionSummary?.workRequestId;
 
   return (
     <div className="min-h-screen bg-background" data-testid="page-onboarding-results">
@@ -223,18 +240,25 @@ export default function OnboardingResultsPage() {
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-2">
               <div className="p-3 rounded-full bg-primary/10">
-                <Sparkles className="h-10 w-10 text-primary" />
+                {isResidentMode ? (
+                  <Home className="h-10 w-10 text-primary" />
+                ) : (
+                  <Sparkles className="h-10 w-10 text-primary" />
+                )}
               </div>
             </div>
             <CardTitle className="text-2xl" data-testid="heading-results">
-              Your Workspace is Ready!
+              {isResidentMode ? 'Your Request is Ready!' : 'Your Workspace is Ready!'}
             </CardTitle>
             <CardDescription className="text-base">
-              We analyzed your photos and found some interesting things.
+              {isResidentMode 
+                ? 'We\'ve captured your property details and created a work request.'
+                : 'We analyzed your photos and found some interesting things.'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-3 py-4">
+            <div className={`grid gap-3 py-4 ${isResidentMode ? 'grid-cols-3' : 'grid-cols-4'}`}>
               <div className="text-center p-3 rounded-lg bg-background">
                 <Camera className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
                 <p className="text-xl font-bold" data-testid="count-media">
@@ -242,32 +266,62 @@ export default function OnboardingResultsPage() {
                 </p>
                 <p className="text-xs text-muted-foreground">Photos</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-background">
-                <FileText className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
-                <p className="text-xl font-bold" data-testid="count-ingestion">
-                  {summary.ingestionCount}
-                </p>
-                <p className="text-xs text-muted-foreground">Items</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-background">
-                <Zap className="h-6 w-6 mx-auto mb-1 text-amber-500" />
-                <p className="text-xl font-bold" data-testid="count-actions-pending">
-                  {summary.actionsPending}
-                </p>
-                <p className="text-xs text-muted-foreground">Actions</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-background">
-                <CheckCircle className="h-6 w-6 mx-auto mb-1 text-green-500" />
-                <p className="text-xl font-bold" data-testid="count-actions-completed">
-                  {summary.actionsCompleted}
-                </p>
-                <p className="text-xs text-muted-foreground">Done</p>
-              </div>
+              {isResidentMode ? (
+                <>
+                  <div className="text-center p-3 rounded-lg bg-background">
+                    <MapPin className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xl font-bold" data-testid="count-zones">
+                      {zoneCount}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Zones</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background">
+                    {workRequestId ? (
+                      <>
+                        <CheckCircle className="h-6 w-6 mx-auto mb-1 text-green-500" />
+                        <p className="text-xl font-bold" data-testid="count-request">1</p>
+                        <p className="text-xs text-muted-foreground">Request</p>
+                      </>
+                    ) : (
+                      <>
+                        <ClipboardList className="h-6 w-6 mx-auto mb-1 text-amber-500" />
+                        <p className="text-xl font-bold">Draft</p>
+                        <p className="text-xs text-muted-foreground">Pending</p>
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-center p-3 rounded-lg bg-background">
+                    <FileText className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+                    <p className="text-xl font-bold" data-testid="count-ingestion">
+                      {summary.ingestionCount}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Items</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background">
+                    <Zap className="h-6 w-6 mx-auto mb-1 text-amber-500" />
+                    <p className="text-xl font-bold" data-testid="count-actions-pending">
+                      {summary.actionsPending}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Actions</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-background">
+                    <CheckCircle className="h-6 w-6 mx-auto mb-1 text-green-500" />
+                    <p className="text-xl font-bold" data-testid="count-actions-completed">
+                      {summary.actionsCompleted}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Done</p>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {pendingActions.length > 0 && (
+        {/* RES-ONB-01: Hide contractor-centric actions for resident mode */}
+        {pendingActions.length > 0 && !isResidentMode && (
           <Card>
             <CardHeader className="flex flex-row items-center gap-2 pb-2">
               <Zap className="h-5 w-5 text-amber-500" />
@@ -386,46 +440,92 @@ export default function OnboardingResultsPage() {
             <CardTitle className="text-base">What's Next?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-start gap-3 p-3 rounded-lg border">
-              <Badge variant="secondary">1</Badge>
-              <div className="flex-1">
-                <p className="font-medium">Review suggested actions</p>
-                <p className="text-sm text-muted-foreground">
-                  Confirm or dismiss the actions we identified from your photos.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg border">
-              <Badge variant="secondary">2</Badge>
-              <div className="flex-1">
-                <p className="font-medium">Complete your profile</p>
-                <p className="text-sm text-muted-foreground">
-                  Add your business details and service areas.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 rounded-lg border">
-              <Badge variant="secondary">3</Badge>
-              <div className="flex-1">
-                <p className="font-medium">Explore the platform</p>
-                <p className="text-sm text-muted-foreground">
-                  Discover tools to help you manage your work.
-                </p>
-              </div>
-            </div>
+            {isResidentMode ? (
+              <>
+                <div className="flex items-start gap-3 p-3 rounded-lg border">
+                  <Badge variant="secondary">1</Badge>
+                  <div className="flex-1">
+                    <p className="font-medium">Review your work request</p>
+                    <p className="text-sm text-muted-foreground">
+                      Check that your property zones and photos are correct.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg border">
+                  <Badge variant="secondary">2</Badge>
+                  <div className="flex-1">
+                    <p className="font-medium">Get matched with contractors</p>
+                    <p className="text-sm text-muted-foreground">
+                      We'll find qualified contractors in your area.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg border">
+                  <Badge variant="secondary">3</Badge>
+                  <div className="flex-1">
+                    <p className="font-medium">Receive quotes</p>
+                    <p className="text-sm text-muted-foreground">
+                      Compare quotes and choose the best fit for your project.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start gap-3 p-3 rounded-lg border">
+                  <Badge variant="secondary">1</Badge>
+                  <div className="flex-1">
+                    <p className="font-medium">Review suggested actions</p>
+                    <p className="text-sm text-muted-foreground">
+                      Confirm or dismiss the actions we identified from your photos.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg border">
+                  <Badge variant="secondary">2</Badge>
+                  <div className="flex-1">
+                    <p className="font-medium">Complete your profile</p>
+                    <p className="text-sm text-muted-foreground">
+                      Add your business details and service areas.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg border">
+                  <Badge variant="secondary">3</Badge>
+                  <div className="flex-1">
+                    <p className="font-medium">Explore the platform</p>
+                    <p className="text-sm text-muted-foreground">
+                      Discover tools to help you manage your work.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button 
-            className="flex-1 gap-2" 
-            size="lg"
-            onClick={() => navigate('/app')}
-            data-testid="button-go-dashboard"
-          >
-            <Home className="h-5 w-5" />
-            Go to Dashboard
-          </Button>
+          {isResidentMode && workRequestId ? (
+            <Button 
+              className="flex-1 gap-2" 
+              size="lg"
+              onClick={() => navigate('/app/work-requests')}
+              data-testid="button-view-request"
+            >
+              <ClipboardList className="h-5 w-5" />
+              View Your Request
+            </Button>
+          ) : (
+            <Button 
+              className="flex-1 gap-2" 
+              size="lg"
+              onClick={() => navigate('/app')}
+              data-testid="button-go-dashboard"
+            >
+              <Home className="h-5 w-5" />
+              Go to Dashboard
+            </Button>
+          )}
           
           <Button 
             variant="outline" 
