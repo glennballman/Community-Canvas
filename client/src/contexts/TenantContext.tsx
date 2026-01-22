@@ -274,9 +274,9 @@ export function TenantProvider({ children }: TenantProviderProps) {
         credentials: 'include',
       });
       
-      // CRITICAL: Full page redirect to /app/platform/impersonation
-      // This ensures all state is fresh and correct
-      window.location.href = '/app/platform/impersonation';
+      // CRITICAL: Full page redirect to All Tenants page
+      // This ensures all state is fresh and returns admin to tenant management
+      window.location.href = '/app/platform/tenants';
       
     } catch (error) {
       console.error('Failed to stop impersonation:', error);
