@@ -28,14 +28,7 @@ export default function CommandConsoleFerriesPage() {
     items: FerryItem[];
     lastUpdated: string;
   }>({
-    queryKey: ['/api/p2/platform/command-console/ferries', scope],
-    queryFn: async () => {
-      const res = await fetch(`/api/p2/platform/command-console/ferries?scope=${scope}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch ferry data');
-      return res.json();
-    },
+    queryKey: [`/api/p2/platform/command-console/ferries?scope=${scope}`],
   });
 
   function getAlertIcon(alertType: string | null, severity: string | null) {

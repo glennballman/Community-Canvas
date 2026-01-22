@@ -24,13 +24,6 @@ export default function CommandConsoleDependencyRulesPage() {
     items: DependencyRuleItem[];
   }>({
     queryKey: ['/api/p2/platform/command-console/dependency-rules'],
-    queryFn: async () => {
-      const res = await fetch('/api/p2/platform/command-console/dependency-rules', {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch dependency rules');
-      return res.json();
-    },
   });
 
   function getFeedTypeIcon(feedType: string) {

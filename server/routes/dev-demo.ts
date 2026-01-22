@@ -358,7 +358,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           severity: 'warning',
           signal_type: 'drivebc',
           alert_type: 'road',
-          location_name: 'Bamfield Road',
+          affected_area: 'Bamfield Road',
           details: JSON.stringify({ highway: 'Bamfield Road', km_start: 67, km_end: 85 }),
         },
         {
@@ -367,7 +367,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           severity: 'moderate',
           signal_type: 'bcferries',
           alert_type: 'ferry',
-          location_name: 'Barkley Sound',
+          affected_area: 'Barkley Sound',
           details: JSON.stringify({ route: 'Port Alberni - Bamfield', vessel: 'MV Frances Barkley' }),
         },
         {
@@ -376,7 +376,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           severity: 'warning',
           signal_type: 'environment-canada',
           alert_type: 'weather',
-          location_name: 'Barkley Sound',
+          affected_area: 'Barkley Sound',
           details: JSON.stringify({ type: 'wind_warning', wind_speed: '60-80 km/h' }),
         },
       ];
@@ -385,7 +385,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
         const result = await serviceQuery(`
           INSERT INTO cc_alerts (
             title, summary, severity, signal_type, alert_type, 
-            location_name, details, source_key, 
+            affected_area, details, source_key, 
             effective_from, effective_until
           )
           VALUES ($1, $2, $3, $4, $5, $6, $7, 'demo-seed', NOW(), NOW() + interval '7 days')
@@ -396,7 +396,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           alert.severity,
           alert.signal_type,
           alert.alert_type,
-          alert.location_name,
+          alert.affected_area,
           alert.details,
         ]);
         await logDemoRow('cc_alerts', result.rows[0].id);

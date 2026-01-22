@@ -27,14 +27,7 @@ export default function CommandConsoleHydroPage() {
     items: HydroItem[];
     lastUpdated: string;
   }>({
-    queryKey: ['/api/p2/platform/command-console/hydro', scope],
-    queryFn: async () => {
-      const res = await fetch(`/api/p2/platform/command-console/hydro?scope=${scope}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch hydro data');
-      return res.json();
-    },
+    queryKey: [`/api/p2/platform/command-console/hydro?scope=${scope}`],
   });
 
   function getSeverityIcon(severity: string | null, customersAffected: number | null) {

@@ -26,14 +26,7 @@ export default function CommandConsoleRoadsPage() {
     items: RoadItem[];
     lastUpdated: string;
   }>({
-    queryKey: ['/api/p2/platform/command-console/roads', scope],
-    queryFn: async () => {
-      const res = await fetch(`/api/p2/platform/command-console/roads?scope=${scope}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch road data');
-      return res.json();
-    },
+    queryKey: [`/api/p2/platform/command-console/roads?scope=${scope}`],
   });
 
   function getSeverityIcon(severity: string | null) {

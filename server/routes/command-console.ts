@@ -32,8 +32,7 @@ function isBamfieldRelevant(row: any): boolean {
     row.title,
     row.summary,
     row.message,
-    row.location_name,
-    row.route_name,
+    row.affected_area,
     JSON.stringify(row.details),
   ].filter(Boolean).join(' ').toLowerCase();
 

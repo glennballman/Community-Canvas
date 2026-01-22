@@ -28,14 +28,7 @@ export default function CommandConsoleEarthquakesPage() {
     items: EarthquakeItem[];
     lastUpdated: string;
   }>({
-    queryKey: ['/api/p2/platform/command-console/earthquakes', scope],
-    queryFn: async () => {
-      const res = await fetch(`/api/p2/platform/command-console/earthquakes?scope=${scope}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch earthquake data');
-      return res.json();
-    },
+    queryKey: [`/api/p2/platform/command-console/earthquakes?scope=${scope}`],
   });
 
   function getMagnitudeIcon(magnitude: number | null) {

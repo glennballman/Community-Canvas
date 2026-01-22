@@ -44,7 +44,7 @@ function isRelevantToPortal(row: any, keywords: string[]): boolean {
     row.title,
     row.summary,
     row.message,
-    row.location_name,
+    row.affected_area,
     JSON.stringify(row.details),
   ].filter(Boolean).join(' ').toLowerCase();
 
@@ -89,7 +89,7 @@ router.get('/api/public/portal/:portalSlug/conditions', async (req: Request, res
     const alertsResult = await pool.query(`
       SELECT 
         id, title, summary, message, severity, 
-        signal_type, alert_type, details, location_name
+        signal_type, alert_type, details, affected_area
       FROM cc_alerts
       WHERE effective_until IS NULL OR effective_until > NOW()
       ORDER BY effective_from DESC

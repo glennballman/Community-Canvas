@@ -30,12 +30,7 @@ interface PortalConditionsBarProps {
 
 export function PortalConditionsBar({ portalSlug, compact = false }: PortalConditionsBarProps) {
   const { data, isLoading } = useQuery<ConditionsResponse>({
-    queryKey: ['/api/public/portal', portalSlug, 'conditions'],
-    queryFn: async () => {
-      const res = await fetch(`/api/public/portal/${portalSlug}/conditions`);
-      if (!res.ok) throw new Error('Failed to fetch conditions');
-      return res.json();
-    },
+    queryKey: [`/api/public/portal/${portalSlug}/conditions`],
     refetchInterval: 5 * 60 * 1000,
   });
 

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 import { MapPin, RefreshCw, AlertTriangle, CheckCircle, Route, Ship, Cloud, Zap, Activity, ExternalLink } from 'lucide-react';
 
 interface FeedSummary {
@@ -43,13 +43,6 @@ interface BamfieldSnapshot {
 export default function CommandConsoleBamfieldPage() {
   const { data, isLoading, refetch, isFetching } = useQuery<BamfieldSnapshot>({
     queryKey: ['/api/p2/platform/command-console/bamfield'],
-    queryFn: async () => {
-      const res = await fetch('/api/p2/platform/command-console/bamfield', {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch Bamfield snapshot');
-      return res.json();
-    },
   });
 
   function getStatusBadge(status: string) {

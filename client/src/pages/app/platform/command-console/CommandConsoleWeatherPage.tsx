@@ -26,14 +26,7 @@ export default function CommandConsoleWeatherPage() {
     items: WeatherItem[];
     lastUpdated: string;
   }>({
-    queryKey: ['/api/p2/platform/command-console/weather', scope],
-    queryFn: async () => {
-      const res = await fetch(`/api/p2/platform/command-console/weather?scope=${scope}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch weather data');
-      return res.json();
-    },
+    queryKey: [`/api/p2/platform/command-console/weather?scope=${scope}`],
   });
 
   function getWeatherIcon(warningType: string | null, severity: string | null) {
