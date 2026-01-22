@@ -1,0 +1,185 @@
+REPLIT PROMPT — N3-CAL-04: Community Roll-Up (Read-Only) + Demo Seed Personas (Ellen Contractor / Wade Resident) + Bamfield Portal Publish
+
+ROLE
+Lead Platform Architect. Implement a READ-ONLY community roll-up calendar projection for the Bamfield public portal and seed DEV demo data for a live in-person demo today.
+This is DEV only on laptop; must be removable after demo.
+
+CONTEXT
+- OpsCalendarBoardPage exists and is canonical.
+- N3-CAL-03 complete: live dependency windows, run→thread, evidence badges (contractor only).
+- Portal route exists: /p/:portalSlug/calendar → OpsCalendarBoardPage mode="portal"
+- Messaging exists (no SMS).
+- Platform admin membership management exists.
+- Dev login-as exists via Debug Panel with seeded users.
+
+GOAL
+1) Community roll-up: Public portal shows a read-only ops-style calendar with:
+   - Scheduled Work (aggregated, redacted)
+   - Dependencies
+   - Zone Feasibility
+   - (Optional) Staff redacted lane
+2) Demo data: Seed Bamfield portal + zones + a handful of service runs with feasibility effects.
+3) Ensure demo personas:
+   - Ellen = contractor admin for tenant "1252093 BC LTD" (Enviropaving) and has contractor profile
+   - Wade = resident user for Bamfield portal with resident view
+4) Data must be removable after demo (best effort): Implement DEV-only reset that deletes only demo-tagged rows.
+
+HARD RULES
+- DO NOT leak PII on portal roll-up (no contractor names, no addresses, no pricing).
+- DO NOT create a new calendar UI (must use ScheduleBoard / OpsCalendarBoardPage).
+- Seed and reset must be DEV guarded (IS_DEV or CC_DEV_SEED/CC_DEMO_SEED).
+- Avoid touching real data: all seeded rows must carry demo tags.
+
+================================================================================
+A) COMMUNITY ROLL-UP PROJECTION (PORTAL READ-ONLY)
+================================================================================
+Update the portal ops-calendar endpoint to support roll-up grouping.
+
+Endpoint (already exists):
+GET /api/portal/:portalId/ops-calendar
+
+Add query param:
+?rollup=1  (default true for public portal calendar)
+
+When rollup=1:
+- Scheduled Work lane group:
+  - 1 resource per zone OR 1 resource per category (choose zone-based for Bamfield demo)
+  - Resource IDs: zone:{zoneId}
+  - Title: "{Zone Label} — Scheduled Work"
+- Events:
+  - For each N3 run in the portal date window:
+    - event.title must be generic:
+      "Community Service" OR "{Service Category}" (safe)
+    - NO contractor name, NO resident name, NO address, NO price
+    - include meta:
+      { runCount?: number, feasibility?: {status, reasons, severity}, zoneId, category? }
+  - If multiple runs overlap in same zone/time:
+    - either emit separate events (OK) OR aggregate into one event with meta.runCount (preferred)
+- Include Dependencies lanes (existing) and Zone Feasibility lanes (existing).
+- Ensure portal response stays compatible with ScheduleBoard:
+  { ok:true, resources, events, meta }
+
+UI:
+- Portal calendar page remains /p/:portalSlug/calendar
+- Ensure it calls portal endpoint with rollup=1 (default).
+- Remove/disable any event click actions on portal mode (no thread, no “View Run”).
+
+================================================================================
+B) DEMO DATA TAGGING (REMOVABLE)
+================================================================================
+Add a small shared helper:
+server/services/demoTag.ts
+- const DEMO_BATCH = process.env.CC_DEMO_BATCH_ID || 'demo-2026-01-22';
+- function demoTag() { return { demoBatchId: DEMO_BATCH }; }
+
+We need to tag seeded rows so we can delete them later.
+If tables have json/meta fields (e.g., payload/proofJson), store demoBatchId there.
+If not, add additive columns ONLY where necessary:
+- Preferred: create a single cc_demo_seed_log table and store seeded IDs there.
+
+Create:
+cc_demo_seed_log
+- id uuid pk
+- demo_batch_id text not null
+- table_name text not null
+- row_id uuid not null
+- created_at timestamptz default now()
+Index: (demo_batch_id)
+
+All seed actions must write rows into cc_demo_seed_log for deletion later.
+
+================================================================================
+C) DEMO SEED SCRIPT + DEV ENDPOINTS
+================================================================================
+Create DEV-only endpoints:
+POST /api/dev/demo-seed
+POST /api/dev/demo-reset
+
+Guards:
+- 404 unless (IS_DEV || CC_DEV_SEED === 'true')
+- additionally require header x-demo-seed-key matches env CC_DEMO_SEED_KEY if present (optional)
+Return { ok:true, ...summary }
+
+Seed behavior (idempotent):
+1) Ensure Bamfield portal exists:
+   - slug: "bamfield"
+   - label: "Bamfield Community"
+2) Ensure 4 zones exist (if not already):
+   - East Bamfield, West Bamfield, Helby Island, Deer Group
+3) Ensure tenant exists:
+   - "1252093 BC LTD" (or reuse existing)
+   - Attach Enviropaving brand if you have it; otherwise just tenant label is fine.
+4) Ensure users exist:
+   - ellen@example.com / ellen123! (already)
+   - wade@example.com / wade123!
+5) Ensure memberships:
+   - Ellen is tenant admin for 1252093 BC LTD
+   - Wade is resident user (no tenant admin required) but must be able to access /app/my-place/*
+6) Ensure Ellen has contractor profile:
+   - contractorProfile company label "Enviropaving"
+   - Ensure she can access /app/contractor/*
+7) Seed a small set of N3 runs for demo:
+   - 6 runs across 2 days in Bamfield
+   - at least 2 runs in West Bamfield + Helby Island that will show blocked windows
+   - at least 1 run in East Bamfield that stays OK
+   - Assign to Ellen contractor profile (tenant-scoped)
+   - Create at least one run that Wade can see in resident view (tie to his resident place/work request if applicable; if not available, create a resident-visible run stub in resident calendar projection)
+8) Seed at least 1 photo bundle for evidence badge:
+   - bundle.status='confirmed' overlapping one seeded run window
+   - contractor_profile_id = Ellen’s contractor profile
+   - Write to cc_demo_seed_log
+
+9) Seed at least one staff availability block:
+   - show at least one “Unavailable” interval to demonstrate blockers (contractor view only)
+   - Write to cc_demo_seed_log
+
+10) Ensure portal dependency rules exist for demo:
+   - seaplane affects West Bamfield + Helby Island, not East
+   - Write to cc_demo_seed_log
+
+11) Ensure dependency windows exist for demo day:
+   - Prefer feed-based (N3-CAL-03 already). If feeds are missing on laptop:
+     - allow dev_seed windows with source='dev_seed'
+     - Must still demonstrate: West/Helby blocked 12:00–18:00, East ok in same window.
+
+Reset behavior:
+- Read cc_demo_seed_log for demo_batch_id
+- Delete rows in reverse dependency order safely (photo bundles, runs, staff blocks, rules, etc.)
+- Leave real tables untouched. Only delete IDs recorded in log.
+- Clear cc_demo_seed_log rows for that batch.
+
+================================================================================
+D) DEBUG PANEL UX (DEMO-FRIENDLY)
+================================================================================
+Update client/src/components/dev/DebugPanel.tsx:
+- Add buttons:
+  - "Seed Demo Data" → POST /api/dev/demo-seed
+  - "Reset Demo Data" → POST /api/dev/demo-reset
+  - Show summary counts
+- Add login-as shortcuts:
+  - "Login as Ellen (Contractor)"
+  - "Login as Wade (Resident)"
+- After login-as:
+  - auto-navigate to relevant default page:
+    - Ellen → /app/contractor/calendar
+    - Wade → /app/my-place/calendar
+- Add "Open Bamfield Portal Calendar" button → /p/bamfield/calendar (new tab)
+
+================================================================================
+E) QA / PROOF (FAST)
+================================================================================
+Create docs/N3-CAL-04_PROOF_PACK.md with:
+1) Portal roll-up payload snippet showing:
+   - zone work lanes
+   - no PII
+   - zone feasibility differences (East ok vs West blocked)
+2) Ellen contractor view screenshot notes:
+   - /app/contractor/calendar shows runs + evidence badge + Open Thread
+3) Wade resident view screenshot notes:
+   - /app/my-place/calendar shows his run(s) + feasibility overlay
+4) Demo seed/reset proof:
+   - seed summary counts
+   - reset summary counts
+   - confirm portal calendar empties after reset
+
+Proceed.

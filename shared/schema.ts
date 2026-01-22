@@ -8659,3 +8659,24 @@ export const insertEntityThreadSchema = createInsertSchema(ccEntityThreads).omit
 });
 export type EntityThread = typeof ccEntityThreads.$inferSelect;
 export type InsertEntityThread = z.infer<typeof insertEntityThreadSchema>;
+
+// ============================================================================
+// N3-CAL-04: Demo Seed Log (Removable Demo Data Tracking)
+// DEV-only: Tracks seeded rows for batch cleanup after demos
+// ============================================================================
+
+export const ccDemoSeedLog = pgTable("cc_demo_seed_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  demoBatchId: text("demo_batch_id").notNull(),
+  tableName: text("table_name").notNull(),
+  rowId: uuid("row_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_demo_seed_log_batch").on(table.demoBatchId),
+]);
+
+export const insertDemoSeedLogSchema = createInsertSchema(ccDemoSeedLog).omit({
+  id: true, createdAt: true
+});
+export type DemoSeedLog = typeof ccDemoSeedLog.$inferSelect;
+export type InsertDemoSeedLog = z.infer<typeof insertDemoSeedLogSchema>;
