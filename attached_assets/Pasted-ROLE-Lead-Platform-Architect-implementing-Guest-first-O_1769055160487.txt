@@ -1,0 +1,135 @@
+ROLE: Lead Platform Architect implementing Guest-first Onboarding for Community Canvas V3.5.
+MODE: Additive changes only. No refactors. No breaking schema changes.
+
+GOAL
+Implement a shareable, resumable onboarding workspace that works WITHOUT login.
+Contractors/residents/any user can start, upload messy inputs, and share a link to finish later.
+A “claim” step will be built later; for now we create the guest workspace + item capture + review pages.
+
+NON-NEGOTIABLES
+- No hardcoding to “contractor”
+- Non-linear: user can type a name first OR upload photos OR add a note first
+- Token expires in 30 days, but expiry extends on access
+- Do not reuse cc_reservation_carts tokens; create dedicated onboarding tables
+- Do not require tenantId on workspace (tenant attached at claim later)
+- Use existing media/ingestion upload plumbing only if it works without auth; otherwise store media references as items (do NOT force login)
+
+A) DATABASE (MIGRATION)
+Create migration: add onboarding workspace tables.
+
+1) cc_onboarding_workspaces
+Columns:
+- id uuid pk defaultRandom
+- access_token text unique not null
+- status varchar(20) not null default 'open'  // open|claimed|expired
+- display_name text null                     // what should we call you?
+- company_name text null
+- mode_hints jsonb not null default '{}'     // { intent: 'provide'|'need'|'both'|'unsure' }
+- claimed_user_id uuid null                  // future
+- claimed_tenant_id uuid null                // future
+- expires_at timestamptz not null            // 30 days from created_at
+- last_accessed_at timestamptz not null default now()
+- created_at timestamptz not null default now()
+- updated_at timestamptz not null default now()
+
+Indexes:
+- unique(access_token)
+- index(expires_at)
+- index(status)
+
+2) cc_onboarding_items
+Columns:
+- id uuid pk defaultRandom
+- workspace_id uuid not null references cc_onboarding_workspaces(id) on delete cascade
+- item_type varchar(30) not null   // 'media' | 'typed_note' | 'form' | 'qr_payload'
+- source varchar(30) not null default 'user' // user|system
+- payload jsonb not null default '{}'        // stores flexible content (note text, filename, mediaId, etc.)
+- created_at timestamptz not null default now()
+
+Indexes:
+- workspace_id
+- item_type
+
+Token Generation:
+- 32+ char URL-safe token (crypto.randomBytes)
+- store as access_token
+
+Expiry:
+- expires_at = now() + interval '30 days'
+- when workspace is accessed successfully, extend expires_at to now()+30 days and update last_accessed_at
+
+B) SERVER API (PUBLIC, NO AUTH REQUIRED)
+Add routes under: /api/public/onboard
+
+1) POST /api/public/onboard/workspaces
+Body: { intent?: 'provide'|'need'|'both'|'unsure' }
+Returns:
+{ ok:true, token, expiresAt, urlPath: `/onboard/w/${token}` }
+
+2) GET /api/public/onboard/workspaces/:token
+Returns:
+{ ok:true, workspace: { id, token, status, displayName, companyName, modeHints, expiresAt, lastAccessedAt }, items: [...] }
+Behavior:
+- if expired: return 410 { ok:false, error:'expired' }
+- extend expiry on access
+
+3) PATCH /api/public/onboard/workspaces/:token
+Body: { displayName?, companyName?, modeHints? }
+Returns updated workspace.
+
+4) POST /api/public/onboard/workspaces/:token/items
+Body examples:
+- typed note: { itemType:'typed_note', payload:{ text:'...', tags?:[...] } }
+- media stub: { itemType:'media', payload:{ mediaId:'uuid', filename:'...', mime:'...' } }
+Return created item.
+
+5) GET /api/public/onboard/workspaces/:token/items
+Return list (latest first).
+
+C) CLIENT ROUTES (PUBLIC PAGES)
+Add public pages (no auth required):
+
+1) /onboard
+Minimal intent page:
+- 4 buttons: Provide services / Need services / Both / Not sure
+- On click: call POST workspace; navigate to /onboard/w/:token
+
+2) /onboard/w/:token
+Workspace Home:
+- show “Copy link” button (copies window.location.href)
+- show expiration date
+- tiles:
+  A) “What should we call you?” (displayName + companyName)
+  B) “Add a note” (typed note text area + save)
+  C) “Add photos” (placeholder for ONB-02; for now show “Coming next” but DO NOT block)
+  D) “Review” button -> /onboard/w/:token/review
+
+3) /onboard/w/:token/review
+Show:
+- workspace summary (name/company/intent)
+- list of items (typed notes, media stubs)
+- CTA: “Keep going” back to /onboard/w/:token
+
+UI style:
+- simple, camera-first friendly layout (big tiles)
+- no references to “contractor” or “resident”
+- language: “workspace”, “set up”, “continue later”
+
+D) GUARDRAILS
+- Never leak any PII beyond what user typed
+- No admin routes or /admin/* paths
+- Use existing app router patterns; keep public pages separate from /app/*
+
+E) ACCEPTANCE TESTS (MANUAL)
+1) Visit /onboard -> choose “Provide services” -> gets token -> lands on /onboard/w/:token
+2) Enter display name and save -> refresh -> persists
+3) Add typed note -> appears in review
+4) Open link in incognito -> same workspace loads
+5) Wait or simulate expiry by setting expires_at to past -> GET returns 410
+
+DELIVERABLES
+- migration SQL
+- shared/schema.ts tables
+- server routes for /api/public/onboard/*
+- client pages for /onboard, /onboard/w/:token, /onboard/w/:token/review
+Proceed.

@@ -205,6 +205,9 @@ import EventCapturePage from './pages/contractor/EventCapturePage';
 
 // Pages - Public Event (A2.5)
 import EventQuotePage from './pages/public/EventQuotePage';
+import OnboardIntentPage from './pages/public/onboard/OnboardIntentPage';
+import OnboardWorkspacePage from './pages/public/onboard/OnboardWorkspacePage';
+import OnboardReviewPage from './pages/public/onboard/OnboardReviewPage';
 
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
@@ -346,6 +349,13 @@ export default function App() {
               
               {/* Public Event Lead Capture (A2.5) */}
               <Route path="/event/quote" element={<EventQuotePage />} />
+
+              {/* ========================================== */}
+              {/* PUBLIC ONBOARD - /onboard/*               */}
+              {/* ========================================== */}
+              <Route path="/onboard" element={<OnboardIntentPage />} />
+              <Route path="/onboard/w/:token" element={<OnboardWorkspacePage />} />
+              <Route path="/onboard/w/:token/review" element={<OnboardReviewPage />} />
 
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}

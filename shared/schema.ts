@@ -8394,3 +8394,65 @@ export const insertQuoteDraftSchema = createInsertSchema(ccQuoteDrafts).omit({
 });
 export type QuoteDraft = typeof ccQuoteDrafts.$inferSelect;
 export type InsertQuoteDraft = z.infer<typeof insertQuoteDraftSchema>;
+
+// ============================================================================
+// ONB-01: Guest Onboarding Workspaces
+// ============================================================================
+
+/**
+ * Onboarding Workspaces - Token-based guest workspaces
+ * 
+ * Shareable, resumable onboarding that works WITHOUT login.
+ * Users can start, add items, and share a link to continue later.
+ * Tenant/user attachment happens at claim time (future).
+ */
+export const ccOnboardingWorkspaces = pgTable("cc_onboarding_workspaces", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  accessToken: text("access_token").notNull().unique(),
+  status: varchar("status", { length: 20 }).notNull().default('open'),
+  displayName: text("display_name"),
+  companyName: text("company_name"),
+  modeHints: jsonb("mode_hints").notNull().default({}),
+  claimedUserId: uuid("claimed_user_id"),
+  claimedTenantId: uuid("claimed_tenant_id"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_onboarding_workspaces_expires").on(table.expiresAt),
+  index("idx_onboarding_workspaces_status").on(table.status),
+]);
+
+export const insertOnboardingWorkspaceSchema = createInsertSchema(ccOnboardingWorkspaces).omit({
+  id: true, createdAt: true, updatedAt: true, lastAccessedAt: true
+});
+export type OnboardingWorkspace = typeof ccOnboardingWorkspaces.$inferSelect;
+export type InsertOnboardingWorkspace = z.infer<typeof insertOnboardingWorkspaceSchema>;
+
+/**
+ * Onboarding Items - Flexible content items within a workspace
+ * 
+ * Item types:
+ * - typed_note: Free-form text note
+ * - media: Media file reference (stub for future upload)
+ * - form: Structured form data
+ * - qr_payload: QR code scan data
+ */
+export const ccOnboardingItems = pgTable("cc_onboarding_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull(),
+  itemType: varchar("item_type", { length: 30 }).notNull(),
+  source: varchar("source", { length: 30 }).notNull().default('user'),
+  payload: jsonb("payload").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_onboarding_items_workspace").on(table.workspaceId),
+  index("idx_onboarding_items_type").on(table.itemType),
+]);
+
+export const insertOnboardingItemSchema = createInsertSchema(ccOnboardingItems).omit({
+  id: true, createdAt: true
+});
+export type OnboardingItem = typeof ccOnboardingItems.$inferSelect;
+export type InsertOnboardingItem = z.infer<typeof insertOnboardingItemSchema>;
