@@ -108,7 +108,20 @@ export default function TenantUsersPage() {
             title: 'Success',
             description: `Password set to: ${password}`,
           });
+        } else {
+          toast({
+            title: 'Error',
+            description: data.message || 'Failed to set password',
+            variant: 'destructive',
+          });
         }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        toast({
+          title: 'Error',
+          description: errData.message || 'Failed to set password',
+          variant: 'destructive',
+        });
       }
     } catch (err: any) {
       toast({

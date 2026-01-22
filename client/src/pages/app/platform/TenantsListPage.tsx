@@ -249,6 +249,9 @@ export default function TenantsListPage() {
                             if (res.ok) {
                               toast({ title: 'Impersonating', description: `Now acting as ${tenant.name}` });
                               setLocation('/app/dashboard');
+                            } else {
+                              const errData = await res.json().catch(() => ({}));
+                              toast({ title: 'Error', description: errData.message || 'Failed to start impersonation', variant: 'destructive' });
                             }
                           } catch (err) {
                             toast({ title: 'Error', description: 'Failed to start impersonation', variant: 'destructive' });
@@ -272,6 +275,9 @@ export default function TenantsListPage() {
                             });
                             if (res.ok) {
                               setLocation('/app/dashboard');
+                            } else {
+                              const errData = await res.json().catch(() => ({}));
+                              toast({ title: 'Error', description: errData.message || 'Failed to open tenant', variant: 'destructive' });
                             }
                           } catch (err) {
                             toast({ title: 'Error', description: 'Failed to open tenant', variant: 'destructive' });
