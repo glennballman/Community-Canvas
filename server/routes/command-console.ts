@@ -300,12 +300,10 @@ router.get('/api/p2/platform/command-console/dependency-rules', requirePlatformA
 
     let query = `
       SELECT 
-        r.id, r.portal_id, r.zone_id, r.feed_type, r.source, r.severity,
-        p.name as portal_name, p.slug as portal_slug,
-        z.name as zone_name
+        r.id, r.portal_id, r.dependency_type, r.rule_payload, r.created_at,
+        p.name as portal_name, p.slug as portal_slug
       FROM cc_portal_dependency_rules r
       LEFT JOIN cc_portals p ON r.portal_id = p.id
-      LEFT JOIN cc_zones z ON r.zone_id = z.id
     `;
     const params: string[] = [];
 
@@ -314,7 +312,7 @@ router.get('/api/p2/platform/command-console/dependency-rules', requirePlatformA
       params.push(portalId);
     }
 
-    query += ` ORDER BY p.name, z.name`;
+    query += ` ORDER BY p.name, r.dependency_type`;
 
     const result = await pool.query(query, params);
 
@@ -323,11 +321,9 @@ router.get('/api/p2/platform/command-console/dependency-rules', requirePlatformA
       portalId: row.portal_id,
       portalName: row.portal_name,
       portalSlug: row.portal_slug,
-      zoneId: row.zone_id,
-      zoneName: row.zone_name,
-      feedType: row.feed_type,
-      source: row.source,
-      severity: row.severity,
+      dependencyType: row.dependency_type,
+      rulePayload: row.rule_payload,
+      createdAt: row.created_at,
     }));
 
     res.json({
@@ -397,9 +393,8 @@ router.get('/api/p2/platform/command-console/bamfield', requirePlatformAdmin, as
     }
 
     const rulesResult = portal ? await pool.query(`
-      SELECT r.id, r.zone_id, r.feed_type, r.source, r.severity, z.name as zone_name
+      SELECT r.id, r.dependency_type, r.rule_payload, r.created_at
       FROM cc_portal_dependency_rules r
-      LEFT JOIN cc_zones z ON r.zone_id = z.id
       WHERE r.portal_id = $1
     `, [portal.id]) : { rows: [] };
 
@@ -420,11 +415,9 @@ router.get('/api/p2/platform/command-console/bamfield', requirePlatformAdmin, as
       zones: zonesResult.rows,
       dependencyRules: rulesResult.rows.map(r => ({
         id: r.id,
-        zoneId: r.zone_id,
-        zoneName: r.zone_name,
-        feedType: r.feed_type,
-        source: r.source,
-        severity: r.severity,
+        dependencyType: r.dependency_type,
+        rulePayload: r.rule_payload,
+        createdAt: r.created_at,
       })),
       feeds: {
         roads: { count: byType.roads.length, items: byType.roads.slice(0, 5) },

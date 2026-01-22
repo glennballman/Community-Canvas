@@ -10,11 +10,13 @@ interface DependencyRuleItem {
   portalId: string;
   portalName: string | null;
   portalSlug: string | null;
-  zoneId: string | null;
-  zoneName: string | null;
-  feedType: string;
-  source: string | null;
-  severity: string;
+  dependencyType: string;
+  rulePayload: {
+    zoneId?: string;
+    source?: string;
+    severity?: string;
+  } | null;
+  createdAt: string;
 }
 
 export default function CommandConsoleDependencyRulesPage() {
@@ -114,15 +116,15 @@ export default function CommandConsoleDependencyRulesPage() {
                         <div className="text-xs text-muted-foreground">/p/{rule.portalSlug}</div>
                       )}
                     </TableCell>
-                    <TableCell>{rule.zoneName || rule.zoneId || 'All Zones'}</TableCell>
+                    <TableCell>{rule.rulePayload?.zoneId ? rule.rulePayload.zoneId.slice(0, 8) + '...' : 'All Zones'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getFeedTypeIcon(rule.feedType)}
-                        <span className="capitalize">{rule.feedType}</span>
+                        {getFeedTypeIcon(rule.dependencyType)}
+                        <span className="capitalize">{rule.dependencyType}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{rule.source || '—'}</TableCell>
-                    <TableCell>{getSeverityBadge(rule.severity)}</TableCell>
+                    <TableCell className="text-muted-foreground">{rule.rulePayload?.source || '—'}</TableCell>
+                    <TableCell>{getSeverityBadge(rule.rulePayload?.severity || 'info')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

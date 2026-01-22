@@ -24,11 +24,13 @@ interface BamfieldSnapshot {
   zones: Array<{ id: string; name: string; key: string }>;
   dependencyRules: Array<{
     id: string;
-    zoneId: string;
-    zoneName: string;
-    feedType: string;
-    source: string;
-    severity: string;
+    dependencyType: string;
+    rulePayload: {
+      zoneId?: string;
+      source?: string;
+      severity?: string;
+    } | null;
+    createdAt: string;
   }>;
   feeds: {
     roads: FeedSummary;
@@ -214,13 +216,13 @@ export default function CommandConsoleBamfieldPage() {
                 <div className="space-y-2">
                   {data.dependencyRules.map((rule) => (
                     <div key={rule.id} className="flex items-center justify-between text-sm">
-                      <span>
-                        {rule.zoneName || 'All Zones'}: {rule.feedType}
+                      <span className="capitalize">
+                        {rule.dependencyType}
                       </span>
                       <Badge
-                        variant={rule.severity === 'critical' ? 'destructive' : 'secondary'}
+                        variant={rule.rulePayload?.severity === 'critical' ? 'destructive' : 'secondary'}
                       >
-                        {rule.severity}
+                        {rule.rulePayload?.severity || 'info'}
                       </Badge>
                     </div>
                   ))}

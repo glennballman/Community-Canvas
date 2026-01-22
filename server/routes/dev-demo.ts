@@ -159,16 +159,16 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
     }
 
     const ellenMembership = await serviceQuery(`
-      SELECT id FROM cc_tenant_memberships WHERE user_id = $1 AND tenant_id = $2
+      SELECT id FROM cc_tenant_users WHERE user_id = $1 AND tenant_id = $2
     `, [ellenUserId, tenantId]);
 
     if (ellenMembership.rows.length === 0) {
       const result = await serviceQuery(`
-        INSERT INTO cc_tenant_memberships (user_id, tenant_id, role_label, status)
-        VALUES ($1, $2, 'tenant_admin', 'active')
+        INSERT INTO cc_tenant_users (user_id, tenant_id, role, status)
+        VALUES ($1, $2, 'admin', 'active')
         RETURNING id
       `, [ellenUserId, tenantId]);
-      await logDemoRow('cc_tenant_memberships', result.rows[0].id);
+      await logDemoRow('cc_tenant_users', result.rows[0].id);
       summary.memberships++;
     }
 
@@ -297,7 +297,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
     const existingRules = await serviceQuery(`
       SELECT id FROM cc_portal_dependency_rules 
       WHERE portal_id = $1 
-      AND source LIKE '%demo%'
+      AND rule_payload::text LIKE '%demo%'
     `, [portalId]);
 
     if (existingRules.rows.length === 0) {
@@ -307,38 +307,38 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
 
       if (westZoneId) {
         const r1 = await serviceQuery(`
-          INSERT INTO cc_portal_dependency_rules (portal_id, zone_id, feed_type, source, severity)
-          VALUES ($1, $2, 'seaplane', 'demo-seaplane', 'warn')
+          INSERT INTO cc_portal_dependency_rules (portal_id, dependency_type, rule_payload)
+          VALUES ($1, 'seaplane', $2)
           RETURNING id
-        `, [portalId, westZoneId]);
+        `, [portalId, JSON.stringify({ zoneId: westZoneId, source: 'demo-seaplane', severity: 'warn' })]);
         await logDemoRow('cc_portal_dependency_rules', r1.rows[0].id);
         summary.dependencyRules++;
       }
 
       if (helbyZoneId) {
         const r2 = await serviceQuery(`
-          INSERT INTO cc_portal_dependency_rules (portal_id, zone_id, feed_type, source, severity)
-          VALUES ($1, $2, 'seaplane', 'demo-seaplane', 'critical')
+          INSERT INTO cc_portal_dependency_rules (portal_id, dependency_type, rule_payload)
+          VALUES ($1, 'seaplane', $2)
           RETURNING id
-        `, [portalId, helbyZoneId]);
+        `, [portalId, JSON.stringify({ zoneId: helbyZoneId, source: 'demo-seaplane', severity: 'critical' })]);
         await logDemoRow('cc_portal_dependency_rules', r2.rows[0].id);
         summary.dependencyRules++;
       }
 
       if (eastZoneId) {
         const r3 = await serviceQuery(`
-          INSERT INTO cc_portal_dependency_rules (portal_id, zone_id, feed_type, source, severity)
-          VALUES ($1, $2, 'ferry', 'demo-ferry', 'warn')
+          INSERT INTO cc_portal_dependency_rules (portal_id, dependency_type, rule_payload)
+          VALUES ($1, 'ferry', $2)
           RETURNING id
-        `, [portalId, eastZoneId]);
+        `, [portalId, JSON.stringify({ zoneId: eastZoneId, source: 'demo-ferry', severity: 'warn' })]);
         await logDemoRow('cc_portal_dependency_rules', r3.rows[0].id);
         summary.dependencyRules++;
 
         const r4 = await serviceQuery(`
-          INSERT INTO cc_portal_dependency_rules (portal_id, zone_id, feed_type, source, severity)
-          VALUES ($1, $2, 'road', 'demo-road', 'critical')
+          INSERT INTO cc_portal_dependency_rules (portal_id, dependency_type, rule_payload)
+          VALUES ($1, 'road', $2)
           RETURNING id
-        `, [portalId, eastZoneId]);
+        `, [portalId, JSON.stringify({ zoneId: eastZoneId, source: 'demo-road', severity: 'critical' })]);
         await logDemoRow('cc_portal_dependency_rules', r4.rows[0].id);
         summary.dependencyRules++;
       }
@@ -447,7 +447,7 @@ router.post('/api/dev/demo-reset', async (req: Request, res: Response) => {
       { table: 'cc_n3_runs', key: 'runs' },
       { table: 'cc_portal_dependency_rules', key: 'dependencyRules' },
       { table: 'cc_contractor_profiles', key: 'contractorProfiles' },
-      { table: 'cc_tenant_memberships', key: 'memberships' },
+      { table: 'cc_tenant_users', key: 'memberships' },
       { table: 'cc_zones', key: 'zones' },
       { table: 'cc_portals', key: 'portal' },
       { table: 'cc_tenants', key: 'tenant' },
