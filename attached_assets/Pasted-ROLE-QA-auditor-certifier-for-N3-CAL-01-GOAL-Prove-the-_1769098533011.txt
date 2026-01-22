@@ -1,0 +1,110 @@
+ROLE: QA auditor + certifier for N3-CAL-01.
+GOAL: Prove the ops calendars (contractor/resident/portal) are using ScheduleBoard time spine AND include the required lane groups, privacy rules, and feasibility overlays.
+OUTPUT: Write a single report to docs/N3-CAL-01_PROOF_PACK.md
+
+DO NOT GUESS. Include file paths and line ranges.
+
+--------------------------------------------------------------------
+A) ROUTE + NAV PROOF (NO LEGACY ACCESS)
+--------------------------------------------------------------------
+1) Confirm App.tsx routing
+- Show the exact <Route> entries for:
+  /app/contractor/calendar
+  /app/my-place/calendar
+  /p/:portalSlug/calendar
+- Prove they render OpsCalendarBoardPage with correct mode prop.
+
+2) Confirm nav does NOT reference legacy CalendarGrid routes
+Search for:
+- "CalendarGrid"
+- "ContractorCalendarPage"
+- "ResidentCalendarPage"
+- "PortalCalendarPage"
+- "/calendar" nav item hrefs
+- any "Today" / view toggles component references from the old calendar
+
+Report:
+- where nav links to /calendar (good)
+- confirm no nav points to legacy pages
+- list any remaining legacy imports still reachable (should be NONE)
+
+--------------------------------------------------------------------
+B) TIME SPINE PROOF (ScheduleBoard used, not duplicated)
+--------------------------------------------------------------------
+1) In OpsCalendarBoardPage:
+- Show the import line(s) for ScheduleBoard and ZOOM_CONFIGS.
+- Show where zoom is set (default) and prove ZoomLevel is used.
+- Confirm no local generateTimeSlots / snapTo15Min implementations exist.
+
+2) In backend calendar endpoints:
+- Confirm endpoints return resources + events in ScheduleBoard-compatible format.
+- Confirm backend does NOT return slot arrays/cell grids.
+
+--------------------------------------------------------------------
+C) REQUIRED LANE GROUP COVERAGE (FUNCTIONAL REQUIREMENTS)
+--------------------------------------------------------------------
+For EACH mode, confirm these lane groups exist in returned resources:
+
+Contractor mode MUST include:
+- service runs
+- staff availability (or explicit placeholder lane group with TODO)
+- dependencies (weather + travel)
+- fleet lanes (if assets exist; else placeholder)
+- tools lanes (if tools exist; else placeholder)
+- materials lane (simple boolean; can be placeholder)
+- accommodations lanes (optional)
+- payments lane (optional/placeholder)
+
+Resident mode MUST include:
+- resident’s requests/runs only (narrowed scope)
+- dependencies lanes
+- payments lane (optional)
+- must NOT leak contractor identities
+
+Portal mode MUST include:
+- dependencies lanes
+- zone feasibility roll-up lanes (or deterministic placeholders + TODO)
+- must NOT leak identities/addresses/pricing
+
+To prove this:
+- Print example JSON snippets (sanitized) for each endpoint showing resource.group or resource.label patterns.
+- If grouping is not encoded, document how grouping is represented.
+
+--------------------------------------------------------------------
+D) PRIVACY PROOF (Portal)
+--------------------------------------------------------------------
+Confirm portal endpoint filters out:
+- contractor names
+- resident names
+- addresses
+- pricing
+
+Provide:
+- the exact filtering code path (file + lines)
+- example payload snippet showing only zone labels/categories/counts
+
+--------------------------------------------------------------------
+E) FEASIBILITY / BLOCKERS PROOF
+--------------------------------------------------------------------
+We need proof that:
+- dependency windows can mark runs as blocked/risky
+- staff unavailability can block runs
+- portal can show different zone feasibility for same weather window (East feasible, West blocked)
+
+If any of these are NOT implemented yet, mark:
+NOT IMPLEMENTED with evidence, and list exactly what’s missing.
+
+--------------------------------------------------------------------
+F) SMOKE TEST SCRIPT (MANUAL)
+--------------------------------------------------------------------
+Write a 10-minute manual test checklist for Glenn:
+- Contractor calendar: confirm 15m zoom and lane headers render
+- Resident calendar: confirm narrowed scope
+- Portal calendar: confirm redacted + dependencies present
+- Verify no iPhone calendar UI appears
+- Verify no /admin/* route is opened
+
+--------------------------------------------------------------------
+DELIVERABLE
+Write docs/N3-CAL-01_PROOF_PACK.md with sections A–F.
+Proceed.
