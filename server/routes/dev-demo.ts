@@ -216,18 +216,22 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
         const endAt = new Date(startAt.getTime() + 2 * 3600000);
 
         const result = await serviceQuery(`
-          INSERT INTO cc_n3_runs (tenant_id, portal_id, zone_id, name, status, starts_at, ends_at, metadata)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          INSERT INTO cc_n3_runs (tenant_id, name, description, status, starts_at, ends_at, metadata)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING id
         `, [
           tenantId,
-          portalId,
-          zoneIds.get(run.zone),
           run.name,
+          `Demo run for ${run.zone}`,
           run.status,
           startAt.toISOString(),
           endAt.toISOString(),
-          JSON.stringify({ demoBatchId: DEMO_BATCH_ID })
+          JSON.stringify({ 
+            demoBatchId: DEMO_BATCH_ID,
+            portalId: portalId,
+            zoneId: zoneIds.get(run.zone),
+            zone: run.zone
+          })
         ]);
         await logDemoRow('cc_n3_runs', result.rows[0].id);
         summary.runs++;
@@ -237,8 +241,8 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
     const existingBundles = await serviceQuery(`
       SELECT id FROM cc_contractor_photo_bundles 
       WHERE contractor_profile_id = $1 
-      AND meta->>'demoBatchId' = $2
-    `, [contractorProfileId, DEMO_BATCH_ID]);
+      AND timeline_json::text LIKE '%demoBatchId%'
+    `, [contractorProfileId]);
 
     if (existingBundles.rows.length === 0) {
       const now = new Date();
@@ -251,9 +255,9 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           tenant_id, 
           bundle_type, 
           status, 
-          start_time, 
-          end_time,
-          meta
+          covers_from, 
+          covers_to,
+          timeline_json
         )
         VALUES ($1, $2, 'job_evidence', 'confirmed', $3, $4, $5)
         RETURNING id
@@ -262,7 +266,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
         tenantId,
         bundleStart.toISOString(),
         bundleEnd.toISOString(),
-        JSON.stringify({ demoBatchId: DEMO_BATCH_ID })
+        JSON.stringify({ demoBatchId: DEMO_BATCH_ID, events: [] })
       ]);
       await logDemoRow('cc_contractor_photo_bundles', result.rows[0].id);
       summary.photoBundles++;
@@ -357,17 +361,17 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           summary: 'Expect delays on the Bamfield Road due to gravel surface maintenance between Km 67 and Km 85.',
           severity: 'warning',
           signal_type: 'drivebc',
-          alert_type: 'road',
-          affected_area: 'Bamfield Road',
+          alert_type: 'delay',
+          affected_area: JSON.stringify({ name: 'Bamfield Road', region: 'Vancouver Island' }),
           details: JSON.stringify({ highway: 'Bamfield Road', km_start: 67, km_end: 85 }),
         },
         {
           title: 'MV Frances Barkley - Schedule Change',
           summary: 'Lady Rose Marine Services announces modified sailing schedule for Bamfield route due to vessel maintenance.',
-          severity: 'moderate',
+          severity: 'advisory',
           signal_type: 'bcferries',
-          alert_type: 'ferry',
-          affected_area: 'Barkley Sound',
+          alert_type: 'delay',
+          affected_area: JSON.stringify({ name: 'Barkley Sound', region: 'Vancouver Island' }),
           details: JSON.stringify({ route: 'Port Alberni - Bamfield', vessel: 'MV Frances Barkley' }),
         },
         {
@@ -376,7 +380,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           severity: 'warning',
           signal_type: 'environment-canada',
           alert_type: 'weather',
-          affected_area: 'Barkley Sound',
+          affected_area: JSON.stringify({ name: 'Barkley Sound', region: 'Vancouver Island' }),
           details: JSON.stringify({ type: 'wind_warning', wind_speed: '60-80 km/h' }),
         },
       ];

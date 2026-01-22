@@ -28,11 +28,13 @@ const BAMFIELD_REGION = {
 };
 
 function isBamfieldRelevant(row: any): boolean {
+  const affectedAreaStr = row.affected_area ? 
+    (typeof row.affected_area === 'string' ? row.affected_area : JSON.stringify(row.affected_area)) : '';
   const text = [
     row.title,
     row.summary,
     row.message,
-    row.affected_area,
+    affectedAreaStr,
     JSON.stringify(row.details),
   ].filter(Boolean).join(' ').toLowerCase();
 

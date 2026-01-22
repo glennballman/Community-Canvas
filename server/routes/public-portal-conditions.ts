@@ -40,11 +40,13 @@ const BAMFIELD_KEYWORDS = [
 ];
 
 function isRelevantToPortal(row: any, keywords: string[]): boolean {
+  const affectedAreaStr = row.affected_area ? 
+    (typeof row.affected_area === 'string' ? row.affected_area : JSON.stringify(row.affected_area)) : '';
   const text = [
     row.title,
     row.summary,
     row.message,
-    row.affected_area,
+    affectedAreaStr,
     JSON.stringify(row.details),
   ].filter(Boolean).join(' ').toLowerCase();
 
