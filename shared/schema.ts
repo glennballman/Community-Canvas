@@ -8538,3 +8538,25 @@ export const insertOnboardingThreadSchema = createInsertSchema(ccOnboardingThrea
 });
 export type OnboardingThread = typeof ccOnboardingThreads.$inferSelect;
 export type InsertOnboardingThread = z.infer<typeof insertOnboardingThreadSchema>;
+
+// ============================================================================
+// N3-CAL-01: Calendar Run DTO
+// ============================================================================
+
+/**
+ * Shared DTO for calendar projections across contractor, resident, and portal views.
+ * All views normalize N3 runs to this structure.
+ */
+export const calendarRunDTOSchema = z.object({
+  runId: z.string(),
+  title: z.string(),
+  status: z.enum(['draft', 'scheduled', 'in_progress', 'completed']),
+  startAt: z.string().nullable(),
+  endAt: z.string().nullable(),
+  zoneLabel: z.string().optional(),
+  portalLabel: z.string().optional(),
+  surfaceSummary: z.array(z.string()).optional(),
+  evidenceStatus: z.enum(['none', 'partial', 'complete']).optional(),
+});
+
+export type CalendarRunDTO = z.infer<typeof calendarRunDTOSchema>;

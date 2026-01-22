@@ -1,0 +1,269 @@
+✅ REPLIT PROMPT — N3-CAL-01
+Service Run Calendar Projections (Contractor · Resident · Portal)
+CONTEXT (DO NOT CHANGE)
+
+Community Canvas V3.5 already contains the canonical Service Run (N3) system:
+
+Runs, segments, zones, evidence, messaging already exist
+
+This prompt adds calendar projections only
+
+❌ Do NOT create new scheduling tables
+
+❌ Do NOT fork service logic
+
+✅ Treat calendar as a view over N3 runs
+
+OBJECTIVE
+
+Expose calendar-style views over existing N3 Service Runs for:
+
+Contractors / Providers
+
+Residents / Requestors
+
+Community Portals (read-only)
+
+All views must reference the same N3 run IDs.
+
+A) ROUTES (UI ONLY)
+Contractor Calendar
+/app/contractor/calendar
+
+Resident Calendar
+/app/my-place/calendar
+
+Portal / Community Calendar
+/p/:portalSlug/calendar
+
+B) DATA SOURCE (CANONICAL)
+
+All calendar views must read from:
+
+cc_n3_runs
+
+cc_n3_segments
+
+zone bindings
+
+run status fields
+
+❌ Do NOT create:
+
+cc_calendar_events
+
+cc_schedule_entries
+
+any duplicate time models
+
+C) API ENDPOINTS (READ-ONLY)
+
+Create projection endpoints only.
+
+1️⃣ Contractor Projection
+GET /api/contractor/calendar
+
+
+Returns:
+
+upcoming runs
+
+draft runs
+
+in-progress runs
+
+completed runs
+
+Filters:
+
+contractorProfileId (from auth)
+
+optional date range (default: next 30 days)
+
+2️⃣ Resident Projection
+GET /api/resident/calendar
+
+
+Returns:
+
+runs linked to resident’s places
+
+draft + scheduled + completed
+
+Must:
+
+hide internal logistics
+
+show friendly labels only
+
+3️⃣ Portal Projection
+GET /api/portal/:portalId/calendar
+
+
+Returns:
+
+aggregated runs
+
+capacity windows
+
+zone-level activity
+
+Rules:
+
+read-only
+
+no contractor identity leakage
+
+no pricing exposure
+
+D) SHARED CALENDAR DTO (IMPORTANT)
+
+All projections must normalize to:
+
+CalendarRunDTO {
+  runId: string
+  title: string
+  status: 'draft' | 'scheduled' | 'in_progress' | 'completed'
+  startAt: timestamp
+  endAt: timestamp
+  zoneLabel?: string
+  portalLabel?: string
+  surfaceSummary?: string[]
+  evidenceStatus?: 'none' | 'partial' | 'complete'
+}
+
+
+Different views may hide fields, but structure stays consistent.
+
+E) UI COMPONENTS
+Core Components
+
+CalendarGrid
+
+CalendarRunCard
+
+RunStatusBadge
+
+ZoneBadge
+
+EvidenceIndicator
+
+Contractor Calendar
+
+Week + Day toggle
+
+Click → run detail
+
+Highlight:
+
+draft runs (attention)
+
+incomplete evidence
+
+Resident Calendar
+
+Simplified timeline
+
+Friendly copy:
+
+“Upcoming work”
+
+“Completed work”
+
+CTA:
+
+“View details”
+
+“Message provider”
+
+Portal Calendar
+
+Read-only list
+
+Grouped by day
+
+Copy like:
+
+“Service activity in your area”
+
+F) BEHAVIOR RULES (HARD)
+
+No mutation
+
+Calendar cannot edit runs
+
+Single source of truth
+
+runId always references cc_n3_runs.id
+
+Zone aware
+
+If run has zone → show badge
+
+Evidence aware
+
+Uses A2.7 bundle status
+
+Resident safety
+
+Never expose contractor internals
+
+G) INTEGRATION WITH RES-ONB-01
+
+When RES-ONB-01 creates:
+
+draft work requests
+
+draft N3 runs
+
+They must automatically appear in:
+
+resident calendar
+
+contractor calendar (if assigned later)
+
+No extra glue code.
+
+H) ACCEPTANCE CRITERIA
+
+✅ Contractor sees draft + scheduled runs
+✅ Resident sees their request as calendar item
+✅ Portal shows aggregated activity
+✅ Same runId across all views
+✅ No new scheduling tables
+✅ No /admin/* routes used
+
+I) OUT OF SCOPE (DO NOT BUILD)
+
+Drag/drop scheduling
+
+Crew assignment
+
+Route optimization
+
+Payments
+
+Notifications
+
+These come later.
+
+DELIVERABLES
+
+3 UI pages (contractor / resident / portal)
+
+3 projection APIs
+
+Shared DTO
+
+Calendar UI components
+
+Minimal styling (no polish needed)
+
+FINAL CHECK
+
+If at any point you feel tempted to:
+
+“just create a calendar table”
+
+STOP.
+You are projecting N3, not replacing it.
