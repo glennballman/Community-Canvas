@@ -67,6 +67,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Job Publication Accounting GL Integration**: Complete financial audit trail for paid job placement intents.
 - **N3 Service Run Monitor + Replan Engine (Patent CC-01)**: Real-time service run monitoring with attention bundles and an evaluator.
 - **N3-CAL-01 Calendar Projections**: Read-only calendar views over cc_n3_runs for 3 audiences: contractor (full details), resident (privacy-filtered), and portal (public). Features week/day/list views with tenant-based filtering.
+- **N3-CAL-02 Dependencies/Staff/Asset Lanes**: Extended calendar with staff availability blocks, dependency windows (weather/ferry/seaplane/highway), and multi-lane groups. Contractor sees 8 lane groups, resident sees 4 (redacted), portal sees zone feasibility roll-up. Feasibility overlay marks runs as ok/risky/blocked based on overlapping dependency windows.
 - **V3.5 Surface Spine (Patent CC-02)**: Atomic unit-level spatial modeling for containers, surfaces, claims, and utilities with Capacity Lenses.
 - **P-UI-08 Proposal API**: Itinerary + atomic allocations + folios API with 10-participant split pay support, operator credits, and incidents.
 - **P-UI-09 Proposal UI**: 8 React components for proposal/approver workflow.
