@@ -8486,3 +8486,55 @@ export const insertOnboardingMediaObjectSchema = createInsertSchema(ccOnboarding
 });
 export type OnboardingMediaObject = typeof ccOnboardingMediaObjects.$inferSelect;
 export type InsertOnboardingMediaObject = z.infer<typeof insertOnboardingMediaObjectSchema>;
+
+// ============================================================================
+// ONB-04: Onboarding Ingestion Links
+// ============================================================================
+
+/**
+ * Links workspaces to promoted ingestions for tenant-safe data retrieval.
+ */
+export const ccOnboardingIngestionLinks = pgTable("cc_onboarding_ingestion_links", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  ingestionId: uuid("ingestion_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_onboarding_ingestion_links_workspace").on(table.workspaceId),
+  index("idx_onboarding_ingestion_links_tenant").on(table.tenantId),
+  index("idx_onboarding_ingestion_links_ingestion").on(table.ingestionId),
+]);
+
+export const insertOnboardingIngestionLinkSchema = createInsertSchema(ccOnboardingIngestionLinks).omit({
+  id: true, createdAt: true
+});
+export type OnboardingIngestionLink = typeof ccOnboardingIngestionLinks.$inferSelect;
+export type InsertOnboardingIngestionLink = z.infer<typeof insertOnboardingIngestionLinkSchema>;
+
+// ============================================================================
+// ONB-04: Onboarding Threads
+// ============================================================================
+
+/**
+ * One messaging thread per workspace+tenant for onboarding communication.
+ */
+export const ccOnboardingThreads = pgTable("cc_onboarding_threads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  threadId: uuid("thread_id").notNull(),
+  summaryPostedAt: timestamp("summary_posted_at", { withTimezone: true }),
+  summaryHash: text("summary_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_onboarding_threads_workspace").on(table.workspaceId),
+  index("idx_onboarding_threads_tenant").on(table.tenantId),
+  uniqueIndex("uq_onboarding_threads_workspace_tenant").on(table.workspaceId, table.tenantId),
+]);
+
+export const insertOnboardingThreadSchema = createInsertSchema(ccOnboardingThreads).omit({
+  id: true, createdAt: true
+});
+export type OnboardingThread = typeof ccOnboardingThreads.$inferSelect;
+export type InsertOnboardingThread = z.infer<typeof insertOnboardingThreadSchema>;

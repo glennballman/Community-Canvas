@@ -1,0 +1,143 @@
+ROLE: Lead Platform Architect shipping V3.5 ONB-04.
+MODE: Additive only. No refactors. No breaking changes. No /admin/*.
+
+GOAL (ONB-04)
+After ONB-03 Promote completes, users must land in a “Holy Cow” results workspace that:
+- shows what the system detected (from promoted ingestions)
+- shows actionable A2.6 Next Actions (confirm/edit/dismiss)
+- shows A2.7 Photo Bundles (if any were created or suggested)
+- provides an “Open Thread” button (messaging invariant)
+- lets the user continue onboarding WITHOUT forcing “Need service vs Provide service” as a big up-front decision
+
+IMPORTANT UX NOTE (TRUST)
+We should infer “Need vs Provide” from entry path:
+- If they entered via /onboard with intent button: store mode_hints.intent
+- If they entered via /event/quote: treat as “need”
+- If they entered via contractor/event modes: treat as “provide”
+Do NOT confront with the decision on first screen. Allow a subtle change later via a small link (“Change intent”) in an overflow menu.
+
+SCOPE
+1) Create authenticated results route: /app/onboarding/results
+2) Add server endpoints to fetch ONB-promoted ingestions/actions/bundles in a tenant-safe way
+3) Wire “Continue onboarding” flows to existing screens (Service Areas, Upload Results, Photo Bundles, Event Mode) WITHOUT hardcoding contractor/resident language
+4) Add thread creation + summary message (idempotent)
+
+A) DATA + CONVENTIONS (NO GUESSING)
+Promotion already creates tenant-scoped cc_media + cc_ai_ingestions and runs A2.3/A2.6.
+We need a stable way to find “ingestions created from this workspace”.
+Implement ONE of these, whichever exists already:
+
+Preferred:
+- In cc_ai_ingestions.extracted_signals OR metadata JSON, store:
+  { source:'onboarding', workspaceId:'<uuid>', workspaceToken:'<token optional>' }
+
+If promote already stored something else, reuse it. Do NOT add new columns to cc_ai_ingestions unless absolutely necessary.
+
+If no metadata exists today:
+- Add a new table mapping workspaces to ingestions:
+  cc_onboarding_ingestion_links (workspace_id, tenant_id, ingestion_id, created_at)
+This is additive and avoids changing cc_ai_ingestions.
+
+B) SERVER ENDPOINTS (AUTH REQUIRED)
+Create routes under /api/onboarding (NOT /api/contractor):
+Guards:
+- authenticateToken
+- requireTenantContext (tenantId required)
+- user must be member of tenant via cc_tenant_users
+- NEVER accept workspace token alone for tenant-scoped data
+
+1) GET /api/onboarding/results?workspaceId=<uuid>
+Returns:
+{
+  ok: true,
+  workspace: { id, displayName, companyName, modeHints, promotionSummary },
+  ingestions: [ { id, createdAt, kind?, summary?, topClassification?, confidence? } ],
+  nextActions: [ { id, ingestionId, actionType, status, actionPayload, confidence, priority? } ],
+  photoBundles: [ { id, status, bundleType, coversFrom, coversTo, totalQualityScore?, completeness?, missingStage? } ],
+  thread: { id } | null
+}
+
+Implementation notes:
+- Resolve workspaceId -> ensure it is claimed/promoted and claimed_user_id == current user OR current user is platform admin impersonating.
+- Load ingestions via metadata OR link table.
+- Load next actions from cc_ingestion_next_actions where ingestion_id in ingestion list.
+- Load photo bundles for contractor_profile_id IF available OR bundles referenced in ingestions metadata.
+  If you can’t reliably infer contractor_profile_id from a general user, return bundles by:
+    - any bundle whose mediaIds intersect the promoted mediaIds OR
+    - skip bundles section gracefully (empty) and show “Create a bundle” CTA.
+- Ensure thread:
+  - Create/ensure a single onboarding thread per (tenantId, workspaceId)
+  - Post a single summary message (idempotent) with counts + “Review suggested actions”
+  - Store thread id in workspace.promotion_summary.threadId OR a new table cc_onboarding_threads(workspace_id, tenant_id, thread_id)
+
+2) POST /api/onboarding/ensure-thread
+Body: { workspaceId }
+Returns { ok:true, threadId }
+Idempotent: must not create duplicates.
+
+3) POST /api/onboarding/post-summary
+Body: { workspaceId }
+Posts summary message ONLY ONCE (idempotent hash stored in workspace.promotion_summary.lastSummaryHash/At).
+Return { ok:true, skipped?:true }
+
+C) CLIENT ROUTE + PAGE
+Add route (authenticated, tenant-selected):
+/app/onboarding/results -> OnboardingResultsPage.tsx
+
+Page layout:
+Header:
+- “Here’s what we found”
+- Small subtext: uses displayName/companyName if set
+- Kebab menu: “Change intent” (subtle), “Copy onboarding link” (if you still have token), “Start over” (creates new workspace)
+
+Sections (order matters):
+1) Detected Items (Ingestions)
+- list cards with: thumbnail (if available), label, created time
+- click -> deep link to existing ingestion review:
+  If contractor ingestion review exists: /app/contractor/onboard/ingestions/:id
+  Otherwise create neutral view: /app/onboarding/ingestions/:id (wrapper) that reuses IngestionReviewPage component.
+  DO NOT hardcode “contractor” labels in UI; keep copy neutral.
+
+2) Suggested Next Steps (A2.6)
+- reuse DurableActionCard + edit/confirm/dismiss
+- show grouped by ingestion
+- include “Open Thread” button (uses ensure-thread result)
+- include “Refresh suggestions” (recompute) if endpoint exists; otherwise omit.
+
+3) Proof Bundles (A2.7)
+- show PhotoBundleCard list (status badges)
+- link to /app/contractor/photo-bundles/:id if that’s where it lives; otherwise add neutral alias route /app/onboarding/photo-bundles/:id that redirects.
+- If none exist: show CTA “Create proof bundle from these photos” (calls existing create bundle endpoint, if safe) OR just links to photo bundles list.
+
+4) Continue Setup (trust-building, no forced choice)
+- Based on mode_hints.intent (if present), choose default primary CTA:
+  - intent=provide: “Set service areas” -> /app/contractor/onboard/service-areas (but label neutrally “Service areas”)
+  - intent=need: “Set up your place” -> route to resident onboarding entry (if exists) else placeholder “Coming next”
+  - unsure/both: show two secondary CTAs with soft language:
+     “I provide services” and “I need services” as small buttons, not a big fork.
+- Add a small link “Change later” only.
+
+D) INTENT INFERENCE (NO BIG DECISION)
+Implement:
+- When workspace created from /onboard intent buttons, store mode_hints.intent immediately (already ONB-01).
+- ONB-04 should not ask again; it uses the stored hint.
+- Provide a subtle “Change intent” in kebab menu:
+  opens small modal with 4 radio options; saves PATCH to workspace mode_hints.
+  DO NOT block progress.
+
+E) QA / ACCEPTANCE
+1) After claim+promote, redirect lands on /app/onboarding/results?workspaceId=...
+2) Page loads:
+- ingestions list present (>= created in promote)
+- next actions present (>= A2.6 created)
+- “Open Thread” works and stays stable on refresh
+3) No /admin/* links
+4) No exposure of tenant data without auth
+5) Intent is not forced; only subtle change available
+
+DELIVERABLES
+- server routes /api/onboarding/*
+- OnboardingResultsPage + route wiring
+- thread ensure + summary post idempotency
+- proof in PR comment: screenshot + sample JSON response from /api/onboarding/results
+Proceed.

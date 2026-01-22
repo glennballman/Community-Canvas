@@ -140,6 +140,7 @@ import contractorIntelligenceRouter from "./routes/contractor-ingestion-intellig
 import contractorPhotoBundlesRouter from "./routes/contractor-photo-bundles";
 import publicEventRouter from "./routes/public-event";
 import publicOnboardRouter from "./routes/public-onboard";
+import onboardingRouter from "./routes/onboarding";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -575,6 +576,9 @@ export async function registerRoutes(
   // Public Event Lead Capture (Prompt A2.5)
   app.use('/api/public/event', publicEventRouter);
   app.use('/api/public/onboard', publicOnboardRouter);
+  
+  // ONB-04: Authenticated Onboarding routes
+  app.use('/api/onboarding', onboardingRouter);
 
   // Dev seed for N3 and Surfaces testing (development only)
   if (process.env.NODE_ENV !== 'production') {
