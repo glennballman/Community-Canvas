@@ -24,7 +24,10 @@ const DEV_LOGIN_ALLOWLIST = new Set([
   'tester@example.com',
   'platformadmin@example.com',
   'contractor@example.com',
-  'guest@example.com'
+  'guest@example.com',
+  'ellen@example.com',
+  'pavel@example.com',
+  'rita@example.com'
 ]);
 
 interface JWTPayload {
@@ -121,6 +124,97 @@ export async function ensureDevTestUser(): Promise<void> {
     }
   } catch (error) {
     console.error('[DEV SEED] Failed to seed test user:', error);
+  }
+}
+
+/**
+ * Seed Ellen test persona (Tenant Admin + Contractor Admin)
+ * Ellen is admin of 1252093 BC LTD tenant
+ */
+export async function ensureEllenTestUser(): Promise<void> {
+  if (!IS_DEV && process.env.CC_DEV_SEED !== 'true') {
+    return;
+  }
+
+  try {
+    const ellenEmail = 'ellen@example.com';
+    const ellenPassword = 'ellen123!';
+    const tenantName = '1252093 BC LTD';
+    const tenantSlug = '1252093-bc-ltd';
+    const dbaNames = ['Enviropaving', 'Remote Services Inc'];
+
+    // Check if Ellen already exists
+    const existing = await serviceQuery(
+      'SELECT id FROM cc_users WHERE email = $1',
+      [ellenEmail]
+    );
+
+    if (existing.rows.length > 0) {
+      console.log('[DEV SEED] ellen@example.com already exists');
+      return;
+    }
+
+    // Ensure tenant exists
+    let tenantId: string;
+    const existingTenant = await serviceQuery(
+      'SELECT id FROM cc_tenants WHERE slug = $1',
+      [tenantSlug]
+    );
+
+    if (existingTenant.rows.length > 0) {
+      tenantId = existingTenant.rows[0].id;
+      // Update settings with dbaNames
+      await serviceQuery(`
+        UPDATE cc_tenants SET settings = jsonb_set(COALESCE(settings, '{}'), '{dbaNames}', $1::jsonb)
+        WHERE id = $2
+      `, [JSON.stringify(dbaNames), tenantId]);
+    } else {
+      const tenantResult = await serviceQuery(`
+        INSERT INTO cc_tenants (name, slug, tenant_type, settings, status, created_at)
+        VALUES ($1, $2, 'business', $3, 'active', NOW())
+        RETURNING id
+      `, [tenantName, tenantSlug, JSON.stringify({ dbaNames })]);
+      tenantId = tenantResult.rows[0].id;
+    }
+
+    // Create Ellen user
+    const passwordHash = await bcrypt.hash(ellenPassword, 12);
+    const userResult = await serviceQuery(`
+      INSERT INTO cc_users (
+        email, password_hash, given_name, family_name, display_name,
+        status, is_platform_admin
+      ) VALUES (
+        $1, $2, 'Ellen', 'Test', 'Ellen Test',
+        'active', false
+      )
+      RETURNING id
+    `, [ellenEmail, passwordHash]);
+
+    const userId = userResult.rows[0]?.id;
+
+    if (userId && tenantId) {
+      // Assign Ellen as admin of tenant
+      await serviceQuery(`
+        INSERT INTO cc_tenant_users (user_id, tenant_id, role, status)
+        VALUES ($1, $2, 'admin', 'active')
+        ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = 'admin'
+      `, [userId, tenantId]);
+
+      // Create contractor profile for Ellen
+      try {
+        await serviceQuery(`
+          INSERT INTO cc_contractor_profiles (user_id, portal_id, tenant_id, onboarding_complete, contractor_role)
+          VALUES ($1, $2, $2, false, 'contractor_admin')
+          ON CONFLICT (user_id, portal_id) DO NOTHING
+        `, [userId, tenantId]);
+      } catch (e) {
+        console.warn('[DEV SEED] Could not create contractor profile for Ellen:', e);
+      }
+
+      console.log(`[DEV SEED] ensured ellen@example.com as admin of ${tenantName} (tenant: ${tenantId})`);
+    }
+  } catch (error) {
+    console.error('[DEV SEED] Failed to seed Ellen:', error);
   }
 }
 

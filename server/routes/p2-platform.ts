@@ -841,8 +841,8 @@ router.post('/dev/ensure-test-personas', async (req: AuthRequest, res: Response)
     
     const tenantName = '1252093 BC LTD';
     const tenantSlug = '1252093-bc-ltd';
-    const ellenEmail = 'ellen+dev@example.com';
-    const ellenPassword = 'Ellen123!';
+    const ellenEmail = 'ellen@example.com';
+    const ellenPassword = 'ellen123!';
     const dbaNames = ['Enviropaving', 'Remote Services Inc'];
     
     // Ensure tenant exists

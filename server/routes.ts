@@ -103,7 +103,7 @@ import { surfacesRouter } from "./routes/surfaces";
 import devSeedN3Router from "./routes/dev-seed-n3";
 import devSeedSurfacesRouter from "./routes/dev-seed-surfaces";
 import devSeedWeddingRouter from "./routes/dev-seed-wedding";
-import devLoginRouter, { ensureDevTestUser } from "./routes/dev-login";
+import devLoginRouter, { ensureDevTestUser, ensureEllenTestUser } from "./routes/dev-login";
 import proposalsRouter from "./routes/proposals";
 import opsRouter from "./routes/ops";
 import publicJobsRouter from "./routes/public-jobs";
@@ -420,8 +420,9 @@ export async function registerRoutes(
     app.use('/api/dev/seed', devSeedMarinaRouter);
     app.use('/api/dev', devLoginRouter);
     
-    // Ensure dev test user exists
+    // Ensure dev test users exist
     ensureDevTestUser().catch(err => console.error('[DEV SEED] Error:', err));
+    ensureEllenTestUser().catch(err => console.error('[DEV SEED] Ellen Error:', err));
   }
 
   // Register operator routes (for community operators)

@@ -9,7 +9,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Users, Shield, Building2, Award, Search, UserPlus, Edit, KeyRound, UserX, UserCheck } from 'lucide-react';
+import { Users, Shield, Building2, Award, Search, UserPlus, Edit, KeyRound, UserX, UserCheck, Loader2 } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -86,6 +87,15 @@ export default function UsersManagement() {
     const [inviteUserOpen, setInviteUserOpen] = useState(false);
     const [inviteForm, setInviteForm] = useState({ email: '', fullName: '', password: '', isPlatformAdmin: false });
     const [inviting, setInviting] = useState(false);
+
+    // Add to Tenant modal state
+    const [addToTenantOpen, setAddToTenantOpen] = useState(false);
+    const [tenantSearch, setTenantSearch] = useState('');
+    const [tenantSearchResults, setTenantSearchResults] = useState<{id: string, name: string, slug: string}[]>([]);
+    const [searchingTenants, setSearchingTenants] = useState(false);
+    const [selectedTenant, setSelectedTenant] = useState<{id: string, name: string, slug: string} | null>(null);
+    const [addToTenantRole, setAddToTenantRole] = useState('member');
+    const [addingToTenant, setAddingToTenant] = useState(false);
 
     const loadUsers = useCallback(async () => {
         if (!token) return;
@@ -283,6 +293,69 @@ export default function UsersManagement() {
             setInviting(false);
         }
     }
+
+    // Search tenants
+    const searchTenants = async (query: string) => {
+        if (query.length < 2) {
+            setTenantSearchResults([]);
+            return;
+        }
+        setSearchingTenants(true);
+        try {
+            const res = await fetch(`/api/p2/platform/tenants/search?q=${encodeURIComponent(query)}`, {
+                headers: getAuthHeaders(),
+                credentials: 'include',
+            });
+            if (!res.ok) throw new Error('Failed to search tenants');
+            const data = await res.json();
+            setTenantSearchResults(data.tenants || []);
+        } catch (err) {
+            console.error('Failed to search tenants:', err);
+            setTenantSearchResults([]);
+        } finally {
+            setSearchingTenants(false);
+        }
+    };
+
+    // Add user to tenant
+    const handleAddToTenant = async () => {
+        if (!selectedUser || !selectedTenant) {
+            toast({ title: 'Error', description: 'Please select a tenant', variant: 'destructive' });
+            return;
+        }
+        setAddingToTenant(true);
+        try {
+            const res = await fetch('/api/p2/platform/memberships', {
+                method: 'POST',
+                headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    tenantId: selectedTenant.id,
+                    userId: selectedUser.id,
+                    role: addToTenantRole,
+                    mode: 'active',
+                }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to add to tenant');
+            }
+            toast({ title: 'Success', description: `User added to ${selectedTenant.name}` });
+            setAddToTenantOpen(false);
+            setSelectedTenant(null);
+            setTenantSearch('');
+            setTenantSearchResults([]);
+            setAddToTenantRole('member');
+            // Refresh user detail to show new membership
+            if (selectedUser) {
+                loadUserDetails(selectedUser.id);
+            }
+        } catch (err: any) {
+            toast({ title: 'Error', description: err.message || 'Failed to add to tenant', variant: 'destructive' });
+        } finally {
+            setAddingToTenant(false);
+        }
+    };
 
     return (
         <div className="p-6 space-y-6">
@@ -547,6 +620,10 @@ export default function UsersManagement() {
                                                 <Edit className="w-4 h-4 mr-2" />
                                                 Edit User
                                             </Button>
+                                            <Button variant="outline" className="w-full" size="sm" data-testid="button-add-to-tenant" onClick={() => setAddToTenantOpen(true)}>
+                                                <Building2 className="w-4 h-4 mr-2" />
+                                                Add to Tenant
+                                            </Button>
                                             <Button variant="outline" className="w-full" size="sm" data-testid="button-reset-password" onClick={openPasswordDialog}>
                                                 <KeyRound className="w-4 h-4 mr-2" />
                                                 Reset Password
@@ -719,6 +796,101 @@ export default function UsersManagement() {
                         </Button>
                         <Button onClick={handleInviteUser} disabled={inviting} data-testid="button-submit-invite">
                             {inviting ? 'Creating...' : 'Create User'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add to Tenant Modal */}
+            <Dialog open={addToTenantOpen} onOpenChange={(open) => {
+                setAddToTenantOpen(open);
+                if (!open) {
+                    setSelectedTenant(null);
+                    setTenantSearch('');
+                    setTenantSearchResults([]);
+                    setAddToTenantRole('member');
+                }
+            }}>
+                <DialogContent data-testid="dialog-add-to-tenant">
+                    <DialogHeader>
+                        <DialogTitle>Add to Tenant</DialogTitle>
+                        <DialogDescription>
+                            Add {selectedUser?.given_name || selectedUser?.email || 'user'} to a tenant organization
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="tenant-search">Search Tenant</Label>
+                            <div className="relative">
+                                <Input
+                                    id="tenant-search"
+                                    value={tenantSearch}
+                                    onChange={(e) => {
+                                        setTenantSearch(e.target.value);
+                                        searchTenants(e.target.value);
+                                    }}
+                                    placeholder="Type tenant name or slug..."
+                                    data-testid="input-tenant-search"
+                                />
+                                {searchingTenants && (
+                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                                )}
+                            </div>
+                            {tenantSearchResults.length > 0 && !selectedTenant && (
+                                <div className="border rounded-md divide-y max-h-32 overflow-y-auto">
+                                    {tenantSearchResults.map(tenant => (
+                                        <div
+                                            key={tenant.id}
+                                            className="p-2 hover-elevate cursor-pointer"
+                                            onClick={() => {
+                                                setSelectedTenant(tenant);
+                                                setTenantSearch(tenant.name);
+                                                setTenantSearchResults([]);
+                                            }}
+                                            data-testid={`tenant-result-${tenant.id}`}
+                                        >
+                                            <div className="text-sm font-medium">{tenant.name}</div>
+                                            <div className="text-xs text-muted-foreground">{tenant.slug}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {selectedTenant && (
+                                <div className="flex items-center gap-2 p-2 border rounded-md bg-primary/5">
+                                    <Building2 className="h-4 w-4 text-primary" />
+                                    <div className="flex-1">
+                                        <div className="text-sm font-medium">{selectedTenant.name}</div>
+                                        <div className="text-xs text-muted-foreground">{selectedTenant.slug}</div>
+                                    </div>
+                                    <Button size="sm" variant="ghost" onClick={() => {
+                                        setSelectedTenant(null);
+                                        setTenantSearch('');
+                                    }}>
+                                        Clear
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Role</Label>
+                            <Select value={addToTenantRole} onValueChange={setAddToTenantRole}>
+                                <SelectTrigger data-testid="select-add-role">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="member">Member</SelectItem>
+                                    <SelectItem value="staff">Staff</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setAddToTenantOpen(false)} data-testid="button-cancel-add-tenant">
+                            Cancel
+                        </Button>
+                        <Button onClick={handleAddToTenant} disabled={addingToTenant || !selectedTenant} data-testid="button-submit-add-tenant">
+                            {addingToTenant ? 'Adding...' : 'Add to Tenant'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
