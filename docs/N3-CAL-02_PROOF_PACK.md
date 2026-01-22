@@ -138,6 +138,136 @@ This enables QA testing of zone feasibility indicators.
 - `client/src/components/schedule/ScheduleBoard.tsx` - Resource group support
 - `client/src/pages/shared/OpsCalendarBoardPage.tsx` - Calendar page component
 
+## Example Payloads
+
+### 1. Portal Zone Feasibility (East Bamfield ok, West Bamfield blocked)
+
+```json
+{
+  "resources": [
+    { "id": "zone-east-bamfield", "title": "East Bamfield", "group": "Zone Feasibility" },
+    { "id": "zone-west-bamfield", "title": "West Bamfield", "group": "Zone Feasibility" },
+    { "id": "zone-helby-island", "title": "Helby Island", "group": "Zone Feasibility" },
+    { "id": "zone-deer-group", "title": "Deer Group", "group": "Zone Feasibility" }
+  ],
+  "events": [
+    {
+      "id": "feasibility-east-bamfield-2026-01-23",
+      "resourceId": "zone-east-bamfield",
+      "start": "2026-01-23T12:00:00Z",
+      "end": "2026-01-23T18:00:00Z",
+      "title": "Service Available",
+      "meta": { "feasibility": { "status": "ok", "reasons": [], "severity": "info" } }
+    },
+    {
+      "id": "feasibility-west-bamfield-2026-01-23",
+      "resourceId": "zone-west-bamfield",
+      "start": "2026-01-23T12:00:00Z",
+      "end": "2026-01-23T18:00:00Z",
+      "title": "Seaplane Cancelled",
+      "meta": { "feasibility": { "status": "blocked", "reasons": ["seaplane_cancelled"], "severity": "critical" } }
+    },
+    {
+      "id": "feasibility-helby-island-2026-01-23",
+      "resourceId": "zone-helby-island",
+      "start": "2026-01-23T12:00:00Z",
+      "end": "2026-01-23T18:00:00Z",
+      "title": "Seaplane Cancelled",
+      "meta": { "feasibility": { "status": "blocked", "reasons": ["seaplane_cancelled"], "severity": "critical" } }
+    }
+  ],
+  "meta": {
+    "zones": ["East Bamfield", "West Bamfield", "Helby Island", "Deer Group"],
+    "laneGroups": ["Scheduled Work", "Staff", "Dependencies", "Zone Feasibility"]
+  }
+}
+```
+
+### 2. Contractor Staff Lane with Unavailable Events
+
+```json
+{
+  "resources": [
+    { "id": "staff-p001", "title": "Mike Chen", "group": "Staff" },
+    { "id": "staff-p002", "title": "Sarah Wong", "group": "Staff" },
+    { "id": "staff-p003", "title": "James Miller", "group": "Staff" }
+  ],
+  "events": [
+    {
+      "id": "avail-block-001",
+      "resourceId": "staff-p001",
+      "start": "2026-01-23T08:00:00Z",
+      "end": "2026-01-23T17:00:00Z",
+      "title": "PTO - Vacation",
+      "kind": "pto",
+      "meta": { "type": "unavailable", "reason": "Family vacation" }
+    },
+    {
+      "id": "avail-block-002",
+      "resourceId": "staff-p002",
+      "start": "2026-01-24T13:00:00Z",
+      "end": "2026-01-24T15:00:00Z",
+      "title": "Blocked - Medical Appt",
+      "kind": "blocked",
+      "meta": { "type": "unavailable", "reason": "Doctor appointment" }
+    }
+  ],
+  "meta": {
+    "laneGroups": ["Service Runs", "Staff", "Fleet", "Tools", "Materials", "Accommodations", "Dependencies", "Payments"]
+  }
+}
+```
+
+### 3. Run Event with meta.feasibility (Blocked)
+
+```json
+{
+  "id": "run-abc123",
+  "resourceId": "runs",
+  "start": "2026-01-23T14:00:00Z",
+  "end": "2026-01-23T16:30:00Z",
+  "title": "Septic Pump-out - West Bamfield",
+  "kind": "service_run",
+  "meta": {
+    "runId": "abc123",
+    "status": "scheduled",
+    "zone": "West Bamfield",
+    "feasibility": {
+      "status": "blocked",
+      "reasons": ["seaplane_cancelled"],
+      "severity": "critical"
+    },
+    "assignedStaff": ["Mike Chen"],
+    "estimatedDuration": 150
+  }
+}
+```
+
+A risky example (weather warning but not blocking):
+
+```json
+{
+  "id": "run-def456",
+  "resourceId": "runs",
+  "start": "2026-01-24T09:00:00Z",
+  "end": "2026-01-24T11:30:00Z",
+  "title": "Generator Service - Helby Island",
+  "kind": "service_run",
+  "meta": {
+    "runId": "def456",
+    "status": "scheduled",
+    "zone": "Helby Island",
+    "feasibility": {
+      "status": "risky",
+      "reasons": ["weather_wind", "ferry_delay_possible"],
+      "severity": "warn"
+    },
+    "assignedStaff": ["James Miller"],
+    "estimatedDuration": 150
+  }
+}
+```
+
 ## Verification Checklist
 
 - [x] Staff availability blocks table created
