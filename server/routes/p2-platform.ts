@@ -395,17 +395,18 @@ router.get('/users', async (req: AuthRequest, res: Response) => {
  */
 router.post('/users', async (req: AuthRequest, res: Response) => {
   try {
-    const { email, name, role } = req.body;
+    const { email, name, fullName, role, isPlatformAdmin: isAdmin, password } = req.body;
     
     if (!email) {
       return res.status(400).json({ error: 'email is required' });
     }
     
-    // Parse name into first/last
-    const nameParts = (name || '').split(' ');
+    // Parse name into first/last (accept both 'name' and 'fullName')
+    const displayName = fullName || name || '';
+    const nameParts = displayName.split(' ');
     const givenName = nameParts[0] || null;
     const familyName = nameParts.slice(1).join(' ') || null;
-    const isPlatformAdmin = role === 'platform_admin';
+    const isPlatformAdmin = isAdmin || role === 'platform_admin';
     
     // Check if user exists
     const existing = await serviceQuery(
@@ -417,12 +418,21 @@ router.post('/users', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'User with this email already exists' });
     }
     
-    // Create user without password (will need set-password or invite)
+    // Hash password if provided (dev mode only)
+    let passwordHash: string | null = null;
+    if (password) {
+      if (!isDevMode()) {
+        return res.status(400).json({ error: 'Password setting only available in development mode' });
+      }
+      passwordHash = await bcrypt.hash(password, 12);
+    }
+    
+    // Create user
     const result = await serviceQuery(`
-      INSERT INTO cc_users (email, given_name, family_name, is_platform_admin, status, created_at)
-      VALUES ($1, $2, $3, $4, 'active', NOW())
+      INSERT INTO cc_users (email, given_name, family_name, password_hash, is_platform_admin, status, created_at)
+      VALUES ($1, $2, $3, $4, $5, 'active', NOW())
       RETURNING id, email, given_name, family_name, is_platform_admin
-    `, [email.toLowerCase(), givenName, familyName, isPlatformAdmin]);
+    `, [email.toLowerCase(), givenName, familyName, passwordHash, isPlatformAdmin]);
     
     const user = result.rows[0];
     
@@ -582,34 +592,42 @@ router.post('/tenants', async (req: AuthRequest, res: Response) => {
 /**
  * POST /api/p2/platform/tenants/:tenantId/assign-admin
  * Assign a user as tenant admin
+ * Accepts either userId or email in request body
  */
 router.post('/tenants/:tenantId/assign-admin', async (req: AuthRequest, res: Response) => {
   try {
     const { tenantId } = req.params;
-    const { userId, actorRole } = req.body;
+    const { userId, email, actorRole } = req.body;
     
-    if (!userId) {
-      return res.status(400).json({ error: 'userId is required' });
+    if (!userId && !email) {
+      return res.status(400).json({ error: 'userId or email is required' });
     }
     
     const role = actorRole || 'admin';
     
     // Check tenant exists
-    const tenantCheck = await serviceQuery('SELECT id FROM cc_tenants WHERE id = $1', [tenantId]);
+    const tenantCheck = await serviceQuery('SELECT id, name FROM cc_tenants WHERE id = $1', [tenantId]);
     if (tenantCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Tenant not found' });
     }
     
-    // Check user exists
-    const userCheck = await serviceQuery('SELECT id, email FROM cc_users WHERE id = $1', [userId]);
+    // Find user by id or email
+    let userCheck;
+    if (userId) {
+      userCheck = await serviceQuery('SELECT id, email FROM cc_users WHERE id = $1', [userId]);
+    } else {
+      userCheck = await serviceQuery('SELECT id, email FROM cc_users WHERE email = $1', [email.toLowerCase()]);
+    }
     if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
+    const targetUserId = userCheck.rows[0].id;
+    
     // Check if already a member
     const existingMembership = await serviceQuery(
       'SELECT id FROM cc_tenant_users WHERE tenant_id = $1 AND user_id = $2',
-      [tenantId, userId]
+      [tenantId, targetUserId]
     );
     
     if (existingMembership.rows.length > 0) {
@@ -617,16 +635,16 @@ router.post('/tenants/:tenantId/assign-admin', async (req: AuthRequest, res: Res
       await serviceQuery(`
         UPDATE cc_tenant_users SET role = $1, updated_at = NOW()
         WHERE tenant_id = $2 AND user_id = $3
-      `, [role, tenantId, userId]);
+      `, [role, tenantId, targetUserId]);
     } else {
       // Create membership
       await serviceQuery(`
         INSERT INTO cc_tenant_users (tenant_id, user_id, role, status, created_at)
         VALUES ($1, $2, $3, 'active', NOW())
-      `, [tenantId, userId, role]);
+      `, [tenantId, targetUserId, role]);
     }
     
-    console.log(`[PLATFORM AUDIT] User ${userId} assigned as ${role} for tenant ${tenantId} by ${req.user?.userId}`);
+    console.log(`[PLATFORM AUDIT] User ${targetUserId} assigned as ${role} for tenant ${tenantId} by ${req.user?.userId}`);
     
     res.json({ success: true, message: `User assigned as ${role}` });
   } catch (error) {

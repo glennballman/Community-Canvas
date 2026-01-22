@@ -82,6 +82,11 @@ export default function UsersManagement() {
     const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
     const [saving, setSaving] = useState(false);
 
+    // Invite User modal state
+    const [inviteUserOpen, setInviteUserOpen] = useState(false);
+    const [inviteForm, setInviteForm] = useState({ email: '', fullName: '', password: '', isPlatformAdmin: false });
+    const [inviting, setInviting] = useState(false);
+
     const loadUsers = useCallback(async () => {
         if (!token) return;
         setLoading(true);
@@ -242,6 +247,43 @@ export default function UsersManagement() {
         }
     }
 
+    // Invite (create) user handler
+    async function handleInviteUser() {
+        if (!token || !inviteForm.email.trim()) {
+            toast({ title: 'Error', description: 'Email is required', variant: 'destructive' });
+            return;
+        }
+        setInviting(true);
+        try {
+            const res = await fetch('/api/p2/platform/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    email: inviteForm.email.trim(),
+                    fullName: inviteForm.fullName.trim() || undefined,
+                    password: inviteForm.password || undefined,
+                    isPlatformAdmin: inviteForm.isPlatformAdmin,
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast({ title: 'Success', description: 'User created successfully' });
+                setInviteUserOpen(false);
+                setInviteForm({ email: '', fullName: '', password: '', isPlatformAdmin: false });
+                loadUsers();
+            } else {
+                toast({ title: 'Error', description: data.error || 'Failed to create user', variant: 'destructive' });
+            }
+        } catch {
+            toast({ title: 'Error', description: 'Failed to create user', variant: 'destructive' });
+        } finally {
+            setInviting(false);
+        }
+    }
+
     return (
         <div className="p-6 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -249,7 +291,7 @@ export default function UsersManagement() {
                     <h1 className="text-2xl font-bold">User Management</h1>
                     <p className="text-muted-foreground">Manage platform users and their access</p>
                 </div>
-                <Button data-testid="button-invite-user">
+                <Button onClick={() => setInviteUserOpen(true)} data-testid="button-invite-user">
                     <UserPlus className="w-4 h-4 mr-2" />
                     Invite User
                 </Button>
@@ -613,6 +655,70 @@ export default function UsersManagement() {
                         <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>Cancel</Button>
                         <Button onClick={handleResetPassword} disabled={saving} data-testid="button-confirm-password">
                             {saving ? 'Saving...' : 'Reset Password'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Invite User Modal */}
+            <Dialog open={inviteUserOpen} onOpenChange={setInviteUserOpen}>
+                <DialogContent data-testid="dialog-invite-user">
+                    <DialogHeader>
+                        <DialogTitle>Invite User</DialogTitle>
+                        <DialogDescription>Create a new user account</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="invite-email">Email *</Label>
+                            <Input 
+                                id="invite-email"
+                                data-testid="input-invite-email"
+                                type="email"
+                                value={inviteForm.email}
+                                onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+                                placeholder="user@example.com"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="invite-name">Full Name (optional)</Label>
+                            <Input 
+                                id="invite-name"
+                                data-testid="input-invite-name"
+                                value={inviteForm.fullName}
+                                onChange={(e) => setInviteForm(prev => ({ ...prev, fullName: e.target.value }))}
+                                placeholder="John Doe"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="invite-password">Password (optional)</Label>
+                            <Input 
+                                id="invite-password"
+                                data-testid="input-invite-password"
+                                type="password"
+                                value={inviteForm.password}
+                                onChange={(e) => setInviteForm(prev => ({ ...prev, password: e.target.value }))}
+                                placeholder="Leave empty to send invite email"
+                            />
+                            <p className="text-xs text-muted-foreground">If set, user can login immediately</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="invite-admin"
+                                data-testid="checkbox-invite-admin"
+                                checked={inviteForm.isPlatformAdmin}
+                                onChange={(e) => setInviteForm(prev => ({ ...prev, isPlatformAdmin: e.target.checked }))}
+                                className="h-4 w-4"
+                            />
+                            <Label htmlFor="invite-admin">Platform Admin</Label>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setInviteUserOpen(false)} data-testid="button-cancel-invite">
+                            Cancel
+                        </Button>
+                        <Button onClick={handleInviteUser} disabled={inviting} data-testid="button-submit-invite">
+                            {inviting ? 'Creating...' : 'Create User'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -10,10 +10,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, Search, Users, Globe, Calendar, ArrowRight, Eye, UserCog, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Building2, Search, Users, Globe, Calendar, ArrowRight, Eye, UserCog, ExternalLink, Plus, UserPlus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { getAuthHeaders } from '@/lib/api';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -53,6 +55,17 @@ export default function TenantsListPage() {
   const { toast } = useToast();
   const { startImpersonation } = useTenant();
 
+  // Create Tenant Modal state
+  const [createTenantOpen, setCreateTenantOpen] = useState(false);
+  const [createTenantForm, setCreateTenantForm] = useState({ name: '', slug: '', type: 'business' });
+  const [creating, setCreating] = useState(false);
+
+  // Add Admin Modal state
+  const [addAdminOpen, setAddAdminOpen] = useState(false);
+  const [addAdminTenant, setAddAdminTenant] = useState<Tenant | null>(null);
+  const [addAdminEmail, setAddAdminEmail] = useState('');
+  const [addingAdmin, setAddingAdmin] = useState(false);
+
   const { data, isLoading, error } = useQuery<{ success: boolean; tenants: Tenant[] }>({
     queryKey: ['/api/p2/platform/tenants'],
     queryFn: async () => {
@@ -83,14 +96,84 @@ export default function TenantsListPage() {
     totalUsers: tenants.reduce((sum, t) => sum + t.activeUsers, 0),
   };
 
+  // Create tenant handler
+  const handleCreateTenant = async () => {
+    if (!createTenantForm.name.trim()) {
+      toast({ title: 'Error', description: 'Tenant name is required', variant: 'destructive' });
+      return;
+    }
+    setCreating(true);
+    try {
+      const slug = createTenantForm.slug.trim() || createTenantForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const res = await fetch('/api/p2/platform/tenants', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: createTenantForm.name.trim(),
+          slug,
+          tenantType: createTenantForm.type,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to create tenant');
+      }
+      toast({ title: 'Success', description: 'Tenant created successfully' });
+      setCreateTenantOpen(false);
+      setCreateTenantForm({ name: '', slug: '', type: 'business' });
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/platform/tenants'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to create tenant', variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Add admin handler
+  const handleAddAdmin = async () => {
+    if (!addAdminTenant || !addAdminEmail.trim()) {
+      toast({ title: 'Error', description: 'Email is required', variant: 'destructive' });
+      return;
+    }
+    setAddingAdmin(true);
+    try {
+      const res = await fetch(`/api/p2/platform/tenants/${addAdminTenant.id}/assign-admin`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: addAdminEmail.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to assign admin');
+      }
+      toast({ title: 'Success', description: `Admin assigned to ${addAdminTenant.name}` });
+      setAddAdminOpen(false);
+      setAddAdminEmail('');
+      setAddAdminTenant(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/p2/platform/tenants'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to assign admin', variant: 'destructive' });
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6" data-testid="page-platform-tenants">
-      <div className="flex items-center gap-3">
-        <Building2 className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Tenants</h1>
-          <p className="text-muted-foreground">Platform-wide tenant management</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Building2 className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Tenants</h1>
+            <p className="text-muted-foreground">Platform-wide tenant management</p>
+          </div>
         </div>
+        <Button onClick={() => setCreateTenantOpen(true)} data-testid="button-create-tenant">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Tenant
+        </Button>
       </div>
 
       <div className="grid grid-cols-4 gap-4" data-testid="stats-grid">
@@ -267,6 +350,18 @@ export default function TenantsListPage() {
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setAddAdminTenant(tenant);
+                          setAddAdminOpen(true);
+                        }}
+                        data-testid={`button-add-admin-${tenant.id}`}
+                        title="Add Admin"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
@@ -276,6 +371,97 @@ export default function TenantsListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Tenant Modal */}
+      <Dialog open={createTenantOpen} onOpenChange={setCreateTenantOpen}>
+        <DialogContent data-testid="dialog-create-tenant">
+          <DialogHeader>
+            <DialogTitle>Create Tenant</DialogTitle>
+            <DialogDescription>Create a new tenant organization</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tenant-name">Tenant Name *</Label>
+              <Input
+                id="tenant-name"
+                value={createTenantForm.name}
+                onChange={(e) => setCreateTenantForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="e.g., Acme Corporation"
+                data-testid="input-tenant-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tenant-slug">Slug (optional)</Label>
+              <Input
+                id="tenant-slug"
+                value={createTenantForm.slug}
+                onChange={(e) => setCreateTenantForm(f => ({ ...f, slug: e.target.value }))}
+                placeholder="e.g., acme-corporation"
+                data-testid="input-tenant-slug"
+              />
+              <p className="text-xs text-muted-foreground">Leave empty to auto-generate from name</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tenant-type">Type</Label>
+              <Select 
+                value={createTenantForm.type} 
+                onValueChange={(val) => setCreateTenantForm(f => ({ ...f, type: val }))}
+              >
+                <SelectTrigger data-testid="select-tenant-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="business">Business</SelectItem>
+                  <SelectItem value="government">Government</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateTenantOpen(false)} data-testid="button-cancel-create-tenant">
+              Cancel
+            </Button>
+            <Button onClick={handleCreateTenant} disabled={creating} data-testid="button-submit-create-tenant">
+              {creating ? 'Creating...' : 'Create Tenant'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Admin Modal */}
+      <Dialog open={addAdminOpen} onOpenChange={(open) => { setAddAdminOpen(open); if (!open) setAddAdminTenant(null); }}>
+        <DialogContent data-testid="dialog-add-admin">
+          <DialogHeader>
+            <DialogTitle>Add Admin</DialogTitle>
+            <DialogDescription>
+              Assign an admin to {addAdminTenant?.name || 'tenant'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-email">User Email *</Label>
+              <Input
+                id="admin-email"
+                type="email"
+                value={addAdminEmail}
+                onChange={(e) => setAddAdminEmail(e.target.value)}
+                placeholder="e.g., user@example.com"
+                data-testid="input-admin-email"
+              />
+              <p className="text-xs text-muted-foreground">Enter the email of an existing user</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddAdminOpen(false)} data-testid="button-cancel-add-admin">
+              Cancel
+            </Button>
+            <Button onClick={handleAddAdmin} disabled={addingAdmin} data-testid="button-submit-add-admin">
+              {addingAdmin ? 'Assigning...' : 'Add Admin'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

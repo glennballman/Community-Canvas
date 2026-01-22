@@ -1,0 +1,218 @@
+🔧 REPLIT PATCH PROMPT — Platform Admin: User & Tenant Creation Wiring
+CONTEXT
+
+Platform Admin UI exists but is non-functional for user and tenant setup.
+
+Problems:
+
+“Invite User” button does nothing
+
+No way to create tenants
+
+No way to assign users as tenant admins
+
+Tenant rows are not clickable
+
+No impersonation or portal access from tenant list
+
+This blocks QA for contractor workflows.
+
+TASK 1 — Wire Invite User Button (Create User)
+UI
+
+When clicking Invite User on /app/platform/users:
+
+Open a modal: CreateUserModal
+
+Fields:
+
+email (required)
+
+fullName (optional)
+
+password (optional; if set → immediate login possible)
+
+isPlatformAdmin (boolean)
+
+Buttons:
+
+Create User
+
+Cancel
+
+API
+
+Add:
+
+POST /api/platform/users
+
+
+Body:
+
+{
+  "email": "ellen@enviropaving.com",
+  "fullName": "Ellen",
+  "password": "TempPass123!",
+  "isPlatformAdmin": false
+}
+
+
+Behavior:
+
+Create user
+
+Hash password if provided
+
+Return user record
+
+Do NOT auto-email (dev safe)
+
+TASK 2 — Add “Create Tenant” Button (Platform Admin)
+UI
+
+On /app/platform/tenants, add Create Tenant button (top right).
+
+Modal: CreateTenantModal
+
+Fields:
+
+tenantName
+
+slug
+
+tenantType (business | government | individual)
+
+API
+
+Add:
+
+POST /api/platform/tenants
+
+
+Returns tenantId.
+
+TASK 3 — Assign User as Tenant Admin
+
+After creating tenant OR from tenant detail page:
+
+API
+POST /api/platform/tenants/:tenantId/users
+
+
+Body:
+
+{
+  "userId": "uuid",
+  "role": "admin"
+}
+
+
+Creates membership.
+
+TASK 4 — Tenant Row Actions (CRITICAL)
+
+On /app/platform/tenants each row must show icons on the right:
+
+Icon	Action
+👁 View	Go to tenant portals
+🔑 Impersonate	Switch context to tenant
+➕ Add Admin	Open user picker
+Behavior
+
+Impersonate sets cc_impersonation_tenant_id
+
+Redirects to /app/dashboard
+
+Banner shows “Impersonating Tenant”
+
+TASK 5 — Make Rows Clickable
+
+Clicking a tenant row:
+
+Navigates to /app/platform/tenants/:id
+
+ACCEPTANCE CRITERIA (ALL REQUIRED)
+
+Invite User opens modal and creates user
+
+Create Tenant works
+
+User can be assigned as tenant admin
+
+Tenant rows have action icons
+
+Impersonation works
+
+No /admin/* routes used
+
+No auth refactors
+
+Proceed incrementally. Do not redesign.
+
+Canonical Test Personas (Use These Exactly)
+
+These give Replit stable anchors for all future QA.
+
+👩‍🔧 Contractor Admin (Primary QA Actor)
+
+User
+
+Email: ellen@enviropaving.com
+
+Name: Ellen
+
+Password: DevPass123!
+
+Tenants
+
+1252093 BC Ltd (slug: enviropaving)
+
+Remote Services Inc (slug: remote-services)
+
+Role
+
+Admin on both tenants
+
+Contractor profile attached
+
+👉 Replit must use this user for contractor photo upload tests
+
+👨‍💼 Platform Admin (You)
+
+glenn@envirogroupe.com
+
+Platform Admin
+
+Can create users/tenants
+
+Can impersonate
+
+🤖 Automation Bot (Optional)
+
+qa-bot@example.com
+
+No tenant access
+
+Used only for API tests
+
+Why This Is the Right Fix
+
+✅ Unblocks A2.7 contractor testing
+
+✅ Enables clean test data
+
+✅ Avoids legacy admin paths
+
+✅ Matches V3.5 mental model
+
+✅ Minimal surface area
+
+✅ Production-safe
+
+Once this is in place:
+
+Contractor photo upload testing will stop confusing Replit
+
+Personas will stay stable
+
+You’ll regain full control
