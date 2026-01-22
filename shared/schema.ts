@@ -8592,13 +8592,70 @@ export type CalendarRunDTO = z.infer<typeof calendarRunDTOSchema>;
  * Dependency window for weather, travel, and other external factors.
  */
 export const dependencyWindowDTOSchema = z.object({
-  type: z.enum(['weather', 'ferry', 'highway', 'seaplane', 'air']),
+  id: z.string(),
+  type: z.enum(['weather', 'ferry', 'highway', 'seaplane', 'road', 'tsunami', 'air']),
   startAt: z.string(),
   endAt: z.string(),
   severity: z.enum(['info', 'warn', 'critical']),
   reasonCodes: z.array(z.string()),
-  affectedZones: z.array(z.string()).optional(),
+  affectedZoneIds: z.array(z.string()).optional(),
   confidence: z.number().optional(),
+  source: z.enum(['feed', 'dev_seed']),
+  rawRef: z.object({
+    feedEventId: z.string().optional(),
+    provider: z.string().optional(),
+  }).optional(),
 });
 
 export type DependencyWindowDTO = z.infer<typeof dependencyWindowDTOSchema>;
+
+// ============================================================================
+// N3-CAL-03: Portal Dependency Rules
+// ============================================================================
+
+/**
+ * Maps dependency types to affected zones for a portal.
+ * Used when feed data lacks geo-tagging (e.g., seaplane cancellations).
+ */
+export const ccPortalDependencyRules = pgTable("cc_portal_dependency_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portalId: uuid("portal_id").notNull(),
+  dependencyType: varchar("dependency_type", { length: 30 }).notNull(),
+  rulePayload: jsonb("rule_payload").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_portal_dependency_rules_portal").on(table.portalId),
+  index("idx_portal_dependency_rules_type").on(table.portalId, table.dependencyType),
+]);
+
+export const insertPortalDependencyRuleSchema = createInsertSchema(ccPortalDependencyRules).omit({
+  id: true, createdAt: true
+});
+export type PortalDependencyRule = typeof ccPortalDependencyRules.$inferSelect;
+export type InsertPortalDependencyRule = z.infer<typeof insertPortalDependencyRuleSchema>;
+
+// ============================================================================
+// N3-CAL-03: Entity Threads (Run → Message Thread)
+// ============================================================================
+
+/**
+ * Links entities (e.g., n3_runs) to messaging threads.
+ * Enables opening a canonical thread from calendar events.
+ */
+export const ccEntityThreads = pgTable("cc_entity_threads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  entityType: varchar("entity_type", { length: 40 }).notNull(),
+  entityId: uuid("entity_id").notNull(),
+  threadId: uuid("thread_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("idx_entity_threads_tenant_entity").on(table.tenantId, table.entityType, table.entityId),
+  uniqueIndex("uq_entity_threads_tenant_type_id").on(table.tenantId, table.entityType, table.entityId),
+]);
+
+export const insertEntityThreadSchema = createInsertSchema(ccEntityThreads).omit({
+  id: true, createdAt: true
+});
+export type EntityThread = typeof ccEntityThreads.$inferSelect;
+export type InsertEntityThread = z.infer<typeof insertEntityThreadSchema>;

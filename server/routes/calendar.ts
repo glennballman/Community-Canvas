@@ -18,6 +18,7 @@ import {
   ccContractorFleet,
   ccContractorTools,
   ccStaffAvailabilityBlocks,
+  ccContractorPhotoBundles,
   type CalendarRunDTO
 } from '@shared/schema';
 import { eq, and, gte, lte, or, desc, inArray } from 'drizzle-orm';
@@ -571,19 +572,81 @@ calendarRouter.get('/contractor/ops-calendar', requireAuth, requireTenant, async
       group: 'Payments',
     }];
 
-    // Apply feasibility overlay to run events
+    // 9) A2.7 Evidence Badges: Query photo bundles for evidence status
+    const photoBundles = await db
+      .select({
+        id: ccContractorPhotoBundles.id,
+        status: ccContractorPhotoBundles.status,
+        coversFrom: ccContractorPhotoBundles.coversFrom,
+        coversTo: ccContractorPhotoBundles.coversTo,
+        beforeMediaIds: ccContractorPhotoBundles.beforeMediaIds,
+        afterMediaIds: ccContractorPhotoBundles.afterMediaIds,
+        duringMediaIds: ccContractorPhotoBundles.duringMediaIds,
+      })
+      .from(ccContractorPhotoBundles)
+      .where(
+        and(
+          eq(ccContractorPhotoBundles.tenantId, tenantId),
+          or(
+            and(gte(ccContractorPhotoBundles.coversFrom, startDate), lte(ccContractorPhotoBundles.coversFrom, endDate)),
+            and(gte(ccContractorPhotoBundles.coversTo, startDate), lte(ccContractorPhotoBundles.coversTo, endDate)),
+            and(lte(ccContractorPhotoBundles.coversFrom, startDate), gte(ccContractorPhotoBundles.coversTo, endDate))
+          )
+        )
+      );
+
+    // Build evidence lookup by time overlap (arrow function to avoid strict mode issue)
+    const getEvidenceForRun = (runStart: Date, runEnd: Date): { status: 'none' | 'partial' | 'complete' | 'confirmed'; bundleId?: string } => {
+      for (const bundle of photoBundles) {
+        const bundleStart = bundle.coversFrom ? new Date(bundle.coversFrom) : null;
+        const bundleEnd = bundle.coversTo ? new Date(bundle.coversTo) : null;
+        
+        // Check time overlap
+        const overlaps = bundleStart && bundleEnd && bundleStart < runEnd && bundleEnd > runStart;
+        if (!overlaps && bundleStart) continue;
+        
+        // Determine evidence status from bundle
+        if (bundle.status === 'confirmed') {
+          return { status: 'confirmed', bundleId: bundle.id };
+        } else if (bundle.status === 'complete') {
+          return { status: 'complete', bundleId: bundle.id };
+        } else {
+          const beforeIds = bundle.beforeMediaIds as string[] || [];
+          const afterIds = bundle.afterMediaIds as string[] || [];
+          const duringIds = bundle.duringMediaIds as string[] || [];
+          const hasMedia = beforeIds.length > 0 || afterIds.length > 0 || duringIds.length > 0;
+          if (hasMedia) {
+            return { status: 'partial', bundleId: bundle.id };
+          }
+        }
+      }
+      return { status: 'none' };
+    };
+
+    // Apply feasibility overlay and evidence badges to run events
     const enhancedRunEvents = runEvents.map(event => {
-      const overlappingDeps = dependencyWindows.filter(w => {
-        const eventStart = new Date(event.start_date);
-        const eventEnd = new Date(event.end_date);
-        return w.startAt < eventEnd && w.endAt > eventStart;
-      });
+      const eventStart = new Date(event.start_date);
+      const eventEnd = new Date(event.end_date);
+      
+      // Get evidence status for this run
+      const evidence = getEvidenceForRun(eventStart, eventEnd);
+      
+      // Check dependency overlaps
+      const overlappingDeps = dependencyWindows.filter(w => 
+        w.startAt < eventEnd && w.endAt > eventStart
+      );
+
+      // Build enhanced meta with evidence
+      const baseMeta = {
+        ...event.meta,
+        evidence,
+      };
 
       if (overlappingDeps.some(d => d.severity === 'critical')) {
         return {
           ...event,
           meta: {
-            ...event.meta,
+            ...baseMeta,
             feasibility: {
               status: 'blocked' as const,
               reasons: overlappingDeps.flatMap(d => d.reasonCodes),
@@ -595,7 +658,7 @@ calendarRouter.get('/contractor/ops-calendar', requireAuth, requireTenant, async
         return {
           ...event,
           meta: {
-            ...event.meta,
+            ...baseMeta,
             feasibility: {
               status: 'risky' as const,
               reasons: overlappingDeps.flatMap(d => d.reasonCodes),
@@ -604,7 +667,7 @@ calendarRouter.get('/contractor/ops-calendar', requireAuth, requireTenant, async
           },
         };
       }
-      return event;
+      return { ...event, meta: baseMeta };
     });
 
     // Combine all resources and events in group order
@@ -894,8 +957,8 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
     // Create zone events for blocked/risky windows
     const zoneEvents: OpsEvent[] = [];
     dependencyWindows.forEach((window, index) => {
-      const affectedZones = window.affectedZones || [];
-      affectedZones.forEach(zone => {
+      const affectedZones = window.affectedZoneIds || [];
+      affectedZones.forEach((zone: string) => {
         const feasibility = zoneFeasibility.get(zone);
         if (feasibility && feasibility.status !== 'ok') {
           zoneEvents.push({
@@ -956,6 +1019,108 @@ calendarRouter.get('/portal/:portalId/ops-calendar', async (req, res) => {
   } catch (err) {
     console.error('[Calendar API] Portal ops-calendar error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ============================================================================
+// N3-CAL-03: Run → Thread Endpoints
+// ============================================================================
+
+import { pool } from '../db';
+import { randomUUID } from 'crypto';
+
+/**
+ * POST /api/contractor/n3/runs/:runId/ensure-thread
+ * Idempotently creates/retrieves a message thread for a service run.
+ * Returns the thread ID for navigation.
+ */
+calendarRouter.post('/contractor/n3/runs/:runId/ensure-thread', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const { runId } = req.params;
+    
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'Missing tenant context' });
+    }
+
+    if (!runId) {
+      return res.status(400).json({ ok: false, error: 'Missing runId' });
+    }
+
+    // Check if run exists and belongs to tenant
+    const runCheck = await db
+      .select({ id: ccN3Runs.id })
+      .from(ccN3Runs)
+      .where(and(eq(ccN3Runs.id, runId), eq(ccN3Runs.tenantId, tenantId)))
+      .limit(1);
+
+    if (runCheck.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Run not found' });
+    }
+
+    // Check for existing thread link
+    const existingThread = await pool.query(`
+      SELECT thread_id FROM cc_entity_threads
+      WHERE tenant_id = $1 AND entity_type = 'n3_run' AND entity_id = $2
+      LIMIT 1
+    `, [tenantId, runId]);
+
+    if (existingThread.rows.length > 0) {
+      return res.json({ ok: true, threadId: existingThread.rows[0].thread_id });
+    }
+
+    // Create new conversation/thread
+    const threadId = randomUUID();
+    const conversationId = randomUUID();
+
+    // Create the conversation entry
+    await pool.query(`
+      INSERT INTO cc_conversations (id, state, message_count, created_at, updated_at)
+      VALUES ($1, 'active', 0, NOW(), NOW())
+    `, [conversationId]);
+
+    // Link entity to thread (using conversation_id as thread_id)
+    await pool.query(`
+      INSERT INTO cc_entity_threads (id, tenant_id, entity_type, entity_id, thread_id, created_at)
+      VALUES ($1, $2, 'n3_run', $3, $4, NOW())
+    `, [randomUUID(), tenantId, runId, conversationId]);
+
+    res.json({ ok: true, threadId: conversationId });
+  } catch (err) {
+    console.error('[Calendar API] ensure-thread error:', err);
+    res.status(500).json({ ok: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/contractor/n3/runs/:runId/thread
+ * Get the thread ID for a run (if exists).
+ */
+calendarRouter.get('/contractor/n3/runs/:runId/thread', requireAuth, requireTenant, async (req, res) => {
+  try {
+    const tenantReq = req as TenantRequest;
+    const tenantId = tenantReq.ctx.tenant_id;
+    const { runId } = req.params;
+    
+    if (!tenantId || !runId) {
+      return res.status(400).json({ ok: false, error: 'Missing required params' });
+    }
+
+    const result = await pool.query(`
+      SELECT thread_id FROM cc_entity_threads
+      WHERE tenant_id = $1 AND entity_type = 'n3_run' AND entity_id = $2
+      LIMIT 1
+    `, [tenantId, runId]);
+
+    if (result.rows.length === 0) {
+      return res.json({ ok: true, threadId: null });
+    }
+
+    res.json({ ok: true, threadId: result.rows[0].thread_id });
+  } catch (err) {
+    console.error('[Calendar API] get thread error:', err);
+    res.status(500).json({ ok: false, error: 'Internal server error' });
   }
 });
 

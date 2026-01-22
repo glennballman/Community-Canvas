@@ -1,0 +1,168 @@
+REPLIT PROMPT — N3-CAL-03: Replace Dependency Stub With Live Feed Adapter + Run→Thread + Evidence Badges
+
+ROLE
+Lead Platform Architect. Convert N3-CAL dependency windows from DEV seed to the existing live data feeds spine, add Run→Message Thread entry, and add evidence status badges from A2.7 photo bundles.
+Additive only. No parallel feed system. Messaging is mandatory.
+
+CONTEXT
+- N3-CAL-02 implemented:
+  - cc_staff_availability_blocks
+  - dependencyWindowsService.ts with zone feasibility logic (currently DEV/stub + seeded test data)
+  - ops-calendar endpoints: contractor/resident/portal return {resources, events} for ScheduleBoard
+  - portal privacy redaction is PASS
+- A2.7 photo bundles exist (cc_contractor_photo_bundles) and are used for proof bundles.
+
+HARD RULES
+1) DO NOT build a new feed ingestion pipeline. You must reuse the existing “live data feeds system” already in the repo.
+2) DO NOT return slot arrays; calendars remain interval-based events.
+3) Portal and public endpoints must not leak PII (names, addresses, pricing).
+4) All new actions must post into the existing messaging thread system (no SMS).
+5) Everything must continue to work if feeds are temporarily missing; only then may you fall back to dev_seed (explicitly labeled).
+
+================================================================================
+A) FEED SPINE DISCOVERY (MANDATORY)
+================================================================================
+1) Locate existing feed system: tables, routes, services.
+Search keywords:
+- "feed", "feeds", "weather", "forecast", "alert", "advisory", "incident", "tsunami", "wind"
+- "cc_feed", "cc_data_feed", "cc_live", "cc_alert", "cc_advisory", "cc_incident"
+- any cron/scheduler that ingests feeds
+
+Deliverable:
+Create docs/N3-CAL-03_FEED_DISCOVERY.md with:
+- table names + key columns (schema excerpt)
+- service paths + exported functions
+- routes and DTOs used to query feed data by time window and (portal/location)
+- mapping strategy: how to determine which feed events apply to a portal/zone
+
+If NOTHING is found, say NOT FOUND and include grep output evidence.
+(But do not stop; implement a clean adapter interface anyway.)
+
+================================================================================
+B) ADAPTER: dependencyWindowsService.ts → live feed system
+================================================================================
+Update server/services/dependencyWindowsService.ts to return windows from feed spine.
+
+New function signatures:
+- getDependencyWindowsForPortal(portalId: string, from: Date, to: Date): Promise<DependencyWindow[]>
+- getDependencyWindowsForZones(portalId: string, zoneIds: string[], from: Date, to: Date): Promise<ZoneWindowMap>
+
+DependencyWindow shape:
+{
+  id: string,
+  type: 'weather'|'seaplane'|'ferry'|'highway'|'tsunami'|'road',
+  startAt: string (ISO),
+  endAt: string (ISO),
+  severity: 'info'|'warn'|'critical',
+  reasonCodes: string[],
+  confidence: number (0..1),
+  affectedZoneIds?: string[],
+  source: 'feed'|'dev_seed',
+  rawRef?: { feedEventId?: string, provider?: string }
+}
+
+Implementation requirements:
+1) Query the feed spine for the portal’s region.
+- Determine portal location via existing portal table fields (centroid, lat/lng) or portal config.
+- If zones exist with geo (preferred), use zone centroid/region.
+2) Derive windows deterministically:
+- Weather: high wind warnings => warn/critical
+- Ferry cancellations/delays => warn/critical
+- Seaplane cancellations => critical
+- Road closures => critical
+3) Zone mapping:
+- If feed events include geofence/region tags, map to zoneIds via existing zone metadata.
+- If not possible, implement cc_portal_dependency_rules as an additive table:
+  cc_portal_dependency_rules(
+    id uuid pk,
+    portal_id uuid not null,
+    dependency_type varchar(30) not null,
+    rule_payload jsonb not null default '{}',
+    created_at timestamptz default now()
+  )
+Use it to map affectedZoneIds for specific dependencies (e.g. seaplane impacts West+Helby but not East).
+4) Fallback:
+- If NO feed data in window OR feed spine unavailable, return dev_seed windows ONLY when CC_DEV_SEED or IS_DEV.
+- When returning dev_seed, set source='dev_seed' and add meta note in proof pack.
+
+================================================================================
+C) RUN → MESSAGE THREAD (calendar click)
+================================================================================
+Goal: contractor can click a service run bar and open the canonical message thread.
+
+1) Implement endpoint:
+POST /api/contractor/n3/runs/:runId/ensure-thread
+
+Behavior:
+- authenticateToken + requireTenant + contractor context
+- idempotent:
+  - if run already linked to a threadId, return it
+  - else create a thread in the existing messaging system and persist link
+- return { ok:true, threadId }
+
+Data model:
+- If there is an existing linkage table for entity->thread, reuse it.
+- If not, add additive table:
+  cc_entity_threads(
+    id uuid pk,
+    tenant_id uuid not null,
+    entity_type varchar(40) not null,  -- 'n3_run'
+    entity_id uuid not null,
+    thread_id uuid not null,
+    created_at timestamptz default now(),
+    unique(tenant_id, entity_type, entity_id)
+  )
+
+2) UI:
+In ScheduleBoard event rendering (or wrapper in OpsCalendarBoardPage):
+- If event.kind === 'service_run':
+  show a small action (context menu or button) “Open Thread”
+  calls ensure-thread and navigates to the existing thread route.
+
+Resident/portal:
+- Resident: only show “Open Thread” if there is a resident-safe thread already (or omit for now).
+- Portal: never show.
+
+================================================================================
+D) EVIDENCE BADGE (A2.7)
+================================================================================
+Contractor calendar only.
+
+Add to each run event meta:
+meta.evidence = { status: 'none'|'partial'|'complete'|'confirmed', bundleId?: string }
+
+Derive:
+- If run has linked photoBundleId already, use it.
+- Else infer by:
+  - contractor_profile_id match
+  - time overlap with bundle.coversFrom/coversTo (or createdAt window)
+  - same zone if available via cc_ingestion_zone_links (optional)
+Pick best bundle by overlap score.
+Status mapping:
+- bundle.status == 'confirmed' -> confirmed
+- bundle.status == 'complete' -> complete
+- bundle has any media ids -> partial
+- none -> none
+
+UI:
+- show a small badge on run bars:
+  Evidence: None/Partial/Complete/Confirmed
+- Do not leak evidence details to portal.
+- Resident may show boolean “Proof received” only if safe.
+
+================================================================================
+E) QA / CERTIFICATION
+================================================================================
+Create docs/N3-CAL-03_PROOF_PACK.md with:
+
+1) Feed discovery summary + proof that at least one dependency window returned has source='feed'
+   Include snippet of one dependency window with rawRef.feedEventId/provider if available.
+2) Portal zone feasibility computed from feed window (not seed) — snippet where source='feed'
+3) ensure-thread idempotency proof:
+   - call endpoint twice, same threadId
+4) Evidence badge proof:
+   - one run event meta.evidence.status != 'none'
+5) Privacy proof:
+   - portal payload still redacted
+
+Proceed.
