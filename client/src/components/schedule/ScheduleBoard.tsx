@@ -63,6 +63,7 @@ export interface Resource {
   capability_type?: string;
   capability_status?: 'operational' | 'inoperable' | 'maintenance';
   indent_level?: number;
+  group?: string; // Lane group for grouping resources (e.g., "Staff", "Fleet", "Dependencies")
 }
 
 export interface ScheduleBoardProps {
