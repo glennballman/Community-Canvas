@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { getAuthHeaders } from '@/lib/api';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface Tenant {
   id: string;
@@ -50,6 +51,7 @@ export default function TenantsListPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { startImpersonation } = useTenant();
 
   const { data, isLoading, error } = useQuery<{ success: boolean; tenants: Tenant[] }>({
     queryKey: ['/api/p2/platform/tenants'],
@@ -239,21 +241,10 @@ export default function TenantsListPage() {
                         variant="ghost"
                         onClick={async () => {
                           try {
-                            const res = await fetch('/api/p2/platform/impersonate', {
-                              method: 'POST',
-                              headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                              credentials: 'include',
-                              body: JSON.stringify({ tenantId: tenant.id, mode: 'tenant' })
-                            });
-                            if (res.ok) {
-                              toast({ title: 'Impersonating', description: `Now acting as ${tenant.name}` });
-                              navigate('/app/dashboard');
-                            } else {
-                              const errData = await res.json().catch(() => ({}));
-                              toast({ title: 'Error', description: errData.message || 'Failed to start impersonation', variant: 'destructive' });
-                            }
-                          } catch (err) {
-                            toast({ title: 'Error', description: 'Failed to start impersonation', variant: 'destructive' });
+                            toast({ title: 'Impersonating', description: `Switching to ${tenant.name}...` });
+                            await startImpersonation(tenant.id, 'Platform admin access');
+                          } catch (err: any) {
+                            toast({ title: 'Error', description: err?.message || 'Failed to start impersonation', variant: 'destructive' });
                           }
                         }}
                         data-testid={`button-impersonate-${tenant.id}`}
@@ -266,20 +257,9 @@ export default function TenantsListPage() {
                         variant="ghost"
                         onClick={async () => {
                           try {
-                            const res = await fetch('/api/p2/platform/impersonate', {
-                              method: 'POST',
-                              headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                              credentials: 'include',
-                              body: JSON.stringify({ tenantId: tenant.id, mode: 'tenant' })
-                            });
-                            if (res.ok) {
-                              navigate('/app/dashboard');
-                            } else {
-                              const errData = await res.json().catch(() => ({}));
-                              toast({ title: 'Error', description: errData.message || 'Failed to open tenant', variant: 'destructive' });
-                            }
-                          } catch (err) {
-                            toast({ title: 'Error', description: 'Failed to open tenant', variant: 'destructive' });
+                            await startImpersonation(tenant.id, 'Platform admin view');
+                          } catch (err: any) {
+                            toast({ title: 'Error', description: err?.message || 'Failed to open tenant', variant: 'destructive' });
                           }
                         }}
                         data-testid={`button-open-tenant-${tenant.id}`}
