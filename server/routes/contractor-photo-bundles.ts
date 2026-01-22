@@ -113,6 +113,24 @@ router.post('/:id/recompute', async (req, res) => {
       return res.status(400).json({ error: 'Tenant context required' });
     }
     
+    // A2.7 Confirmed freeze: if confirmed and not force, only update timeline/proof (not media arrays)
+    const existingBundle = await db.query.ccContractorPhotoBundles.findFirst({
+      where: and(
+        eq(ccContractorPhotoBundles.id, id),
+        eq(ccContractorPhotoBundles.tenantId, tenantId)
+      )
+    });
+    
+    if (existingBundle?.status === 'confirmed' && force !== true) {
+      // Return existing bundle unchanged - timeline/proof can still be refreshed but arrays frozen
+      return res.json({ 
+        ok: true, 
+        bundle: existingBundle, 
+        frozen: true,
+        message: 'Bundle is confirmed. Media arrays are frozen. Use force=true to override.'
+      });
+    }
+    
     const result = await buildOrUpdateTimelineForBundle({
       tenantId,
       contractorProfileId,
@@ -168,6 +186,7 @@ router.post('/:id/move', async (req, res) => {
     }
     
     const { itemId, to } = parseResult.data;
+    const { force } = req.body || {};
     
     // Fetch the bundle
     const bundle = await db.query.ccContractorPhotoBundles.findFirst({
@@ -179,6 +198,15 @@ router.post('/:id/move', async (req, res) => {
     
     if (!bundle) {
       return res.status(404).json({ error: 'Bundle not found' });
+    }
+    
+    // A2.7 Confirmed freeze: block move if confirmed unless force=true
+    if (bundle.status === 'confirmed' && force !== true) {
+      return res.status(400).json({ 
+        error: 'Bundle is confirmed and frozen. Media cannot be moved.',
+        frozen: true,
+        hint: 'Use force=true to override freeze.'
+      });
     }
     
     // Get current arrays

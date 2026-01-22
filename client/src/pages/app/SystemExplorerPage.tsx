@@ -140,7 +140,7 @@ export default function SystemExplorerPage() {
             </p>
             <Button 
               variant="default" 
-              onClick={() => window.location.href = '/admin/impersonation'}
+              onClick={() => window.location.href = '/app/platform/tenants'}
               data-testid="button-exit-impersonation"
             >
               <Shield className="h-4 w-4 mr-2" />
