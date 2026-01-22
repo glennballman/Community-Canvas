@@ -199,10 +199,8 @@ import PhotoBundleDetailPage from './pages/contractor/PhotoBundleDetailPage';
 import PhotoBundlesListPage from './pages/contractor/PhotoBundlesListPage';
 import EventModePage from './pages/contractor/EventModePage';
 
-// Pages - Calendar (N3-CAL-01)
-import ContractorCalendarPage from './pages/app/ContractorCalendarPage';
-import ResidentCalendarPage from './pages/app/ResidentCalendarPage';
-import PortalCalendarPage from './pages/public/PortalCalendarPage';
+// Pages - Calendar (N3-CAL-01) - Using OpsCalendarBoardPage with ScheduleBoard time spine
+import OpsCalendarBoardPage from './pages/shared/OpsCalendarBoardPage';
 import EventQuotesListPage from './pages/contractor/EventQuotesListPage';
 import EventQuoteDetailPage from './pages/contractor/EventQuoteDetailPage';
 import EventScanPage from './pages/contractor/EventScanPage';
@@ -329,7 +327,7 @@ export default function App() {
               <Route path="/p/:portalSlug/onboarding" element={<PortalOnboardingPage />} />
               <Route path="/p/:portalSlug/reserve" element={<PortalReservePage />} />
               <Route path="/p/:portalSlug/reserve/:assetId" element={<PortalReservePage />} />
-              <Route path="/p/:portalSlug/calendar" element={<PortalCalendarPage />} />
+              <Route path="/p/:portalSlug/calendar" element={<OpsCalendarBoardPage mode="portal" />} />
               
               {/* Public Trip Portal - guest-facing trip view */}
               <Route path="/trip/:accessCode" element={<TripPortalPage />} />
@@ -573,11 +571,11 @@ export default function App() {
                 <Route path="contractor/event/quotes" element={<EventQuotesListPage />} />
                 <Route path="contractor/event/quotes/:id" element={<EventQuoteDetailPage />} />
                 
-                {/* N3-CAL-01: Contractor Calendar */}
-                <Route path="contractor/calendar" element={<ContractorCalendarPage />} />
+                {/* N3-CAL-01: Contractor Calendar - uses ScheduleBoard time spine */}
+                <Route path="contractor/calendar" element={<OpsCalendarBoardPage mode="contractor" />} />
                 
-                {/* Resident Calendar (my-place) */}
-                <Route path="my-place/calendar" element={<ResidentCalendarPage />} />
+                {/* Resident Calendar (my-place) - uses ScheduleBoard time spine */}
+                <Route path="my-place/calendar" element={<OpsCalendarBoardPage mode="resident" />} />
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />
