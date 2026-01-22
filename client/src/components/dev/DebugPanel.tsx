@@ -309,6 +309,36 @@ export function DebugPanel() {
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-3">
+          {/* Big Status Badges */}
+          <div className="flex gap-2 justify-center" data-testid="status-badges">
+            <Badge 
+              variant={authState.tokenPresent ? 'default' : 'destructive'} 
+              className="text-sm px-3 py-1 gap-1"
+              data-testid="badge-authenticated"
+            >
+              {authState.tokenPresent ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+              Authenticated
+            </Badge>
+            <Badge 
+              variant={context?.current_tenant_id ? 'default' : 'destructive'} 
+              className="text-sm px-3 py-1 gap-1"
+              data-testid="badge-tenant-set"
+            >
+              {context?.current_tenant_id ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+              Tenant Set
+            </Badge>
+          </div>
+
+          {/* Tenant Null Warning */}
+          {authState.tokenPresent && !context?.current_tenant_id && (
+            <div 
+              className="bg-destructive/10 border border-destructive/30 text-destructive rounded-md px-3 py-2 text-xs font-mono text-center"
+              data-testid="warning-no-tenant"
+            >
+              Tenant context is null → tenant routes will 404 until you Set Tenant.
+            </div>
+          )}
+
           {/* Auth State Section */}
           <div className="text-xs font-mono space-y-1">
             <div className="flex items-center justify-between">
