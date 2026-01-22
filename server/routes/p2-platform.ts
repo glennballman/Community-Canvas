@@ -1176,14 +1176,43 @@ router.delete('/memberships', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'tenantId and userId are required' });
     }
     
+    // Check if user is an admin being removed
+    const memberCheck = await serviceQuery(
+      'SELECT role FROM cc_tenant_users WHERE tenant_id = $1 AND user_id = $2',
+      [tenantId, userId]
+    );
+    
+    if (memberCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Membership not found' });
+    }
+    
+    const memberRole = memberCheck.rows[0].role;
+    
+    // If removing an admin/owner, ensure tenant still has at least one other admin
+    if (memberRole === 'admin' || memberRole === 'owner') {
+      const adminCount = await serviceQuery(`
+        SELECT COUNT(*) as count FROM cc_tenant_users 
+        WHERE tenant_id = $1 
+        AND role IN ('admin', 'owner') 
+        AND status = 'active'
+        AND user_id != $2
+      `, [tenantId, userId]);
+      
+      const remainingAdmins = parseInt(adminCount.rows[0]?.count || '0', 10);
+      
+      if (remainingAdmins === 0) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'tenant_must_have_admin',
+          message: 'Cannot remove the last admin from a tenant'
+        });
+      }
+    }
+    
     const result = await serviceQuery(
       'DELETE FROM cc_tenant_users WHERE tenant_id = $1 AND user_id = $2 RETURNING id',
       [tenantId, userId]
     );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Membership not found' });
-    }
     
     console.log(`[PLATFORM AUDIT] membership_removed tenant=${tenantId} user=${userId} by=${req.user?.userId}`);
     

@@ -299,7 +299,10 @@ export default function TenantsListPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to remove member');
+        if (err.error === 'tenant_must_have_admin') {
+          throw new Error('Cannot remove the last admin. Every tenant must have at least one admin.');
+        }
+        throw new Error(err.message || err.error || 'Failed to remove member');
       }
       toast({ title: 'Success', description: 'Member removed' });
       loadMembers(membersTenant.id);
