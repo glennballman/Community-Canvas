@@ -1,0 +1,116 @@
+REPLIT PATCH PROMPT — N3-CAL-01 ALIGNMENT: Remove CalendarGrid + Reuse ScheduleBoard Time Spine
+
+ROLE
+Senior architect implementing canonical Operations Timeline Grid using existing time spine.
+You must eliminate the iPhone-style calendar and ensure ALL calendar routes reuse the ScheduleBoard time spine (ZOOM_CONFIGS, generateTimeSlots, 15m zoom).
+
+NON-NEGOTIABLES
+- Do NOT build a second time grid.
+- Do NOT keep CalendarGrid.tsx as the primary calendar view.
+- Calendar routes must render the Operations-style board: resources down left, time across top, 15m zoom available.
+- Use existing ScheduleBoard component (client/src/components/schedule/ScheduleBoard.tsx) as the base.
+- Read-only is fine, but the VIEW must be the operations grid (not cards).
+- No /admin/*.
+
+TASKS
+
+1) Retire CalendarGrid-based pages
+Find these files:
+- client/src/components/calendar/CalendarGrid.tsx
+- client/src/pages/app/ContractorCalendarPage.tsx
+- client/src/pages/app/ResidentCalendarPage.tsx
+- client/src/pages/public/PortalCalendarPage.tsx
+
+Action:
+- Stop routing to these pages/components.
+- Keep files for now but mark with:
+  // LEGACY (V3.5): replaced by OpsCalendarBoard. Remove after QA.
+- Ensure nav and routes no longer hit CalendarGrid.
+
+2) Create a new shared calendar view that uses ScheduleBoard
+Create:
+client/src/pages/shared/OpsCalendarBoardPage.tsx  (or similar shared page/component)
+
+This page must:
+- import ScheduleBoard and its types:
+  import ScheduleBoard, { Resource, ScheduleEvent, ZoomLevel, ZOOM_CONFIGS } from '@/components/schedule/ScheduleBoard';
+- set zoom default to '15m'
+- provide a zoom selector that uses ZoomLevel (at least: 15m, 1h, day, week)
+- render resources (lanes) + events (bars)
+
+IMPORTANT: Do NOT implement your own slot generation, snapping, headers, “today/tomorrow” formatting.
+All that must come from ScheduleBoard.
+
+3) Build resource lanes for contractor/resident/portal projections
+We already have N3 runs/segments, plus dependencies. Represent them as:
+- Resource rows (lanes) in ScheduleBoard
+- ScheduleEvent items spanning startAt/endAt
+
+Resource groups (labels only; can be encoded in resource.type or resource.group field):
+- Service Runs
+- Staff
+- Fleet
+- Tools
+- Materials
+- Accommodations
+- Dependencies (weather/ferry/highway)
+- Payments
+
+If ScheduleBoard Resource type does not support grouping, add a minimal additive field to Resource:
+  group?: string
+and update ScheduleBoard rendering to show group headers (lightweight).
+
+4) Wire the 3 routes to the shared board
+Replace pages for:
+- /app/contractor/calendar
+- /app/my-place/calendar
+- /p/:portalSlug/calendar
+
+They should all render OpsCalendarBoardPage but pass a mode:
+- mode='contractor' | 'resident' | 'portal'
+and different data loaders.
+
+5) Data loaders MUST return Resource[] + ScheduleEvent[]
+Do NOT change backend to emit slots/cells.
+Keep it interval-based.
+
+Implement client loaders:
+- loadContractorOpsCalendar(from,to) -> Resource[] + ScheduleEvent[]
+- loadResidentOpsCalendar(from,to)
+- loadPortalOpsCalendar(from,to)
+
+They can call existing endpoints (or add new ones):
+- /api/contractor/ops-calendar
+- /api/resident/ops-calendar
+- /api/portal/:portalId/ops-calendar
+and then adapt to ScheduleBoard types.
+
+6) Enforce 15-minute view + snapping
+- The default zoom for these views must be '15m'
+- When user creates a window selection (if any), snapping must use existing snapTo15Min from ScheduleBoard (do not duplicate)
+
+If ScheduleBoard does not export snapTo15Min, export it from ScheduleBoard.tsx (additive export).
+
+7) Remove the iPhone calendar UX affordances
+- No “Today” button that implies month/week calendar.
+- No card list grouping by day.
+- “Today” is fine only as a quick jump in a timeline grid (scroll-to-now), not a view mode header.
+
+8) QA PROOF (MANDATORY)
+Create docs/QA_N3_CAL_01.md with:
+- Routes tested:
+  /app/contractor/calendar
+  /app/my-place/calendar
+  /p/:portalSlug/calendar
+- Proof that ScheduleBoard is used:
+  include imports and line refs
+- Screenshot notes: resources down left, time across top, 15-minute ticks visible
+- Confirm CalendarGrid is not used by these routes anymore.
+
+DELIVERABLES
+- New shared OpsCalendarBoardPage using ScheduleBoard
+- Route rewiring for contractor/resident/portal calendars
+- Minimal adapter from ops-calendar DTO -> ScheduleBoard Resource/ScheduleEvent
+- docs/QA_N3_CAL_01.md proof
+
+Proceed now.

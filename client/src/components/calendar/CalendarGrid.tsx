@@ -1,3 +1,7 @@
+// LEGACY (V3.5): replaced by OpsCalendarBoardPage. Remove after QA.
+// This iPhone-style calendar has been deprecated in favor of the Operations Timeline Grid
+// which uses ScheduleBoard's time spine (ZOOM_CONFIGS, generateTimeSlots, 15m zoom).
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -239,7 +239,7 @@ function isToday(date: Date): boolean {
   return date.toDateString() === today.toDateString();
 }
 
-function snapTo15Min(date: Date): Date {
+export function snapTo15Min(date: Date): Date {
   const snapped = new Date(date);
   const minutes = Math.floor(snapped.getMinutes() / 15) * 15;
   snapped.setMinutes(minutes, 0, 0);

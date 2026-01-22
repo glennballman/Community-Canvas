@@ -1,3 +1,6 @@
+// LEGACY (V3.5): replaced by OpsCalendarBoardPage. Remove after QA.
+// Replaced by shared/OpsCalendarBoardPage using ScheduleBoard time spine.
+
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
