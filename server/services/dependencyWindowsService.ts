@@ -2,7 +2,18 @@
  * N3-CAL-02: Dependency Windows Service
  * 
  * Provides dependency risk windows (weather, travel) for calendar feasibility overlays.
- * Uses existing feed data when available, with DEV seed fallback.
+ * These windows affect zone feasibility and are used to mark runs as ok/risky/blocked.
+ * 
+ * IMPLEMENTATION STATUS:
+ * - DEV/STUB MODE: Returns seeded test data for development/QA testing
+ * - The DEV seed creates a seaplane critical window for tomorrow 12pm-6pm
+ *   affecting West Bamfield and Helby Island zones (NOT East Bamfield)
+ * 
+ * PRODUCTION TODO: Integrate with real data sources:
+ *   - Weather: cc_weather_observations + cc_weather_alerts tables
+ *   - Ferry: BC Ferries API / cc_external_data_lake
+ *   - Seaplane: Harbour Air status feed  
+ *   - Highway: DriveBC road events / cc_road_events table
  */
 
 import { db } from '../db';

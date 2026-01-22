@@ -7115,6 +7115,29 @@ export const insertN3SegmentSchema = createInsertSchema(ccN3Segments).omit({ id:
 export type N3Segment = typeof ccN3Segments.$inferSelect;
 export type InsertN3Segment = z.infer<typeof insertN3SegmentSchema>;
 
+// ============================================================================
+// N3-CAL-02: Staff Availability Blocks
+// Tracks unavailability windows for staff (PTO, sick, blocked, etc.)
+// ============================================================================
+export const ccStaffAvailabilityBlocks = pgTable("cc_staff_availability_blocks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: varchar("tenant_id").notNull(),
+  personId: uuid("person_id").notNull(),
+  kind: varchar("kind").notNull(), // 'pto' | 'sick' | 'unavailable' | 'blocked' | 'training'
+  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+  endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+  reason: varchar("reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_staff_blocks_tenant").on(table.tenantId),
+  personIdx: index("idx_staff_blocks_person").on(table.personId),
+  rangeIdx: index("idx_staff_blocks_range").on(table.startAt, table.endAt),
+}));
+
+export const insertStaffAvailabilityBlockSchema = createInsertSchema(ccStaffAvailabilityBlocks).omit({ id: true, createdAt: true });
+export type StaffAvailabilityBlock = typeof ccStaffAvailabilityBlocks.$inferSelect;
+export type InsertStaffAvailabilityBlock = z.infer<typeof insertStaffAvailabilityBlockSchema>;
+
 // Tide Predictions (deterministic signal)
 export const ccTidePredictions = pgTable("cc_tide_predictions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -8560,33 +8583,6 @@ export const calendarRunDTOSchema = z.object({
 });
 
 export type CalendarRunDTO = z.infer<typeof calendarRunDTOSchema>;
-
-// ============================================================================
-// N3-CAL-02: Staff Availability Blocks
-// ============================================================================
-
-/**
- * Staff unavailability blocks for calendar feasibility overlays.
- * Used to mark when staff are unavailable (PTO, appointments, etc.)
- */
-export const ccStaffAvailabilityBlocks = pgTable("cc_staff_availability_blocks", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").notNull(),
-  personId: uuid("person_id").notNull(),
-  startAt: timestamp("start_at", { withTimezone: true }).notNull(),
-  endAt: timestamp("end_at", { withTimezone: true }).notNull(),
-  kind: varchar("kind", { length: 20 }).notNull().default('unavailable'),
-  reason: text("reason"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [
-  index("idx_staff_availability_tenant_person").on(table.tenantId, table.personId, table.startAt),
-]);
-
-export const insertStaffAvailabilityBlockSchema = createInsertSchema(ccStaffAvailabilityBlocks).omit({
-  id: true, createdAt: true
-});
-export type StaffAvailabilityBlock = typeof ccStaffAvailabilityBlocks.$inferSelect;
-export type InsertStaffAvailabilityBlock = z.infer<typeof insertStaffAvailabilityBlockSchema>;
 
 // ============================================================================
 // N3-CAL-02: Dependency Window DTO
