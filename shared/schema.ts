@@ -8456,3 +8456,26 @@ export const insertOnboardingItemSchema = createInsertSchema(ccOnboardingItems).
 });
 export type OnboardingItem = typeof ccOnboardingItems.$inferSelect;
 export type InsertOnboardingItem = z.infer<typeof insertOnboardingItemSchema>;
+
+/**
+ * ONB-02: Onboarding Media Objects
+ * Photo/media uploads from guest workspaces before tenant claim.
+ */
+export const ccOnboardingMediaObjects = pgTable("cc_onboarding_media_objects", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull(),
+  storageKey: text("storage_key").notNull(),
+  mimeType: text("mime_type").notNull(),
+  fileSize: integer("file_size"),
+  width: integer("width"),
+  height: integer("height"),
+  sha256: text("sha256"),
+  exifJson: jsonb("exif_json").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+});
+
+export const insertOnboardingMediaObjectSchema = createInsertSchema(ccOnboardingMediaObjects).omit({
+  id: true, createdAt: true
+});
+export type OnboardingMediaObject = typeof ccOnboardingMediaObjects.$inferSelect;
+export type InsertOnboardingMediaObject = z.infer<typeof insertOnboardingMediaObjectSchema>;

@@ -1,0 +1,91 @@
+✅ REPLIT PROMPT — ONB-02: Optional Photo Capture Without Login (Media Stubs + Later Promotion)
+
+This keeps ONB guest-first without forcing auth. It does NOT require changing your existing authenticated media pipeline.
+
+ROLE: Lead Platform Architect. Extend Guest Onboarding to accept photos WITHOUT login, using a safe “media stub” strategy.
+
+CONTEXT
+We created:
+- cc_onboarding_workspaces
+- cc_onboarding_items
+and public pages.
+
+Constraint:
+Existing cc_media / cc_ai_ingestions pipelines likely require auth/tenant.
+We must allow a guest to upload photos anyway, but we can store them as onboarding items first and promote them later during claim.
+
+GOAL
+Allow guests to upload photos into the onboarding workspace, store them in object storage, and reference them via onboarding items.
+No tenant required. No contractorProfile required. No login required.
+
+A) STORAGE STRATEGY (MINIMAL)
+Implement guest uploads to the same object storage backend used for media if possible (R2).
+If existing media upload requires auth, create a parallel “public upload” handler that stores to:
+- bucket path prefix: `onboarding/{workspaceId}/{uuid}.{ext}`
+
+Create a new table to track these objects (optional but recommended for safety):
+cc_onboarding_media_objects
+- id uuid pk defaultRandom
+- workspace_id uuid references cc_onboarding_workspaces(id) on delete cascade
+- storage_key text not null
+- mime_type text not null
+- file_size int null
+- width int null
+- height int null
+- sha256 text null
+- exif_json jsonb not null default '{}'
+- created_at timestamptz default now()
+
+Index: workspace_id
+
+If you want to avoid a new table, store storage_key + mime + metadata in cc_onboarding_items.payload.
+But prefer the table for durability & later promotion.
+
+B) PUBLIC UPLOAD API
+Under /api/public/onboard:
+
+1) POST /api/public/onboard/workspaces/:token/upload-url
+Return a signed upload URL (or server proxy upload endpoint) for a single file.
+Body: { filename, mimeType }
+Returns: { ok:true, uploadUrl, storageKey }
+
+2) POST /api/public/onboard/workspaces/:token/complete-upload
+Body: { storageKey, mimeType, fileSize, width?, height?, exifJson? }
+Effect:
+- creates cc_onboarding_media_objects row
+- creates cc_onboarding_items row:
+  item_type='media'
+  payload: { storageKey, mimeType, mediaObjectId }
+Return: { ok:true, item }
+
+Security:
+- validate token, validate workspace not expired
+- simple rate limit: 30 uploads / 10 minutes per token
+- max file size check (e.g., 25MB)
+
+C) CLIENT UI
+Update /onboard/w/:token page:
+Tile “Add photos”
+- file input (multiple)
+- show thumbnails (from storageKey URLs if readable; if private, show filenames)
+- on upload success, item appears in list
+
+Update /onboard/w/:token/review:
+- show media items thumbnail grid
+
+D) NO AI CLASSIFICATION YET
+Do NOT run A2.3 classification on guest uploads yet.
+That will happen in ONB-03 (claim/promote) where we have tenant/user context.
+For now we just capture and persist photos.
+
+E) ACCEPTANCE TESTS
+1) Guest creates workspace and uploads 3 photos
+2) Refresh page: photos still listed
+3) Copy link to another browser: photos still listed
+4) Expired workspace: upload-url returns 410 expired
+
+DELIVERABLES
+- migration for cc_onboarding_media_objects (if used)
+- public upload endpoints
+- UI updates for photo tile and review grid
+Proceed.

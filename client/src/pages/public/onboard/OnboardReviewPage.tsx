@@ -18,7 +18,7 @@ import {
   StickyNote,
   Camera,
   Clock,
-  FileText
+  ImageIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -204,14 +204,22 @@ export default function OnboardReviewPage() {
             {mediaItems.length === 0 ? (
               <p className="text-sm text-muted-foreground">No photos added yet.</p>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2" data-testid="review-photo-grid">
                 {mediaItems.map((item) => (
                   <div 
                     key={item.id} 
-                    className="aspect-square bg-muted rounded-lg flex items-center justify-center"
+                    className="aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center"
                     data-testid={`media-${item.id}`}
                   >
-                    <FileText className="h-6 w-6 text-muted-foreground" />
+                    {item.payload?.publicUrl ? (
+                      <img 
+                        src={item.payload.publicUrl} 
+                        alt="Uploaded photo"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                    )}
                   </div>
                 ))}
               </div>

@@ -5,7 +5,7 @@
  * Route: /onboard/w/:token
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,11 @@ import {
   StickyNote, 
   Camera, 
   ClipboardList,
-  Clock
+  Clock,
+  X,
+  ImageIcon,
+  Upload,
+  AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -60,6 +64,12 @@ export default function OnboardWorkspacePage() {
   const [addingNote, setAddingNote] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  
+  // Photo upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadWorkspace();
@@ -141,6 +151,102 @@ export default function OnboardWorkspacePage() {
     }
     setSavingNote(false);
   };
+
+  const handlePhotoSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    setUploadingPhotos(true);
+    setUploadError(null);
+    setUploadProgress({ current: 0, total: files.length });
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress({ current: i + 1, total: files.length });
+        
+        // Validate file type
+        if (!allowedTypes.includes(file.type)) {
+          setUploadError(`${file.name}: Only JPEG, PNG, WebP, and HEIC images are allowed`);
+          continue;
+        }
+        
+        // Validate file size (25MB)
+        if (file.size > 25 * 1024 * 1024) {
+          setUploadError(`${file.name}: File too large (max 25MB)`);
+          continue;
+        }
+        
+        // Step 1: Get presigned upload URL
+        const urlRes = await fetch(`/api/public/onboard/workspaces/${token}/upload-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, mimeType: file.type })
+        });
+        
+        if (urlRes.status === 429) {
+          setUploadError('Upload limit reached. Please wait a few minutes.');
+          break;
+        }
+        
+        if (urlRes.status === 503) {
+          setUploadError('Photo uploads are temporarily unavailable.');
+          break;
+        }
+        
+        const urlData = await urlRes.json();
+        if (!urlData.ok) {
+          setUploadError(urlData.error || 'Failed to get upload URL');
+          continue;
+        }
+        
+        // Step 2: Upload to R2 using presigned URL
+        const uploadRes = await fetch(urlData.uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type }
+        });
+        
+        if (!uploadRes.ok) {
+          setUploadError(`Failed to upload ${file.name}`);
+          continue;
+        }
+        
+        // Step 3: Complete upload to create records
+        const completeRes = await fetch(`/api/public/onboard/workspaces/${token}/complete-upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storageKey: urlData.storageKey,
+            mimeType: file.type,
+            fileSize: file.size
+          })
+        });
+        
+        const completeData = await completeRes.json();
+        if (completeData.ok) {
+          setItems(prev => [completeData.item, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      setUploadError('Upload failed. Please try again.');
+    }
+    
+    setUploadingPhotos(false);
+    setUploadProgress(null);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [token]);
+
+  // Get media items for display
+  const mediaItems = items.filter(item => item.itemType === 'media');
+  const noteItems = items.filter(item => item.itemType === 'typed_note');
 
   if (loading) {
     return (
@@ -319,38 +425,115 @@ export default function OnboardWorkspacePage() {
           </CardContent>
         </Card>
 
-        {/* Photos Card (Coming Soon) */}
-        <Card className="opacity-60" data-testid="card-photos">
+        {/* Photos Card */}
+        <Card data-testid="card-photos">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-base">Add photos</CardTitle>
-              <Badge variant="secondary" className="text-xs">Coming next</Badge>
+              {mediaItems.length > 0 && (
+                <Badge variant="secondary" className="text-xs">{mediaItems.length}</Badge>
+              )}
             </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Photo uploads will be available soon.
-            </p>
+          <CardContent className="space-y-3">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              multiple
+              onChange={handlePhotoSelect}
+              className="hidden"
+              data-testid="input-photo-file"
+            />
+            
+            {/* Upload error */}
+            {uploadError && (
+              <div className="flex items-center gap-2 p-2 rounded bg-destructive/10 text-destructive text-sm" data-testid="upload-error">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{uploadError}</span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-5 w-5 ml-auto"
+                  onClick={() => setUploadError(null)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            
+            {/* Upload progress */}
+            {uploadingPhotos && uploadProgress && (
+              <div className="flex items-center gap-2 p-2 rounded bg-muted text-sm" data-testid="upload-progress">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Uploading {uploadProgress.current} of {uploadProgress.total}...</span>
+              </div>
+            )}
+            
+            {/* Photo thumbnails */}
+            {mediaItems.length > 0 && (
+              <div className="grid grid-cols-3 gap-2" data-testid="photo-grid">
+                {mediaItems.slice(0, 6).map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="aspect-square rounded overflow-hidden bg-muted"
+                    data-testid={`photo-thumb-${item.id}`}
+                  >
+                    {item.payload?.publicUrl ? (
+                      <img 
+                        src={item.payload.publicUrl} 
+                        alt="Uploaded photo"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {mediaItems.length > 6 && (
+                  <div className="aspect-square rounded bg-muted flex items-center justify-center text-sm text-muted-foreground">
+                    +{mediaItems.length - 6}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Upload button */}
+            <Button 
+              variant="outline" 
+              className="w-full gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhotos}
+              data-testid="button-add-photos"
+            >
+              {uploadingPhotos ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {mediaItems.length > 0 ? 'Add more photos' : 'Choose photos'}
+            </Button>
           </CardContent>
         </Card>
 
-        {/* Recent Items */}
-        {items.length > 0 && (
+        {/* Recent Items (notes only - photos shown in grid above) */}
+        {noteItems.length > 0 && (
           <Card data-testid="card-recent-items">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Recent items</CardTitle>
+              <CardTitle className="text-base">Recent notes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {items.slice(0, 3).map((item) => (
+              {noteItems.slice(0, 3).map((item) => (
                 <div key={item.id} className="p-2 rounded bg-muted/50 text-sm" data-testid={`item-${item.id}`}>
-                  {item.itemType === 'typed_note' && (
-                    <p className="line-clamp-2">{item.payload?.text || 'Note'}</p>
-                  )}
+                  <p className="line-clamp-2">{item.payload?.text || 'Note'}</p>
                 </div>
               ))}
-              {items.length > 3 && (
-                <p className="text-xs text-muted-foreground">+{items.length - 3} more</p>
+              {noteItems.length > 3 && (
+                <p className="text-xs text-muted-foreground">+{noteItems.length - 3} more</p>
               )}
             </CardContent>
           </Card>
