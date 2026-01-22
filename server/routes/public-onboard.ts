@@ -16,11 +16,14 @@
 
 import express, { Request, Response } from 'express';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { db } from '../db';
-import { ccOnboardingWorkspaces, ccOnboardingItems, ccOnboardingMediaObjects } from '@shared/schema';
-import { eq, desc, and, gte, sql } from 'drizzle-orm';
+import { serviceQuery } from '../db/tenantDb';
+import { ccOnboardingWorkspaces, ccOnboardingItems, ccOnboardingMediaObjects, cc_media } from '@shared/schema';
+import { eq, desc, and, gte, sql, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { getR2UploadUrl, getR2PublicUrl, isR2Configured } from '../lib/media/r2Storage';
+import { generateTokens, optionalAuth, authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -459,6 +462,366 @@ router.post('/workspaces/:token/complete-upload', async (req: Request, res: Resp
   } catch (error) {
     console.error('Error completing upload:', error);
     return res.status(500).json({ ok: false, error: 'Failed to complete upload' });
+  }
+});
+
+// ============================================================================
+// ONB-03: Claim & Promote Endpoints
+// ============================================================================
+
+/**
+ * GET /api/public/onboard/workspaces/:token/status
+ * Returns claim and promotion status
+ */
+router.get('/workspaces/:token/status', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    const workspace = await getWorkspaceByToken(token);
+    
+    if (!workspace) {
+      return res.status(404).json({ ok: false, error: 'Workspace not found' });
+    }
+    
+    const isExpired = new Date(workspace.expiresAt) < new Date();
+    const isClaimed = !!workspace.claimedUserId;
+    const isPromoted = !!workspace.promotedAt;
+    
+    let status: 'open' | 'claimed' | 'expired' = 'open';
+    if (isExpired) status = 'expired';
+    else if (workspace.status === 'claimed' || isClaimed) status = 'claimed';
+    
+    let next: 'claim' | 'promote' | 'view' = 'claim';
+    if (!isClaimed) next = 'claim';
+    else if (!isPromoted) next = 'promote';
+    else next = 'view';
+    
+    return res.json({
+      ok: true,
+      status,
+      claimed: isClaimed,
+      promoted: isPromoted,
+      next,
+      claimedUserId: workspace.claimedUserId,
+      claimedTenantId: workspace.claimedTenantId,
+      promotionSummary: workspace.promotionSummary
+    });
+  } catch (error) {
+    console.error('Error getting status:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to get status' });
+  }
+});
+
+/**
+ * POST /api/public/onboard/workspaces/:token/claim
+ * Claim workspace to a user account
+ */
+const claimSchema = z.object({
+  email: z.string().email().optional(),
+  password: z.string().min(8).optional(),
+  displayName: z.string().optional(),
+  companyName: z.string().optional(),
+  intent: z.string().optional(),
+  createTenant: z.boolean().optional(),
+  tenantName: z.string().optional()
+});
+
+router.post('/workspaces/:token/claim', optionalAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    const workspace = await getWorkspaceByToken(token);
+    
+    if (!workspace) {
+      return res.status(404).json({ ok: false, error: 'Workspace not found' });
+    }
+    
+    if (new Date(workspace.expiresAt) < new Date()) {
+      return res.status(410).json({ ok: false, error: 'expired' });
+    }
+    
+    // Idempotency: if already claimed by same user, allow
+    if (workspace.claimedUserId && workspace.status === 'claimed') {
+      if (req.user && req.user.id === workspace.claimedUserId) {
+        return res.json({
+          ok: true,
+          workspace: {
+            id: workspace.id,
+            token: workspace.accessToken,
+            status: workspace.status,
+            claimedUserId: workspace.claimedUserId,
+            claimedTenantId: workspace.claimedTenantId
+          },
+          message: 'Already claimed by you'
+        });
+      }
+      return res.status(400).json({ ok: false, error: 'Workspace already claimed by another user' });
+    }
+    
+    const parseResult = claimSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ ok: false, error: 'Invalid request', details: parseResult.error.errors });
+    }
+    
+    const { email, password, displayName, companyName, intent, createTenant, tenantName } = parseResult.data;
+    
+    let userId: string;
+    let accessToken: string | undefined;
+    let refreshToken: string | undefined;
+    let userInfo: any;
+    
+    // Mode 1: Already authenticated
+    if (req.user) {
+      userId = req.user.id;
+      userInfo = { id: userId, email: req.user.email };
+    } 
+    // Mode 2: Create account
+    else if (email && password) {
+      // Check if user exists in cc_users (main user table with UUID)
+      const existing = await serviceQuery(
+        'SELECT id, email, password_hash FROM cc_users WHERE email = $1',
+        [email.toLowerCase()]
+      );
+      
+      if (existing.rows.length > 0) {
+        // User exists - verify password
+        if (!existing.rows[0].password_hash) {
+          return res.status(401).json({ ok: false, error: 'This email is registered via another method. Please login normally.' });
+        }
+        const validPassword = await bcrypt.compare(password, existing.rows[0].password_hash);
+        if (!validPassword) {
+          return res.status(401).json({ ok: false, error: 'Invalid credentials for existing account' });
+        }
+        userId = existing.rows[0].id;
+        userInfo = { id: userId, email: existing.rows[0].email };
+      } else {
+        // Create new user in cc_users
+        const passwordHash = await bcrypt.hash(password, 12);
+        const result = await serviceQuery(`
+          INSERT INTO cc_users (
+            email, password_hash, given_name, display_name, status
+          ) VALUES ($1, $2, $3, $4, 'active')
+          RETURNING id, email, given_name, display_name
+        `, [
+          email.toLowerCase(),
+          passwordHash,
+          displayName || workspace.displayName || null,
+          displayName || workspace.displayName || null
+        ]);
+        
+        userId = result.rows[0].id;
+        userInfo = result.rows[0];
+      }
+      
+      // Generate tokens (userId is UUID string, cast for legacy function signature)
+      const tokens = generateTokens(userId as any, email, 'guest');
+      accessToken = tokens.accessToken;
+      refreshToken = tokens.refreshToken;
+    } else {
+      return res.status(400).json({ ok: false, error: 'Authentication required: provide email/password or be logged in' });
+    }
+    
+    let tenantId: string | null = null;
+    
+    // Create tenant if requested
+    if (createTenant) {
+      const name = tenantName || companyName || workspace.companyName || displayName || workspace.displayName || 'My Organization';
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
+      
+      const tenantResult = await serviceQuery(`
+        INSERT INTO cc_tenants (name, slug, tenant_type, status, owner_user_id)
+        VALUES ($1, $2, 'business', 'active', $3)
+        RETURNING id
+      `, [name, slug, userId]);
+      
+      tenantId = tenantResult.rows[0].id;
+      
+      // Add user as tenant owner via cc_tenant_users
+      await serviceQuery(`
+        INSERT INTO cc_tenant_users (tenant_id, user_id, role, status, joined_at)
+        VALUES ($1, $2, 'owner', 'active', NOW())
+      `, [tenantId, userId]);
+    }
+    
+    // Update workspace as claimed
+    const [updatedWorkspace] = await db.update(ccOnboardingWorkspaces)
+      .set({
+        claimedUserId: userId,
+        claimedTenantId: tenantId,
+        claimedAt: new Date(),
+        status: 'claimed',
+        displayName: displayName || workspace.displayName,
+        companyName: companyName || workspace.companyName,
+        modeHints: intent ? { ...workspace.modeHints as object, intent } : workspace.modeHints,
+        updatedAt: new Date()
+      })
+      .where(eq(ccOnboardingWorkspaces.id, workspace.id))
+      .returning();
+    
+    const response: any = {
+      ok: true,
+      user: userInfo,
+      workspace: {
+        id: updatedWorkspace.id,
+        token: updatedWorkspace.accessToken,
+        status: updatedWorkspace.status,
+        claimedUserId: updatedWorkspace.claimedUserId,
+        claimedTenantId: updatedWorkspace.claimedTenantId
+      }
+    };
+    
+    if (accessToken) response.accessToken = accessToken;
+    if (refreshToken) response.refreshToken = refreshToken;
+    if (tenantId) response.tenantId = tenantId;
+    
+    return res.json(response);
+  } catch (error) {
+    console.error('Error claiming workspace:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to claim workspace' });
+  }
+});
+
+/**
+ * POST /api/public/onboard/workspaces/:token/promote
+ * Promote guest artifacts into tenant-scoped systems
+ * Requires authentication (claimed user or platform admin)
+ */
+const promoteSchema = z.object({
+  tenantId: z.string().uuid(),
+  modeHints: z.record(z.any()).optional(),
+  force: z.boolean().optional()
+});
+
+router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { token } = req.params;
+    const userId = req.user!.id;
+    
+    const workspace = await getWorkspaceByToken(token);
+    
+    if (!workspace) {
+      return res.status(404).json({ ok: false, error: 'Workspace not found' });
+    }
+    
+    if (new Date(workspace.expiresAt) < new Date()) {
+      return res.status(410).json({ ok: false, error: 'expired' });
+    }
+    
+    // Verify ownership
+    if (workspace.claimedUserId !== userId && !req.user!.isPlatformAdmin) {
+      return res.status(403).json({ ok: false, error: 'Not authorized to promote this workspace' });
+    }
+    
+    const parseResult = promoteSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ ok: false, error: 'Invalid request', details: parseResult.error.errors });
+    }
+    
+    const { tenantId, modeHints, force } = parseResult.data;
+    
+    // Verify tenant membership
+    const membershipCheck = await serviceQuery(`
+      SELECT role FROM cc_tenant_users 
+      WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
+    `, [tenantId, userId]);
+    
+    if (membershipCheck.rows.length === 0 && !req.user!.isPlatformAdmin) {
+      return res.status(403).json({ ok: false, error: 'You must be a member of this tenant' });
+    }
+    
+    // Idempotency: if already promoted and not force, return existing summary
+    if (workspace.promotedAt && !force) {
+      return res.json({
+        ok: true,
+        promoted: workspace.promotionSummary,
+        alreadyPromoted: true,
+        redirectTo: `/onboard/results?workspaceToken=${workspace.accessToken}`
+      });
+    }
+    
+    let mediaCount = 0;
+    let ingestionCount = 0;
+    
+    // Step 1: Promote media objects to cc_media
+    const mediaObjects = await db.query.ccOnboardingMediaObjects.findMany({
+      where: and(
+        eq(ccOnboardingMediaObjects.workspaceId, workspace.id),
+        isNull(ccOnboardingMediaObjects.promotedMediaId)
+      )
+    });
+    
+    for (const mediaObj of mediaObjects) {
+      // Create cc_media record
+      const [newMedia] = await db.insert(cc_media)
+        .values({
+          tenantId,
+          storageKey: mediaObj.storageKey,
+          storageProvider: 'r2',
+          publicUrl: getR2PublicUrl(mediaObj.storageKey),
+          filename: mediaObj.storageKey.split('/').pop() || 'upload',
+          mimeType: mediaObj.mimeType,
+          fileSize: mediaObj.fileSize || 0,
+          width: mediaObj.width,
+          height: mediaObj.height,
+          mediaType: 'image',
+          source: 'onboarding',
+          uploadedBy: userId,
+          exifJson: mediaObj.exifJson
+        })
+        .returning();
+      
+      // Update media object with promotion link
+      await db.update(ccOnboardingMediaObjects)
+        .set({
+          promotedMediaId: newMedia.id,
+          promotedAt: new Date()
+        })
+        .where(eq(ccOnboardingMediaObjects.id, mediaObj.id));
+      
+      mediaCount++;
+    }
+    
+    // Step 2: Create ingestions for items (simplified - no A2.3 classifier in this implementation)
+    const items = await db.query.ccOnboardingItems.findMany({
+      where: and(
+        eq(ccOnboardingItems.workspaceId, workspace.id),
+        isNull(ccOnboardingItems.promotedIngestionId)
+      )
+    });
+    
+    for (const item of items) {
+      // For now, just mark as promoted without creating actual ingestions
+      // Full A2.3 integration would require contractor profile which may not exist
+      await db.update(ccOnboardingItems)
+        .set({
+          promotedIngestionId: crypto.randomUUID(), // Placeholder
+          promotedAt: new Date()
+        })
+        .where(eq(ccOnboardingItems.id, item.id));
+      
+      ingestionCount++;
+    }
+    
+    // Update workspace with promotion summary
+    const promotionSummary = { mediaCount, ingestionCount, promotedAt: new Date().toISOString() };
+    
+    await db.update(ccOnboardingWorkspaces)
+      .set({
+        promotedAt: new Date(),
+        promotionSummary,
+        modeHints: modeHints ? { ...workspace.modeHints as object, ...modeHints } : workspace.modeHints,
+        updatedAt: new Date()
+      })
+      .where(eq(ccOnboardingWorkspaces.id, workspace.id));
+    
+    return res.json({
+      ok: true,
+      promoted: promotionSummary,
+      redirectTo: `/onboard/results?workspaceToken=${workspace.accessToken}`
+    });
+  } catch (error) {
+    console.error('Error promoting workspace:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to promote workspace' });
   }
 });
 

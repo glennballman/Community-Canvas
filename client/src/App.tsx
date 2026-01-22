@@ -208,6 +208,8 @@ import EventQuotePage from './pages/public/EventQuotePage';
 import OnboardIntentPage from './pages/public/onboard/OnboardIntentPage';
 import OnboardWorkspacePage from './pages/public/onboard/OnboardWorkspacePage';
 import OnboardReviewPage from './pages/public/onboard/OnboardReviewPage';
+import OnboardClaimPage from './pages/public/onboard/OnboardClaimPage';
+import OnboardingResultsPage from './pages/app/OnboardingResultsPage';
 
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
@@ -356,6 +358,8 @@ export default function App() {
               <Route path="/onboard" element={<OnboardIntentPage />} />
               <Route path="/onboard/w/:token" element={<OnboardWorkspacePage />} />
               <Route path="/onboard/w/:token/review" element={<OnboardReviewPage />} />
+              <Route path="/onboard/w/:token/claim" element={<OnboardClaimPage />} />
+              <Route path="/onboard/results" element={<OnboardingResultsPage />} />
 
               {/* ========================================== */}
               {/* PUBLIC PORTAL - /c/:slug/*                */}
@@ -460,6 +464,9 @@ export default function App() {
                 {/* N3 Service Run Monitor (Patent CC-01) */}
                 <Route path="n3/attention" element={<ServiceRunAttentionPage />} />
                 <Route path="n3/monitor/:runId" element={<ServiceRunMonitorPage />} />
+                
+                {/* Onboarding Results (ONB-03) */}
+                <Route path="onboarding/results" element={<OnboardingResultsPage />} />
                 
                 {/* V3 Admin */}
                 <Route path="admin" element={<AdminHomePage />} />

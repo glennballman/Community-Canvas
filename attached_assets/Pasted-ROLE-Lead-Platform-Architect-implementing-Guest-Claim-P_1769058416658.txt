@@ -1,0 +1,169 @@
+ROLE: Lead Platform Architect implementing Guest → Claim → Promote for Community Canvas V3.5.
+
+CONTEXT
+ONB-01 and ONB-02 exist:
+- cc_onboarding_workspaces (token, expires, extend-on-access)
+- cc_onboarding_items
+- cc_onboarding_media_objects + guest uploads to R2
+Public pages:
+- /onboard
+- /onboard/w/:token
+- /onboard/w/:token/review
+
+We already have:
+- cc_media system (tenant-scoped)
+- cc_ai_ingestions + A2.3 classifier pipeline
+- A2.6 next actions (cc_ingestion_next_actions)
+- UploadResultsPage + IngestionReviewPage in /app/contractor/onboard/* (auth required)
+- Messaging system (must be used)
+
+GOAL
+Add a Claim step so a guest can create an account (or attach to an existing session), optionally create a tenant, and PROMOTE the workspace media+notes into:
+- tenant-scoped cc_media
+- cc_ai_ingestions rows
+Then run A2.3 classification and generate A2.6 actions.
+Finally redirect user into the authenticated results experience.
+
+HARD REQUIREMENTS
+- Do NOT hardcode "contractor". This is user onboarding / tenant onboarding.
+- Guest can claim later. Claim is optional until they want persistence beyond the link.
+- Promotion must be idempotent: claiming twice should not duplicate media or ingestions.
+- Use existing auth/token storage conventions (cc_token localStorage) and existing register/login if present.
+- If user is already logged in, claim attaches to that user (no new account required).
+
+A) DATABASE (ADDITIVE)
+1) Add columns to cc_onboarding_workspaces:
+- claimed_at timestamptz null
+- promoted_at timestamptz null
+- promotion_summary jsonb not null default '{}'
+
+2) Add columns to cc_onboarding_media_objects:
+- promoted_media_id uuid null
+- promoted_at timestamptz null
+
+3) Add columns to cc_onboarding_items:
+- promoted_ingestion_id uuid null
+- promoted_at timestamptz null
+
+Indexes:
+- onboarding_media_objects(promoted_media_id)
+- onboarding_items(promoted_ingestion_id)
+
+B) SERVER ROUTES
+Create routes under /api/public/onboard (still public token-based), plus one authenticated helper.
+
+1) POST /api/public/onboard/workspaces/:token/claim
+Purpose: claim workspace to a user account.
+Supports two modes:
+
+Mode 1: Create account (if no session)
+Body:
+{ email, password, displayName?, companyName?, intent?, createTenant?: boolean, tenantName?: string }
+- create user if not exists (or return error if exists and password mismatch)
+- log in user (return JWT token in response)
+- set workspace.claimed_user_id + claimed_at
+- if createTenant true: create tenant and membership for claimed_user_id as tenant_admin
+  - tenantName required; if missing use companyName or displayName fallback
+- return:
+{ ok:true, token: <jwt>, user, tenantId?: uuid, workspace: {...} }
+
+Mode 2: Attach to existing session
+If Authorization present and valid:
+Body:
+{ createTenant?: boolean, tenantName?: string }
+- attach workspace.claimed_user_id = current user
+- optionally create tenant + membership
+- return { ok:true, workspace, tenantId? }
+
+Security:
+- refuse claim if workspace expired (410)
+- refuse claim if status != 'open' unless claimed_user_id is same user (idempotency)
+- set workspace.status='claimed' when claimed.
+
+2) POST /api/public/onboard/workspaces/:token/promote
+Purpose: promote guest workspace artifacts into tenant-scoped systems.
+Auth REQUIRED (must be the claimed user OR platform admin impersonating).
+
+Body:
+{ tenantId: uuid, modeHints?: {...}, force?: false }
+Behavior (idempotent):
+- verify workspace claimed_user_id == current user (or platform admin)
+- verify tenantId membership exists for current user (tenant_admin or equivalent)
+- For each cc_onboarding_media_objects row where promoted_media_id is null:
+  - create cc_media record (tenant-scoped) using storage_key and metadata
+  - store promoted_media_id + promoted_at
+- Create cc_ai_ingestions for the workspace:
+  Strategy:
+  - Create one ingestion per "upload batch" OR simplest: one ingestion per media object.
+  Choose simplest deterministic approach:
+    - Create one ingestion per media object (type='media') with a link to promoted_media_id
+    - Include workspace_id and source='onboarding' in ingestion metadata/extracted_signals
+  - Store promoted_ingestion_id on cc_onboarding_items for media items
+
+- For each typed_note item:
+  - Create a cc_ai_ingestions row with kind='typed_note' or 'sticky_note_text'
+  - Store note text in ingestion.extracted_signals.note_text
+
+- After creating ingestions:
+  - invoke existing A2.3 classifier for each ingestion (same service used for contractor uploads)
+  - generate A2.6 next actions for each ingestion
+  - ensure messaging thread exists for this onboarding session (thread participants: claimed user)
+    - post one message summarizing what was detected and provide next actions link
+
+- Update workspace.promoted_at and promotion_summary { mediaCount, ingestionCount, actionCount }
+
+Return:
+{ ok:true, promoted: { mediaCount, ingestionCount, actionCount }, redirectTo: '/app/onboarding/results?workspaceToken=...' }
+
+3) GET /api/public/onboard/workspaces/:token/status
+Returns whether claimed and promoted, plus suggested next step:
+{ ok:true, status:'open|claimed|expired', claimed:boolean, promoted:boolean, next:'claim|promote|view' }
+
+C) CLIENT PAGES
+Add public claim UI pages:
+
+1) /onboard/w/:token/claim
+- shows: "Save this workspace"
+- options:
+  A) Create account (email + password)
+  B) If already logged in: "Attach to my account"
+- optional toggle: "Create a new tenant for this workspace"
+  - tenant name input (default companyName or displayName)
+- on success: store token (cc_token) and redirect to promote step
+
+2) Promote UX (after claim)
+After claim success, immediately call promote endpoint:
+- If tenant created: use that tenantId
+- If not: ask to select tenant (simple dropdown of memberships) OR create one
+Then redirect into authenticated results:
+Preferred target:
+- /app/contractor/onboard/results (if that page already surfaces ingestions/actions)
+But we must not hardcode contractor. Add a neutral route:
+- /app/onboarding/results
+This page can simply wrap existing UploadResultsPage and show ingestions created from promotion.
+Implement:
+- /app/onboarding/results?workspaceToken=...
+It fetches promotion_summary and lists ingestions created by that workspace (filter by metadata workspace_id).
+
+D) DO NOT BREAK EXISTING ROUTES
+- Do not modify /app/contractor/* beyond adding optional deep links
+- Do not alter tenant selection logic except where needed to select tenant for promotion
+
+E) ACCEPTANCE TESTS (MANDATORY)
+1) Guest creates workspace, uploads 2 photos, adds typed note
+2) Open /onboard/w/:token/claim, create account, create tenant
+3) Promotion runs:
+   - cc_media created (2 rows)
+   - cc_ai_ingestions created (>=2 for photos + 1 for typed note)
+   - A2.3 classification executed (check ingestion fields updated)
+   - A2.6 next actions created
+4) Redirect lands on /app/onboarding/results and shows suggested actions
+5) Re-run promote (same token) -> no duplicate media or ingestions (idempotent)
+
+DELIVERABLES
+- migrations
+- server routes
+- claim UI page
+- /app/onboarding/results wrapper page
+- QA proof: SQL counts before/after, and one screenshot of actions appearing
+Proceed.

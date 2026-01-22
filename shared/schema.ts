@@ -8415,6 +8415,9 @@ export const ccOnboardingWorkspaces = pgTable("cc_onboarding_workspaces", {
   modeHints: jsonb("mode_hints").notNull().default({}),
   claimedUserId: uuid("claimed_user_id"),
   claimedTenantId: uuid("claimed_tenant_id"),
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
+  promotedAt: timestamp("promoted_at", { withTimezone: true }),
+  promotionSummary: jsonb("promotion_summary").notNull().default({}),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -8445,6 +8448,8 @@ export const ccOnboardingItems = pgTable("cc_onboarding_items", {
   itemType: varchar("item_type", { length: 30 }).notNull(),
   source: varchar("source", { length: 30 }).notNull().default('user'),
   payload: jsonb("payload").notNull().default({}),
+  promotedIngestionId: uuid("promoted_ingestion_id"),
+  promotedAt: timestamp("promoted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index("idx_onboarding_items_workspace").on(table.workspaceId),
@@ -8471,6 +8476,8 @@ export const ccOnboardingMediaObjects = pgTable("cc_onboarding_media_objects", {
   height: integer("height"),
   sha256: text("sha256"),
   exifJson: jsonb("exif_json").notNull().default({}),
+  promotedMediaId: uuid("promoted_media_id"),
+  promotedAt: timestamp("promoted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 
