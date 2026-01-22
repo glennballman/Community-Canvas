@@ -19,7 +19,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { db } from '../db';
 import { serviceQuery } from '../db/tenantDb';
-import { ccOnboardingWorkspaces, ccOnboardingItems, ccOnboardingMediaObjects, cc_media } from '@shared/schema';
+import { ccOnboardingWorkspaces, ccOnboardingItems, ccOnboardingMediaObjects, cc_media, ccAiIngestions, ccOnboardingIngestionLinks } from '@shared/schema';
 import { eq, desc, and, gte, sql, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { getR2UploadUrl, getR2PublicUrl, isR2Configured } from '../lib/media/r2Storage';
@@ -735,7 +735,7 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
         ok: true,
         promoted: workspace.promotionSummary,
         alreadyPromoted: true,
-        redirectTo: `/onboard/results?workspaceToken=${workspace.accessToken}`
+        redirectTo: `/app/onboarding/results?workspaceToken=${workspace.guestToken}`
       });
     }
     
@@ -781,7 +781,7 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
       mediaCount++;
     }
     
-    // Step 2: Create ingestions for items (simplified - no A2.3 classifier in this implementation)
+    // Step 2: Create ingestions for items and link to workspace
     const items = await db.query.ccOnboardingItems.findMany({
       where: and(
         eq(ccOnboardingItems.workspaceId, workspace.id),
@@ -789,17 +789,51 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
       )
     });
     
+    const createdIngestionLinks: Array<{ workspaceId: string; tenantId: string; ingestionId: string }> = [];
+    
     for (const item of items) {
-      // For now, just mark as promoted without creating actual ingestions
-      // Full A2.3 integration would require contractor profile which may not exist
+      // Create real cc_ai_ingestions record
+      const [newIngestion] = await db.insert(ccAiIngestions)
+        .values({
+          tenantId,
+          sourceType: 'onboarding',
+          status: 'pending',
+          confidence: 0.5,
+          rawPayload: {
+            onboardingItemId: item.id,
+            itemType: item.itemType,
+            label: item.label,
+            note: item.note,
+            mediaIds: item.mediaIds
+          },
+          aiProposedPayload: null,
+          createdBy: userId,
+          priority: 100
+        })
+        .returning();
+      
+      // Update item with promotion link
       await db.update(ccOnboardingItems)
         .set({
-          promotedIngestionId: crypto.randomUUID(), // Placeholder
+          promotedIngestionId: newIngestion.id,
           promotedAt: new Date()
         })
         .where(eq(ccOnboardingItems.id, item.id));
       
+      // Track for linking with tenant
+      createdIngestionLinks.push({ 
+        workspaceId: workspace.id, 
+        tenantId,
+        ingestionId: newIngestion.id 
+      });
+      
       ingestionCount++;
+    }
+    
+    // Insert ingestion links for ONB-04
+    if (createdIngestionLinks.length > 0) {
+      await db.insert(ccOnboardingIngestionLinks)
+        .values(createdIngestionLinks);
     }
     
     // Update workspace with promotion summary
@@ -817,7 +851,7 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
     return res.json({
       ok: true,
       promoted: promotionSummary,
-      redirectTo: `/onboard/results?workspaceToken=${workspace.accessToken}`
+      redirectTo: `/app/onboarding/results?workspaceToken=${workspace.guestToken}`
     });
   } catch (error) {
     console.error('Error promoting workspace:', error);

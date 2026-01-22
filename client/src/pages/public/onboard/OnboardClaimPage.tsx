@@ -136,8 +136,8 @@ export default function OnboardClaimPage() {
         }
       }
       
-      // Navigate to results (public route to avoid auth redirect)
-      navigate(`/onboard/results?workspaceToken=${token}`);
+      // Navigate to authenticated results page
+      navigate(`/app/onboarding/results?workspaceToken=${token}`);
     } catch (err) {
       console.error('Claim error:', err);
       setError('Failed to claim workspace. Please try again.');

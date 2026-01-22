@@ -64,31 +64,63 @@ async function verifyWorkspaceAccess(
 }
 
 /**
- * GET /api/onboarding/results?workspaceId=<uuid>
+ * GET /api/onboarding/results?workspaceId=<uuid> OR workspaceToken=<token>
  * 
  * Returns promoted workspace data including ingestions, actions, bundles.
+ * Accepts either workspaceId (UUID) or workspaceToken (guest token).
  */
 router.get('/results', async (req: Request, res: Response) => {
   try {
-    const { workspaceId } = req.query;
+    const { workspaceId, workspaceToken } = req.query;
     const user = (req as any).user as AuthUser;
     
-    if (!workspaceId || typeof workspaceId !== 'string') {
-      return res.status(400).json({ ok: false, error: 'workspaceId required' });
-    }
+    // Find workspace by ID or token
+    let workspace: any;
     
-    // Verify access
-    const access = await verifyWorkspaceAccess(workspaceId, user.userId, user.isPlatformAdmin);
-    if (!access.ok) {
-      return res.status(403).json({ ok: false, error: access.error });
+    if (workspaceId && typeof workspaceId === 'string') {
+      const access = await verifyWorkspaceAccess(workspaceId, user.userId, user.isPlatformAdmin);
+      if (!access.ok) {
+        return res.status(403).json({ ok: false, error: access.error });
+      }
+      workspace = access.workspace;
+    } else if (workspaceToken && typeof workspaceToken === 'string') {
+      workspace = await db.query.ccOnboardingWorkspaces.findFirst({
+        where: eq(ccOnboardingWorkspaces.guestToken, workspaceToken)
+      });
+      
+      if (!workspace) {
+        return res.status(404).json({ ok: false, error: 'Workspace not found' });
+      }
+      
+      if (!workspace.claimedUserId) {
+        return res.status(400).json({ ok: false, error: 'Workspace not claimed' });
+      }
+      
+      // Verify ownership or platform admin
+      if (workspace.claimedUserId !== user.userId && !user.isPlatformAdmin) {
+        return res.status(403).json({ ok: false, error: 'Not authorized' });
+      }
+      
+      // Verify tenant membership if workspace is promoted to a tenant
+      if (workspace.claimedTenantId && workspace.claimedUserId !== user.userId) {
+        const membershipCheck = await pool.query(`
+          SELECT role FROM cc_tenant_users 
+          WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
+        `, [workspace.claimedTenantId, user.userId]);
+        
+        if (membershipCheck.rows.length === 0 && !user.isPlatformAdmin) {
+          return res.status(403).json({ ok: false, error: 'Not authorized for this tenant' });
+        }
+      }
+    } else {
+      return res.status(400).json({ ok: false, error: 'workspaceId or workspaceToken required' });
     }
-    
-    const workspace = access.workspace!;
     const tenantId = workspace.claimedTenantId;
+    const wsId = workspace.id;
     
     // Load ingestion links for this workspace
     const ingestionLinks = await db.query.ccOnboardingIngestionLinks.findMany({
-      where: eq(ccOnboardingIngestionLinks.workspaceId, workspaceId)
+      where: eq(ccOnboardingIngestionLinks.workspaceId, wsId)
     });
     
     const ingestionIds = ingestionLinks.map(l => l.ingestionId);
@@ -109,76 +141,77 @@ router.get('/results', async (req: Request, res: Response) => {
       });
     }
     
-    // Load photo bundles if tenant exists
+    // Load photo bundles scoped to this workspace's promoted media only
     let photoBundles: any[] = [];
     if (tenantId) {
       // Get promoted media IDs from this workspace
       const promotedMedia = await db.query.ccOnboardingMediaObjects.findMany({
-        where: and(
-          eq(ccOnboardingMediaObjects.workspaceId, workspaceId),
-          // Only those that have been promoted
-          // Note: promotedMediaId would be set if promoted
-        )
+        where: eq(ccOnboardingMediaObjects.workspaceId, wsId)
       });
       
       const promotedMediaIds = promotedMedia
         .filter(m => m.promotedMediaId)
         .map(m => m.promotedMediaId!);
       
-      // For now, load bundles by tenant - in future could filter by mediaIds
-      if (tenantId) {
-        photoBundles = await db.query.ccContractorPhotoBundles.findMany({
-          where: eq(ccContractorPhotoBundles.tenantId, tenantId)
-        });
-      }
+      // Only load bundles that include workspace's promoted media
+      // For now return empty - full implementation requires bundle-media linking
+      // This prevents leaking tenant-wide bundles to workspace viewers
+      photoBundles = [];
     }
     
     // Load or reference existing thread
     const existingThread = await db.query.ccOnboardingThreads.findFirst({
       where: and(
-        eq(ccOnboardingThreads.workspaceId, workspaceId),
+        eq(ccOnboardingThreads.workspaceId, wsId),
         tenantId ? eq(ccOnboardingThreads.tenantId, tenantId) : isNull(ccOnboardingThreads.tenantId)
       )
     });
     
-    // Format response
+    // Count media objects
+    const mediaCount = await db.query.ccOnboardingMediaObjects.findMany({
+      where: eq(ccOnboardingMediaObjects.workspaceId, wsId)
+    }).then(m => m.length);
+    
+    // Calculate action stats
+    const actionsPending = nextActions.filter(a => a.status === 'pending').length;
+    const actionsCompleted = nextActions.filter(a => a.status === 'confirmed').length;
+    
+    // Format response to match client expectations
     const response = {
       ok: true,
       workspace: {
         id: workspace.id,
-        displayName: workspace.displayName,
-        companyName: workspace.companyName,
-        modeHints: workspace.modeHints,
-        promotionSummary: workspace.promotionSummary,
-        claimedTenantId: workspace.claimedTenantId
+        guestToken: workspace.guestToken,
+        status: workspace.status,
+        intent: workspace.intent || 'unsure',
+        claimedAt: workspace.claimedAt,
+        promotedAt: workspace.promotedAt
       },
-      ingestions: ingestions.map(i => ({
-        id: i.id,
-        createdAt: i.createdAt,
-        sourceType: i.sourceType,
-        status: i.status,
-        confidence: i.confidence,
-        media: i.media,
-        aiProposedPayload: i.aiProposedPayload
-      })),
+      summary: {
+        mediaCount,
+        ingestionCount: ingestions.length,
+        actionsPending,
+        actionsCompleted
+      },
       nextActions: nextActions.map(a => ({
         id: a.id,
-        ingestionId: a.ingestionId,
         actionType: a.actionType,
-        status: a.status,
-        actionPayload: a.actionPayload,
-        confidence: a.confidence
+        title: a.actionPayload?.title || `${a.actionType} action`,
+        payload: a.actionPayload || {},
+        status: a.status || 'pending',
+        priority: a.priority || 100
       })),
       photoBundles: photoBundles.map(b => ({
         id: b.id,
-        status: b.status,
-        bundleType: b.bundleType,
-        coversFrom: b.coversFrom,
-        coversTo: b.coversTo,
-        completenessScore: b.completenessScore,
-        qualityScore: b.qualityScore
+        bundleType: b.bundleType || 'general',
+        label: b.bundleLabel || `${b.bundleType} collection`,
+        thumbnailUrl: null, // TODO: Get first photo thumbnail
+        photoCount: 0 // TODO: Count photos in bundle
       })),
-      thread: existingThread ? { id: existingThread.threadId } : null
+      thread: existingThread ? { 
+        id: existingThread.threadId,
+        messageCount: 0 // TODO: Count messages
+      } : null
     };
     
     return res.json(response);
