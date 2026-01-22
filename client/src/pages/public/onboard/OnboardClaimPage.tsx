@@ -22,6 +22,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface WorkspaceStatus {
   status: 'open' | 'claimed' | 'expired';
@@ -35,6 +36,7 @@ interface WorkspaceStatus {
 export default function OnboardClaimPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const { refreshContext } = useTenant();
   
   const [status, setStatus] = useState<WorkspaceStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,6 +118,9 @@ export default function OnboardClaimPage() {
       if (claimData.refreshToken) {
         localStorage.setItem('cc_refresh_token', claimData.refreshToken);
       }
+      
+      // Refresh tenant context to pick up new auth
+      await refreshContext();
       
       // If tenant was created, immediately promote
       if (claimData.tenantId) {

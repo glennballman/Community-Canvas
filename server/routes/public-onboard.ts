@@ -735,7 +735,7 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
         ok: true,
         promoted: workspace.promotionSummary,
         alreadyPromoted: true,
-        redirectTo: `/app/onboarding/results?workspaceToken=${workspace.guestToken}`
+        redirectTo: `/app/onboarding/results?workspaceToken=${workspace.accessToken}`
       });
     }
     
@@ -851,7 +851,7 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
     return res.json({
       ok: true,
       promoted: promotionSummary,
-      redirectTo: `/app/onboarding/results?workspaceToken=${workspace.guestToken}`
+      redirectTo: `/app/onboarding/results?workspaceToken=${workspace.accessToken}`
     });
   } catch (error) {
     console.error('Error promoting workspace:', error);

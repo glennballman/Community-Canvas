@@ -83,7 +83,7 @@ export function TenantAppLayout(): React.ReactElement {
   
   // Routes that can be accessed without a tenant selected
   // Note: /app/founder/* and /app/platform/* now have their own layouts
-  const noTenantRoutes = ['/app/places'];
+  const noTenantRoutes = ['/app/places', '/app/onboarding'];
   const isNoTenantRoute = noTenantRoutes.some(r => location.pathname.startsWith(r));
   
   const needsRedirectToRoot = !isAtRoot && !isNoTenantRoute && !currentTenant && initialized && !loading;

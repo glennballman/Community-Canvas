@@ -85,7 +85,7 @@ router.get('/results', async (req: Request, res: Response) => {
       workspace = access.workspace;
     } else if (workspaceToken && typeof workspaceToken === 'string') {
       workspace = await db.query.ccOnboardingWorkspaces.findFirst({
-        where: eq(ccOnboardingWorkspaces.guestToken, workspaceToken)
+        where: eq(ccOnboardingWorkspaces.accessToken, workspaceToken)
       });
       
       if (!workspace) {
@@ -181,7 +181,7 @@ router.get('/results', async (req: Request, res: Response) => {
       ok: true,
       workspace: {
         id: workspace.id,
-        guestToken: workspace.guestToken,
+        guestToken: workspace.accessToken,
         status: workspace.status,
         intent: workspace.intent || 'unsure',
         claimedAt: workspace.claimedAt,
