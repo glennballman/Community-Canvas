@@ -34,7 +34,7 @@ interface Workspace {
   status: string;
   displayName: string | null;
   companyName: string | null;
-  modeHints: { intent?: string };
+  modeHints: { intent?: string; entry?: string; portalSlug?: string };
   expiresAt: string;
   lastAccessedAt: string;
 }
@@ -247,6 +247,9 @@ export default function OnboardWorkspacePage() {
   // Get media items for display
   const mediaItems = items.filter(item => item.itemType === 'media');
   const noteItems = items.filter(item => item.itemType === 'typed_note');
+  
+  // RES-ONB-01: Detect place-focused workspace (intent='need' or entry='place')
+  const isPlaceMode = workspace?.modeHints?.intent === 'need' || workspace?.modeHints?.entry === 'place';
 
   if (loading) {
     return (
@@ -279,7 +282,7 @@ export default function OnboardWorkspacePage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <CardTitle className="text-xl" data-testid="heading-workspace">
-                {workspace?.displayName || 'Your Workspace'}
+                {workspace?.displayName || (isPlaceMode ? 'Set up your place' : 'Your Workspace')}
               </CardTitle>
               <Button 
                 variant="outline" 
@@ -304,7 +307,9 @@ export default function OnboardWorkspacePage() {
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <User className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base">What should we call you?</CardTitle>
+              <CardTitle className="text-base">
+                {isPlaceMode ? 'What should we call this place?' : 'What should we call you?'}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -380,7 +385,9 @@ export default function OnboardWorkspacePage() {
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <StickyNote className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base">Add a note</CardTitle>
+              <CardTitle className="text-base">
+                {isPlaceMode ? 'What needs to be done?' : 'Add a note'}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -430,7 +437,9 @@ export default function OnboardWorkspacePage() {
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base">Add photos</CardTitle>
+              <CardTitle className="text-base">
+                {isPlaceMode ? 'Add photos of the place' : 'Add photos'}
+              </CardTitle>
               {mediaItems.length > 0 && (
                 <Badge variant="secondary" className="text-xs">{mediaItems.length}</Badge>
               )}

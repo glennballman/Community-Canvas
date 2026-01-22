@@ -61,24 +61,38 @@ async function extendExpiry(workspaceId: string) {
 /**
  * POST /api/public/onboard/workspaces
  * Create a new onboarding workspace
+ * 
+ * Accepts optional mode hints:
+ * - intent: 'provide' | 'need' | 'both' | 'unsure'
+ * - entry: 'place' | 'portal' | 'generic' (tracks entry path)
+ * - portalSlug: string (if entered via portal)
  */
 const createWorkspaceSchema = z.object({
-  intent: z.enum(['provide', 'need', 'both', 'unsure']).optional()
+  intent: z.enum(['provide', 'need', 'both', 'unsure']).optional(),
+  entry: z.string().optional(),
+  portalSlug: z.string().optional()
 });
 
 router.post('/workspaces', async (req: Request, res: Response) => {
   try {
     const parseResult = createWorkspaceSchema.safeParse(req.body);
-    const intent = parseResult.success ? parseResult.data.intent : 'unsure';
+    const { intent, entry, portalSlug } = parseResult.success ? parseResult.data : {};
     
     const token = generateToken();
     const expiresAt = getExpiryDate();
+    
+    // Build mode hints from request params
+    const modeHints: Record<string, any> = {
+      intent: intent || 'unsure'
+    };
+    if (entry) modeHints.entry = entry;
+    if (portalSlug) modeHints.portalSlug = portalSlug;
     
     const [workspace] = await db.insert(ccOnboardingWorkspaces)
       .values({
         accessToken: token,
         status: 'open',
-        modeHints: { intent: intent || 'unsure' },
+        modeHints,
         expiresAt
       })
       .returning();
@@ -792,23 +806,30 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
     const createdIngestionLinks: Array<{ workspaceId: string; tenantId: string; ingestionId: string }> = [];
     
     for (const item of items) {
+      // Extract payload fields safely
+      const itemPayload = (item.payload || {}) as Record<string, any>;
+      
       // Create real cc_ai_ingestions record
       const [newIngestion] = await db.insert(ccAiIngestions)
         .values({
           tenantId,
+          contractorProfileId: userId, // Use claiming user as profile reference
           sourceType: 'onboarding',
-          status: 'pending',
-          confidence: 0.5,
-          rawPayload: {
+          status: 'proposed',
+          media: [],
+          aiProposedPayload: {
             onboardingItemId: item.id,
             itemType: item.itemType,
-            label: item.label,
-            note: item.note,
-            mediaIds: item.mediaIds
+            label: itemPayload.label,
+            note: itemPayload.text || itemPayload.note,
+            mediaIds: itemPayload.mediaIds || []
           },
-          aiProposedPayload: null,
-          createdBy: userId,
-          priority: 100
+          classification: {},
+          extractedEntities: {},
+          geoInference: {},
+          proposedLinks: {},
+          identityProposal: {},
+          proposedServiceAreas: []
         })
         .returning();
       

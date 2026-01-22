@@ -1,0 +1,200 @@
+ROLE: Lead Platform Architect implementing V3.5 RES-ONB-01.
+MODE: Additive only. No refactors. No breaking changes. No /admin/*.
+
+GOAL (RES-ONB-01)
+Enable residents to onboard their PLACE using the SAME guest-first onboarding workspace:
+- no login required
+- camera-first OR note-first
+- zones + notes + photos
+- produces a draft Work Request (or N3 intake) after claim/promote
+- mirrors contractor onboarding but with resident outcomes
+
+IMPORTANT UX PRINCIPLES
+- Do NOT confront user with “resident vs contractor” language
+- Infer intent from entry path (/onboard vs portal vs invite)
+- Language should be “Set up your place”, not “Resident onboarding”
+- Allow role-fluidity: same user may later provide services
+
+SCOPE
+1) Add resident entry paths into the existing onboarding workspace
+2) Add resident-specific promotion outcomes (zones + work request draft)
+3) Reuse existing:
+   - cc_onboarding_workspaces
+   - cc_onboarding_items
+   - cc_geo_place_candidates
+   - cc_ingestion_zone_links
+   - cc_ai_ingestions
+   - A2.6 next actions
+   - Messaging system
+
+DO NOT:
+- Create a new onboarding system
+- Create a new workspace table
+- Hardcode “resident” anywhere in the schema
+- Require login before value is shown
+
+---
+
+## A) ENTRY PATHS (INTENT INFERENCE)
+
+Add resident-biased entry routes (PUBLIC):
+
+1) /onboard/place
+2) /onboard/place/:portalSlug (optional)
+
+Behavior:
+- These routes call POST /api/public/onboard/workspaces
+- mode_hints.intent = 'need'
+- mode_hints.entry = 'place'
+- If portalSlug exists, store:
+  mode_hints.portalSlug = '<slug>'
+
+Then redirect to:
+/onboard/w/:token
+
+This is the ONLY difference from generic /onboard.
+Do NOT ask the user what they are — infer it.
+
+---
+
+## B) WORKSPACE UI ADAPTATION (NO NEW PAGES)
+
+Update existing public workspace page:
+/onboard/w/:token
+
+When mode_hints.intent === 'need':
+
+1) Headline text:
+   Change from:
+   “Set up your workspace”
+   to:
+   “Set up your place”
+
+2) Tile labels (same mechanics):
+   - “Add photos” → “Add photos of the place”
+   - “Add a note” → “What needs to be done?”
+   - “Add a name” → “What should we call this place?” (name optional)
+
+3) DO NOT remove provider tiles.
+   Just reorder so place-centric tiles appear first.
+
+All functionality remains identical — this is copy + ordering only.
+
+---
+
+## C) ZONE DEFINITION (CRITICAL MIRROR)
+
+Add a new PUBLIC step (guest-allowed):
+
+/onboard/w/:token/zones
+
+Purpose:
+- Let a resident define **work zones** on their place
+- This mirrors contractor service areas, but creates *place zones*
+
+UI:
+- List of zone types (reuse existing zone definitions for portal if present)
+- Ability to:
+  - add zone name
+  - optional description
+  - optional photo reference
+- “Skip for now” allowed
+
+Storage:
+- Store zone definitions temporarily in:
+  cc_onboarding_items
+  item_type = 'zone_definition'
+  payload = { zoneType, name, notes, portalSlug? }
+
+DO NOT write to cc_ingestion_zone_links yet (guest mode).
+
+---
+
+## D) PROMOTION LOGIC (EXTEND ONB-03)
+
+Extend POST /api/public/onboard/workspaces/:token/promote
+
+When mode_hints.intent === 'need':
+
+1) Promote photos & notes as usual:
+   - cc_media
+   - cc_ai_ingestions
+   - run A2.3 classifier
+   - generate A2.6 actions
+
+2) Promote zone definitions:
+   For each onboarding item where item_type='zone_definition':
+   - create resident-side zone entity OR
+   - map to existing zone model used by Work Requests (use what already exists)
+   - store resulting zone_id(s)
+
+3) Create a DRAFT Work Request:
+   Use existing work request draft endpoint.
+   Populate:
+   - zones from promoted zone definitions
+   - extracted notes (from sticky / typed notes)
+   - photo references
+   - portal_id if known
+   - status='draft'
+
+4) Messaging:
+   - ensure onboarding thread
+   - post message:
+     “We’ve created a draft request for your place. You can review or add more details.”
+
+Promotion summary must include:
+{
+  mediaCount,
+  ingestionCount,
+  zoneCount,
+  workRequestId
+}
+
+---
+
+## E) AUTHENTICATED RESULTS (REUSE ONB-04)
+
+After promote, redirect to:
+/app/onboarding/results?workspaceId=...
+
+Behavior differences when intent='need':
+- Primary CTA:
+  “Review your request” → links to work request detail page
+- Secondary CTAs:
+  “Add more photos”
+  “Adjust zones”
+  “Message service providers”
+
+DO NOT surface provider-centric CTAs by default.
+They can still exist behind subtle links.
+
+---
+
+## F) QA / ACCEPTANCE CRITERIA
+
+1) Guest enters via /onboard/place
+2) Adds typed note + optional photos
+3) Defines at least one zone
+4) Claims workspace and creates account + tenant (if required)
+5) Promote runs:
+   - cc_media created
+   - cc_ai_ingestions created
+   - zones promoted
+   - draft work request created
+6) Lands on /app/onboarding/results
+7) Can open draft work request
+8) Messaging thread exists and persists
+
+NO login required until claim.
+NO “are you a contractor or resident?” prompt.
+
+---
+
+## DELIVERABLES
+- Entry routes /onboard/place*
+- Zone definition UI + onboarding item storage
+- Promotion logic extension for zones + draft work request
+- Results page behavior adjustments (copy + CTAs)
+- QA proof: IDs of created work request + zones
+
+STOP AFTER THIS.
