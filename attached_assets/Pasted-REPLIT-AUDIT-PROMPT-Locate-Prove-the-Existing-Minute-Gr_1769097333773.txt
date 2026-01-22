@@ -1,0 +1,154 @@
+REPLIT AUDIT PROMPT — Locate & Prove the Existing Minute-Granular Time Spine (Do NOT build beside it)
+
+ROLE
+You are the repo auditor. Your job is to FIND the existing minute-granular time system (the “time spine” we previously designed/built), prove where it lives, how it works, and how the current calendar work should reuse it (not rebuild beside it).
+
+OUTPUT REQUIREMENT
+Produce a single markdown report at:
+docs/AUDIT_TIME_SPINE.md
+
+Include:
+- exact file paths
+- line ranges
+- exported function/type names
+- any DB tables involved
+- where it is used (routes/components)
+- and whether any NEW calendar code is bypassing it
+
+DO NOT GUESS.
+If something is missing, say “NOT FOUND” with evidence (grep results).
+
+================================================================================
+STEP 1 — GLOBAL SEARCH (KEYWORDS)
+================================================================================
+Run ripgrep searches and paste results (top 30 hits each), including file + line.
+
+Search terms (run all):
+- "granularity"
+- "minute"
+- "minutes"
+- "slot"
+- "timeslot"
+- "tick"
+- "bucket"
+- "windowStart"
+- "windowEnd"
+- "startOfDay"
+- "endOfDay"
+- "roundTo"
+- "floorTo"
+- "ceilTo"
+- "timeGrid"
+- "timeAxis"
+- "pxPerMinute"
+- "minutesBetween"
+- "gridStart"
+- "gridEnd"
+- "15" (only inside time code areas)
+- "1440"
+- "interval '1 minute'"
+- "generate_series"
+- "date_trunc('minute'"
+- "timestamptz"
+
+Also search for these likely filenames:
+- "timeSpine"
+- "timeAxis"
+- "timeGrid"
+- "timeMath"
+- "timeWindow"
+- "opsCalendar"
+- "operations"
+- "timeline"
+
+================================================================================
+STEP 2 — IDENTIFY THE TIME SPINE MODULE(S)
+================================================================================
+From the search results, identify the PRIMARY module(s) responsible for:
+A) converting timestamps -> grid slots
+B) generating a time window axis
+C) computing bar positions (minutesBetween, pxPerMinute, etc.)
+D) any “down to the minute” rounding or indexing
+
+For each candidate module, document:
+- path
+- exported functions
+- what inputs/outputs look like
+- does it support minute-level granularity?
+- is 15-minute tick a VIEW choice vs core granularity?
+
+If there are multiple implementations (bad smell), list them all.
+
+================================================================================
+STEP 3 — DB / BACKEND TIME UTILITIES
+================================================================================
+Search backend for any of:
+- generate_series usage
+- date_trunc('minute') usage
+- "interval '1 minute'" usage
+- time-bucket tables or materialized views
+- any tables storing “minute_index”, “slot_index”, etc.
+
+Report:
+- Which tables are part of the time spine (if any)
+- Which endpoints return time-windowed projections
+- Whether backend returns slot arrays (bad) or intervals/bars (good)
+
+================================================================================
+STEP 4 — EXISTING “OPERATIONS” VIEW (V1/V3)
+================================================================================
+Find any existing “Operations” style UI that already renders:
+- rows down the left
+- time across the top
+- asset lanes / reservation lanes / service run lanes
+- 15-minute ticks
+
+Locate and document:
+- page route(s)
+- component(s)
+- data sources
+
+If the operations grid exists but is hidden/unrouted, note that.
+
+================================================================================
+STEP 5 — CALENDAR WORK CHECK: ARE WE BUILDING BESIDE IT?
+================================================================================
+Locate ALL new calendar-related code added recently (N3-CAL-01 work), including:
+- OperationsTimelineGrid.tsx (if present)
+- Contractor/Resident/Portal calendar pages
+- ops-calendar endpoints
+
+For each, answer:
+- Does it import/use the existing time spine module?
+- If not, what time math does it do instead?
+- Are there duplicated helper functions (minutesBetween, rounding, tick generation)?
+- Are there separate “granularity” constants that conflict?
+
+Mark each calendar file as:
+- ✅ REUSES TIME SPINE
+- ⚠️ PARTIALLY REUSES (explain)
+- ❌ BYPASSES / DUPLICATES (must fix)
+
+================================================================================
+STEP 6 — REQUIRED FIX LIST
+================================================================================
+If ANY bypass/duplication is found, produce an exact fix plan:
+- which module becomes canonical
+- what to delete/redirect
+- which imports to change
+- minimal changes only
+
+================================================================================
+DELIVERABLE
+Write docs/AUDIT_TIME_SPINE.md with sections:
+
+1. Summary (found/not found; canonical module path)
+2. Time Spine Inventory (modules + exports)
+3. Backend Time Spine (tables, queries, endpoints)
+4. Existing Operations UI (routes/components)
+5. Calendar Implementation Audit (reuse vs duplicate table)
+6. Fix Plan (if needed)
+
+IMPORTANT
+Do not implement changes. This is an audit only.
+Proceed.
