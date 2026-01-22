@@ -141,6 +141,7 @@ import contractorPhotoBundlesRouter from "./routes/contractor-photo-bundles";
 import publicEventRouter from "./routes/public-event";
 import publicOnboardRouter from "./routes/public-onboard";
 import onboardingRouter from "./routes/onboarding";
+import calendarRouter from "./routes/calendar";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -572,6 +573,9 @@ export async function registerRoutes(
   
   // Photo Bundles (A2.7)
   app.use('/api/contractor/photo-bundles', contractorPhotoBundlesRouter);
+  
+  // N3-CAL-01: Calendar projections
+  app.use('/api', calendarRouter);
   
   // Public Event Lead Capture (Prompt A2.5)
   app.use('/api/public/event', publicEventRouter);

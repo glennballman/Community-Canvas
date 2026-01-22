@@ -16,7 +16,7 @@ import {
   ccN3Segments,
   ccZones,
   ccPortals,
-  ccPlaces,
+  ccProperties,
   type CalendarRunDTO
 } from '@shared/schema';
 import { eq, and, gte, lte, or, desc, sql, inArray } from 'drizzle-orm';
@@ -143,12 +143,12 @@ calendarRouter.get('/resident/calendar', requireAuth, async (req, res) => {
     const startDate = startParam ? new Date(startParam) : defaults.startDate;
     const endDate = endParam ? new Date(endParam) : defaults.endDate;
 
-    const residentPlaces = await db
-      .select({ id: ccPlaces.id, portalId: ccPlaces.portalId })
-      .from(ccPlaces)
-      .where(eq(ccPlaces.ownerId, userId));
+    const residentProperties = await db
+      .select({ id: ccProperties.id, portalId: ccProperties.portalId })
+      .from(ccProperties)
+      .where(eq(ccProperties.ownerId, userId));
 
-    if (residentPlaces.length === 0) {
+    if (residentProperties.length === 0) {
       return res.json({
         runs: [],
         meta: {
@@ -159,7 +159,7 @@ calendarRouter.get('/resident/calendar', requireAuth, async (req, res) => {
       });
     }
 
-    const portalIds = residentPlaces.map(p => p.portalId).filter(Boolean) as string[];
+    const portalIds = residentProperties.map(p => p.portalId).filter(Boolean) as string[];
     
     if (portalIds.length === 0) {
       return res.json({
