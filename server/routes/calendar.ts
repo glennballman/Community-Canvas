@@ -343,7 +343,9 @@ interface OpsEvent {
   title: string;
   notes?: string;
   meta?: {
+    runId?: string;
     feasibility?: { status: 'ok' | 'risky' | 'blocked'; reasons: string[]; severity?: string };
+    evidence?: { status: 'none' | 'partial' | 'complete' | 'confirmed'; bundleId?: string };
     severity?: string;
     reasonCodes?: string[];
     affectedZones?: string[];
@@ -388,6 +390,9 @@ function mapRunsToOpsFormat(runs: Array<{
         status: run.status,
         title: run.name || 'Untitled Run',
         notes: run.description || undefined,
+        meta: {
+          runId: run.id,
+        },
       });
     }
   });

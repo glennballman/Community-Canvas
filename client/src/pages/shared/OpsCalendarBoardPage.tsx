@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useLocation } from 'wouter';
 import ScheduleBoard, { 
   Resource, 
   ScheduleEvent, 
@@ -9,16 +9,8 @@ import ScheduleBoard, {
   snapTo15Min 
 } from '@/components/schedule/ScheduleBoard';
 import type { CalendarRunDTO } from '@shared/schema';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel
-} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Camera, ExternalLink, MoreVertical, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { MessageCircle, Camera, ExternalLink, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -103,7 +95,7 @@ function groupResourcesByType(resources: Resource[]): Record<string, Resource[]>
 
 export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps) {
   const { portalSlug } = useParams<{ portalSlug: string }>();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [dateRange, setDateRange] = useState(() => {
     const now = new Date();
@@ -129,7 +121,7 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
           title: "Thread opened",
           description: "Navigating to conversation...",
         });
-        navigate(`/app/messages/${data.threadId}`);
+        setLocation(`/app/messages/${data.threadId}`);
       }
     },
     onError: (error: Error) => {
@@ -235,8 +227,18 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
     setSelectedEvent(event);
   }, []);
   
-  // Extract run ID from event (events are formatted as event-{runId}-{index})
+  // Extract run ID from event - check meta.runId first, then fall back to ID parsing
   const getRunIdFromEvent = (event: ScheduleEvent): string | null => {
+    // Prefer explicit runId from meta (most reliable)
+    const meta = (event as any).meta;
+    if (meta?.runId) return meta.runId;
+    
+    // Fall back to resource_id parsing (run-{runId} format)
+    if (event.resource_id?.startsWith('run-')) {
+      return event.resource_id.slice(4);
+    }
+    
+    // Last resort: parse event ID (event-{runId}-{index} format from legacy adapter)
     const match = event.id.match(/^event-([a-f0-9-]+)-\d+$/);
     return match ? match[1] : null;
   };
@@ -253,9 +255,9 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
   const handleViewRunDetails = useCallback((event: ScheduleEvent) => {
     const runId = getRunIdFromEvent(event);
     if (runId) {
-      navigate(`/app/n3/runs/${runId}`);
+      setLocation(`/app/n3/runs/${runId}`);
     }
-  }, [navigate]);
+  }, [setLocation]);
   
   // Get evidence status from event meta
   const getEvidenceStatus = (event: ScheduleEvent): 'none' | 'partial' | 'complete' | 'confirmed' => {
@@ -452,7 +454,7 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
                 className="w-full justify-start gap-2"
                 onClick={() => {
                   const runId = getRunIdFromEvent(selectedEvent);
-                  if (runId) navigate(`/app/n3/runs/${runId}/evidence`);
+                  if (runId) setLocation(`/app/n3/runs/${runId}/evidence`);
                 }}
                 data-testid="button-add-evidence"
               >
