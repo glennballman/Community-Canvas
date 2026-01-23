@@ -1,0 +1,69 @@
+REPLIT PROMPT — V3.5 PUBLIC PORTAL MARKET-MODE PARITY (READ-ONLY VIEWER SAFE)
+ROLE: Senior platform engineer wiring public portal flows to marketModePolicy with strict identity gating.
+HARD RULES:
+- No parallel implementations.
+- No refactors of backend logic.
+- Additive changes only.
+- Public pages must never expose requester/provider/operator CTAs to unauthenticated viewers.
+- All labels via copy tokens (already in place).
+
+GOAL
+Ensure public portal pages that display service requests / service runs:
+1) Render state notices using copy tokens.
+2) Use centralized policy for CTAs when (and only when) the authenticated viewer has the correct role for that object.
+3) Default public viewers to READ-ONLY (no actions), while still showing correct status/labels.
+
+DELIVERABLES
+
+A) Add a read-only “viewer gating” adapter (no role expansion required)
+Create:
+  client/src/policy/publicActionGate.ts
+
+Export:
+  function gateActionsForViewer(args: {
+    isAuthenticated: boolean
+    viewerTenantId?: string
+    viewerUserId?: string
+    requesterTenantId?: string
+    providerTenantId?: string
+    actions: Array<{ id: string; tokenKey: string; kind: string; requiresConfirm?: boolean }>
+  }): Array<...same...>
+
+Rules:
+- If not authenticated: return []
+- If viewer matches requesterTenantId => allow requester actions only
+- If viewer matches providerTenantId => allow provider actions only
+- Never allow operator/admin actions in public views
+- If cannot determine ownership: return []
+
+B) Wire public pages to centralized actions
+Search public routes/components:
+- client/src/public/pages/** 
+- any public cards rendering service requests/runs
+- AvailabilityResultCard / AvailabilityResults where it shows “Add to Reservation” or similar
+
+For any component that renders actions for requests/runs:
+- Compute actions via getMarketActions() (or useMarketActions)
+- Then pass through gateActionsForViewer() before rendering buttons
+- Ensure targeted/open notices still show via copy tokens even when actions are empty
+
+C) Add tests
+Create:
+  client/src/policy/__tests__/publicActionGate.test.ts
+
+Cases:
+- unauthenticated viewer => no actions
+- authenticated non-owner => no actions
+- authenticated requester => requester actions allowed (open_to_responses, invite_another_provider, review proposal, etc.)
+- authenticated provider => provider actions allowed (accept/decline/propose)
+- operator actions never allowed in public, even if viewer is operator
+
+D) Acceptance Criteria
+- Public portal never shows “invite”, “open to responses”, “accept/decline”, “admin” CTAs unless the viewer is the rightful owner role.
+- All public notices/labels are still accurate and tokenized.
+- No new strings introduced; copy-lint stays clean.
+- Tests pass.
+
+DO NOT DO
+- Do not introduce new role enums into marketModePolicy if avoidable.
+- Do not create a second CTA logic path for public.

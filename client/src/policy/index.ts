@@ -30,3 +30,17 @@ export {
   type ResolvedAction,
   type UseMarketActionsResult,
 } from './useMarketActions';
+
+export {
+  gateActionsForViewer,
+  hasAnyActions,
+  isViewerRequester,
+  isViewerProvider,
+  type GateActionsInput,
+} from './publicActionGate';
+
+export {
+  usePublicMarketActions,
+  type ResolvedPublicAction,
+  type UsePublicMarketActionsResult,
+} from './usePublicMarketActions';
