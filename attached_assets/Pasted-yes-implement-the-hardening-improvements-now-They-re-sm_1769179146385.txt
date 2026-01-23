@@ -1,0 +1,82 @@
+yes: implement the hardening improvements now. They’re small, additive, and they prevent future “oops we shipped a test door” incidents.
+
+Here’s the exact build spec I want you to implement (Replit-ready).
+
+REPLIT PROMPT — V3.5 TEST AUTH BOOTSTRAP HARDENING (SAFE, ADDITIVE)
+
+ROLE: Senior engineer hardening /api/test/auth/* endpoints for long-term safety and maintainability.
+HARD RULES:
+- Additive only.
+- Must continue to mirror canonical auth (JWT localStorage).
+- Must be impossible to use in production.
+- Must be impossible to use unless explicitly enabled.
+
+GOALS
+1) Add a second guard: ALLOW_TEST_AUTH === "true" required in addition to NODE_ENV !== "production".
+2) Rename personas:
+   - contractor -> service_provider
+   - guest -> guest_user
+   Keep backward compatibility temporarily (support old names but return deprecation warning).
+3) Add IP-based rate limiting to /api/test/auth/login and /api/test/auth/personas.
+4) Add explicit marking for test sessions for cleanup/analytics WITHOUT violating constraints.
+5) Add explicit cleanup utility (dev-only) to purge expired test sessions.
+
+IMPLEMENTATION DETAILS
+
+A) Double guard (required)
+- In both endpoints:
+  - if (process.env.NODE_ENV === "production") return 404
+  - if (process.env.ALLOW_TEST_AUTH !== "true") return 404
+This must happen BEFORE any other logic.
+Rationale: safest default = off.
+
+B) Persona rename + compatibility
+- Update allowlist to include:
+  ellen, tester, wade, pavel, rita, bamfield_host, platformadmin, service_provider, guest_user
+- Accept legacy values:
+  contractor -> map to service_provider
+  guest -> map to guest_user
+- If legacy used, include in JSON response:
+  { warning: "persona_deprecated", replacedBy: "service_provider" }
+- Update GET /api/test/auth/personas to only list new names.
+
+C) Rate limiting (simple, dev-safe)
+- Add in-memory sliding window per IP:
+  - max 30 requests per 5 minutes per IP for /login
+  - max 60 requests per 5 minutes per IP for /personas
+- Return 429 with { ok:false, error:"rate_limited" }
+- Include Retry-After header (seconds).
+
+D) Mark test sessions (cleanup-safe)
+You said a check constraint prevented session_type='test'. Do NOT violate schema.
+Instead:
+- If cc_auth_sessions has a metadata/jsonb column, set metadata.test_auth = true and metadata.persona = <persona>
+- If not, store marker in a separate existing audit/event table (preferred) e.g. cc_audit_events:
+  event_type: "test_auth_bootstrap"
+  payload: { persona, userId, tenantId, ip }
+Do NOT add new tables.
+
+E) Cleanup
+- Ensure TTL is enforced at query time if already.
+- Add a dev-only endpoint:
+  POST /api/test/auth/purge
+  Guards identical to (A) + header X-TEST-AUTH required.
+  Behavior:
+  - delete/expire sessions where metadata.test_auth=true AND expires_at < now()
+  OR if no metadata, delete sessions created by this endpoint older than TTL using join to audit events if needed.
+  Return { ok:true, purgedCount }.
+
+F) Tests
+- Extend existing tests to cover:
+  - 404 when ALLOW_TEST_AUTH not true
+  - persona rename mapping + warning
+  - rate limiting returns 429
+  - purge endpoint guarded + works
+
+ACCEPTANCE CRITERIA
+- Existing E2E helpers still work with new persona names.
+- Legacy persona names still work but return a deprecation warning.
+- Endpoints return 404 unless ALLOW_TEST_AUTH="true" and non-production.
+- Rate limit works deterministically.
+- Sessions are marked for cleanup without schema violations.
+- All tests pass.
