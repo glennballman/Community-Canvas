@@ -451,6 +451,27 @@ router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => 
       ORDER BY rpp.published_at DESC
     `, [runId, tenantId]);
 
+    const attachmentsResult = await pool.query(`
+      SELECT 
+        a.id as attachment_id,
+        a.request_id,
+        a.status,
+        a.held_at,
+        a.committed_at,
+        a.released_at,
+        wr.summary,
+        wr.description,
+        wr.category,
+        wr.priority,
+        wr.status as request_status,
+        wr.location_text,
+        wr.created_at as request_created_at
+      FROM cc_run_request_attachments a
+      JOIN cc_work_requests wr ON a.request_id = wr.id
+      WHERE a.run_id = $1 AND a.tenant_id = $2 AND a.released_at IS NULL
+      ORDER BY a.status DESC, a.created_at ASC
+    `, [runId, tenantId]);
+
     res.json({ 
       ok: true, 
       run: {
@@ -469,7 +490,23 @@ router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => 
         created_at: run.created_at,
         updated_at: run.updated_at
       },
-      attached_requests: [],
+      attached_requests: attachmentsResult.rows.map(row => ({
+        attachment_id: row.attachment_id,
+        request_id: row.request_id,
+        status: row.status,
+        held_at: row.held_at,
+        committed_at: row.committed_at,
+        released_at: row.released_at,
+        request_summary: {
+          summary: row.summary,
+          description: row.description,
+          category: row.category,
+          priority: row.priority,
+          status: row.request_status,
+          location_text: row.location_text,
+          created_at: row.request_created_at
+        }
+      })),
       publications: publicationsResult.rows.map(row => ({
         portal_id: row.portal_id,
         portal_name: row.portal_name,
@@ -654,6 +691,358 @@ router.post('/runs/:id/unpublish', requireAuth, async (req: AuthRequest, res: Re
   } catch (error: any) {
     console.error('Provider unpublish run error:', error);
     res.status(500).json({ ok: false, error: 'Failed to unpublish run' });
+  }
+});
+
+// ============================================================================
+// V3.5 STEP 6: Run Request Attachments (HOLD / COMMIT / RELEASE)
+// ============================================================================
+
+// State Transition Guard - defines valid request status transitions
+const HOLDABLE_STATUSES = ['new', 'sent', 'awaiting_response', 'proposed_change', 'unassigned', 'awaiting_commitment'];
+const TERMINAL_STATUSES = ['in_progress', 'completed', 'cancelled'];
+
+// GET /api/provider/requests - List holdable service requests for the tenant
+router.get('/requests', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id;
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'Tenant context required' });
+    }
+
+    // Return requests that can be held (not already attached and not in terminal states)
+    const result = await pool.query(`
+      SELECT 
+        wr.id,
+        wr.summary,
+        wr.description,
+        wr.category,
+        wr.priority,
+        wr.status,
+        wr.location_text,
+        wr.created_at,
+        p.name as portal_name
+      FROM cc_work_requests wr
+      LEFT JOIN cc_portals p ON p.id = wr.portal_id
+      WHERE wr.tenant_id = $1 
+        AND wr.status NOT IN ('completed', 'cancelled', 'in_progress', 'awaiting_commitment', 'accepted')
+        AND NOT EXISTS (
+          SELECT 1 FROM cc_run_request_attachments a 
+          WHERE a.request_id = wr.id AND a.released_at IS NULL
+        )
+      ORDER BY wr.created_at DESC
+      LIMIT 100
+    `, [tenantId]);
+
+    res.json({ 
+      ok: true, 
+      requests: result.rows.map(row => ({
+        id: row.id,
+        summary: row.summary,
+        description: row.description,
+        category: row.category,
+        priority: row.priority,
+        status: row.status,
+        location_text: row.location_text,
+        created_at: row.created_at,
+        portal_name: row.portal_name
+      }))
+    });
+  } catch (error: any) {
+    console.error('Provider requests list error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch requests' });
+  }
+});
+
+// POST /api/provider/runs/:id/attachments/hold - Attach a request in HELD state
+router.post('/runs/:id/attachments/hold', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id;
+    const runId = req.params.id;
+    const { requestId } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'Tenant context required' });
+    }
+
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'Invalid run ID' });
+    }
+
+    if (!requestId || !isValidUUID(requestId)) {
+      return res.status(400).json({ ok: false, error: 'Valid request ID is required' });
+    }
+
+    // Verify run ownership
+    const runResult = await pool.query(`
+      SELECT id FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2
+    `, [runId, tenantId]);
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    // Verify request exists and belongs to tenant
+    const requestResult = await pool.query(`
+      SELECT id, status FROM cc_work_requests WHERE id = $1 AND tenant_id = $2
+    `, [requestId, tenantId]);
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.request.not_found' });
+    }
+
+    const currentStatus = requestResult.rows[0].status;
+
+    // State transition guard: check if request is holdable
+    if (TERMINAL_STATUSES.includes(currentStatus)) {
+      return res.status(409).json({ 
+        ok: false, 
+        error: 'error.request.invalid_state',
+        message: `Cannot hold request in ${currentStatus} state`
+      });
+    }
+
+    if (currentStatus === 'accepted') {
+      return res.status(409).json({ 
+        ok: false, 
+        error: 'error.attachment.not_holdable',
+        message: 'Request is already accepted and cannot be held'
+      });
+    }
+
+    // Check if already attached to a run (any run)
+    const existingAttachment = await pool.query(`
+      SELECT id, run_id, status FROM cc_run_request_attachments 
+      WHERE request_id = $1 AND tenant_id = $2 AND released_at IS NULL
+    `, [requestId, tenantId]);
+
+    if (existingAttachment.rows.length > 0) {
+      const existing = existingAttachment.rows[0];
+      if (existing.run_id === runId) {
+        // Already attached to this run - just return success
+        return res.json({ 
+          ok: true, 
+          message: 'Request already attached to this run',
+          attachment: { 
+            request_id: requestId, 
+            status: existing.status 
+          }
+        });
+      } else {
+        return res.status(409).json({ 
+          ok: false, 
+          error: 'error.attachment.exists',
+          message: 'Request is already attached to another run'
+        });
+      }
+    }
+
+    // Create attachment in HELD state (or reset a previously released attachment)
+    const attachResult = await pool.query(`
+      INSERT INTO cc_run_request_attachments (tenant_id, run_id, request_id, status, held_at)
+      VALUES ($1, $2, $3, 'HELD', now())
+      ON CONFLICT (tenant_id, run_id, request_id) 
+      DO UPDATE SET status = 'HELD', held_at = now(), released_at = NULL, committed_at = NULL
+      RETURNING id, status, held_at
+    `, [tenantId, runId, requestId]);
+
+    // Transition request to AWAITING_COMMITMENT if not already
+    if (currentStatus !== 'awaiting_commitment') {
+      await pool.query(`
+        UPDATE cc_work_requests SET status = 'awaiting_commitment', updated_at = now()
+        WHERE id = $1
+      `, [requestId]);
+    }
+
+    res.json({
+      ok: true,
+      attachment: {
+        id: attachResult.rows[0].id,
+        request_id: requestId,
+        status: attachResult.rows[0].status,
+        held_at: attachResult.rows[0].held_at
+      }
+    });
+  } catch (error: any) {
+    console.error('Provider hold attachment error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to hold request' });
+  }
+});
+
+// POST /api/provider/runs/:id/attachments/commit - Commit a held attachment
+router.post('/runs/:id/attachments/commit', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id;
+    const runId = req.params.id;
+    const { requestId } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'Tenant context required' });
+    }
+
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'Invalid run ID' });
+    }
+
+    if (!requestId || !isValidUUID(requestId)) {
+      return res.status(400).json({ ok: false, error: 'Valid request ID is required' });
+    }
+
+    // Verify run ownership
+    const runResult = await pool.query(`
+      SELECT id FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2
+    `, [runId, tenantId]);
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    // Find the attachment
+    const attachmentResult = await pool.query(`
+      SELECT id, status FROM cc_run_request_attachments 
+      WHERE run_id = $1 AND request_id = $2 AND tenant_id = $3 AND released_at IS NULL
+    `, [runId, requestId, tenantId]);
+
+    if (attachmentResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.attachment.not_found' });
+    }
+
+    const attachment = attachmentResult.rows[0];
+
+    if (attachment.status === 'COMMITTED') {
+      return res.json({ 
+        ok: true, 
+        message: 'Request already committed',
+        attachment: { request_id: requestId, status: 'COMMITTED' }
+      });
+    }
+
+    if (attachment.status !== 'HELD') {
+      return res.status(409).json({ 
+        ok: false, 
+        error: 'error.attachment.not_committable',
+        message: 'Only HELD attachments can be committed'
+      });
+    }
+
+    // Check request is in AWAITING_COMMITMENT state
+    const requestResult = await pool.query(`
+      SELECT status FROM cc_work_requests WHERE id = $1
+    `, [requestId]);
+
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.request.not_found' });
+    }
+
+    const requestStatus = requestResult.rows[0].status;
+    if (requestStatus !== 'awaiting_commitment') {
+      return res.status(409).json({ 
+        ok: false, 
+        error: 'error.request.invalid_state',
+        message: `Cannot commit from ${requestStatus} state. Must be awaiting_commitment.`
+      });
+    }
+
+    // Update attachment to COMMITTED
+    await pool.query(`
+      UPDATE cc_run_request_attachments 
+      SET status = 'COMMITTED', committed_at = now(), updated_at = now()
+      WHERE id = $1
+    `, [attachment.id]);
+
+    // Transition request to ACCEPTED
+    await pool.query(`
+      UPDATE cc_work_requests SET status = 'accepted', updated_at = now()
+      WHERE id = $1
+    `, [requestId]);
+
+    res.json({
+      ok: true,
+      attachment: {
+        request_id: requestId,
+        status: 'COMMITTED',
+        committed_at: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    console.error('Provider commit attachment error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to commit request' });
+  }
+});
+
+// POST /api/provider/runs/:id/attachments/release - Release a held attachment
+router.post('/runs/:id/attachments/release', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id;
+    const runId = req.params.id;
+    const { requestId } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'Tenant context required' });
+    }
+
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'Invalid run ID' });
+    }
+
+    if (!requestId || !isValidUUID(requestId)) {
+      return res.status(400).json({ ok: false, error: 'Valid request ID is required' });
+    }
+
+    // Verify run ownership
+    const runResult = await pool.query(`
+      SELECT id FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2
+    `, [runId, tenantId]);
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    // Find the attachment
+    const attachmentResult = await pool.query(`
+      SELECT id, status FROM cc_run_request_attachments 
+      WHERE run_id = $1 AND request_id = $2 AND tenant_id = $3 AND released_at IS NULL
+    `, [runId, requestId, tenantId]);
+
+    if (attachmentResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.attachment.not_found' });
+    }
+
+    const attachment = attachmentResult.rows[0];
+
+    // HARD BLOCK: Cannot release COMMITTED attachments
+    if (attachment.status === 'COMMITTED') {
+      return res.status(409).json({ 
+        ok: false, 
+        error: 'error.commitment.release_not_allowed',
+        message: 'Committed attachments cannot be released'
+      });
+    }
+
+    // Release the attachment
+    await pool.query(`
+      UPDATE cc_run_request_attachments 
+      SET released_at = now(), updated_at = now()
+      WHERE id = $1
+    `, [attachment.id]);
+
+    // Transition request to UNASSIGNED
+    await pool.query(`
+      UPDATE cc_work_requests SET status = 'unassigned', updated_at = now()
+      WHERE id = $1
+    `, [requestId]);
+
+    res.json({
+      ok: true,
+      attachment: {
+        request_id: requestId,
+        released_at: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    console.error('Provider release attachment error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to release request' });
   }
 });
 

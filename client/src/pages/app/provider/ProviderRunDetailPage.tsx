@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams, useLocation } from 'wouter';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, Truck, 
-  MessageSquare, FileText, Globe, AlertCircle
+  MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCopy } from '@/copy/useCopy';
+import { useToast } from '@/hooks/use-toast';
 import { useMarketActions } from '@/policy/useMarketActions';
 import type { ActionKind } from '@/policy/marketModePolicy';
 import { PublishRunModal } from '@/components/provider/PublishRunModal';
+import { AddRequestsModal } from '@/components/provider/AddRequestsModal';
+import { apiRequest } from '@/lib/queryClient';
 
 function getButtonVariant(kind: ActionKind): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
   switch (kind) {
@@ -42,10 +45,21 @@ interface ServiceRun {
 }
 
 interface AttachedRequest {
-  id: string;
-  title: string;
-  status: string;
-  requester_name: string | null;
+  attachment_id: string;
+  request_id: string;
+  status: 'HELD' | 'COMMITTED';
+  held_at: string | null;
+  committed_at: string | null;
+  released_at: string | null;
+  request_summary: {
+    summary: string | null;
+    description: string | null;
+    category: string | null;
+    priority: string;
+    status: string;
+    location_text: string | null;
+    created_at: string;
+  };
 }
 
 interface Publication {
@@ -68,11 +82,127 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
+function AttachmentItem({ 
+  attachment, 
+  runId, 
+  nouns, 
+  resolve 
+}: { 
+  attachment: AttachedRequest; 
+  runId: string; 
+  nouns: any; 
+  resolve: (key: string) => string;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState<'commit' | 'release' | null>(null);
+
+  const handleCommit = async () => {
+    setLoading('commit');
+    try {
+      const response = await apiRequest('POST', `/api/provider/runs/${runId}/attachments/commit`, { 
+        requestId: attachment.request_id 
+      });
+      const data = await response.json();
+      if (data.ok) {
+        toast({ title: resolve('provider.run.attachments.commit_success') });
+        queryClient.invalidateQueries({ queryKey: ['/api/provider/runs', runId] });
+      } else {
+        toast({ title: 'Error', description: data.message || data.error, variant: 'destructive' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+    setLoading(null);
+  };
+
+  const handleRelease = async () => {
+    setLoading('release');
+    try {
+      const response = await apiRequest('POST', `/api/provider/runs/${runId}/attachments/release`, { 
+        requestId: attachment.request_id 
+      });
+      const data = await response.json();
+      if (data.ok) {
+        toast({ title: resolve('provider.run.attachments.release_success') });
+        queryClient.invalidateQueries({ queryKey: ['/api/provider/runs', runId] });
+      } else {
+        toast({ title: 'Error', description: data.message || data.error, variant: 'destructive' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+    setLoading(null);
+  };
+
+  const summary = attachment.request_summary;
+  const isHeld = attachment.status === 'HELD';
+
+  return (
+    <div 
+      className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/50"
+      data-testid={`attachment-${attachment.attachment_id}`}
+    >
+      <div className="flex-1 min-w-0">
+        <p className="font-medium truncate">
+          {summary.summary || `Untitled ${nouns.request}`}
+        </p>
+        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+          {summary.category && (
+            <Badge variant="outline" className="text-xs">{summary.category}</Badge>
+          )}
+          {summary.location_text && (
+            <span className="flex items-center gap-1 text-xs">
+              <MapPin className="w-3 h-3" />
+              {summary.location_text}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {isHeld && (
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleCommit}
+              disabled={loading !== null}
+              data-testid={`button-commit-${attachment.request_id}`}
+            >
+              {loading === 'commit' ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                resolve('provider.run.attachments.commit_cta')
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleRelease}
+              disabled={loading !== null}
+              data-testid={`button-release-${attachment.request_id}`}
+            >
+              {loading === 'release' ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                resolve('provider.run.attachments.release_cta')
+              )}
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProviderRunDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { nouns, resolve } = useCopy({ entryPoint: 'service' });
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [addRequestsModalOpen, setAddRequestsModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery<{ 
     ok: boolean; 
@@ -128,6 +258,9 @@ export default function ProviderRunDetailPage() {
   const run = data.run;
   const attachedRequests = data.attached_requests || [];
   const publications = data.publications || [];
+  
+  const heldRequests = attachedRequests.filter(a => a.status === 'HELD');
+  const committedRequests = attachedRequests.filter(a => a.status === 'COMMITTED');
 
   const formatSchedule = () => {
     if (!run.starts_at) return 'Not scheduled';
@@ -210,27 +343,63 @@ export default function ProviderRunDetailPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Attached {nouns.request}s</CardTitle>
-              <CardDescription>{nouns.request}s linked to this {nouns.run}</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg">{resolve('provider.run.attachments.title')}</CardTitle>
+                <CardDescription>{nouns.request}s linked to this {nouns.run}</CardDescription>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setAddRequestsModalOpen(true)}
+                data-testid="button-add-requests"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {resolve('provider.run.attachments.add_cta')}
+              </Button>
             </CardHeader>
             <CardContent>
               {attachedRequests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p data-testid="text-no-requests">No {nouns.request}s attached to this {nouns.run} yet.</p>
+                  <p data-testid="text-no-requests">{resolve('provider.run.attachments.empty')}</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {attachedRequests.map(request => (
-                    <div key={request.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
-                      <div>
-                        <p className="font-medium">{request.title}</p>
-                        <p className="text-sm text-muted-foreground">{request.requester_name}</p>
-                      </div>
-                      <Badge variant="outline">{request.status}</Badge>
+                <div className="space-y-4">
+                  {heldRequests.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Badge variant="secondary">{resolve('provider.run.attachments.held')}</Badge>
+                        <span className="text-xs">({heldRequests.length})</span>
+                      </h4>
+                      {heldRequests.map(attachment => (
+                        <AttachmentItem
+                          key={attachment.attachment_id}
+                          attachment={attachment}
+                          runId={id || ''}
+                          nouns={nouns}
+                          resolve={resolve}
+                        />
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {committedRequests.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Badge variant="default">{resolve('provider.run.attachments.committed')}</Badge>
+                        <span className="text-xs">({committedRequests.length})</span>
+                      </h4>
+                      {committedRequests.map(attachment => (
+                        <AttachmentItem
+                          key={attachment.attachment_id}
+                          attachment={attachment}
+                          runId={id || ''}
+                          nouns={nouns}
+                          resolve={resolve}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -281,11 +450,11 @@ export default function ProviderRunDetailPage() {
               <Button
                 className="w-full"
                 variant="outline"
-                disabled
-                data-testid="button-attach-stub"
+                onClick={() => setAddRequestsModalOpen(true)}
+                data-testid="button-attach-requests"
               >
                 <FileText className="w-4 h-4 mr-2" />
-                Attach {nouns.request}s (Coming Soon)
+                {resolve('provider.run.attachments.add_cta')}
               </Button>
 
               <Separator />
@@ -307,6 +476,12 @@ export default function ProviderRunDetailPage() {
         runId={id || ''}
         currentMarketMode={run.market_mode}
         currentPublications={publications}
+      />
+
+      <AddRequestsModal
+        open={addRequestsModalOpen}
+        onOpenChange={setAddRequestsModalOpen}
+        runId={id || ''}
       />
     </div>
   );

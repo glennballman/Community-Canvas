@@ -166,6 +166,25 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'provider.run.publish.success': 'Run published successfully',
     'provider.run.publish.no_portals': 'No community portals available',
     'error.run.publish.invalid_market_mode': 'Invalid market mode. TARGETED is not valid for runs.',
+    
+    // V3.5 STEP 6: Provider Run Attachments tokens
+    'provider.run.attachments.title': 'Attached Service Requests',
+    'provider.run.attachments.held': 'Held',
+    'provider.run.attachments.committed': 'Committed',
+    'provider.run.attachments.add_cta': 'Add Requests',
+    'provider.run.attachments.hold_cta': 'Hold',
+    'provider.run.attachments.commit_cta': 'Commit',
+    'provider.run.attachments.release_cta': 'Release',
+    'provider.run.attachments.hold_success': 'Request held successfully',
+    'provider.run.attachments.commit_success': 'Request committed successfully',
+    'provider.run.attachments.release_success': 'Request released',
+    'provider.run.attachments.empty': 'No requests attached to this run',
+    'provider.run.attachments.add_modal_title': 'Add Requests to Run',
+    'provider.run.attachments.no_requests': 'No available requests to attach',
+    'error.request.invalid_state': 'Request cannot be modified in its current state',
+    'error.attachment.not_holdable': 'This request cannot be held',
+    'error.attachment.not_committable': 'This attachment cannot be committed',
+    'error.commitment.release_not_allowed': 'Committed requests cannot be released',
   },
 
   lodging: {
@@ -545,6 +564,25 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'provider.run.publish.success': 'Run published successfully',
     'provider.run.publish.no_portals': 'No community portals available',
     'error.run.publish.invalid_market_mode': 'Invalid market mode. TARGETED is not valid for runs.',
+    
+    // V3.5 STEP 6: Provider Run Attachments tokens
+    'provider.run.attachments.title': 'Attached Service Requests',
+    'provider.run.attachments.held': 'Held',
+    'provider.run.attachments.committed': 'Committed',
+    'provider.run.attachments.add_cta': 'Add Requests',
+    'provider.run.attachments.hold_cta': 'Hold',
+    'provider.run.attachments.commit_cta': 'Commit',
+    'provider.run.attachments.release_cta': 'Release',
+    'provider.run.attachments.hold_success': 'Request held successfully',
+    'provider.run.attachments.commit_success': 'Request committed successfully',
+    'provider.run.attachments.release_success': 'Request released',
+    'provider.run.attachments.empty': 'No requests attached to this run',
+    'provider.run.attachments.add_modal_title': 'Add Requests to Run',
+    'provider.run.attachments.no_requests': 'No available requests to attach',
+    'error.request.invalid_state': 'Request cannot be modified in its current state',
+    'error.attachment.not_holdable': 'This request cannot be held',
+    'error.attachment.not_committable': 'This attachment cannot be committed',
+    'error.commitment.release_not_allowed': 'Committed requests cannot be released',
   },
 
   activity: {
