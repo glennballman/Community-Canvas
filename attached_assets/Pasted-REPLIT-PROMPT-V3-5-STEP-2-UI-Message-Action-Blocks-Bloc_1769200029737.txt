@@ -1,0 +1,258 @@
+REPLIT PROMPT — V3.5 STEP 2 (UI) — Message Action Blocks BlockRenderer + Thread Wiring — v2 (Audit-Aligned + Retry-Safe)
+
+ROLE: Senior Frontend Engineer implementing V3.5 UI for Message Action Blocks.
+MODE: Additive-only. No refactors. No duplicate inbox/thread UIs. Evidence-based.
+
+HARD RULES
+- Use “service provider” (never contractor).
+- Use “reserve / reservation” (never booking).
+- No new parallel messaging UI surfaces.
+- No action leakage in Public viewer mode.
+- MarketMode Policy MUST gate all CTAs (reuse useMarketActions()).
+- Copy Tokens required for ALL user-visible strings (errors + success).
+- Backend is complete — DO NOT modify it.
+- Do NOT introduce the banned word “calendar” anywhere.
+
+KNOWN COMPONENT PATHS (FROM MESSAGING AUDIT) — START HERE
+Primary thread view:
+1) client/src/components/conversations/ConversationPanel.tsx (≈480 lines) — PRIMARY TARGET
+Conversation list (do not modify except if needed for refresh triggers):
+2) client/src/components/conversations/ConversationList.tsx (≈320 lines)
+Job-specific thread view:
+3) client/src/components/jobs/JobConversationPanel.tsx (≈199 lines)
+
+Provider context (also check & wire if it renders threads):
+- client/src/pages/provider/ProviderInboxPage.tsx
+- client/src/pages/provider/ProviderRequestDetailPage.tsx (or similarly named detail page)
+
+IMPORTANT: Wire the BlockRenderer consistently in ALL thread-rendering contexts (ConversationPanel + JobConversationPanel + Provider request detail if it embeds a thread).
+
+BACKEND ENDPOINT NOTE (LOCKED)
+Existing thread APIs are under /api/conversations/... (fetch/post/mark-read).
+The new action endpoint is intentionally cross-cutting:
+POST /api/messages/:messageId/action
+This is NOT under /api/conversations/... — do not “normalize” it.
+
+GOAL
+1) Render Message Action Blocks inside existing thread UIs.
+2) Enable explicit action execution via POST /api/messages/:messageId/action.
+3) Enforce: Public viewer gating + MarketMode gating + Copy Tokens.
+4) Use safe refresh strategy (no risky optimistic updates).
+
+DELIVERABLES
+A) New UI component: MessageActionBlock.tsx (BlockRenderer)
+B) Integrate into ConversationPanel.tsx message row rendering
+C) Integrate into JobConversationPanel.tsx (if it renders messages)
+D) Integrate into ProviderRequestDetailPage.tsx (ONLY if it renders a message thread)
+E) API helper: postMessageAction()
+F) Copy-token entries for all relevant errors + success toasts
+G) Proof report: proof/v3.5/message-action-blocks-ui.md
+
+A) BLOCK RENDERER COMPONENT (NEW)
+Create:
+client/src/components/messaging/MessageActionBlock.tsx
+(use folder conventions if messaging/ already exists; otherwise create it under components/)
+
+Props (LOCKED):
+- messageId: string
+- conversationId: string
+- actionBlock: ActionBlockV1 (frontend mirror of server schema)
+- isPublicViewer: boolean
+- marketActions: ReturnType<typeof useMarketActions>
+- onActionComplete?: (messageId: string, newActionBlock: ActionBlockV1) => void
+  // Parent MUST refetch/refresh the thread when this fires
+
+Component requirements:
+1) Public viewer:
+   - Render block read-only
+   - NO buttons, NO inputs
+2) Resolved blocks:
+   - If status in accepted/declined/expired/informational:
+     - Render summary + badge
+     - NO interactive controls
+3) Pending blocks:
+   - Show controls strictly allowed per blockType (mirror server rules)
+
+Allowed actions mapping (MUST MATCH SERVER):
+- summary:            none
+- deposit_request:    none (link-out only)
+- signature_request:  none (link-out only)
+- question:           answer
+- multi_question:     answer
+- offer:              accept, decline
+- availability:       accept, counter   (counter = propose alternative)
+- change_request:     accept, decline, counter
+- capacity:           acknowledge
+- cancellation:       acknowledge
+
+UI per blockType:
+- deposit_request / signature_request:
+  - show a button “Continue” linking to actionBlock.ctaUrl (new tab, rel="noreferrer noopener")
+  - do NOT call the backend (server rejects inline actions)
+- question:
+  - single input + submit (action=answer)
+- multi_question:
+  - render questions from payload, collect responses, submit (action=answer)
+- offer:
+  - Accept / Decline
+- availability / change_request:
+  - Accept / Decline (if applicable) + Counter form
+- capacity / cancellation:
+  - Acknowledge
+
+LOADING / DISABLED STATES (REQUIRED)
+- While action is in flight:
+  - disable all controls
+  - show spinner on active button
+- On error:
+  - re-enable controls
+  - show toast using copy-token resolved error code
+- On success:
+  - keep controls disabled (block now resolved/pending updated)
+  - show success toast (copy token)
+  - call onActionComplete(messageId, newActionBlock)
+
+B) IDENTITY + IDEMPOTENCY KEY (RETRY-SAFE) — REQUIRED
+Idempotency must survive retries.
+
+Generate stable keys:
+- Deterministic actions: accept/decline/acknowledge
+  idempotencyKey = `${messageId}:${action}`
+- Response-bearing actions: answer/counter
+  idempotencyKey = `${messageId}:${action}:${hash(response)}`
+  (If no shared hash utility exists, implement a small stable JSON stringify + hash locally.)
+
+Store the computed idempotencyKey in component state for the in-flight attempt so a retry uses the same key.
+
+C) API CLIENT HELPER (NEW)
+Create:
+client/src/api/messageActions.ts (or existing API folder convention)
+
+Function:
+postMessageAction(messageId: string, body: { action, response?, idempotencyKey? })
+
+- POST /api/messages/:messageId/action
+- Use existing API envelope parsing
+- On non-ok, throw object containing error.code
+- Do NOT change any /api/conversations/* patterns
+
+D) COPY TOKEN INTEGRATION (MANDATORY)
+Find where copy tokens are defined (publicCopy.ts or similar).
+Add tokens for:
+Errors (must match backend codes):
+- error.auth.unauthenticated
+- error.request.invalid
+- error.action_block.not_participant
+- error.action_block.missing
+- error.action_block.invalid
+- error.action_block.expired
+- error.action_block.already_resolved
+- error.action_block.action_not_allowed
+- error.action_block.marketmode_blocked
+
+Success (UI-level):
+- message.action_block.accepted
+- message.action_block.declined
+- message.action_block.answered
+- message.action_block.acknowledged
+- message.action_block.countered
+
+No hardcoded user-facing strings outside copy tokens.
+
+E) THREAD WIRING (MINIMAL, SAFE) — LOCKED REFRESH STRATEGY
+
+UPDATE STRATEGY (LOCKED):
+- Do NOT use optimistic updates for action blocks.
+- On success: REFRESH the thread.
+- Use existing query invalidation patterns (React Query / SWR / custom).
+- If no query invalidation exists, update local message state ONLY with returned action_block (minimal patch), but prefer refetch.
+
+KNOWN INTEGRATION POINTS (FROM AUDIT):
+
+1) client/src/components/conversations/ConversationPanel.tsx
+   - Find message row render
+   - Add:
+     {message.action_block && <MessageActionBlock ... />}
+
+2) client/src/components/jobs/JobConversationPanel.tsx
+   - If it renders messages similarly, wire the same renderer.
+
+3) Provider context:
+   - Open ProviderInboxPage.tsx and ProviderRequestDetailPage.tsx
+   - If either renders a conversation thread (messages list), wire the same renderer.
+   - If Provider pages link out to ConversationPanel, do NOT duplicate wiring.
+
+WIRING PATTERN (EXAMPLE — ADAPT TO ACTUAL QUERY KEYS IN REPO):
+```tsx
+{message.action_block && (
+  <MessageActionBlock
+    messageId={message.id}
+    conversationId={conversationId}
+    actionBlock={message.action_block}
+    isPublicViewer={isPublicViewer}
+    marketActions={marketActions}
+    onActionComplete={(msgId, newBlock) => {
+      // Prefer refetch/invalidate
+      queryClient.invalidateQueries(['conversation', conversationId, 'messages']);
+      // If no query client exists, call existing refetch() from hook.
+    }}
+  />
+)}
+DO NOT:
+
+Create ConversationPanelWithBlocks wrappers
+
+Introduce HOCs
+
+Change message fetching logic
+
+Create new thread pages or duplicate inbox UIs
+
+F) TESTS (LIGHTWEIGHT)
+If a UI test harness exists:
+
+Add tests for MessageActionBlock:
+
+offer pending renders Accept/Decline (not public viewer)
+
+public viewer shows read-only (no buttons)
+
+MarketMode blocked hides/disables CTAs and shows error on attempt (if attempt possible)
+
+deterministic idempotencyKey is stable
+If no harness, document “NOT FOUND” and provide a manual QA checklist in the proof report.
+
+G) PROOF REPORT
+Write: proof/v3.5/message-action-blocks-ui.md
+Include:
+
+file paths created/modified
+
+excerpts proving:
+
+ConversationPanel wiring
+
+JobConversationPanel wiring (if applicable)
+
+Provider detail wiring (if applicable)
+
+public viewer gating
+
+MarketMode gating
+
+stable idempotency keys
+
+copy token entries present
+
+API call hits POST /api/messages/:messageId/action
+
+NO new inbox/thread pages created
+
+END.
+
+yaml
+Copy code
+
+---
+
+If you want, paste the existing **copy token file path** (where errors/toasts are defined) and I’ll tailor the prompt’s copy-token section to match the exact structure so Replit doesn’t guess.

@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Unlock, Send } from 'lucide-react';
 import { AssistButton } from '@/components/ai/AssistButton';
+import { MessageActionBlock } from '@/components/messaging/MessageActionBlock';
+import { useMarketActions } from '@/policy/useMarketActions';
+import type { ActionBlockV1 } from '@/api/messageActions';
 
 interface Message {
   id: string;
@@ -14,15 +17,17 @@ interface Message {
   sender_role: 'me' | 'them' | 'system';
   was_redacted: boolean;
   created_at: string;
+  action_block?: ActionBlockV1;
 }
 
 interface ConversationViewProps {
   conversationId: string;
   myRole: 'owner' | 'contractor';
   intakeMode?: 'bid' | 'run' | 'direct_award';
+  isPublicViewer?: boolean;
 }
 
-export function ConversationView({ conversationId, myRole }: ConversationViewProps) {
+export function ConversationView({ conversationId, myRole, isPublicViewer = false }: ConversationViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -30,6 +35,24 @@ export function ConversationView({ conversationId, myRole }: ConversationViewPro
   const [contactUnlocked, setContactUnlocked] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasMarkedRead = useRef(false);
+
+  const marketActions = useMarketActions({
+    objectType: 'service_request',
+    actorRole: myRole === 'owner' ? 'requester' : 'provider',
+    marketMode: 'TARGETED',
+    visibility: 'PRIVATE',
+    requestStatus: 'AWAITING_RESPONSE',
+    hasTargetProvider: true,
+    hasActiveProposal: false,
+    entryPoint: 'service',
+  });
+
+  const handleActionComplete = useCallback((messageId: string, newActionBlock: ActionBlockV1) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, action_block: newActionBlock } : msg
+    ));
+    fetchMessages();
+  }, []);
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -236,6 +259,16 @@ export function ConversationView({ conversationId, myRole }: ConversationViewPro
                         </span>
                       )}
                     </div>
+                    {msg.action_block && (
+                      <MessageActionBlock
+                        messageId={msg.id}
+                        conversationId={conversationId}
+                        actionBlock={msg.action_block}
+                        isPublicViewer={isPublicViewer}
+                        marketActions={marketActions}
+                        onActionComplete={handleActionComplete}
+                      />
+                    )}
                   </div>
                 )}
               </div>

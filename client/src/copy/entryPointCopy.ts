@@ -137,6 +137,21 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'cta.admin.reassign': 'Reassign',
     'cta.admin.cancel': 'Cancel',
     'cta.admin.force_status': 'Force Status',
+    // V3.5 Message Action Block copy tokens
+    'error.auth.unauthenticated': 'Please sign in to continue',
+    'error.request.invalid': 'Invalid request',
+    'error.action_block.not_participant': 'You are not a participant in this conversation',
+    'error.action_block.missing': 'No action available for this message',
+    'error.action_block.invalid': 'This action is not available',
+    'error.action_block.expired': 'This action has expired',
+    'error.action_block.already_resolved': 'This action has already been completed',
+    'error.action_block.action_not_allowed': 'This action is not allowed',
+    'error.action_block.marketmode_blocked': 'This action is not available at this time',
+    'message.action_block.accepted': 'Accepted successfully',
+    'message.action_block.declined': 'Declined',
+    'message.action_block.answered': 'Response submitted',
+    'message.action_block.acknowledged': 'Acknowledged',
+    'message.action_block.countered': 'Counter proposal submitted',
   },
 
   lodging: {

@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Send, MessageSquare } from 'lucide-react';
+import { MessageActionBlock } from '@/components/messaging/MessageActionBlock';
+import { useMarketActions } from '@/policy/useMarketActions';
+import type { ActionBlockV1 } from '@/api/messageActions';
 
 interface Message {
   id: string;
@@ -15,6 +18,7 @@ interface Message {
   sender_role: 'me' | 'them' | 'system';
   was_redacted: boolean;
   created_at: string;
+  action_block?: ActionBlockV1;
 }
 
 interface ConversationData {
@@ -44,6 +48,17 @@ export function JobConversationPanel({ jobId, applicationId }: JobConversationPa
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasMarkedRead = useRef(false);
+
+  const marketActions = useMarketActions({
+    objectType: 'service_request',
+    actorRole: 'operator',
+    marketMode: 'TARGETED',
+    visibility: 'PRIVATE',
+    requestStatus: 'AWAITING_RESPONSE',
+    hasTargetProvider: true,
+    hasActiveProposal: false,
+    entryPoint: 'service',
+  });
 
   const { data, isLoading, error, refetch } = useQuery<ConversationData>({
     queryKey: ['/api/jobs', jobId, 'applications', applicationId, 'conversation'],
@@ -100,6 +115,13 @@ export function JobConversationPanel({ jobId, applicationId }: JobConversationPa
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [localMessages]);
+
+  const handleActionComplete = useCallback((messageId: string, newActionBlock: ActionBlockV1) => {
+    setLocalMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, action_block: newActionBlock } : msg
+    ));
+    refetch();
+  }, [refetch]);
 
   const handleSend = (e: FormEvent) => {
     e.preventDefault();
@@ -167,6 +189,16 @@ export function JobConversationPanel({ jobId, applicationId }: JobConversationPa
                   <div className="text-xs opacity-50 mt-1">
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
+                  {msg.action_block && (
+                    <MessageActionBlock
+                      messageId={msg.id}
+                      conversationId={data?.conversationId || ''}
+                      actionBlock={msg.action_block}
+                      isPublicViewer={false}
+                      marketActions={marketActions}
+                      onActionComplete={handleActionComplete}
+                    />
+                  )}
                 </div>
               </div>
             ))}
