@@ -9,8 +9,8 @@ import {
   getUINotices,
   getCTAs,
   getMessageTemplates,
-} from '../CopyResolver';
-import type { CopyContext } from '../entryPointCopy';
+} from '../../client/src/copy/CopyResolver';
+import type { CopyContext } from '../../client/src/copy/entryPointCopy';
 
 describe('CopyResolver', () => {
   describe('ep() - EntryPoint type mapper', () => {

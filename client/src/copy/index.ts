@@ -24,3 +24,5 @@ export {
   getCTAs,
   getMessageTemplates,
 } from './CopyResolver';
+
+export { useCopy } from './useCopy';

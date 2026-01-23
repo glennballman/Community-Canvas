@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ENTRY_POINT_COPY, REQUIRED_TOKEN_KEYS, type EntryPointType } from '../entryPointCopy';
+import { ENTRY_POINT_COPY, REQUIRED_TOKEN_KEYS, type EntryPointType } from '../../client/src/copy/entryPointCopy';
 
 describe('CopyInventory', () => {
   const entryPoints: EntryPointType[] = [
