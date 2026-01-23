@@ -3,6 +3,10 @@
  * 
  * Mirrors client/src/copy/entryPointCopy.ts for server-side notification generation.
  * Keep these in sync!
+ * 
+ * IMPORTANT: 
+ * - Never use "contractor" in generic context - use "provider" instead
+ * - Never use "book/booking" - use "reserve/reservation" only
  */
 
 export type EntryPointType = 
@@ -24,7 +28,6 @@ export type CopyContext = {
 
 /**
  * Required token keys that every entry point must define
- * Kept in sync with client/src/copy/entryPointCopy.ts
  */
 export const REQUIRED_TOKEN_KEYS = [
   'label.noun.provider',
@@ -56,12 +59,33 @@ export const REQUIRED_TOKEN_KEYS = [
   'msg.request.unassigned.subject',
   'msg.request.unassigned.body',
   'cta.proposal.review',
+  'cta.proposal.accept',
+  'cta.proposal.reject',
+  'cta.proposal.propose_change',
+  'cta.proposal.submit',
   'cta.request.open_to_bids',
   'cta.request.invite_another_provider',
+  'cta.request.send',
+  'cta.request.accept',
+  'cta.request.decline',
+  'cta.request.withdraw',
+  'cta.request.cancel',
+  'cta.request.modify',
+  'cta.publish',
+  'cta.run.withdraw',
+  'cta.run.close_signups',
+  'cta.run.express_interest',
+  'cta.run.mark_complete',
+  'cta.admin.reassign',
+  'cta.admin.cancel',
+  'cta.admin.force_status',
 ] as const;
 
 export type CopyTokenKey = typeof REQUIRED_TOKEN_KEYS[number];
 
+/**
+ * Copy token inventory by entry point type
+ */
 export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = {
   generic: {
     'label.noun.provider': 'provider',
@@ -93,8 +117,26 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Request is now unassigned',
     'msg.request.unassigned.body': 'The request {requestTitle} is now open for new proposals.',
     'cta.proposal.review': 'Review Proposal',
+    'cta.proposal.accept': 'Accept Proposal',
+    'cta.proposal.reject': 'Decline Proposal',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Response',
     'cta.request.open_to_bids': 'Open for Responses',
     'cta.request.invite_another_provider': 'Invite Another Provider',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept Request',
+    'cta.request.decline': 'Decline Request',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Signups',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 
   lodging: {
@@ -127,8 +169,26 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Reservation request reopened',
     'msg.request.unassigned.body': 'The reservation request {requestTitle} is now open for new offers.',
     'cta.proposal.review': 'Review Offer',
+    'cta.proposal.accept': 'Accept Offer',
+    'cta.proposal.reject': 'Decline Offer',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Offer',
     'cta.request.open_to_bids': 'Open for Offers',
     'cta.request.invite_another_provider': 'Invite Another Host',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept',
+    'cta.request.decline': 'Decline',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Availability',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 
   parking: {
@@ -161,8 +221,26 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Parking request reopened',
     'msg.request.unassigned.body': 'The parking request {requestTitle} is now open for new offers.',
     'cta.proposal.review': 'Review Offer',
+    'cta.proposal.accept': 'Accept Offer',
+    'cta.proposal.reject': 'Decline Offer',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Offer',
     'cta.request.open_to_bids': 'Open for Offers',
     'cta.request.invite_another_provider': 'Invite Another Operator',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept',
+    'cta.request.decline': 'Decline',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Availability',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 
   marina: {
@@ -195,8 +273,26 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Moorage request reopened',
     'msg.request.unassigned.body': 'The moorage request {requestTitle} is now open for new offers.',
     'cta.proposal.review': 'Review Offer',
+    'cta.proposal.accept': 'Accept Offer',
+    'cta.proposal.reject': 'Decline Offer',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Offer',
     'cta.request.open_to_bids': 'Open for Offers',
     'cta.request.invite_another_provider': 'Invite Another Marina',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept',
+    'cta.request.decline': 'Decline',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Availability',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 
   restaurant: {
@@ -229,8 +325,26 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Dining request reopened',
     'msg.request.unassigned.body': 'The dining request {requestTitle} is now open for new offers.',
     'cta.proposal.review': 'Review Offer',
+    'cta.proposal.accept': 'Accept Offer',
+    'cta.proposal.reject': 'Decline Offer',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Offer',
     'cta.request.open_to_bids': 'Open for Offers',
     'cta.request.invite_another_provider': 'Invite Another Restaurant',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept',
+    'cta.request.decline': 'Decline',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Availability',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 
   equipment: {
@@ -263,8 +377,26 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Rental request reopened',
     'msg.request.unassigned.body': 'The rental request {requestTitle} is now open for new offers.',
     'cta.proposal.review': 'Review Offer',
+    'cta.proposal.accept': 'Accept Offer',
+    'cta.proposal.reject': 'Decline Offer',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Offer',
     'cta.request.open_to_bids': 'Open for Offers',
     'cta.request.invite_another_provider': 'Invite Another Provider',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept',
+    'cta.request.decline': 'Decline',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Availability',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 
   service: {
@@ -297,8 +429,26 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Service request is now unassigned',
     'msg.request.unassigned.body': 'The service request {requestTitle} is now open for new proposals.',
     'cta.proposal.review': 'Review Proposal',
+    'cta.proposal.accept': 'Accept Proposal',
+    'cta.proposal.reject': 'Decline Proposal',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Proposal',
     'cta.request.open_to_bids': 'Open for Proposals',
     'cta.request.invite_another_provider': 'Invite Another Provider',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept',
+    'cta.request.decline': 'Decline',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Signups',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 
   activity: {
@@ -331,147 +481,25 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'msg.request.unassigned.subject': 'Activity request reopened',
     'msg.request.unassigned.body': 'The activity request {requestTitle} is now open for new offers.',
     'cta.proposal.review': 'Review Offer',
+    'cta.proposal.accept': 'Accept Offer',
+    'cta.proposal.reject': 'Decline Offer',
+    'cta.proposal.propose_change': 'Propose Change',
+    'cta.proposal.submit': 'Submit Offer',
     'cta.request.open_to_bids': 'Open for Offers',
     'cta.request.invite_another_provider': 'Invite Another Operator',
+    'cta.request.send': 'Send Request',
+    'cta.request.accept': 'Accept',
+    'cta.request.decline': 'Decline',
+    'cta.request.withdraw': 'Withdraw',
+    'cta.request.cancel': 'Cancel Request',
+    'cta.request.modify': 'Modify Request',
+    'cta.publish': 'Publish',
+    'cta.run.withdraw': 'Withdraw',
+    'cta.run.close_signups': 'Close Signups',
+    'cta.run.express_interest': 'Express Interest',
+    'cta.run.mark_complete': 'Mark Complete',
+    'cta.admin.reassign': 'Reassign',
+    'cta.admin.cancel': 'Cancel',
+    'cta.admin.force_status': 'Force Status',
   },
 };
-
-/**
- * Safe mapping of string to EntryPointType with fallback to 'generic'
- */
-export function ep(entryPoint?: string | null): EntryPointType {
-  if (!entryPoint) return 'generic';
-  
-  const normalized = entryPoint.toLowerCase().trim();
-  
-  const validTypes: EntryPointType[] = [
-    'lodging', 'parking', 'marina', 'restaurant', 
-    'equipment', 'service', 'activity', 'generic'
-  ];
-  
-  if (validTypes.includes(normalized as EntryPointType)) {
-    return normalized as EntryPointType;
-  }
-  
-  return 'generic';
-}
-
-/**
- * Resolve copy token with variable interpolation
- */
-export function resolveCopy(
-  key: string,
-  ctx: CopyContext,
-  vars?: Record<string, string | number>
-): string {
-  const entryPointCopy = ENTRY_POINT_COPY[ctx.entryPoint];
-  const genericCopy = ENTRY_POINT_COPY.generic;
-  
-  let value = entryPointCopy?.[key] ?? genericCopy?.[key];
-  
-  if (!value) {
-    return `[[${key}]]`;
-  }
-  
-  if (vars) {
-    for (const [varName, varValue] of Object.entries(vars)) {
-      value = value.replace(new RegExp(`\\{${varName}\\}`, 'g'), String(varValue));
-    }
-  }
-  
-  return value;
-}
-
-/**
- * Create a CopyContext
- */
-export function createContext(
-  entryPoint?: string | null,
-  options?: Partial<Omit<CopyContext, 'entryPoint'>>
-): CopyContext {
-  return {
-    entryPoint: ep(entryPoint),
-    ...options,
-  };
-}
-
-/**
- * Get message templates for notifications
- */
-export function getMessageTemplates(ctx: CopyContext, vars?: Record<string, string | number>) {
-  return {
-    inviteSent: {
-      subject: resolveCopy('msg.invite.sent.subject', ctx, vars),
-      body: resolveCopy('msg.invite.sent.body', ctx, vars),
-    },
-    requestAccepted: {
-      subject: resolveCopy('msg.request.accepted.subject', ctx, vars),
-      body: resolveCopy('msg.request.accepted.body', ctx, vars),
-    },
-    proposalCreated: {
-      subject: resolveCopy('msg.proposal.created.subject', ctx, vars),
-      body: resolveCopy('msg.proposal.created.body', ctx, vars),
-    },
-    requestDeclined: {
-      subject: resolveCopy('msg.request.declined.subject', ctx, vars),
-      body: resolveCopy('msg.request.declined.body', ctx, vars),
-    },
-    requestUnassigned: {
-      subject: resolveCopy('msg.request.unassigned.subject', ctx, vars),
-      body: resolveCopy('msg.request.unassigned.body', ctx, vars),
-    },
-  };
-}
-
-/**
- * Get nouns for UI display
- */
-export function getNouns(ctx: CopyContext) {
-  return {
-    provider: resolveCopy('label.noun.provider', ctx),
-    requester: resolveCopy('label.noun.requester', ctx),
-    request: resolveCopy('label.noun.request', ctx),
-    run: resolveCopy('label.noun.run', ctx),
-    community: resolveCopy('label.noun.community', ctx),
-    company: resolveCopy('label.noun.company', ctx),
-    reservation: resolveCopy('label.noun.reservation', ctx),
-  };
-}
-
-/**
- * Get state labels
- */
-export function getStateLabels(ctx: CopyContext) {
-  return {
-    marketTargeted: resolveCopy('state.market.TARGETED.label', ctx),
-    marketOpen: resolveCopy('state.market.OPEN.label', ctx),
-    marketInviteOnly: resolveCopy('state.market.INVITE_ONLY.label', ctx),
-    visibilityPrivate: resolveCopy('state.visibility.PRIVATE.label', ctx),
-    requestUnassigned: resolveCopy('state.request.UNASSIGNED.label', ctx),
-  };
-}
-
-/**
- * Get UI notices
- */
-export function getUINotices(ctx: CopyContext, vars?: Record<string, string | number>) {
-  return {
-    marketLocked: resolveCopy('ui.market.locked_notice', ctx, vars),
-    publishAskRequesterTitle: resolveCopy('ui.publish.ask_requester.title', ctx, vars),
-    publishAskRequesterBody: resolveCopy('ui.publish.ask_requester.body', ctx, vars),
-    publishJustPublishNotice: resolveCopy('ui.publish.just_publish.notice', ctx, vars),
-    aiSuggestionRouteZonesTitle: resolveCopy('ui.ai.suggestion.route_zones.title', ctx, vars),
-    aiSuggestionRouteZonesBody: resolveCopy('ui.ai.suggestion.route_zones.body', ctx, vars),
-  };
-}
-
-/**
- * Get CTAs
- */
-export function getCTAs(ctx: CopyContext) {
-  return {
-    proposalReview: resolveCopy('cta.proposal.review', ctx),
-    requestOpenToBids: resolveCopy('cta.request.open_to_bids', ctx),
-    requestInviteAnotherProvider: resolveCopy('cta.request.invite_another_provider', ctx),
-  };
-}

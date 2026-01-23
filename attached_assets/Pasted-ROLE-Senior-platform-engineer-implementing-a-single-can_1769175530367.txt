@@ -1,0 +1,110 @@
+ROLE: Senior platform engineer implementing a single canonical UI policy for ServiceRequest/ServiceRun state affordances.
+HARD RULES:
+- No parallel implementations.
+- No refactors of workflow state machines.
+- Additive changes only.
+- Use existing enums/states; do not rename.
+- All labels/copy must use the copy-token layer (useCopy/resolveCopy).
+- Do not add DB tables.
+
+GOAL
+Create a shared “MarketMode UI Policy” that:
+1) Computes allowed actions (CTAs) for ServiceRequest and ServiceRun based on:
+   - object type (request vs run)
+   - object status (ACCEPTED/DECLINED/UNASSIGNED/etc.)
+   - market mode (TARGETED/OPEN/INVITE_ONLY/CLOSED)
+   - visibility (PRIVATE/PORTAL/COMPANY)
+   - actor role (requester/provider/operator)
+2) Ensures the same logic is used across ALL screens (detail cards, lists, banners, mod/operator views).
+3) Guarantees UNASSIGNED recovery flows:
+   - open to responses
+   - invite another provider
+   - modify timing/capacity
+   - cancel
+4) Guarantees Propose Change flow:
+   - provider can propose
+   - requester can review/accept/reject
+   - audit events preserved (already exists)
+5) Prevents UI from accidentally showing “bid-like” actions in entry points where it’s disallowed by copy tokens.
+
+DELIVERABLES
+
+A) Shared policy module
+Create:
+  client/src/policy/marketModePolicy.ts
+
+Export types:
+- ActorRole = "requester" | "provider" | "operator"
+- ObjectType = "service_request" | "service_run"
+- MarketMode = "TARGETED"|"INVITE_ONLY"|"OPEN"|"CLOSED"
+- VisibilityScope = "PRIVATE"|"PORTAL"|"PORTAL_SET"|"COMPANY"|"MIXED"
+- ServiceRequestStatus = existing union (DRAFT/SENT/AWAITING_RESPONSE/PROPOSED_CHANGE/ACCEPTED/DECLINED/UNASSIGNED/CANCELLED/EXPIRED)
+- ServiceRunStatus = existing union
+
+Export function:
+  getMarketActions(input: {
+    objectType: ObjectType
+    actorRole: ActorRole
+    marketMode: MarketMode
+    visibility: VisibilityScope
+    requestStatus?: ServiceRequestStatus
+    runStatus?: ServiceRunStatus
+    hasTargetProvider?: boolean
+    hasActiveProposal?: boolean
+    isPublished?: boolean
+  }): Array<{
+    id: string
+    tokenKey: string        // copy token key for button label
+    kind: "primary"|"secondary"|"danger"|"link"
+    requiresConfirm?: boolean
+  }>
+
+Required action ids (as applicable):
+- "invite_another_provider" (cta.request.invite_another_provider)
+- "open_to_responses" (cta.request.open_to_bids)
+- "propose_change" (cta.proposal.review OR create proposal token if exists)
+- "accept_proposal" (new token: cta.proposal.accept)
+- "reject_proposal" (new token: cta.proposal.reject)
+- "publish" (new token: cta.publish)
+- "ask_requester_then_publish" (ui.publish.ask_requester.* already exists)
+- "just_publish" (ui.publish.just_publish.notice already exists)
+- "cancel_request" (new token: cta.request.cancel)
+- "withdraw_run" (new token: cta.run.withdraw)
+
+NOTE: Add any missing tokens to entryPointCopy for ALL entry points + server sync.
+
+B) Integrate policy across UI
+Search for CTAs rendered in:
+- Work request detail views
+- CreateServiceRun / ServiceRun detail views
+- List cards for requests/runs
+- Any operator/moderator views
+
+Replace ad-hoc button logic with:
+  const actions = getMarketActions(...)
+  render actions with useCopy({entryPoint}).resolve(action.tokenKey)
+
+C) Add tests
+Create:
+  client/src/policy/__tests__/marketModePolicy.test.ts
+
+Coverage must include:
+- TARGETED request visible to portal: requester sees “provider selected” notice; no open-to-responses CTA.
+- Provider declines TARGETED request -> requestStatus UNASSIGNED: requester sees open_to_responses + invite_another_provider.
+- Provider receiving TARGETED: sees accept/propose_change/decline.
+- OPEN request: requester does NOT see invite-specific CTAs; providers see respond/propose.
+- PRIVATE request: only direct invite actions available, no publish actions.
+- Operator role: sees admin actions but no requester/provider actions.
+- ServiceRun PUBLISHED: provider can withdraw/cancel (policy driven), requester can join/attach only if allowed by existing rules.
+
+D) Acceptance Criteria
+- All CTAs on requests/runs are driven by marketModePolicy.
+- No screen renders state-dependent CTAs without calling getMarketActions().
+- All button labels come from copy tokens (no hardcoded strings).
+- Tests pass; copy sync tests still pass; copy-lint passes.
+
+DO NOT DO
+- Do not modify server workflow logic.
+- Do not add new state machines.
+- Do not add database tables.
+- Do not introduce new role terms in copy (no “contractor”).
