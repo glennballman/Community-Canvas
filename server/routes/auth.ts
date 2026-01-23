@@ -24,42 +24,45 @@ router.post('/register', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
         }
 
-        const existing = await serviceQuery(
+        const emailLower = email.toLowerCase();
+
+        // Check both canonical and legacy tables
+        const existingCcUsers = await serviceQuery(
+            'SELECT id FROM cc_users WHERE email = $1',
+            [emailLower]
+        );
+        const existingStaging = await serviceQuery(
             'SELECT id FROM cc_staging_users WHERE email = $1',
-            [email.toLowerCase()]
+            [emailLower]
         );
 
-        if (existing.rows.length > 0) {
+        if (existingCcUsers.rows.length > 0 || existingStaging.rows.length > 0) {
             return res.status(400).json({ success: false, error: 'Email already registered' });
         }
 
         const passwordHash = await bcrypt.hash(password, 12);
+        const displayName = [firstName, lastName].filter(Boolean).join(' ') || emailLower.split('@')[0];
 
+        // Insert into canonical cc_users table
         const result = await serviceQuery(`
-            INSERT INTO cc_staging_users (
-                email, password_hash, given_name, family_name, telephone,
-                user_type, company_name
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, email, given_name, family_name, user_type
+            INSERT INTO cc_users (
+                email, password_hash, given_name, family_name, display_name, telephone, status
+            ) VALUES ($1, $2, $3, $4, $5, $6, 'active')
+            RETURNING id, email, given_name, family_name, display_name, is_platform_admin
         `, [
-            email.toLowerCase(),
+            emailLower,
             passwordHash,
             firstName || null,
             lastName || null,
-            phone || null,
-            userType || 'guest',
-            companyName || null
+            displayName,
+            phone || null
         ]);
 
         const user = result.rows[0];
+        const userTypeVal = user.is_platform_admin ? 'admin' : 'user';
+        const { accessToken } = generateTokens(user.id, user.email, userTypeVal);
 
-        const { accessToken, refreshToken } = generateTokens(user.id, user.email, user.user_type);
-
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await serviceQuery(`
-            INSERT INTO cc_staging_sessions (user_id, refresh_token, expires_at)
-            VALUES ($1, $2, $3)
-        `, [user.id, refreshToken, expiresAt]);
+        // V3 users: stateless JWT, no refresh token
 
         res.status(201).json({
             success: true,
@@ -68,10 +71,13 @@ router.post('/register', async (req: Request, res: Response) => {
                 email: user.email,
                 firstName: user.given_name,
                 lastName: user.family_name,
-                userType: user.user_type
+                displayName: user.display_name,
+                userType: userTypeVal,
+                isPlatformAdmin: user.is_platform_admin
             },
             accessToken,
-            refreshToken
+            refreshToken: null, // V3 uses stateless JWT
+            source: 'cc_users'
         });
 
     } catch (error: any) {
@@ -88,10 +94,61 @@ router.post('/login', async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, error: 'Email and password required' });
         }
 
+        const emailLower = email.toLowerCase();
+
+        // Try canonical cc_users table first (V3)
+        const ccUsersResult = await serviceQuery(`
+            SELECT id, email, password_hash, given_name, family_name, display_name, status, is_platform_admin
+            FROM cc_users WHERE email = $1
+        `, [emailLower]);
+
+        if (ccUsersResult.rows.length > 0) {
+            const user = ccUsersResult.rows[0];
+
+            if (user.status !== 'active') {
+                return res.status(403).json({ success: false, error: 'Account is suspended' });
+            }
+
+            const validPassword = await bcrypt.compare(password, user.password_hash);
+            if (!validPassword) {
+                return res.status(401).json({ success: false, error: 'Invalid credentials' });
+            }
+
+            await serviceQuery(`
+                UPDATE cc_users 
+                SET last_login_at = NOW(), login_count = COALESCE(login_count, 0) + 1
+                WHERE id = $1
+            `, [user.id]);
+
+            const userType = user.is_platform_admin ? 'admin' : 'user';
+            const { accessToken } = generateTokens(user.id, user.email, userType);
+
+            // V3 users: JWT tokens are self-validating, stateless auth
+            // No refresh token for V3 - client should re-authenticate when access token expires
+            // Access token is valid for 15 minutes by default
+
+            return res.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.given_name,
+                    lastName: user.family_name,
+                    displayName: user.display_name,
+                    userType,
+                    isPlatformAdmin: user.is_platform_admin
+                },
+                accessToken,
+                refreshToken: null, // V3 uses stateless JWT, no refresh
+                source: 'cc_users'
+            });
+        }
+
+        // Fallback to legacy cc_staging_users table
         const result = await serviceQuery(`
             SELECT id, email, password_hash, given_name, family_name, user_type, status
             FROM cc_staging_users WHERE email = $1
-        `, [email.toLowerCase()]);
+        `, [emailLower]);
 
         if (result.rows.length === 0) {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
@@ -132,7 +189,8 @@ router.post('/login', async (req: Request, res: Response) => {
                 userType: user.user_type
             },
             accessToken,
-            refreshToken
+            refreshToken,
+            source: 'cc_staging_users'
         });
 
     } catch (error: any) {
@@ -233,13 +291,45 @@ router.get('/logout', handleLogout);
 
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+        const userId = req.user!.id;
+
+        // Try canonical cc_users table first (V3)
+        const ccUsersResult = await serviceQuery(`
+            SELECT id, email, given_name, family_name, display_name, telephone, avatar_url,
+                   email_verified, is_platform_admin, status, created_at, last_login_at
+            FROM cc_users WHERE id = $1
+        `, [userId]);
+
+        if (ccUsersResult.rows.length > 0) {
+            const user = ccUsersResult.rows[0];
+            return res.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.given_name,
+                    lastName: user.family_name,
+                    displayName: user.display_name,
+                    phone: user.telephone,
+                    avatarUrl: user.avatar_url,
+                    userType: user.is_platform_admin ? 'admin' : 'user',
+                    isPlatformAdmin: user.is_platform_admin,
+                    emailVerified: user.email_verified,
+                    createdAt: user.created_at,
+                    lastLoginAt: user.last_login_at
+                },
+                source: 'cc_users'
+            });
+        }
+
+        // Fallback to legacy cc_staging_users table
         const result = await serviceQuery(`
             SELECT id, email, given_name, family_name, telephone, avatar_url,
                    user_type, company_name, company_role,
                    email_verified, preferences, notification_settings,
                    created_at, last_login_at
             FROM cc_staging_users WHERE id = $1
-        `, [req.user!.id]);
+        `, [userId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'User not found' });
@@ -264,7 +354,8 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
                 notificationSettings: user.notification_settings,
                 createdAt: user.created_at,
                 lastLoginAt: user.last_login_at
-            }
+            },
+            source: 'cc_staging_users'
         });
 
     } catch (error: any) {

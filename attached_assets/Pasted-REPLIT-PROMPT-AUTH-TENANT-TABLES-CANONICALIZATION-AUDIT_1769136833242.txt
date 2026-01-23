@@ -1,0 +1,79 @@
+REPLIT PROMPT — AUTH/TENANT TABLES CANONICALIZATION AUDIT (V3.5)
+GOAL: Determine if we have multiple user/tenant tables, which ones are canonical, and eliminate any runtime dependency on staging tables.
+
+1) DATABASE INVENTORY (SQL)
+Run these queries and paste results:
+
+A) Find all user-like tables:
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+AND (
+  table_name ILIKE '%user%'
+  OR table_name ILIKE '%account%'
+  OR table_name ILIKE '%identity%'
+)
+ORDER BY 1;
+
+B) Find all tenant/org-like tables:
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+AND (
+  table_name ILIKE '%tenant%'
+  OR table_name ILIKE '%org%'
+  OR table_name ILIKE '%company%'
+)
+ORDER BY 1;
+
+C) For each table that looks relevant (cc_users, cc_staging_users, cc_tenants, any other),
+show columns:
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema='public' AND table_name = '<TABLE_NAME>'
+ORDER BY ordinal_position;
+
+2) CODE AUDIT (GREP)
+Search the codebase for ALL references to staging tables and login queries:
+
+- "cc_staging_users"
+- "staging_users"
+- "cc_staging_tenants"
+- "staging_tenants"
+- any direct SQL mentioning those
+- any Drizzle schema exports referencing those
+
+List:
+- file path
+- line numbers
+- what it’s used for (login? seed? admin?)
+
+3) RUNTIME ROUTE AUDIT
+Identify the *exact* login endpoint(s) used by the UI and what table(s) they query:
+- server/routes/auth*.ts
+- server/routes/login*.ts
+- /api/auth/login (or whatever exists)
+
+For each login endpoint, report:
+- request shape
+- table queried
+- password hash verification logic
+- where tokens are issued
+
+4) REQUIRED FIX (if staging is referenced by login)
+Implement:
+- Login and password reset MUST use cc_users only.
+- Any staging user table must never be queried by production login routes.
+- If needed, create a DEV-only migration script to copy staging users into cc_users.
+
+5) TENANT CANONICAL CHECK
+Confirm tenant selection uses:
+- cc_tenants + cc_tenant_users
+and no other tenant-like table.
+
+Deliver a short report:
+- Canonical tables
+- Deprecated tables
+- Remaining references to remove
+- A safe migration plan (additive; DEV-only destructive ok if guarded)
+Proceed.
