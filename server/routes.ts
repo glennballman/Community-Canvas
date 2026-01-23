@@ -137,6 +137,7 @@ import aiRouter from "./routes/ai";
 import { createParticipantTripsRouter } from "./routes/participant-trips";
 import participantRouter from "./routes/participant";
 import contractorRouter from "./routes/contractor";
+import providerRouter from "./routes/provider";
 import contractorIngestionsRouter from "./routes/contractor-ingestions";
 import contractorGeoRouter from "./routes/contractor-geo";
 import contractorEventRouter from "./routes/contractor-event";
@@ -569,6 +570,9 @@ export async function registerRoutes(
 
   // Contractor Onboarding (Prompt A1)
   app.use('/api/contractor', contractorRouter);
+  
+  // Provider Inbox (Service Provider Experience Phase 1)
+  app.use('/api/provider', providerRouter);
   
   // Contractor Ingestions (Prompt A2)
   app.use('/api/contractor/ingestions', contractorIngestionsRouter);

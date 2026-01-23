@@ -82,6 +82,10 @@ import WorkRequestDetail from './pages/WorkRequestDetail';
 import WorkRequestsList from './pages/intake/WorkRequestsList';
 import IntakeWorkRequestDetail from './pages/intake/WorkRequestDetail';
 
+// Pages - Provider (Service Provider Experience Phase 1)
+import ProviderInboxPage from './pages/app/provider/ProviderInboxPage';
+import ProviderRequestDetailPage from './pages/app/provider/ProviderRequestDetailPage';
+
 // Pages - Contractor Preview (PROMPT 8)
 import ContractorWorkRequestPreview from './pages/app/ContractorWorkRequestPreview';
 
@@ -588,6 +592,10 @@ export default function App() {
                 
                 {/* N3-CAL-01: Contractor Calendar - uses ScheduleBoard time spine */}
                 <Route path="contractor/calendar" element={<OpsCalendarBoardPage mode="contractor" />} />
+                
+                {/* Provider Inbox (Service Provider Experience Phase 1) */}
+                <Route path="provider/inbox" element={<ProviderInboxPage />} />
+                <Route path="provider/requests/:id" element={<ProviderRequestDetailPage />} />
                 
                 {/* Resident Calendar (my-place) - uses ScheduleBoard time spine */}
                 <Route path="my-place/calendar" element={<OpsCalendarBoardPage mode="resident" />} />
