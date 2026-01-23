@@ -1,0 +1,102 @@
+REPLIT PROMPT — V3.5 MESSAGING FORENSIC AUDIT (NO MISTAKES)
+
+ROLE: Platform architect + QA authority performing a complete messaging system audit.
+HARD RULES:
+- Do NOT build anything yet.
+- Do NOT refactor.
+- Do NOT speculate — provide file paths, schemas, routes, and evidence.
+- Goal is to fully understand the existing messaging implementation so we can safely extend the EXISTING messages table with ONE column later.
+
+OUTPUT FORMAT (MANDATORY)
+Return a single markdown report with sections A–K below.
+Every claim must include: (1) file path(s) and (2) the relevant function/route/component name.
+Include code excerpts only when necessary (short snippets).
+
+A) DATABASE SCHEMA (AUTHORITATIVE)
+1) List all tables involved in messaging, with columns + constraints:
+- messages (confirm current shape)
+- conversations
+- conversation participants / memberships (whatever it is called)
+- any notifications tables tied to messages
+- any audit/event tables recording message actions
+2) For each table: primary key, foreign keys, indexes, RLS/policies if present.
+3) Confirm whether JSON/metadata columns exist anywhere relevant.
+
+B) ORM / DATA ACCESS LAYER
+1) Identify whether messages are accessed via Drizzle/Prisma/Knex/raw SQL (and where).
+2) List the core data access functions/modules for:
+- list conversations
+- read conversation thread
+- create message
+- update message (if any)
+- delete message (if any)
+3) Identify where tenant context is enforced (JWT, cookies, GUC, etc).
+
+C) AUTHORIZATION MODEL (CRITICAL)
+1) How is membership defined? (conversation participants table? tenant-based? role-based?)
+2) What checks are used for:
+- viewing a conversation
+- posting a message
+- reading messages
+- operator/mod access
+3) Any special “token preview” / public access message views?
+
+D) API ROUTES (COMPLETE INVENTORY)
+List every API route related to messaging:
+- path
+- method
+- handler file path
+- auth requirement
+- response shape (ok/error envelope)
+- any pagination
+Include internal routes used by QA Runner if any.
+
+E) FRONTEND ROUTES + COMPONENTS (COMPLETE INVENTORY)
+1) List every frontend page that shows messaging:
+- route path
+- component path
+2) Identify the canonical message thread component(s) and message bubble renderer.
+3) Identify how messages are rendered (markdown? plain? sanitization? links?).
+
+F) MESSAGE TYPES / ROLES
+1) Enumerate message.role usage (e.g., system/user/assistant/provider/requester/operator).
+2) Identify where role affects rendering or permissions.
+
+G) THREAD CREATION + BINDING (VERY IMPORTANT)
+1) How are conversations created?
+- per work request?
+- per service run?
+- per reservation?
+- per tenant-to-tenant relationship?
+2) Where is the binding stored (foreign keys / linked entity fields)?
+3) Are there multiple “conversation types”? If yes, list them.
+
+H) NOTIFICATIONS + EMAIL INTEGRATION
+1) Does posting a message send email? in-app notifications?
+2) Where are templates defined?
+3) How is “unread” tracked?
+
+I) EXISTING EXTENSIBILITY POINTS
+1) Is there any existing “attachments”, “metadata”, “blocks”, “cards”, “actions”, or “structured payload” concept already?
+2) If yes, list exact fields + usage.
+
+J) RISK REGISTER (NO MISTAKES)
+List the top 15 risks of adding ONE jsonb column `messages.blocks` and rendering it:
+- migrations risk
+- performance risk (large jsonb)
+- caching risk
+- permission risk
+- XSS risk
+- backward compat risk
+For each risk: mitigation recommendation.
+
+K) RECOMMENDED SAFE IMPLEMENTATION PLAN (BASED ON AUDIT)
+Based strictly on findings above, propose:
+1) the exact migration name/number
+2) exact schema/model edit location(s)
+3) exact API endpoints to extend (existing or new additive)
+4) exact UI component(s) to modify for rendering blocks
+5) how to ensure no parallel messaging system is created
+
+FINAL REQUIREMENT
+At the end, include a “Proof Checklist” stating what evidence was collected (tables, routes, components) and what is still unknown (if anything).
