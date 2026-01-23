@@ -273,13 +273,14 @@ router.get('/services', async (req: Request, res: Response) => {
     }));
     
     res.json({
-      success: true,
-      cc_services,
+      ok: true,
+      services: cc_services,
+      cc_services, // deprecated alias - remove after UI migration
       total: cc_services.length
     });
   } catch (err) {
     console.error('Failed to load services:', err);
-    res.status(500).json({ success: false, error: 'Failed to load cc_services' });
+    res.status(500).json({ ok: false, error: 'Failed to load services' });
   }
 });
 
