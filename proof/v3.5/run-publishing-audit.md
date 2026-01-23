@@ -1,7 +1,7 @@
 # V3.5 STEP 5 — Run Publishing Audit
 
 **Date**: 2026-01-23  
-**Status**: BLOCKED — Schema additions required
+**Status**: COMPLETE — Schema additions applied (STEP 5A)
 
 ============================================================
 ## A1) Portal Inventory Discovery
@@ -26,9 +26,9 @@
 ## A2) Existing Run→Portal Publication Discovery
 ============================================================
 
-### Current State
+### Before STEP 5A
 
-**cc_n3_runs schema**:
+**cc_n3_runs schema** (pre-migration):
 | Column | Type | Nullable |
 |--------|------|----------|
 | id | uuid | NO |
@@ -44,28 +44,10 @@
 | portal_id | uuid | YES |
 | zone_id | uuid | YES |
 
-### Finding: SINGLE-PORTAL ONLY
+### Finding: SINGLE-PORTAL ONLY (pre-migration)
 
-- cc_n3_runs has a single `portal_id` column
-- **NO multi-portal publication join table exists**
-- Existing publication tables are for jobs, not runs:
-  - `cc_job_embed_publications`
-  - `cc_job_channel_publications`
-  - `cc_paid_publication_intents`
-
-### Required for STEP 5
-
-A join table is needed to support multi-portal publishing:
-
-```sql
-CREATE TABLE cc_run_portal_publications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  run_id UUID NOT NULL REFERENCES cc_n3_runs(id) ON DELETE CASCADE,
-  portal_id UUID NOT NULL REFERENCES cc_portals(id) ON DELETE CASCADE,
-  published_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(run_id, portal_id)
-);
-```
+- cc_n3_runs had only a single `portal_id` column
+- No multi-portal publication join table existed
 
 ============================================================
 ## A3) Tenant Isolation Enforcement
@@ -90,52 +72,113 @@ Tenant isolation is enforced via `req.ctx?.tenant_id` from global middleware.
 ## A4) market_mode Column Check
 ============================================================
 
-### Finding: COLUMN DOES NOT EXIST
+### Pre-Migration Status: MISSING
+### Post-Migration Status: PRESENT ✅
 
-Query result for `cc_n3_runs.market_mode`:
+============================================================
+## Schema Additions (STEP 5A) — COMPLETE
+============================================================
+
+### Migration File
+`server/migrations/172_run_publishing_schema.sql`
+
+### SQL Executed
+
+```sql
+-- 1) Add market_mode column
+ALTER TABLE cc_n3_runs 
+ADD COLUMN IF NOT EXISTS market_mode TEXT DEFAULT 'INVITE_ONLY';
+
+ALTER TABLE cc_n3_runs
+ADD CONSTRAINT cc_n3_runs_market_mode_check 
+CHECK (market_mode IN ('OPEN', 'INVITE_ONLY', 'CLOSED'));
+
+-- 2) Create multi-portal publication join table
+CREATE TABLE IF NOT EXISTS cc_run_portal_publications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE,
+  run_id UUID NOT NULL REFERENCES cc_n3_runs(id) ON DELETE CASCADE,
+  portal_id UUID NOT NULL REFERENCES cc_portals(id) ON DELETE CASCADE,
+  published_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  published_by_party_id UUID REFERENCES cc_parties(id),
+  unpublished_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id, run_id, portal_id)
+);
+
+-- 3) Indexes
+CREATE INDEX idx_run_portal_publications_run_id ON cc_run_portal_publications(run_id);
+CREATE INDEX idx_run_portal_publications_portal_id ON cc_run_portal_publications(portal_id);
+CREATE INDEX idx_run_portal_publications_tenant_id ON cc_run_portal_publications(tenant_id);
+CREATE INDEX idx_run_portal_publications_active ON cc_run_portal_publications(run_id, portal_id) 
+  WHERE unpublished_at IS NULL;
+
+-- 4) RLS policies
+ALTER TABLE cc_run_portal_publications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY cc_run_portal_publications_tenant_isolation ...
+CREATE POLICY cc_run_portal_publications_service_bypass ...
 ```
-(empty - no rows returned)
+
+### Verification Query Results
+
+**market_mode column**:
+```
+ market_mode | text | 'INVITE_ONLY'::text
 ```
 
-**The `market_mode` column is MISSING from cc_n3_runs.**
+**CHECK constraint**:
+```
+ cc_n3_runs_market_mode_check | ((market_mode = ANY (ARRAY['OPEN'::text, 'INVITE_ONLY'::text, 'CLOSED'::text])))
+```
 
-Per prompt instructions: **STOP and document (do not create)**
+**Join table columns**:
+```
+ id                    | uuid                     | NO
+ tenant_id             | uuid                     | NO
+ run_id                | uuid                     | NO
+ portal_id             | uuid                     | NO
+ published_at          | timestamp with time zone | NO
+ published_by_party_id | uuid                     | YES
+ unpublished_at        | timestamp with time zone | YES
+ created_at            | timestamp with time zone | NO
+```
+
+**RLS status**:
+```
+ cc_run_portal_publications | t (enabled)
+```
+
+**Indexes**:
+```
+ cc_run_portal_publications_pkey
+ cc_run_portal_publications_tenant_id_run_id_portal_id_key
+ idx_run_portal_publications_run_id
+ idx_run_portal_publications_portal_id
+ idx_run_portal_publications_tenant_id
+ idx_run_portal_publications_active
+```
+
+**RLS Policies**:
+```
+ cc_run_portal_publications_service_bypass
+ cc_run_portal_publications_tenant_isolation
+```
+
+### Confirmation Checklist
+
+- [x] market_mode column exists with CHECK constraint
+- [x] cc_run_portal_publications table exists
+- [x] RLS policies are active
+- [x] Indexes are created
+- [x] No other schema changes made
 
 ============================================================
-## BLOCKER SUMMARY
+## READY FOR STEP 5B
 ============================================================
 
-### Missing Schema Elements
-
-1. **cc_n3_runs.market_mode** column
-   - Required values: OPEN | INVITE_ONLY | CLOSED
-   - Default: INVITE_ONLY
-   
-2. **cc_run_portal_publications** table
-   - Required for multi-portal publishing
-   - Current `portal_id` column only supports single portal
-
-### Decision Required
-
-Before proceeding with STEP 5 implementation:
-
-- [ ] Add `market_mode` column to cc_n3_runs
-- [ ] Create cc_run_portal_publications join table
-- [ ] OR: Confirm we should modify approach to use existing portal_id column
-
-============================================================
-## RECOMMENDATION
-============================================================
-
-**Option A**: Add missing schema (preferred)
-- Add market_mode column: `ALTER TABLE cc_n3_runs ADD COLUMN market_mode TEXT DEFAULT 'INVITE_ONLY'`
-- Create cc_run_portal_publications table for multi-portal support
-
-**Option B**: Single-portal only (limited)
-- Use existing portal_id column
-- Only supports publishing to ONE portal per run
-- Does not meet STEP 5 spec for "multiple portals"
-
-**Awaiting confirmation before proceeding.**
+Schema foundation is complete. Ready for implementation:
+- POST /api/provider/runs/:id/publish endpoint
+- Publish modal UI with portal selection + market mode
 
 END.
