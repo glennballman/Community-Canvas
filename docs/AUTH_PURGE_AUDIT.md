@@ -201,20 +201,61 @@ DROP TABLE IF EXISTS cc_legacy_vehicle_profiles CASCADE;
 
 ---
 
-## Files to Purge/Modify
+## Phase 8: Calendar Purge & Host Tables Drop (2026-01-23)
 
-### DELETE entirely:
-- None (stagingStorage.ts has non-auth uses)
+### A) Calendar Components Purged
 
-### HEAVY MODIFICATION:
-- `server/routes/auth.ts` - Remove ALL staging fallbacks
-- `server/services/hostAuthService.ts` - Evaluate if still needed
+**Apple-style calendar components moved to _deprecated/:**
+- `CalendarGrid.tsx` → `client/src/_deprecated/`
+- `CalendarRunCard.tsx` → `client/src/_deprecated/`
+- `ContractorCalendarPage.tsx` → `client/src/_deprecated/`
+- `ResidentCalendarPage.tsx` → `client/src/_deprecated/`
+- `PortalCalendarPage.tsx` → `client/src/_deprecated/`
 
-### LIGHT MODIFICATION:
-- `client/src/pages/crew/AccommodationSearch.tsx` - Check staging references
+**Sole Calendar Source:**
+- `OpsCalendarBoardPage.tsx` - Uses ScheduleBoard time spine
+- DEV-only route identity banner shows "mode" and "ScheduleBoard" source
+
+### B) Host Auth Tables Dropped
+
+**Tables dropped (0 rows each, no data loss):**
+```sql
+DROP TABLE cc_host_sessions CASCADE;  -- FK removed from cc_host_accounts
+DROP TABLE cc_host_accounts CASCADE;  -- FKs removed from cc_rental_inventory, cc_staging_ical_feeds
+```
+
+**Orphaned columns dropped:**
+```sql
+ALTER TABLE cc_rental_inventory DROP COLUMN owner_host_id;
+ALTER TABLE cc_staging_ical_feeds DROP COLUMN host_account_id;
+```
+
+### C) Lint Gate Updated
+
+`scripts/auth-purge-lint.ts` now catches:
+- All legacy auth table references
+- Host auth tables: `cc_host_accounts`, `cc_host_sessions`
+- Deprecated calendar components: `CalendarGrid`, `CalendarRunCard`, `ContractorCalendarPage`, `ResidentCalendarPage`, `PortalCalendarPage`
+
+### D) Verification Results
+
+**Lint check: PASSED**
+```
+✅ No forbidden staging/legacy auth patterns found!
+AUTH PURGE LINT: PASSED
+```
+
+**Auth response envelope: CLEAN**
+- `ok: true` - 11 instances in auth.ts
+- `success: true` - 0 instances in auth.ts
 
 ---
 
-## Status: AUDIT COMPLETE
+## Status: COMPLETE
 
-Proceeding to Phase 1: Canonical Auth Implementation
+Auth V3.5 zero-debt canonicalization complete:
+- 13 legacy auth tables dropped
+- 2 host auth tables dropped  
+- cc_users is sole identity table
+- Apple-style calendar purged
+- Lint gate prevents regression
