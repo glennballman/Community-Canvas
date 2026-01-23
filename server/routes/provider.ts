@@ -131,6 +131,7 @@ router.get('/requests/:id', requireAuth, async (req: AuthRequest, res: Response)
         sr.preferred_time_end,
         sr.location_text,
         sr.notes,
+        sr.thread_id,
         COALESCE(p.display_name, p.given_name || ' ' || COALESCE(p.family_name, '')) as requester_name,
         p.email as requester_email,
         EXISTS (

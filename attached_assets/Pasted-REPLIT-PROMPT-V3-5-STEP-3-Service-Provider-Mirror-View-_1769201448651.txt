@@ -1,0 +1,168 @@
+REPLIT PROMPT — V3.5 STEP 3 — Service Provider Mirror View (Read-Only Default, Action-Blocks-Only Writes) — v2 (Nav Fallback + OpsSchedule Canon + Completion Criteria)
+
+ROLE: Senior Platform Engineer implementing V3.5 Service Provider Mirror View.
+MODE: Additive-only. No refactors. No parallel implementations. Evidence-based.
+
+HARD RULES
+- Use “service provider” (never contractor).
+- Use “reserve / reservation” (never booking).
+- Mirror View is READ-ONLY by default.
+- ALL state-changing actions must flow exclusively through:
+  (a) existing MarketMode-gated CTAs that already exist today, OR
+  (b) Message Action Blocks (POST /api/messages/:messageId/action).
+- Do not create new inboxes, new threads, or new conversation UIs.
+- Do not reintroduce duplicate Operations/Schedule surfaces.
+- The banned word “calendar” must NOT appear in any NEW code. Prefer “schedule” / “operations”.
+- Canonical schedule view is SINGLE-SOURCE (see STEP 1): OpsCalendarBoardPage.tsx (do not create alternatives).
+- Do not bypass auth/RLS. No public viewer action leakage.
+
+EVIDENCE / KNOWN PATHS (from audit + Step 2)
+Messaging UI:
+- client/src/components/conversations/ConversationView.tsx (wired for action blocks)
+- client/src/components/jobs/JobConversationPanel.tsx (wired for action blocks)
+
+Provider pages (list/detail, no inline thread confirmed in Step 2 proof):
+- client/src/pages/provider/ProviderInboxPage.tsx
+- client/src/pages/provider/ProviderRequestDetailPage.tsx
+
+Messaging API:
+- POST /api/messages/:messageId/action (Step 1)
+- Existing conversation APIs under /api/conversations/... (read/post/mark-read)
+
+KNOWN CANONICAL SCHEDULE VIEW (from ops/schedule purge)
+- OpsCalendarBoardPage.tsx (canonical schedule board page) with a mode parameter
+- ScheduleBoard.tsx (time spine component)
+NOTE: If naming differs in repo, find the canonical ops/schedule board equivalent and document it.
+
+GOAL
+Restore/complete the Service Provider Mirror View so service providers can:
+1) View relevant workflow context (service requests, jobs, reservations) mirrored, read-only.
+2) Take ONLY explicitly allowed actions via:
+   - Message Action Blocks embedded in threads, OR
+   - pre-existing MarketMode-gated CTAs (no new CTA surfaces).
+3) Ensure provider Operations/Schedule nav points ONLY to canonical OpsCalendarBoardPage (or canonical equivalent).
+
+DELIVERABLES
+A) Inventory & Proof: proof/v3.5/service-provider-mirror-audit.md
+B) Nav/route corrections to remove duplicate provider Ops/Schedule entrypoints (redirect + nav wiring) without refactor
+C) Mirror view completion (ONLY if incomplete) reusing existing components:
+   - workflow detail read-only
+   - link to ConversationView / JobConversationPanel where applicable
+D) Proof report: proof/v3.5/service-provider-mirror-proof.md
+
+DEFINITION: “COMPLETE” (SKIP MODIFICATION IF TRUE)
+A provider mirror page is COMPLETE if:
+- It renders workflow detail read-only (no new mutation controls)
+- It links to existing ConversationView/JobConversationPanel for messaging IF a thread exists
+- It does NOT add duplicate action buttons outside Message Action Blocks / existing CTAs
+- It respects isPublicViewer gating (no action leakage)
+If a page meets all criteria, document it as COMPLETE in the audit and do not modify it.
+
+STEP 0 — PROOF-GRADE INVENTORY (NO CHANGES YET)
+Create: proof/v3.5/service-provider-mirror-audit.md
+
+0.1 Navigation source-of-truth (avoid guessing)
+The prompt references:
+- final-navigation-proposal.md
+- nav-wiring-targets.md
+These may or may not exist in the repo.
+If they do exist in-repo, cite their paths and use them.
+If NOT found:
+- Locate navigation config by searching:
+  rg -n "navItems|navigation|sideNav|leftNav|routes|final navigation" client/src
+- Identify the canonical nav config file(s) and document which file is used as source of truth.
+
+0.2 Provider mirror routes/pages inventory
+- rg -n "ProviderInboxPage|ProviderRequestDetailPage" client/src
+- rg -n "/provider" client/src
+- rg -n "service provider" client/src/pages/provider client/src/components  (ensure terminology)
+List every provider route + page component.
+
+0.3 Provider context discovery (specific search hints)
+Identify how provider context / role is determined:
+- rg -n "isProvider|providerMode|actorRole|currentRole" client/src
+- rg -n "useProvider|ProviderContext" client/src
+- identify any role/actor switcher component
+Document: where role is derived, stored, and passed to pages.
+
+0.4 Ops/Schedule duplication discovery (and banned term check)
+- rg -n "OpsCalendarBoardPage" client/src
+- rg -n "ScheduleBoard" client/src
+- rg -n "Operations" client/src
+- rg -n "Schedule" client/src
+- rg -n "calendar" client/src  (should not be introduced newly; report any existing legacy mentions)
+List:
+- canonical ops/schedule view file(s)
+- any other provider-facing schedule components/routes (duplicates)
+
+STOP and write the audit doc first. Then proceed.
+
+STEP 1 — NAV + ROUTE WIRING: ENFORCE SINGLE CANONICAL OPS/SCHEDULE ENTRYPOINT
+Objective: provider must have ONE canonical Operations/Schedule entrypoint.
+
+Rules:
+- Do not delete large components unless clearly dead and safe.
+- Prefer:
+  - updating nav wiring to point to canonical route
+  - adding lightweight redirects from deprecated provider ops/schedule routes to canonical
+  - leaving old components untouched but unreachable
+
+Implementation:
+1) Confirm canonical provider operations route that renders OpsCalendarBoardPage.tsx
+   - Confirm the mode parameter used for provider context:
+     - mode='contractor' may exist historically; prefer a neutral mode like 'service_provider' ONLY if already used in repo.
+     - Do not rename modes unless already present.
+2) For any duplicate provider ops/schedule route:
+   - Add redirect to canonical route, preserving query params.
+3) Update provider nav config so only the canonical Operations/Schedule item is visible.
+
+Proof must include:
+- list of provider nav items before/after
+- list of routes redirected
+- file paths modified
+
+STEP 2 — MIRROR VIEW: READ-ONLY WORKFLOW DETAIL (ONLY IF INCOMPLETE)
+Mirror view lets service providers understand context and respond safely.
+
+A) Provider Service Request detail (read-only)
+- show request summary + attachments/notes read-only
+- IF a linked conversation exists: provide a link to existing ConversationView route (preferred)
+- Do NOT embed a new thread renderer if that creates a parallel surface
+- rely on Message Action Blocks inside the thread for decisions
+
+B) Provider Job context (read-only)
+- show job match/application context read-only
+- link to JobConversationPanel thread route (already wired for action blocks)
+- no new decision buttons unless they already existed + are MarketMode-gated
+
+C) Provider Reservation context (read-only)
+- show reservation summary read-only
+- IF a conversation thread exists for this reservation, link to ConversationView
+- IF no conversation exists, DO NOT create one; show a “No messages” state
+- do not add reservation mutation controls unless already present + policy-gated
+
+STEP 3 — THREAD LINKS MUST REUSE EXISTING THREAD UI (NO DUPLICATES)
+- Provider pages should link into existing ConversationView / JobConversationPanel routes.
+- Do NOT create ProviderConversationPanel variants.
+- If a provider page currently does not render threads (confirmed in Step 2 proof), keep it that way; link out instead.
+
+STEP 4 — POLICY + PUBLIC VIEWER SAFETY CHECKS
+1) Confirm provider mirror pages never render action controls in public viewer mode:
+- ensure isPublicViewer gating is applied where ConversationView is used
+2) Confirm MarketMode gating remains source of truth for any existing CTAs
+3) Confirm no new write actions appear outside:
+- MessageActionBlock endpoint OR existing CTAs that already existed pre-Step3
+
+STEP 5 — PROOF
+Write: proof/v3.5/service-provider-mirror-proof.md
+Include:
+- file paths modified/created
+- nav wiring changes + redirects
+- proof excerpts that:
+  - mirror view is read-only default
+  - no duplicate Ops/Schedule entrypoints remain
+  - reservation pages do not create conversations
+  - state changes only via action blocks or existing CTAs
+  - no NEW “calendar” mentions introduced
+
+END.

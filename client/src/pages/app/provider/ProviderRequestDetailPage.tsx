@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, User, Check, 
   X, MessageSquare, AlertTriangle, FileText
@@ -61,6 +61,7 @@ interface ServiceRequest {
   location_text: string | null;
   has_active_proposal: boolean;
   notes: string | null;
+  thread_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -334,7 +335,16 @@ export default function ProviderRequestDetailPage() {
                 </Button>
               ))}
 
-              {!primaryAction && !secondaryActions.length && !dangerActions.length && (
+              {request.thread_id && (
+                <Button asChild variant="outline" className="w-full">
+                  <Link to="/app/messages" data-testid="link-view-messages">
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    View Messages
+                  </Link>
+                </Button>
+              )}
+
+              {!primaryAction && !secondaryActions.length && !dangerActions.length && !request.thread_id && (
                 <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-no-actions">
                   {resolve('ui.no_actions', { request: nouns.request })}
                 </p>
