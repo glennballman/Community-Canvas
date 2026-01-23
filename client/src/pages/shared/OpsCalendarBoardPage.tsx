@@ -368,6 +368,13 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
       className="h-full flex flex-col" 
       data-testid={getTestId()}
     >
+      {/* DEV-only route identity banner */}
+      {import.meta.env.DEV && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-3 py-1 text-xs text-yellow-700 dark:text-yellow-400 flex items-center gap-2">
+          <span className="font-mono font-medium">OpsCalendarBoardPage (mode="{mode}")</span>
+          <span className="text-muted-foreground">| Time spine: ScheduleBoard</span>
+        </div>
+      )}
       {mode === 'portal' && portalSlug && (
         <PortalConditionsBar portalSlug={portalSlug} compact />
       )}

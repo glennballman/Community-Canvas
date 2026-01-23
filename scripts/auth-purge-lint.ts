@@ -1,8 +1,9 @@
 #!/usr/bin/env npx tsx
 /**
- * AUTH PURGE LINT SCRIPT
+ * AUTH + CALENDAR PURGE LINT SCRIPT
  * 
- * This script fails the build if any legacy/staging auth references exist in the codebase.
+ * This script fails the build if any legacy/staging auth references or
+ * deprecated calendar components exist in the active codebase.
  * Run as part of CI/lint to prevent regression.
  * 
  * Usage: npx tsx scripts/auth-purge-lint.ts
@@ -12,6 +13,7 @@ import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 
 const FORBIDDEN_PATTERNS = [
+  // Auth patterns
   'cc_staging_users',
   'cc_staging_sessions', 
   'cc_staging_password_resets',
@@ -19,10 +21,18 @@ const FORBIDDEN_PATTERNS = [
   'cc_staging_host_sessions',
   'cc_staging_user_favorites',
   'cc_staging_user_vehicles',
+  'cc_host_accounts',
+  'cc_host_sessions',
   'cc_legacy_',
   'staging_users',
   'source.*cc_staging',
   'migrated_from_staging',
+  // Calendar patterns (Apple-style calendar must be purged)
+  'CalendarGrid',
+  'CalendarRunCard',
+  'ContractorCalendarPage',
+  'ResidentCalendarPage',
+  'PortalCalendarPage',
 ];
 
 const SEARCH_DIRS = ['server', 'client', 'shared'];
