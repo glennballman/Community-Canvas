@@ -1,0 +1,94 @@
+ROLE: Senior platform engineer performing proof-grade audit for Messaging/Conversations in Community Canvas / CivOS V3.5.
+MODE: Evidence-only. No speculation. Output must include file paths, code excerpts, and DB schema evidence.
+
+HARD RULES:
+- Use “service provider” (never “contractor”).
+- Use “reserve/reservation” (never “booking”).
+- Do not propose new architecture. Audit only.
+- Provide proof for tables, routes, permissions, UI components.
+- If something is missing, explicitly say “NOT FOUND” with what you searched.
+
+DELIVERABLE: Create `proof/v3.5/messaging-audit.md` with the following sections and evidence.
+
+A) Database Proof (Schema + RLS)
+1) List all tables related to messaging/conversations, including:
+   - conversations, messages, threads, participants, attachments, read-receipts, action blocks, templates
+2) For each table:
+   - table name
+   - columns (name, type, nullability, defaults)
+   - primary key
+   - foreign keys
+   - indexes
+   - triggers (if any)
+   - RLS enabled? (yes/no)
+   - policies (full text)
+3) Provide SQL used to gather evidence.
+4) Confirm whether any messaging tables are “cc_*” prefixed and whether any non-cc tables exist.
+
+Required SQL evidence (run and paste results):
+- SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name ILIKE '%message%' OR table_name ILIKE '%conversation%' OR table_name ILIKE '%thread%' OR table_name ILIKE '%participant%' OR table_name ILIKE '%inbox%';
+- For each discovered table:
+  - \d+ table_name output (or equivalent query for columns, indexes, constraints)
+- SELECT relname, relrowsecurity FROM pg_class WHERE relname IN (<list>);
+- SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check FROM pg_policies WHERE tablename IN (<list>) ORDER BY tablename, policyname;
+
+B) API Routes Proof (Server)
+1) Enumerate all API endpoints handling messaging/conversations:
+   - method + path
+   - handler file path
+   - request/response shape (include the envelope {ok, error?, ...data})
+   - auth requirements (Bearer JWT, any special headers)
+2) For each endpoint, paste the core logic excerpt (enough to prove access control and data flow).
+3) Identify how tenant/portal/circle context is applied (GUC, middleware, query filters).
+4) Explicitly identify any endpoints that allow creating messages, listing inbox, reading a thread, updating status (read), uploading attachments.
+
+How to find (do this and paste evidence):
+- Ripgrep for route registrations:
+  - rg -n "message|messages|conversation|conversations|inbox|thread|threads|participant|participants" server src api routes
+- Ripgrep for DB calls:
+  - rg -n "cc_messages|messages|conversations|thread|inbox" .
+- Paste exact file paths and relevant excerpts.
+
+C) Permissions / Access Control Proof
+1) Identify the authoritative permission checks:
+   - middleware
+   - role gates (tenant vs service provider vs admin vs public)
+   - portal membership / job match linkage (if used)
+2) Show the exact code that prevents cross-tenant reads/writes.
+3) Show how “public viewer gating” interacts with messaging (should be blocked).
+4) Confirm MarketMode Policy behavior for CTAs in messaging UI (if present).
+
+D) UI Components Proof (Client)
+1) Enumerate all UI pages/components for messaging:
+   - Inbox
+   - Thread view
+   - Compose / reply
+   - Participant list
+   - Any “Accept / Propose / Decline” flows
+2) For each component:
+   - file path
+   - key props/state
+   - API calls used
+   - where the CTA logic lives (MarketMode enforcement point)
+3) Identify whether “Message Action Blocks” exist today in any form.
+4) Include screenshots not required; code evidence is required.
+
+How to find:
+- rg -n "Inbox|Thread|Conversation|Message|Propose|Accept|Decline" client/src
+- Identify routes in client router that link to messaging.
+
+E) Duplicate / Conflicting Implementations Check
+1) Confirm whether there are multiple inbox implementations or multiple message schemas.
+2) If duplicates exist, list each and explain which is used (based on imports/routes).
+3) Do NOT refactor; just document.
+
+F) Minimal SAFE Additive Extension Constraints (NO implementation yet)
+Based ONLY on the audit evidence, add a short section:
+- What is safe to extend additively (e.g., new column, new table, new endpoint)
+- What is NOT safe (would cause parallel system or refactor)
+- What proof is still missing (if any)
+
+OUTPUT REQUIREMENTS
+- Write the report to: proof/v3.5/messaging-audit.md
+- Use headings and bullet lists.
+- Every claim must have a citation: either SQL output snippet or code excerpt with file path + line numbers.
