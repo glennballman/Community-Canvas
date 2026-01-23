@@ -13,6 +13,7 @@
 | `client/src/api/messageActions.ts` | Created | API client helper for action blocks |
 | `client/src/components/messaging/MessageActionBlock.tsx` | Created | BlockRenderer component |
 | `client/src/components/conversations/ConversationView.tsx` | Modified | Wire action block rendering |
+| `client/src/components/jobs/JobConversationPanel.tsx` | Modified | Wire action block rendering for job conversations |
 | `client/src/copy/entryPointCopy.ts` | Modified | Add copy tokens |
 | `proof/v3.5/message-action-blocks-ui.md` | Created | This document |
 
@@ -100,6 +101,8 @@ const canDecline = canDo('decline');
 const canAnswer = canDo('answer') || canDo('ack');
 const canAcknowledge = canDo('acknowledge') || canDo('ack');
 const canCounter = canDo('counter') || canDo('propose_change');
+const canDeposit = canDo('deposit') || canDo('pay');
+const canSign = canDo('sign') || canDo('signature');
 ```
 
 **Allowed Actions per BlockType** (matches server):
@@ -118,15 +121,47 @@ const mapping: Record<ActionBlockV1['blockType'], ActionType[]> = {
 };
 ```
 
-**Link-out Handling** (deposit_request/signature_request):
+**Link-out Handling** (deposit_request/signature_request with MarketMode gating):
 ```typescript
 if (isLinkOut && actionBlock.ctaUrl) {
+  // MarketMode gating for link-out CTAs
+  const canLinkOut = actionBlock.blockType === 'deposit_request' ? canDeposit :
+                     actionBlock.blockType === 'signature_request' ? canSign : true;
+  if (!canLinkOut) return null;
+  
   return (
     <Button variant="outline" size="sm" asChild>
       <a href={actionBlock.ctaUrl} target="_blank" rel="noreferrer noopener">
         Continue <ExternalLink className="ml-2 h-3 w-3" />
       </a>
     </Button>
+  );
+}
+```
+
+**Multi-Question Handling** (payload.questions array → multiAnswers state):
+```typescript
+if (blockType === 'multi_question') {
+  const questions = (payload as { questions?: Array<{ id: string; text: string }> }).questions || [];
+  const allAnswered = questions.every(q => multiAnswers[q.id]?.trim());
+  
+  return (
+    <div className="space-y-3 w-full">
+      {questions.map((q, idx) => (
+        <div key={q.id || idx} className="space-y-1">
+          <label className="text-xs text-muted-foreground">{q.text}</label>
+          <Input
+            value={multiAnswers[q.id] || ''}
+            onChange={(e) => setMultiAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+            placeholder="Your answer..."
+            disabled={isLoading}
+          />
+        </div>
+      ))}
+      <Button onClick={handleMultiAnswer} disabled={isLoading || !allAnswered} size="sm">
+        Submit All
+      </Button>
+    </div>
   );
 }
 ```
@@ -236,6 +271,57 @@ const handleActionComplete = useCallback((messageId: string, newActionBlock: Act
 
 ---
 
+## E) JobConversationPanel Wiring
+
+### E.1 File: `client/src/components/jobs/JobConversationPanel.tsx`
+
+**Imports Added**:
+```typescript
+import { MessageActionBlock } from '@/components/messaging/MessageActionBlock';
+import { useMarketActions } from '@/policy/useMarketActions';
+import type { ActionBlockV1 } from '@/api/messageActions';
+```
+
+**Message Interface Extended**:
+```typescript
+interface Message {
+  id: string;
+  content: string;
+  message_type: string;
+  sender_display_name: string;
+  sender_role: 'me' | 'them' | 'system';
+  was_redacted: boolean;
+  created_at: string;
+  action_block?: ActionBlockV1;  // NEW
+}
+```
+
+**MarketActions Hook Usage**:
+```typescript
+const marketActions = useMarketActions({
+  objectType: 'service_request',
+  actorRole: 'operator',
+  marketMode: 'TARGETED',
+  visibility: 'PRIVATE',
+  requestStatus: 'AWAITING_RESPONSE',
+  hasTargetProvider: true,
+  hasActiveProposal: false,
+  entryPoint: 'service',
+});
+```
+
+**Action Complete Handler**:
+```typescript
+const handleActionComplete = useCallback((messageId: string, newActionBlock: ActionBlockV1) => {
+  setLocalMessages(prev => prev.map(msg => 
+    msg.id === messageId ? { ...msg, action_block: newActionBlock } : msg
+  ));
+  refetch();
+}, [refetch]);
+```
+
+---
+
 ## F) Provider Pages Analysis
 
 ### F.1 ProviderInboxPage.tsx
@@ -256,6 +342,7 @@ const handleActionComplete = useCallback((messageId: string, newActionBlock: Act
 | Component | Has Thread? | Wired? |
 |-----------|-------------|--------|
 | ConversationView.tsx | Yes | ✅ |
+| JobConversationPanel.tsx | Yes | ✅ |
 | ProviderInboxPage.tsx | No (list only) | N/A |
 | ProviderRequestDetailPage.tsx | No (detail only) | N/A |
 | ConversationList.tsx | No (list only) | N/A |
