@@ -35,7 +35,11 @@ async function logDemoRow(tableName: string, rowId: string): Promise<void> {
 }
 
 router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
-  if (!checkDemoGuard(req, res)) return;
+  // DEV mode bypass - no tenant context required
+  const IS_DEV_MODE = process.env.NODE_ENV !== 'production';
+  if (!IS_DEV_MODE && !isDemoMode()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
 
   const summary = {
     portal: 0,
@@ -48,14 +52,21 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
     photoBundles: 0,
     staffBlocks: 0,
     dependencyRules: 0,
+    demoAlerts: 0,
   };
 
+  let currentStep = 'init';
+  
   try {
     let portalId: string;
     let tenantId: string;
     let ellenUserId: string;
     let wadeUserId: string;
+    let ellenTenantId: string; // Ellen's own tenant (Enviropaving)
+    let wadeTenantId: string;  // Wade's own tenant
 
+    // STEP 1: Create or find Bamfield Community Portal's owning tenant
+    currentStep = 'create_bamfield_portal';
     const existingPortal = await serviceQuery(
       "SELECT id, owning_tenant_id FROM cc_portals WHERE slug = 'bamfield'"
     );
@@ -64,24 +75,19 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       portalId = existingPortal.rows[0].id;
       tenantId = existingPortal.rows[0].owning_tenant_id;
     } else {
-      const tenantResult = await serviceQuery(`
-        SELECT id FROM cc_tenants WHERE name ILIKE '%1252093 BC%' OR name ILIKE '%Enviropaving%'
-        LIMIT 1
+      // Create a community tenant to own the Bamfield portal
+      currentStep = 'create_bamfield_tenant';
+      const communityTenant = await serviceQuery(`
+        INSERT INTO cc_tenants (name, slug, tenant_type, status)
+        VALUES ('Bamfield Community Association', 'bamfield-community', 'community', 'active')
+        ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+        RETURNING id
       `);
+      tenantId = communityTenant.rows[0].id;
+      await logDemoRow('cc_tenants', tenantId);
+      summary.tenant++;
 
-      if (tenantResult.rows.length > 0) {
-        tenantId = tenantResult.rows[0].id;
-      } else {
-        const newTenant = await serviceQuery(`
-          INSERT INTO cc_tenants (name, status)
-          VALUES ('1252093 BC LTD', 'active')
-          RETURNING id
-        `);
-        tenantId = newTenant.rows[0].id;
-        await logDemoRow('cc_tenants', tenantId);
-        summary.tenant = 1;
-      }
-
+      currentStep = 'create_bamfield_portal_record';
       const portalResult = await serviceQuery(`
         INSERT INTO cc_portals (slug, name, owning_tenant_id, status)
         VALUES ('bamfield', 'Bamfield Community', $1, 'active')
@@ -92,6 +98,28 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       summary.portal = 1;
     }
 
+    // STEP 2: Create Ellen's Enviropaving tenant (SEPARATE from Bamfield)
+    currentStep = 'create_ellen_tenant';
+    const ellenTenantResult = await serviceQuery(`
+      INSERT INTO cc_tenants (name, slug, tenant_type, settings, status)
+      VALUES ('1252093 BC LTD', '1252093-bc-ltd', 'business', $1, 'active')
+      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id
+    `, [JSON.stringify({ dbaNames: ['Enviropaving', 'Remote Services Inc'] })]);
+    ellenTenantId = ellenTenantResult.rows[0].id;
+
+    // STEP 3: Create Wade's personal tenant
+    currentStep = 'create_wade_tenant';
+    const wadeTenantResult = await serviceQuery(`
+      INSERT INTO cc_tenants (name, slug, tenant_type, status)
+      VALUES ('Wade Residence', 'wade-residence', 'individual', 'active')
+      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id
+    `, []);
+    wadeTenantId = wadeTenantResult.rows[0].id;
+
+    // STEP 4: Create zones
+    currentStep = 'create_zones';
     const zones = [
       { key: 'east-bamfield', name: 'East Bamfield' },
       { key: 'west-bamfield', name: 'West Bamfield' },
@@ -121,6 +149,8 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       }
     }
 
+    // STEP 5: Create Ellen user
+    currentStep = 'create_ellen_user';
     const passwordHash = await bcrypt.hash('ellen123!', 12);
 
     const ellenExisting = await serviceQuery(
@@ -140,6 +170,8 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       summary.users++;
     }
 
+    // STEP 6: Create Wade user
+    currentStep = 'create_wade_user';
     const wadePasswordHash = await bcrypt.hash('wade123!', 12);
     const wadeExisting = await serviceQuery(
       "SELECT id FROM cc_users WHERE email = 'wade@example.com'"
@@ -158,20 +190,40 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       summary.users++;
     }
 
+    // STEP 7: Create tenant memberships - Ellen belongs to HER tenant (Enviropaving), not Bamfield
+    currentStep = 'create_ellen_membership';
     const ellenMembership = await serviceQuery(`
       SELECT id FROM cc_tenant_users WHERE user_id = $1 AND tenant_id = $2
-    `, [ellenUserId, tenantId]);
+    `, [ellenUserId, ellenTenantId]);
 
     if (ellenMembership.rows.length === 0) {
       const result = await serviceQuery(`
         INSERT INTO cc_tenant_users (user_id, tenant_id, role, status)
         VALUES ($1, $2, 'admin', 'active')
         RETURNING id
-      `, [ellenUserId, tenantId]);
+      `, [ellenUserId, ellenTenantId]);
       await logDemoRow('cc_tenant_users', result.rows[0].id);
       summary.memberships++;
     }
 
+    // STEP 8: Create Wade's membership to HIS tenant
+    currentStep = 'create_wade_membership';
+    const wadeMembership = await serviceQuery(`
+      SELECT id FROM cc_tenant_users WHERE user_id = $1 AND tenant_id = $2
+    `, [wadeUserId, wadeTenantId]);
+
+    if (wadeMembership.rows.length === 0) {
+      const result = await serviceQuery(`
+        INSERT INTO cc_tenant_users (user_id, tenant_id, role, status)
+        VALUES ($1, $2, 'admin', 'active')
+        RETURNING id
+      `, [wadeUserId, wadeTenantId]);
+      await logDemoRow('cc_tenant_users', result.rows[0].id);
+      summary.memberships++;
+    }
+
+    // STEP 9: Create contractor profile for Ellen
+    currentStep = 'create_ellen_contractor_profile';
     const ellenProfile = await serviceQuery(`
       SELECT id FROM cc_contractor_profiles WHERE user_id = $1
     `, [ellenUserId]);
@@ -184,17 +236,19 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
         INSERT INTO cc_contractor_profiles (user_id, portal_id, tenant_id, company_name, onboarding_complete, contractor_role)
         VALUES ($1, $2, $3, 'Enviropaving', true, 'contractor_admin')
         RETURNING id
-      `, [ellenUserId, portalId, tenantId]);
+      `, [ellenUserId, portalId, ellenTenantId]);
       contractorProfileId = result.rows[0].id;
       await logDemoRow('cc_contractor_profiles', contractorProfileId);
       summary.contractorProfiles++;
     }
 
+    // STEP 10: Create N3 runs (Ellen's service runs in Bamfield)
+    currentStep = 'create_n3_runs';
     const existingDemoRuns = await serviceQuery(`
       SELECT id FROM cc_n3_runs 
       WHERE tenant_id = $1 
       AND metadata->>'demoBatchId' = $2
-    `, [tenantId, DEMO_BATCH_ID]);
+    `, [ellenTenantId, DEMO_BATCH_ID]);
 
     if (existingDemoRuns.rows.length === 0) {
       const now = new Date();
@@ -220,7 +274,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING id
         `, [
-          tenantId,
+          ellenTenantId,
           run.name,
           `Demo run for ${run.zone}`,
           run.status,
@@ -238,6 +292,8 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       }
     }
 
+    // STEP 11: Create photo bundles
+    currentStep = 'create_photo_bundles';
     const existingBundles = await serviceQuery(`
       SELECT id FROM cc_contractor_photo_bundles 
       WHERE contractor_profile_id = $1 
@@ -263,7 +319,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
         RETURNING id
       `, [
         contractorProfileId,
-        tenantId,
+        ellenTenantId,
         bundleStart.toISOString(),
         bundleEnd.toISOString(),
         JSON.stringify({ demoBatchId: DEMO_BATCH_ID, events: [] })
@@ -272,11 +328,13 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       summary.photoBundles++;
     }
 
+    // STEP 12: Create staff availability blocks
+    currentStep = 'create_staff_blocks';
     const existingBlocks = await serviceQuery(`
       SELECT id FROM cc_staff_availability_blocks 
       WHERE tenant_id = $1 
       AND reason LIKE '%demoBatchId%'
-    `, [tenantId]);
+    `, [ellenTenantId]);
 
     if (existingBlocks.rows.length === 0) {
       const now = new Date();
@@ -288,7 +346,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
         VALUES ($1, $2, 'unavailable', $3, $4, $5)
         RETURNING id
       `, [
-        tenantId,
+        ellenTenantId,
         ellenUserId,
         blockStart.toISOString(),
         blockEnd.toISOString(),
@@ -298,6 +356,8 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       summary.staffBlocks++;
     }
 
+    // STEP 13: Create dependency rules
+    currentStep = 'create_dependency_rules';
     const existingRules = await serviceQuery(`
       SELECT id FROM cc_portal_dependency_rules 
       WHERE portal_id = $1 
@@ -348,12 +408,12 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
       }
     }
 
-    // Seed demo alerts for Command Console testing
+    // STEP 14: Seed demo alerts for Command Console testing
+    currentStep = 'create_demo_alerts';
     const existingAlerts = await serviceQuery(`
       SELECT id FROM cc_alerts WHERE source_key = 'demo-seed' LIMIT 1
     `);
 
-    let demoAlerts = 0;
     if (existingAlerts.rows.length === 0) {
       const demoAlertsData = [
         {
@@ -404,24 +464,43 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
           alert.details,
         ]);
         await logDemoRow('cc_alerts', result.rows[0].id);
-        demoAlerts++;
+        summary.demoAlerts++;
       }
     }
 
+    // Return full response with all IDs for demo flow
+    currentStep = 'complete';
     res.json({
       ok: true,
       demoBatchId: DEMO_BATCH_ID,
-      summary: { ...summary, demoAlerts },
+      summary,
+      bamfieldPortalId: portalId,
+      bamfieldTenantId: tenantId,
+      ellenUserId,
+      ellenTenantId,
+      wadeUserId,
+      wadeTenantId,
+      // Legacy fields for backwards compat
       portalId,
       tenantId,
       users: {
-        ellen: { id: ellenUserId, email: 'ellen@example.com' },
-        wade: { id: wadeUserId, email: 'wade@example.com' },
+        ellen: { id: ellenUserId, email: 'ellen@example.com', tenantId: ellenTenantId },
+        wade: { id: wadeUserId, email: 'wade@example.com', tenantId: wadeTenantId },
       },
     });
-  } catch (err) {
-    console.error('[Demo Seed] Error:', err);
-    res.status(500).json({ error: 'Demo seed failed', details: String(err) });
+  } catch (err: any) {
+    console.error('[DEMO_SEED_FAIL]', { 
+      message: err?.message || String(err), 
+      step: currentStep, 
+      err 
+    });
+    res.status(500).json({ 
+      ok: false, 
+      error: 'demo_seed_failed',
+      message: err?.message || String(err),
+      step: currentStep,
+      detail: String(err)
+    });
   }
 });
 

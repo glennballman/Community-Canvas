@@ -225,6 +225,7 @@ import OnboardingResultsPage from './pages/app/OnboardingResultsPage';
 
 // Pages - Dev Tools (M-2)
 import DevMediaPage from './pages/app/dev/DevMediaPage';
+import DemoLauncherPage from './pages/app/dev/DemoLauncherPage';
 
 // Pages - Fleet (P-UI-15)
 import FleetPage from './pages/app/fleet/FleetPage';
@@ -593,6 +594,7 @@ export default function App() {
                 
                 {/* Dev Tools (M-2) */}
                 <Route path="dev/media" element={<DevMediaPage />} />
+                <Route path="dev/demo" element={<DemoLauncherPage />} />
                 
                 {/* Fleet (P-UI-15) */}
                 <Route path="fleet" element={<FleetPage />} />

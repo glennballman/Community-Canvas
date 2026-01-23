@@ -313,6 +313,25 @@ export function DebugPanel() {
       const data = await res.json();
       if (data.ok && data.token) {
         localStorage.setItem(TOKEN_KEY, data.token);
+        
+        const ellenTenantId = data.tenants?.find((t: any) => 
+          t.name?.includes('1252093') || t.name?.includes('Enviropaving')
+        )?.id || data.tenantId;
+        
+        if (ellenTenantId) {
+          await fetch('/api/dev/set-tenant', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({ tenantId: ellenTenantId })
+          });
+          localStorage.setItem('cc_tenant_id', ellenTenantId);
+          localStorage.setItem('cc_last_tenant_id', ellenTenantId);
+        }
+        
         window.location.href = '/app/contractor/calendar';
       } else {
         setLoginError(data.error || 'Login failed');
@@ -337,6 +356,25 @@ export function DebugPanel() {
       const data = await res.json();
       if (data.ok && data.token) {
         localStorage.setItem(TOKEN_KEY, data.token);
+        
+        const wadeTenantId = data.tenants?.find((t: any) => 
+          t.name?.includes('Wade') || t.type === 'individual'
+        )?.id || data.tenantId;
+        
+        if (wadeTenantId) {
+          await fetch('/api/dev/set-tenant', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.token}`
+            },
+            credentials: 'include',
+            body: JSON.stringify({ tenantId: wadeTenantId })
+          });
+          localStorage.setItem('cc_tenant_id', wadeTenantId);
+          localStorage.setItem('cc_last_tenant_id', wadeTenantId);
+        }
+        
         window.location.href = '/app/my-place/calendar';
       } else {
         setLoginError(data.error || 'Login failed');
@@ -346,6 +384,24 @@ export function DebugPanel() {
     } finally {
       setLoginLoading(false);
     }
+  };
+
+  const panicReset = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.warn('Logout failed:', e);
+    }
+    
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('cc_tenant_id');
+    localStorage.removeItem('cc_user');
+    localStorage.removeItem('cc_view_mode');
+    localStorage.removeItem('cc_last_tenant_id');
+    localStorage.removeItem('cc_demo_last_seed');
+    
+    setContext(null);
+    window.location.href = '/';
   };
 
   useEffect(() => {
@@ -720,13 +776,38 @@ export function DebugPanel() {
             <Button 
               size="sm" 
               variant="ghost" 
-              onClick={() => window.open('/p/bamfield/calendar', '_blank')}
+              onClick={() => window.open('/c/bamfield/calendar', '_blank')}
               className="w-full h-6 text-xs"
               data-testid="button-open-portal"
             >
               <ExternalLink className="h-3 w-3 mr-1" />
               Open Bamfield Portal Calendar
             </Button>
+            
+            <Separator className="my-2" />
+            
+            <div className="flex gap-1">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => window.location.href = '/app/dev/demo'}
+                className="flex-1 h-6 text-xs"
+                data-testid="button-demo-launcher"
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Demo Launcher
+              </Button>
+              <Button 
+                size="sm" 
+                variant="destructive" 
+                onClick={panicReset}
+                className="h-6 text-xs"
+                data-testid="button-panic-reset"
+              >
+                <LogOut className="h-3 w-3 mr-1" />
+                Panic Reset
+              </Button>
+            </div>
           </div>
 
           <Separator />

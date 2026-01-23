@@ -1,0 +1,162 @@
+REPLIT PROMPT — DEMO RECOVERY PACK (N3-CAL-04 Hotfix)
+ROLE: Platform architect + QA lead
+GOAL: Fix demo flow so Glenn can reliably show 3 views on a laptop DEV build:
+(1) Bamfield Community Portal roll-up Operations Calendar (public)
+(2) Wade Resident Operations Calendar (tenant app, resident)
+(3) Ellen Contractor Operations Calendar (tenant app, contractor / Enviropaving)
+
+CONSTRAINTS
+- DEV only. Must not affect prod behavior.
+- MUST use canonical ScheduleBoard time spine (already implemented). No parallel calendars.
+- Additive changes only.
+- Do not use “book/booking” anywhere. Use “reserve/reservation”.
+
+PROBLEM SYMPTOMS (from user)
+- Demo seed button returns 500 /dev/demo-seed
+- Tenant context becomes null or wrong after quick-login
+- Ellen ends up “running Bamfield Community” (wrong tenant selected)
+- Ops board / calendars not visible or user can’t escape Ellen session
+- Confusing “Platform vs Tenant app” switching; missing obvious demo entry points
+
+DELIVERABLES (do all)
+A) Make demo seed endpoint reliable + self-diagnosing (no silent fails)
+B) Make “Quick Login” set BOTH auth AND tenant context correctly every time
+C) Add a single “Demo Launcher” page with 3 buttons that always work
+D) Prevent cross-tenant confusion (Ellen must never auto-land in Bamfield Community tenant)
+E) Add a “Panic: Logout + Clear Context” button that truly resets
+F) Add a small QA script section to docs with exact steps + expected outcomes
+
+------------------------------------------------------------
+A) FIX /dev/demo-seed 500 + RETURN ACTIONABLE ERROR
+1) Locate the DEV seed route handler (likely server/routes/dev-*.ts or server/routes/dev-demo.ts).
+2) Wrap seeding in try/catch and return:
+   { ok:false, error:"demo_seed_failed", message, detail?, step? }
+3) Log server-side with a single structured line:
+   console.error("[DEMO_SEED_FAIL]", { message, step, err })
+4) Ensure the endpoint DOES NOT require tenant context.
+   - It may require DEV mode and platform admin auth, but MUST run even when current_tenant_id is null.
+   - If platform admin is not available, allow DEV-only bypass (IS_DEV) so the demo can be seeded on laptop.
+
+5) Make seed idempotent and deterministic:
+   - If demo entities exist, update/overwrite to a known state OR provide a “reset then seed” pipeline.
+   - Provide response summary with IDs:
+     { ok:true, summary:{ bamfieldPortalId, bamfieldTenantId, ellenUserId, ellenTenantId, wadeUserId, wadeTenantId, runsCreated, bundlesCreated, dependencyWindowsCreated } }
+
+6) Ensure “Reset Demo” truly deletes only demo-tagged data:
+   - Add a demoTag field in meta JSON where available OR use a deterministic “seed namespace” string.
+   - Do not delete real dev data outside demo namespace.
+   - If safe deletion is hard, implement “soft reset” by deactivating demo items and reseeding new ones.
+
+------------------------------------------------------------
+B) QUICK LOGIN MUST SET AUTH + TENANT CONTEXT (NO MORE NULL / WRONG TENANT)
+In DebugPanel.tsx:
+1) Quick Login buttons (Ellen, Wade) must do:
+   - POST /api/dev/login-as with email
+   - store token in localStorage (existing)
+   - call refreshContext() (you already added similar in ONB-04)
+   - THEN set the intended tenant explicitly (see below)
+   - THEN navigate to the correct calendar route
+
+2) Add DEV endpoint:
+   POST /api/dev/set-current-tenant
+   body: { tenantId }
+   behavior:
+   - validates user is a member of tenantId (or platform admin in DEV)
+   - sets server-side session or returns a response that frontend uses to set TenantContext consistently
+   - returns { ok:true, currentTenantId, currentTenantMembership? }
+
+If the app uses /me/context for tenant selection:
+- Either add a server-side setter that affects what /me/context returns
+- OR update TenantContext to allow “DEV override currentTenantId” stored in localStorage (DEV only)
+
+3) Hard rules:
+   - Ellen quick-login MUST always set current tenant to Enviropaving tenant (NOT Bamfield Community)
+   - Wade quick-login MUST always set current tenant to Wade’s resident/home tenant (NOT Bamfield Community)
+   - Platform Admin view should NOT depend on tenant context at all.
+
+------------------------------------------------------------
+C) ADD “DEMO LAUNCHER” PAGE (ONE PLACE TO CLICK)
+Create:
+- client/src/pages/dev/DemoLauncherPage.tsx
+Route (DEV only):
+- /app/dev/demo
+
+UI must include:
+1) “Seed Demo” button
+2) “Reset Demo” button
+3) “Panic Reset” button (see section E)
+4) Three big “Open Demo View” buttons:
+   - Open Bamfield Public Portal Calendar (no login required):
+     open /p/bamfield/calendar (or correct portal slug used in your seed)
+   - Open Ellen Contractor Calendar:
+     quick login as ellen + set tenant = enviropaving + go to /app/contractor/calendar
+   - Open Wade Resident Calendar:
+     quick login as wade + set tenant = wade + go to /app/my-place/calendar
+
+Each button must show a tiny status line:
+- Auth: yes/no
+- Tenant: set/unset + tenant name
+- Last seed: success/fail + timestamp
+
+Add a “Copy Demo Links” button that copies:
+- public portal URL
+- ellen URL
+- wade URL
+
+Make this page reachable from DebugPanel AND from Platform left-nav in DEV:
+- Add “Demo Launcher” under COMMAND CONSOLE section (DEV only)
+
+------------------------------------------------------------
+D) STOP “ELLEN RUNS BAMFIELD COMMUNITY” (TENANT AUTO-SELECT BUG)
+Find the logic that auto-selects a tenant on login (TenantContext.tsx or similar).
+Fix rule:
+- If the user has multiple tenant memberships, DO NOT auto-pick the first.
+- Instead:
+  - If a DEV override tenant is set, use it
+  - Else if lastSelectedTenantId exists in localStorage, use it
+  - Else show a tenant picker screen (or route to /app/places) — do NOT silently choose
+
+Also ensure impersonation/platform flows do not mutate the tenant selection for normal user flows.
+
+------------------------------------------------------------
+E) “PANIC: LOGOUT + CLEAR CONTEXT” MUST REALLY RESET
+In DebugPanel:
+Add a red “Panic Reset” button that does:
+1) POST /api/auth/logout (existing compatibility endpoints)
+2) localStorage.removeItem('cc_token')
+3) clear any DEV override tenant id
+4) clear any lastSelectedTenantId
+5) call refreshContext()
+6) navigate to a safe public page (e.g., / or /p/bamfield)
+
+This is to escape being “stuck as Ellen”.
+
+------------------------------------------------------------
+F) PUT A 10-MINUTE QA SCRIPT IN docs/DEMO_QA.md
+Add an exact checklist:
+1) Open /app/dev/demo
+2) Click Panic Reset → expect Auth: no, Tenant: unset
+3) Click Seed Demo → expect ok:true + summary IDs
+4) Click Open Bamfield Portal → should show ScheduleBoard roll-up view + zone feasibility lanes
+5) Click Open Ellen Contractor → should end at /app/contractor/calendar and show lane groups:
+   Service Runs, Staff, Fleet, Tools, Dependencies, Payments (etc per N3-CAL-02/03)
+6) Click Open Wade Resident → should end at /app/my-place/calendar with redacted staff lanes and only resident-appropriate groups
+7) Confirm portal shows no contractor names/addresses/pricing (titles “Community Service”)
+8) Confirm no tenant context null warnings in DebugPanel on these pages
+
+If any step fails, docs must say which endpoint to inspect and what expected response shape is.
+
+------------------------------------------------------------
+ACCEPTANCE CRITERIA (MUST PASS)
+- Seed Demo never 500s; on failure returns ok:false with error+message+step
+- Quick login always sets correct tenant + lands on correct calendar route
+- Demo Launcher provides one-click access to the 3 demo views
+- Tenant auto-select never silently picks Bamfield Community for Ellen/Wade
+- Panic Reset always gets user unstuck
+- No parallel calendar UI remains in primary routes; all calendars use ScheduleBoard
+
+Proceed now. Implement all changes, run the QA script, and report:
+- files changed
+- endpoints added/modified
+- sample seed response JSON
+- any remaining known limitations

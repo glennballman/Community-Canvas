@@ -22,6 +22,7 @@ import {
   Activity,
   FileText,
   MapPin,
+  Play,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -69,6 +70,7 @@ export const PLATFORM_NAV: PlatformNavSection[] = [
       { icon: Activity, label: 'Earthquakes', href: '/app/platform/command-console/earthquakes', testId: 'nav-cc-earthquakes' },
       { icon: FileText, label: 'Dependency Rules', href: '/app/platform/command-console/dependency-rules', testId: 'nav-cc-dependency-rules' },
       { icon: MapPin, label: 'Bamfield Snapshot', href: '/app/platform/command-console/bamfield', testId: 'nav-cc-bamfield' },
+      { icon: Play, label: 'Demo Launcher', href: '/app/dev/demo', testId: 'nav-demo-launcher' },
     ],
   },
 ];
