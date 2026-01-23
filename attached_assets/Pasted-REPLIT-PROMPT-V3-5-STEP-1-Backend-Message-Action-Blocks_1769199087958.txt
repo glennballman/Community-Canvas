@@ -1,0 +1,229 @@
+REPLIT PROMPT — V3.5 STEP 1 (Backend) — Message Action Blocks (SAFE Additive) — v2 (Schema + Validation Fix)
+
+ROLE: Senior Platform Engineer implementing V3.5 backend-only “Message Action Blocks”.
+MODE: Evidence-first, additive-only. No refactors. No parallel systems. No guessing.
+
+HARD RULES
+- Use “service provider” (never contractor).
+- Use “reserve / reservation” (never booking).
+- Do not create new message storage tables.
+- Do not bypass auth or RLS.
+- Do not add duplicate API surfaces.
+- No side effects on view/render: actions are explicit.
+- Preserve API envelope: { ok, error?, ...data }.
+- Error codes MUST align with Copy Token keys (see section H).
+
+INPUT EVIDENCE
+- proof/v3.5/messaging-audit.md confirms:
+  - cc_messages has structured_data jsonb
+  - cc_messages exists w/ RLS
+  - routes patterns (requireAuth/resolveActorParty) and provider inbox exist
+- Build_12 QA & AUTH proof confirms QA runner + DEV-only Test Auth Bootstrap.
+
+GOAL
+Implement SAFE additive “Message Action Blocks” stored on cc_messages in a dedicated column, plus a single action execution endpoint that:
+1) validates auth + party + participation
+2) validates MarketMode eligibility (server-side)
+3) validates action allowed for blockType
+4) updates ActionBlock status idempotently
+5) records an audit/attestation event using existing evidence patterns
+6) returns updated ActionBlock
+
+IMPORTANT DESIGN CHOICE (ACKNOWLEDGE AUDIT FINDING)
+- cc_messages.structured_data already exists and is used for arbitrary structured content.
+- We will STILL add a dedicated cc_messages.action_block JSONB:
+  - separation of concerns (action blocks are contract-like)
+  - easier querying / indexing / guardrails
+  - avoids collisions with existing structured_data usages
+- Do NOT remove or repurpose structured_data.
+
+DELIVERABLES
+1) DB migration: add cc_messages.action_block JSONB (+ minimal helper columns if needed) — additive only.
+2) New Zod schema ActionBlockV1 (blockType != action) + validator.
+3) New endpoint:
+   POST /api/messages/:messageId/action
+   Body: { action, response?, idempotencyKey? }
+   Returns: { ok: true, action_block, message_id, conversation_id }
+4) Server-side MarketMode enforcement.
+5) Tests + QA runner hooks.
+6) Proof report: proof/v3.5/message-action-blocks-backend.md
+
+A) DATABASE — ADDITIVE MIGRATION
+1) Determine next migration number per repo convention.
+2) Add columns to cc_messages:
+   - action_block jsonb NULL
+   - action_block_updated_at timestamptz NULL (optional but recommended)
+   - action_block_idempotency_key text NULL (optional, stores last applied key)
+3) Optional index if repo accepts additive indexes:
+   - GIN on action_block OR BTREE on (action_block_updated_at) depending on patterns
+
+Example:
+ALTER TABLE cc_messages ADD COLUMN IF NOT EXISTS action_block jsonb;
+ALTER TABLE cc_messages ADD COLUMN IF NOT EXISTS action_block_updated_at timestamptz;
+ALTER TABLE cc_messages ADD COLUMN IF NOT EXISTS action_block_idempotency_key text;
+
+RLS NOTE
+- Do NOT change existing RLS unless required for updating action_block.
+- If current RLS prevents participant updates on cc_messages, add the MINIMAL additive policy permitting UPDATE of action_block only, scoped to participants, mirroring existing RLS style. Document in proof.
+
+B) ACTION BLOCK SCHEMA (ZOD) — LOCKED (per MESSAGE_ACTION_BLOCKS_SPEC)
+Create: server/schemas/actionBlocks.ts (or repo’s standard schemas location)
+
+ActionBlockV1:
+{
+  version: 1,
+  blockType:
+    'summary' | 'question' | 'multi_question' | 'availability' |
+    'capacity' | 'offer' | 'deposit_request' | 'change_request' |
+    'signature_request' | 'cancellation',
+  domain: 'job' | 'reservation' | 'service_run' | 'incident',
+  target_id: string (uuid),
+  status: 'pending' | 'accepted' | 'declined' | 'expired' | 'informational',
+  payload: object,                // block-type-specific
+  ctaUrl?: string,                // link-out blocks only
+  linkedEntityType?: string,
+  linkedEntityId?: string,
+  created_at: ISO string,
+  resolved_at?: ISO string,
+  resolved_by?: string,           // individual_id
+  expires_at?: ISO string
+}
+
+ActionRequest (POST body):
+{
+  action: 'accept' | 'decline' | 'answer' | 'acknowledge' | 'counter',
+  response?: any,                 // required for question / multi_question answer
+  idempotencyKey?: string
+}
+
+C) ACTION ↔ BLOCKTYPE VALIDATION (MUST IMPLEMENT)
+Implement a validator that enforces allowed actions per blockType.
+
+Canonical mapping (adjust ONLY if spec says otherwise; if unclear, follow this):
+- summary:            (no inline actions) -> reject any action (409)
+- deposit_request:    (no inline actions; link out) -> reject any action (409)
+- signature_request:  (no inline actions; link out) -> reject any action (409)
+- question:           answer
+- multi_question:     answer
+- offer:              accept, decline
+- availability:       accept, counter   (counter = propose alternative)
+- change_request:     accept, decline, counter
+- capacity:           acknowledge        (or accept if spec says; default acknowledge)
+- cancellation:       acknowledge        (confirm receipt; actual cancel is domain workflow)
+
+Implement:
+validateActionForBlockType(blockType, action) -> boolean
+AND enforce required response for question/multi_question:
+- if action === 'answer' and response missing -> 400 invalid_request
+
+D) SERVER-SIDE MARKETMODE CHECK (REQUIRED)
+Locate MarketMode policy source-of-truth used by UI hook useMarketActions().
+Implement server-side check:
+ensureMarketActionAllowed({ actorParty, portalContext, blockType, action, domain })
+If blocked => 409 with error code "error.action_block.marketmode_blocked"
+
+Do NOT invent a new policy system.
+
+E) ENDPOINT IMPLEMENTATION (NEW ROUTE) — SINGLE SURFACE
+Create new route file:
+server/routes/message-actions.ts
+Register once in the server router.
+
+Endpoint:
+POST /api/messages/:messageId/action
+
+Handler steps (MUST follow):
+1) requireAuth(req)
+2) resolveActorParty(req)
+3) Validate params/body with Zod
+4) Load message by id (must include):
+   - message_id
+   - conversation_id
+   - action_block
+   - (optional) current idempotency key
+5) Verify actor is a participant:
+   - Prefer explicit participant check + rely on RLS as backstop
+   - If not => 403 { ok:false, error:{ code:'error.action_block.not_participant' } }
+
+6) Validate action_block exists:
+   - If missing => 409 { code:'error.action_block.missing' }
+
+7) Parse ActionBlockV1 from JSONB:
+   - If invalid => 409 { code:'error.action_block.invalid' } (do not leak internals)
+
+8) Expiry check:
+   - If expires_at < now => set status to expired (only if still pending) OR return 409 expired
+   - Return 409 { code:'error.action_block.expired' } if action attempted
+
+9) Validate action allowed for blockType (Section C):
+   - If not allowed => 409 { code:'error.action_block.action_not_allowed' }
+
+10) Idempotency:
+   - If idempotencyKey provided:
+     - if stored key matches and action already applied -> return 200 with current action_block (idempotent)
+   - If already resolved (accepted/declined/informational/expired) and key differs or absent:
+     - 409 { code:'error.action_block.already_resolved' }
+
+11) MarketMode enforcement (server-side) BEFORE writing:
+   - If blocked => 409 { code:'error.action_block.marketmode_blocked' }
+
+12) Compute next status + resolution fields:
+   - accept -> status=accepted
+   - decline -> status=declined
+   - acknowledge -> status=informational OR accepted (per spec; default informational for ack-only blocks)
+   - answer -> status=informational (store response in payload or a dedicated payload.response field)
+   - counter -> status=pending (but mutate payload to include counter proposal) OR status=informational with follow-up; choose the minimal safe approach:
+       Minimal safe approach: keep status=pending, set payload.counter = response, set resolved_* ONLY when accept/decline.
+   Always set action_block_updated_at, and set resolved_at/resolved_by ONLY when terminal (accepted/declined) unless spec requires otherwise.
+
+13) Perform UPDATE on cc_messages:
+   - Update ONLY action_block (+ helper cols)
+   - Set action_block_idempotency_key if provided
+   - Set action_block_updated_at = now()
+
+14) Evidence / audit hook:
+   - Emit an audit event using existing evidence patterns (do not invent new spines).
+   - Record: message_id, conversation_id, actor_party_id, action, blockType, domain, target_id, timestamp, idempotencyKey (if present).
+   - If existing evidence table/function exists, reuse it.
+
+15) Return:
+{ ok:true, message_id, conversation_id, action_block }
+
+F) ERROR CODES — COPY TOKEN ALIGNED (MANDATORY)
+Use these exact codes:
+- error.auth.unauthenticated (401)  // if repo uses a different canonical auth code, map but keep copy-token key
+- error.action_block.not_participant (403)
+- error.action_block.missing (409)
+- error.action_block.invalid (409)
+- error.action_block.expired (409)
+- error.action_block.already_resolved (409)
+- error.action_block.action_not_allowed (409)
+- error.action_block.marketmode_blocked (409)
+- error.request.invalid (400)
+
+G) TESTS
+Add tests using existing harness:
+- 401 without auth
+- 403 auth but not participant
+- 200 valid participant accept for offer
+- 200 idempotent repeat with same idempotencyKey
+- 409 repeat without idempotencyKey after resolved
+- 409 action_not_allowed for summary/deposit_request/signature_request
+- 400 invalid if question answer missing response
+- 409 expired
+
+Use DEV-only test auth bootstrap header gating correctly.
+
+H) PROOF REPORT
+Write: proof/v3.5/message-action-blocks-backend.md
+Include:
+- migration filename + excerpt
+- SQL evidence showing new columns exist
+- route file path + key excerpts (auth, participant check, validation, update)
+- MarketMode enforcement snippet
+- test output snippet
+
+I) NO FRONTEND CHANGES
+Backend only. Do not add BlockRenderer or UI wiring in this step.
+
+END.

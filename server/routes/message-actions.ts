@@ -8,7 +8,8 @@
  * - Requires authentication via session
  * - Verifies actor is a participant in the conversation
  * - Enforces MarketMode policy server-side
- * - Records audit trail for all state transitions
+ * - Validates action is allowed for blockType
+ * - Records audit trail via existing evidence patterns
  */
 
 import { Router, Request, Response } from 'express';
@@ -19,11 +20,13 @@ import { resolveActorParty } from '../lib/partyResolver';
 import {
   ActionRequestSchema,
   ActionBlockV1Schema,
-  ActionBlockState,
-  isValidStateTransition,
-  mapActionToState,
-  isActionBlockExpired,
+  ActionBlockStatus,
   ActionBlockV1,
+  validateActionForBlockType,
+  requiresResponse,
+  isTerminalStatus,
+  mapActionToStatus,
+  isActionBlockExpired,
 } from '../schemas/actionBlocks';
 import { ensureMarketActionAllowed } from '../policy/marketModePolicy';
 
@@ -44,7 +47,7 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
     if (!messageIdResult.success) {
       return res.status(400).json({
         ok: false,
-        error: { code: 'invalid_request', message: 'Invalid message ID format' }
+        error: { code: 'error.request.invalid', message: 'Invalid message ID format' }
       });
     }
     const messageId = messageIdResult.data;
@@ -54,19 +57,19 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
       return res.status(400).json({
         ok: false,
         error: { 
-          code: 'invalid_request', 
+          code: 'error.request.invalid', 
           message: 'Invalid request body',
           details: bodyResult.error.issues 
         }
       });
     }
-    const { action, payload, idempotencyKey } = bodyResult.data;
+    const { action, response, idempotencyKey } = bodyResult.data;
 
     const actor = await resolveActorParty(req, 'contractor') as ActorContext | null;
     if (!actor) {
       return res.status(401).json({
         ok: false,
-        error: { code: 'unauthenticated', message: 'Authentication required' }
+        error: { code: 'error.auth.unauthenticated', message: 'Authentication required' }
       });
     }
 
@@ -91,7 +94,7 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
     if (messageResult.rows.length === 0) {
       return res.status(404).json({
         ok: false,
-        error: { code: 'not_found', message: 'Message not found' }
+        error: { code: 'error.action_block.missing', message: 'Message not found' }
       });
     }
 
@@ -115,7 +118,7 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
       if (participantCheck.rows.length === 0) {
         return res.status(403).json({
           ok: false,
-          error: { code: 'forbidden_not_participant', message: 'Not authorized for this conversation' }
+          error: { code: 'error.action_block.not_participant', message: 'Not authorized for this conversation' }
         });
       }
     }
@@ -123,7 +126,7 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
     if (!message.action_block) {
       return res.status(409).json({
         ok: false,
-        error: { code: 'no_action_block', message: 'Message has no action block' }
+        error: { code: 'error.action_block.missing', message: 'Message has no action block' }
       });
     }
 
@@ -131,7 +134,7 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
     if (!actionBlockResult.success) {
       return res.status(409).json({
         ok: false,
-        error: { code: 'invalid_action_block', message: 'Action block is malformed' }
+        error: { code: 'error.action_block.invalid', message: 'Action block is malformed' }
       });
     }
 
@@ -147,36 +150,46 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
       });
     }
 
-    if (actionBlock.state !== 'pending') {
-      return res.status(409).json({
-        ok: false,
-        error: { code: 'action_block_already_resolved', message: `Action block already ${actionBlock.state}` }
-      });
-    }
-
     if (isActionBlockExpired(actionBlock)) {
-      const expiredBlock: ActionBlockV1 = { ...actionBlock, state: 'expired' };
-      
-      await serviceQuery(`
-        UPDATE cc_messages 
-        SET action_block = $2, action_block_updated_at = now()
-        WHERE id = $1
-      `, [messageId, JSON.stringify(expiredBlock)]);
+      if (actionBlock.status === 'pending') {
+        const expiredBlock: ActionBlockV1 = { ...actionBlock, status: 'expired' };
+        
+        await serviceQuery(`
+          UPDATE cc_messages 
+          SET action_block = $2, action_block_updated_at = now()
+          WHERE id = $1
+        `, [messageId, JSON.stringify(expiredBlock)]);
+      }
 
       return res.status(409).json({
         ok: false,
-        error: { code: 'action_block_expired', message: 'Action block has expired' }
+        error: { code: 'error.action_block.expired', message: 'Action block has expired' }
       });
     }
 
-    const newState = mapActionToState(action);
+    if (isTerminalStatus(actionBlock.status)) {
+      return res.status(409).json({
+        ok: false,
+        error: { code: 'error.action_block.already_resolved', message: `Action block already ${actionBlock.status}` }
+      });
+    }
 
-    if (!isValidStateTransition(actionBlock.state as ActionBlockState, newState)) {
+    if (!validateActionForBlockType(actionBlock.blockType, action)) {
       return res.status(409).json({
         ok: false,
         error: { 
-          code: 'invalid_state_transition', 
-          message: `Cannot transition from ${actionBlock.state} to ${newState}` 
+          code: 'error.action_block.action_not_allowed', 
+          message: `Action '${action}' not allowed for blockType '${actionBlock.blockType}'` 
+        }
+      });
+    }
+
+    if (requiresResponse(action) && response === undefined) {
+      return res.status(400).json({
+        ok: false,
+        error: { 
+          code: 'error.request.invalid', 
+          message: 'Response required for this action' 
         }
       });
     }
@@ -184,8 +197,18 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
     const actorRole = isOwner ? 'requester' : 'provider';
     const actionIdForPolicy = action === 'accept' ? 'accept_request' 
                             : action === 'decline' ? 'decline_request'
-                            : action === 'propose' ? 'propose_change'
-                            : action;
+                            : action === 'counter' ? 'propose_change'
+                            : action === 'answer' ? 'answer'
+                            : action === 'acknowledge' ? 'acknowledge'
+                            : 'ack';
+
+    const conversationState = message.conversation_state || 'open';
+    const derivedObjectStatus = conversationState === 'pending' ? 'AWAITING_RESPONSE'
+                              : conversationState === 'accepted' ? 'ACCEPTED'
+                              : conversationState === 'declined' ? 'DECLINED'
+                              : 'AWAITING_RESPONSE';
+
+    const hasTargetProvider = !!contractorPartyId;
 
     const marketCheck = ensureMarketActionAllowed({
       actorRole: actorRole as 'requester' | 'provider',
@@ -193,8 +216,8 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
       visibility: 'PRIVATE',
       actionId: actionIdForPolicy as any,
       objectType: actionBlock.domain as any,
-      objectStatus: 'AWAITING_RESPONSE',
-      hasTargetProvider: true,
+      objectStatus: derivedObjectStatus as any,
+      hasTargetProvider,
       hasActiveProposal: false,
     });
 
@@ -202,74 +225,101 @@ router.post('/:messageId/action', async (req: Request, res: Response) => {
       return res.status(409).json({
         ok: false,
         error: { 
-          code: 'marketmode_action_blocked', 
+          code: 'error.action_block.marketmode_blocked', 
           message: marketCheck.reason || 'Action not allowed by market mode policy' 
         }
       });
     }
 
+    const newStatus = mapActionToStatus(action);
+    const isTerminal = newStatus === 'accepted' || newStatus === 'declined';
+    const now = new Date().toISOString();
+
+    let updatedPayload = { ...actionBlock.payload };
+    if (action === 'answer' && response !== undefined) {
+      updatedPayload = { ...updatedPayload, response };
+    }
+    if (action === 'counter' && response !== undefined) {
+      updatedPayload = { ...updatedPayload, counter: response };
+    }
+
     const updatedBlock: ActionBlockV1 = {
       ...actionBlock,
-      state: newState,
+      status: newStatus,
+      payload: updatedPayload,
+      resolved_at: isTerminal ? now : actionBlock.resolved_at,
+      resolved_by: isTerminal ? actorIndividualId : actionBlock.resolved_by,
     };
 
-    const client = await pool.connect();
+    await serviceQuery(`
+      UPDATE cc_messages 
+      SET 
+        action_block = $2,
+        action_block_updated_at = now(),
+        action_block_idempotency_key = $3
+      WHERE id = $1
+    `, [messageId, JSON.stringify(updatedBlock), idempotencyKey || null]);
+
     try {
-      await client.query('BEGIN');
-
-      await client.query(`
-        UPDATE cc_messages 
-        SET 
-          action_block = $2,
-          action_block_updated_at = now(),
-          action_block_idempotency_key = $3
-        WHERE id = $1
-      `, [messageId, JSON.stringify(updatedBlock), idempotencyKey || null]);
-
-      await client.query(`
-        INSERT INTO cc_message_action_events (
-          message_id,
-          conversation_id,
-          actor_party_id,
+      await serviceQuery(`
+        INSERT INTO cc_evidence_events (
+          tenant_id,
+          evidence_object_id,
+          event_type,
+          event_at,
           actor_individual_id,
-          action,
-          from_state,
-          to_state,
-          idempotency_key
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          actor_role,
+          event_payload,
+          client_request_id
+        )
+        SELECT 
+          c.tenant_id,
+          $1::uuid,
+          'annotated',
+          now(),
+          $4::uuid,
+          $5,
+          $6::jsonb,
+          $7
+        FROM cc_conversations c
+        WHERE c.id = $2
+        LIMIT 1
       `, [
         messageId,
         conversationId,
         actorPartyId,
         actorIndividualId || null,
-        action,
-        actionBlock.state,
-        newState,
+        actorRole,
+        JSON.stringify({
+          event: 'action_block_transition',
+          message_id: messageId,
+          conversation_id: conversationId,
+          action,
+          block_type: actionBlock.blockType,
+          domain: actionBlock.domain,
+          target_id: actionBlock.target_id,
+          from_status: actionBlock.status,
+          to_status: newStatus,
+        }),
         idempotencyKey || null
       ]);
-
-      await client.query('COMMIT');
-
-      return res.json({
-        ok: true,
-        message_id: messageId,
-        conversation_id: conversationId,
-        action_block: updatedBlock,
-        idempotent: false
-      });
-
-    } catch (dbError) {
-      await client.query('ROLLBACK');
-      throw dbError;
-    } finally {
-      client.release();
+    } catch (auditErr) {
+      console.warn('[MessageActions] Audit event write failed (non-blocking):', auditErr);
     }
+
+    return res.json({
+      ok: true,
+      message_id: messageId,
+      conversation_id: conversationId,
+      action_block: updatedBlock,
+      idempotent: false
+    });
 
   } catch (error) {
     console.error('[MessageActions] Error processing action:', error);
     return res.status(500).json({
       ok: false,
-      error: { code: 'internal_error', message: 'Internal server error' }
+      error: { code: 'error.internal', message: 'Internal server error' }
     });
   }
 });
@@ -280,7 +330,7 @@ router.get('/:messageId/action-block', async (req: Request, res: Response) => {
     if (!messageIdResult.success) {
       return res.status(400).json({
         ok: false,
-        error: { code: 'invalid_request', message: 'Invalid message ID format' }
+        error: { code: 'error.request.invalid', message: 'Invalid message ID format' }
       });
     }
     const messageId = messageIdResult.data;
@@ -289,7 +339,7 @@ router.get('/:messageId/action-block', async (req: Request, res: Response) => {
     if (!actor) {
       return res.status(401).json({
         ok: false,
-        error: { code: 'unauthenticated', message: 'Authentication required' }
+        error: { code: 'error.auth.unauthenticated', message: 'Authentication required' }
       });
     }
 
@@ -312,7 +362,7 @@ router.get('/:messageId/action-block', async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       return res.status(404).json({
         ok: false,
-        error: { code: 'not_found', message: 'Message not found or not accessible' }
+        error: { code: 'error.action_block.missing', message: 'Message not found or not accessible' }
       });
     }
 
@@ -330,7 +380,7 @@ router.get('/:messageId/action-block', async (req: Request, res: Response) => {
     console.error('[MessageActions] Error fetching action block:', error);
     return res.status(500).json({
       ok: false,
-      error: { code: 'internal_error', message: 'Internal server error' }
+      error: { code: 'error.internal', message: 'Internal server error' }
     });
   }
 });

@@ -6,7 +6,7 @@
  */
 
 export type ActorRole = 'requester' | 'provider' | 'operator';
-export type ObjectType = 'service_request' | 'service_run' | 'job' | 'incident';
+export type ObjectType = 'service_request' | 'service_run' | 'job' | 'incident' | 'reservation';
 export type MarketMode = 'TARGETED' | 'INVITE_ONLY' | 'OPEN' | 'CLOSED';
 export type VisibilityScope = 'PRIVATE' | 'PORTAL' | 'PORTAL_SET' | 'COMPANY' | 'MIXED';
 
@@ -30,7 +30,10 @@ export type ActionId =
   | 'submit_response'
   | 'cancel_request'
   | 'ack'
-  | 'confirm';
+  | 'confirm'
+  | 'acknowledge'
+  | 'answer'
+  | 'counter';
 
 export interface EnsureMarketActionInput {
   actorRole: ActorRole;
@@ -80,6 +83,14 @@ export function ensureMarketActionAllowed(input: EnsureMarketActionInput): Marke
     return { allowed: true };
   }
 
+  if (objectType === 'reservation') {
+    return checkReservationAction({ actorRole, actionId });
+  }
+
+  if (objectType === 'service_run') {
+    return checkServiceRunAction({ actorRole, actionId });
+  }
+
   return { allowed: false, reason: 'unknown_object_type' };
 }
 
@@ -101,7 +112,7 @@ function checkServiceRequestAction(input: ServiceRequestInput): MarketActionResu
       case 'SENT':
       case 'AWAITING_RESPONSE':
         if (marketMode === 'TARGETED' && hasTargetProvider) {
-          if (['accept_request', 'propose_change', 'decline_request'].includes(actionId)) {
+          if (['accept_request', 'propose_change', 'decline_request', 'counter'].includes(actionId)) {
             return { allowed: true };
           }
         }
@@ -110,10 +121,13 @@ function checkServiceRequestAction(input: ServiceRequestInput): MarketActionResu
             return { allowed: true };
           }
         }
+        if (['ack', 'acknowledge', 'answer'].includes(actionId)) {
+          return { allowed: true };
+        }
         return { allowed: false, reason: 'action_not_available_in_current_state' };
 
       case 'ACCEPTED':
-        if (actionId === 'ack' || actionId === 'confirm') {
+        if (['ack', 'confirm', 'acknowledge'].includes(actionId)) {
           return { allowed: true };
         }
         return { allowed: false, reason: 'request_already_accepted' };
@@ -136,19 +150,22 @@ function checkServiceRequestAction(input: ServiceRequestInput): MarketActionResu
   if (actorRole === 'requester') {
     switch (status) {
       case 'PROPOSED_CHANGE':
-        if (hasActiveProposal && (actionId === 'accept_proposal' || actionId === 'reject_proposal')) {
+        if (hasActiveProposal && ['accept_proposal', 'reject_proposal', 'accept_request', 'decline_request'].includes(actionId)) {
           return { allowed: true };
         }
         return { allowed: false, reason: 'no_active_proposal' };
 
       case 'SENT':
       case 'AWAITING_RESPONSE':
-        if (actionId === 'cancel_request') {
+        if (['cancel_request', 'ack', 'acknowledge', 'answer'].includes(actionId)) {
           return { allowed: true };
         }
         return { allowed: false, reason: 'action_not_available' };
 
       default:
+        if (['ack', 'acknowledge', 'answer'].includes(actionId)) {
+          return { allowed: true };
+        }
         return { allowed: false, reason: 'action_not_available_in_current_state' };
     }
   }
@@ -166,16 +183,46 @@ function checkJobAction(input: JobActionInput): MarketActionResult {
   const { actorRole, actionId } = input;
 
   if (actorRole === 'operator') {
-    if (['accept_request', 'decline_request', 'ack', 'confirm'].includes(actionId)) {
+    if (['accept_request', 'decline_request', 'ack', 'confirm', 'acknowledge', 'answer'].includes(actionId)) {
       return { allowed: true };
     }
   }
 
   if (actorRole === 'provider') {
-    if (['ack', 'confirm'].includes(actionId)) {
+    if (['ack', 'confirm', 'acknowledge', 'answer'].includes(actionId)) {
       return { allowed: true };
     }
   }
 
   return { allowed: false, reason: 'action_not_allowed_for_role' };
+}
+
+interface ReservationActionInput {
+  actorRole: ActorRole;
+  actionId: ActionId;
+}
+
+function checkReservationAction(input: ReservationActionInput): MarketActionResult {
+  const { actorRole, actionId } = input;
+
+  if (['accept_request', 'decline_request', 'ack', 'acknowledge', 'answer', 'counter'].includes(actionId)) {
+    return { allowed: true };
+  }
+
+  return { allowed: false, reason: 'action_not_allowed_for_reservation' };
+}
+
+interface ServiceRunActionInput {
+  actorRole: ActorRole;
+  actionId: ActionId;
+}
+
+function checkServiceRunAction(input: ServiceRunActionInput): MarketActionResult {
+  const { actionId } = input;
+
+  if (['accept_request', 'decline_request', 'ack', 'acknowledge', 'answer', 'counter'].includes(actionId)) {
+    return { allowed: true };
+  }
+
+  return { allowed: false, reason: 'action_not_allowed_for_service_run' };
 }

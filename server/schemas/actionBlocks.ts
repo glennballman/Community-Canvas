@@ -1,11 +1,24 @@
 /**
  * V3.5 Message Action Blocks - Zod Schemas
  * 
- * Defines validation schemas for action blocks stored on cc_messages
- * and action request payloads.
+ * Defines validation schemas for action blocks stored on cc_messages.action_block
+ * Follows MESSAGE_ACTION_BLOCKS_SPEC v2.
  */
 
 import { z } from 'zod';
+
+export const BlockTypeEnum = z.enum([
+  'summary',
+  'question',
+  'multi_question',
+  'availability',
+  'capacity',
+  'offer',
+  'deposit_request',
+  'change_request',
+  'signature_request',
+  'cancellation'
+]);
 
 export const ActionBlockDomainEnum = z.enum([
   'job',
@@ -14,70 +27,97 @@ export const ActionBlockDomainEnum = z.enum([
   'incident'
 ]);
 
-export const ActionBlockTypeEnum = z.enum([
-  'accept',
-  'propose', 
-  'decline',
-  'ack',
-  'confirm'
-]);
-
-export const ActionBlockStateEnum = z.enum([
+export const ActionBlockStatusEnum = z.enum([
   'pending',
   'accepted',
   'declined',
-  'expired'
+  'expired',
+  'informational'
+]);
+
+export const ActionTypeEnum = z.enum([
+  'accept',
+  'decline',
+  'answer',
+  'acknowledge',
+  'counter'
 ]);
 
 export const ActionBlockV1Schema = z.object({
   version: z.literal(1),
+  blockType: BlockTypeEnum,
   domain: ActionBlockDomainEnum,
-  type: ActionBlockTypeEnum,
   target_id: z.string().uuid(),
-  attestable: z.literal(true),
-  state: ActionBlockStateEnum,
+  status: ActionBlockStatusEnum,
+  payload: z.record(z.unknown()),
+  ctaUrl: z.string().url().optional(),
+  linkedEntityType: z.string().optional(),
+  linkedEntityId: z.string().uuid().optional(),
   created_at: z.string().datetime(),
+  resolved_at: z.string().datetime().optional(),
+  resolved_by: z.string().uuid().optional(),
   expires_at: z.string().datetime().optional(),
-  meta: z.record(z.unknown()).optional(),
 });
 
 export type ActionBlockV1 = z.infer<typeof ActionBlockV1Schema>;
+export type BlockType = z.infer<typeof BlockTypeEnum>;
 export type ActionBlockDomain = z.infer<typeof ActionBlockDomainEnum>;
-export type ActionBlockType = z.infer<typeof ActionBlockTypeEnum>;
-export type ActionBlockState = z.infer<typeof ActionBlockStateEnum>;
+export type ActionBlockStatus = z.infer<typeof ActionBlockStatusEnum>;
+export type ActionType = z.infer<typeof ActionTypeEnum>;
 
 export const ActionRequestSchema = z.object({
-  action: ActionBlockTypeEnum,
-  payload: z.record(z.unknown()).optional(),
+  action: ActionTypeEnum,
+  response: z.unknown().optional(),
   idempotencyKey: z.string().max(128).optional(),
 });
 
 export type ActionRequest = z.infer<typeof ActionRequestSchema>;
 
-export const ACTION_STATE_TRANSITIONS: Record<ActionBlockState, ActionBlockState[]> = {
-  pending: ['accepted', 'declined', 'expired'],
-  accepted: [],
-  declined: [],
-  expired: [],
+const BLOCK_TYPE_ALLOWED_ACTIONS: Record<BlockType, ActionType[]> = {
+  summary: [],
+  deposit_request: [],
+  signature_request: [],
+  question: ['answer'],
+  multi_question: ['answer'],
+  offer: ['accept', 'decline'],
+  availability: ['accept', 'counter'],
+  change_request: ['accept', 'decline', 'counter'],
+  capacity: ['acknowledge'],
+  cancellation: ['acknowledge'],
 };
 
-export function isValidStateTransition(
-  from: ActionBlockState,
-  to: ActionBlockState
-): boolean {
-  const allowedTransitions = ACTION_STATE_TRANSITIONS[from];
-  return allowedTransitions.includes(to);
+export function validateActionForBlockType(blockType: BlockType, action: ActionType): boolean {
+  const allowed = BLOCK_TYPE_ALLOWED_ACTIONS[blockType];
+  return allowed.includes(action);
 }
 
-export function mapActionToState(action: ActionBlockType): ActionBlockState {
+export function getAllowedActionsForBlockType(blockType: BlockType): ActionType[] {
+  return BLOCK_TYPE_ALLOWED_ACTIONS[blockType];
+}
+
+export function isBlockTypeActionable(blockType: BlockType): boolean {
+  return BLOCK_TYPE_ALLOWED_ACTIONS[blockType].length > 0;
+}
+
+export function requiresResponse(action: ActionType): boolean {
+  return action === 'answer';
+}
+
+export function isTerminalStatus(status: ActionBlockStatus): boolean {
+  return status === 'accepted' || status === 'declined' || status === 'expired';
+}
+
+export function mapActionToStatus(action: ActionType): ActionBlockStatus {
   switch (action) {
     case 'accept':
-    case 'ack':
-    case 'confirm':
       return 'accepted';
     case 'decline':
       return 'declined';
-    case 'propose':
+    case 'acknowledge':
+      return 'informational';
+    case 'answer':
+      return 'informational';
+    case 'counter':
       return 'pending';
     default:
       return 'pending';
