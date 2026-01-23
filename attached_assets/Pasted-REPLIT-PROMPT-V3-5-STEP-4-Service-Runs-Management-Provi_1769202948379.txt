@@ -1,0 +1,233 @@
+REPLIT PROMPT — V3.5 STEP 4 — Service Runs Management (Provider Phase 2) — FINAL
+ROLE: Senior Platform Engineer implementing STEP 4 per SERVICE_PROVIDER_PHASE_2_SPECS.md.
+MODE: Evidence-first, additive-only. No refactors. No parallel systems.
+HARD RULES
+
+Use "service provider" (never contractor).
+Use "reserve / reservation" (never booking).
+Do NOT introduce the word "calendar" in any NEW code. Use "schedule" / "operations".
+Read-only by default.
+No new inbox/thread UIs — reuse existing messaging surfaces only.
+All CTAs must be MarketMode-gated (useMarketActions()).
+Copy tokens required for all user-facing strings.
+
+SPEC SOURCE OF TRUTH
+
+/mnt/data/SERVICE_PROVIDER_PHASE_2_SPECS.md
+Implement ONLY SPEC 1 (Service Runs Management) in this step.
+
+GOAL (SPEC 1)
+Service providers can view and manage availability windows ("Service Runs") with:
+
+Provider Runs List: /app/provider/runs (read-only list)
+Provider Run Detail: /app/provider/runs/:id (read-only detail)
+Detail shows: attached requests + publications (may be empty until Steps 5/6)
+
+DATABASE (EXISTING — DO NOT MODIFY)
+Verify existing table(s) per spec:
+
+cc_n3_runs (primary)
+Do NOT alter schema in Step 4 unless a missing column prevents basic reads. If missing, STOP and document before making changes.
+
+
+A) PROOF-GRADE INVENTORY FIRST (NO CHANGES YET)
+Create: proof/v3.5/service-runs-management-audit.md
+
+Verify DB table(s) exist:
+
+
+Confirm cc_n3_runs exists and list key columns (id, tenant_id, party_id, title, description, status, schedule fields).
+If schedule fields differ from spec names, document exact names.
+
+
+Verify any existing endpoints:
+
+
+Check if these already exist:
+
+GET /api/service-runs
+GET /api/service-runs/:id
+POST /api/service-runs
+
+
+Document routes + file paths if found.
+
+
+Verify provider routes area:
+
+
+Identify where provider routes live (likely server/routes/provider.ts).
+Confirm requireAuth/resolveActorParty patterns to reuse.
+
+
+Verify attachment linkage pattern:
+
+
+Check for cc_run_requests join table
+Check for cc_service_requests.run_id column
+Check for cc_n3_runs.request_ids array
+Document which pattern exists (or "NONE FOUND")
+
+STOP. Write audit doc. Then proceed.
+
+B) BACKEND — ADD MINIMAL PROVIDER RUNS ENDPOINTS (ONLY IF MISSING)
+Per Spec 1.3, implement these provider endpoints if they do not already exist:
+1) GET /api/provider/runs
+
+List runs where party_id matches the current service provider's party
+Must enforce auth + provider party ownership
+Return: { ok: true, runs: [...] }
+
+2) GET /api/provider/runs/:id
+
+Run detail for provider
+Return:
+{ ok: true, run: {...}, attached_requests: [...], publications: [...] }
+
+ATTACHED REQUESTS DATA SOURCE (EVIDENCE-BASED)
+To populate attached_requests, probe in this order and use whichever exists:
+
+Join table pattern:
+
+cc_run_requests (or similarly named)
+join cc_run_requests.run_id = cc_n3_runs.id
+then join to cc_service_requests (or equivalent request table)
+
+
+Direct FK pattern:
+
+cc_service_requests.run_id column referencing cc_n3_runs.id
+
+
+Array pattern on runs:
+
+cc_n3_runs.request_ids (uuid[] or jsonb array)
+
+
+
+RULE:
+
+Use whichever exists in the current schema (prove with SQL in the audit).
+If none exist, return attached_requests: [] and explicitly document "NO ATTACHMENT LINKAGE FOUND" in the audit.
+Do NOT create new linkage tables/columns in STEP 4 (that is STEP 6 territory).
+
+ULTRA-SAFE LOCK:
+
+Do NOT create, infer, or backfill any attachment linkage in STEP 4.
+Even if a linkage seems obvious or partially present, ONLY detect and read what already exists.
+If no linkage exists, return attached_requests: [] and document it.
+Creation or mutation of run↔request attachments is strictly deferred to STEP 6.
+
+NOTE:
+
+attached_requests/publications may be empty arrays in STEP 4
+Do NOT implement Step 5/6 mutation endpoints here (those come later)
+
+Auth requirements (MUST MATCH EXISTING PATTERNS):
+
+requireAuth()
+resolveActorParty()
+verify provider owns the run (party_id match)
+respect tenant isolation (tenant_id match)
+do NOT bypass RLS; do not create "service bypass" exceptions
+
+If similar endpoints already exist under different paths:
+
+Prefer EXTENDING existing provider routes rather than duplicating.
+
+
+C) FRONTEND — ADD PROVIDER RUNS PAGES (READ-ONLY)
+Implement the UI pages described in Spec 1.4:
+1) Provider Runs List — /app/provider/runs
+READ-ONLY LIST:
+
+show all runs for this provider
+columns: Title, Status, Scheduled Date, Visibility, Requests Attached
+link to detail page
+NO inline edit/delete buttons
+
+2) Provider Run Detail — /app/provider/runs/:id
+READ-ONLY DETAIL:
+
+run summary (title, description, schedule, status)
+attached service requests (read-only list; may be empty)
+publications (which portals see this run; may be empty)
+If run has an associated conversation thread (if such linkage exists), show "View Messages" link-out to canonical messages route. If not, show "No messages".
+
+ALLOWED CTAs (MarketMode-gated):
+
+"Publish to Portals" button (stub for Step 5):
+
+Must be MarketMode-gated
+For STEP 4, button may be present but disabled with copy-token message like "Coming soon" OR hidden until Step 5—choose whichever matches existing UI conventions.
+
+
+"Attach Requests" button (stub for Step 6):
+
+Must be MarketMode-gated
+Same stub rule as above.
+
+
+
+IMPORTANT:
+
+Do NOT create a new scheduling UI. Runs may display schedule fields read-only.
+Do NOT embed a thread UI. Link out only.
+
+
+D) NAVIGATION
+Wire /app/provider/runs into provider navigation using the existing nav config file discovered in the audit.
+
+Do not create new nav systems.
+Ensure no duplicate ops/schedule items are introduced.
+
+PLACEMENT (LOCKED):
+
+Label: "My Runs" (or "Service Runs" — choose whichever matches existing terminology in provider nav)
+Place it:
+
+After "Inbox"
+Before "Settings" (if present)
+
+
+Match existing provider nav item styling and icon conventions.
+Document the exact nav file + insertion location in the proof.
+
+
+E) COPY TOKENS
+Add copy tokens for all new labels/states:
+
+provider.runs.title
+provider.runs.status
+provider.runs.scheduled_date
+provider.runs.visibility
+provider.runs.requests_attached
+provider.runs.empty_state
+provider.run.detail.title
+provider.run.detail.no_messages
+provider.run.cta.publish_to_portals (stub)
+provider.run.cta.attach_requests (stub)
+provider.run.cta.coming_soon (if used)
+
+Follow existing copy token organization (do not invent a new copy system).
+
+F) PROOF REQUIREMENTS
+Create: proof/v3.5/service-runs-management-proof.md
+Include:
+
+DB evidence (table exists, key columns, attachment linkage pattern found or "NONE")
+Backend route evidence (paths + auth checks + ownership checks)
+Frontend page paths + key excerpts showing:
+
+read-only list/detail
+MarketMode gating for CTAs
+link-out messaging pattern
+
+
+Nav wiring (file + insertion location)
+Copy token additions
+Explicit verification: no new "calendar" term introduced
+Explicit verification: no attachment linkage created (read-only detection only)
+
+
+END.

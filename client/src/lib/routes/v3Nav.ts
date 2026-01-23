@@ -170,6 +170,14 @@ export const V3_NAV: NavSection[] = [
     ],
   },
   {
+    title: 'Provider',
+    requiresTenant: true,
+    items: [
+      { icon: ClipboardList, label: 'Inbox', href: '/app/provider/inbox', testId: 'nav-provider-inbox', requiresTenant: true },
+      { icon: Truck, label: 'My Runs', href: '/app/provider/runs', testId: 'nav-provider-runs', requiresTenant: true },
+    ],
+  },
+  {
     title: 'Compliance',
     requiresTenant: true,
     tenantRolesAny: ['tenant_owner', 'tenant_admin', 'operator'],

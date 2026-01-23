@@ -85,6 +85,8 @@ import IntakeWorkRequestDetail from './pages/intake/WorkRequestDetail';
 // Pages - Provider (Service Provider Experience Phase 1)
 import ProviderInboxPage from './pages/app/provider/ProviderInboxPage';
 import ProviderRequestDetailPage from './pages/app/provider/ProviderRequestDetailPage';
+import ProviderRunsPage from './pages/app/provider/ProviderRunsPage';
+import ProviderRunDetailPage from './pages/app/provider/ProviderRunDetailPage';
 
 // Pages - Contractor Preview (PROMPT 8)
 import ContractorWorkRequestPreview from './pages/app/ContractorWorkRequestPreview';
@@ -596,6 +598,10 @@ export default function App() {
                 {/* Provider Inbox (Service Provider Experience Phase 1) */}
                 <Route path="provider/inbox" element={<ProviderInboxPage />} />
                 <Route path="provider/requests/:id" element={<ProviderRequestDetailPage />} />
+                
+                {/* Provider Runs (Service Provider Experience Phase 2) */}
+                <Route path="provider/runs" element={<ProviderRunsPage />} />
+                <Route path="provider/runs/:id" element={<ProviderRunDetailPage />} />
                 
                 {/* Resident Calendar (my-place) - uses ScheduleBoard time spine */}
                 <Route path="my-place/calendar" element={<OpsCalendarBoardPage mode="resident" />} />
