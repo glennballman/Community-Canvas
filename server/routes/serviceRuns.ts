@@ -275,7 +275,7 @@ router.get('/services', async (req: Request, res: Response) => {
     res.json({
       success: true,
       cc_services,
-      total: services.length
+      total: cc_services.length
     });
   } catch (err) {
     console.error('Failed to load services:', err);
@@ -690,15 +690,15 @@ router.post('/suggest-bundles', async (req: Request, res: Response) => {
     }
     
     // Build compatibility graph
-    const edges = buildCompatibilityGraph(cc_services, DEFAULT_COMPATIBILITY_WEIGHTS, 40);
+    const edges = buildCompatibilityGraph(services, DEFAULT_COMPATIBILITY_WEIGHTS, 40);
     
     // Get suggested bundles
-    const suggestions = suggestBundles(cc_services, edges, 8, 2);
+    const suggestions = suggestBundles(services, edges, 8, 2);
     
     // Check seasonality if provided
     let eligibilityNotes: string[] = [];
     if (climateRegionId && week) {
-      for (const service of cc_services) {
+      for (const service of services) {
         const eligibility = isServiceEligibleForWeek(service, climateRegionId, parseInt(week));
         if (!eligibility.eligible) {
           eligibilityNotes.push(`${service.name}: ${eligibility.reason}`);
@@ -1118,7 +1118,7 @@ router.get('/stats', async (req: Request, res: Response) => {
       success: true,
       stats: {
         categories: parseInt(categories.rows[0].count),
-        services: parseInt(services.rows[0].count),
+        services: parseInt(cc_services.rows[0].count),
         bundles: parseInt(bundles.rows[0].count),
         communities: parseInt(communities.rows[0].count),
         climateRegions: parseInt(climateRegions.rows[0].count),

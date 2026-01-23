@@ -95,8 +95,8 @@ export const CRITICAL_PAGES: CriticalPage[] = [
         method: 'GET',
         path: '/api/service-runs/services',
         assert: (json) => {
-          const services = Array.isArray(json) ? json : json?.services;
-          if (!Array.isArray(services)) throw new Error('Expected services array or {services: []}');
+          const services = Array.isArray(json) ? json : (json?.cc_services || json?.services);
+          if (!Array.isArray(services)) throw new Error('Expected {cc_services: []} or {services: []}');
         }
       }
     ],
