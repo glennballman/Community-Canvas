@@ -1,0 +1,207 @@
+REPLIT PROMPT — V3.5 UNIVERSAL COPY-TOKEN LAYER (WORK REQUESTS + SERVICE RUNS)
+ROLE: Senior platform engineer implementing provider-agnostic copy tokens + resolver + enforcement lint.
+HARD RULES:
+- No parallel implementations.
+- No hardcoded industry nouns in core (especially "contractor").
+- Terminology: use "reserve/reservation" only; never "book/booking".
+- Additive changes only; do not refactor core workflow state machines.
+- All end-user wording must be resolved via copy tokens using entry_point_type.
+
+GOAL
+Introduce a canonical Copy Token system that:
+1) Allows Work Requests and Service Runs UI + notifications to render wording based on entry_point_type (lodging/parking/marina/restaurant/equipment/service/activity/generic).
+2) Prevents any hardcoded "contractor" or other industry-specific terms in core components / templates.
+3) Keeps existing enums/states the same; only changes how text is rendered.
+4) Adds lint + tests that fail CI if forbidden terms appear in core UI or notification templates.
+
+SCOPE
+Frontend + notification copy templates (in-app/email templates stored in code). Do NOT alter DB schema unless there is absolutely no place to store message titles/bodies in code currently; prefer code-level tokenization.
+
+IMPLEMENTATION PLAN
+
+A) Create canonical copy token inventory
+1) Create file:
+   client/src/copy/entryPointCopy.ts
+
+   Export:
+   - type EntryPointType = "lodging"|"parking"|"marina"|"restaurant"|"equipment"|"service"|"activity"|"generic"
+   - type CopyContext = { entryPoint: EntryPointType; surfaceKind?: string; portalTone?: "community"|"company"; actorRole?: "requester"|"provider"|"operator" }
+   - const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>>
+
+2) Provide REQUIRED MINIMUM TOKEN KEYS for every entry point:
+   Nouns:
+   - label.noun.provider
+   - label.noun.requester
+   - label.noun.request
+   - label.noun.run
+   - label.noun.community
+   - label.noun.company
+   - label.noun.reservation (where needed)
+
+   State labels:
+   - state.market.TARGETED.label
+   - state.market.OPEN.label
+   - state.market.INVITE_ONLY.label
+   - state.visibility.PRIVATE.label
+   - state.request.UNASSIGNED.label
+
+   UI notices:
+   - ui.market.locked_notice (meaning: provider selected; not open for responses)
+   - ui.publish.ask_requester.title
+   - ui.publish.ask_requester.body
+   - ui.publish.just_publish.notice
+   - ui.ai.suggestion.route_zones.title
+   - ui.ai.suggestion.route_zones.body
+
+   Message subjects/bodies (shared for in-app + email wrapper):
+   - msg.invite.sent.subject
+   - msg.invite.sent.body
+   - msg.request.accepted.subject
+   - msg.request.accepted.body
+   - msg.proposal.created.subject
+   - msg.proposal.created.body
+   - msg.request.declined.subject
+   - msg.request.declined.body
+   - msg.request.unassigned.subject
+   - msg.request.unassigned.body
+   CTAs:
+   - cta.proposal.review
+   - cta.request.open_to_bids
+   - cta.request.invite_another_provider
+
+3) Populate ENTRY_POINT_COPY for:
+   - generic (neutral wording, never industry-specific)
+   - lodging (provider="host", request="reservation request")
+   - parking (provider="lot operator", request="capacity request")
+   - marina (provider="marina", request="moorage request")
+   - restaurant (provider="restaurant")
+   - equipment (provider="rental provider", request="rental request")
+   - service (provider="service provider", run="service run")
+   - activity (provider="operator", request="activity request")
+
+   IMPORTANT:
+   - The word "contractor" must not appear anywhere in these defaults.
+   - The word "booking" must not appear anywhere (use reservation).
+
+B) Copy resolver (single, canonical)
+1) Create:
+   client/src/copy/CopyResolver.ts
+
+   Export:
+   - function resolveCopy(key: string, ctx: CopyContext, vars?: Record<string,string|number>): string
+
+   Behavior:
+   - Look up key in ENTRY_POINT_COPY[ctx.entryPoint], fall back to ENTRY_POINT_COPY.generic.
+   - If missing in both, return `[[${key}]]` (visible placeholder to catch gaps).
+   - Support simple variable interpolation: {varName}
+   - NO business logic here; resolver only.
+
+2) Add helper:
+   - function ep(entryPoint?: string): EntryPointType
+     (safe mapping + fallback to "generic")
+
+C) Wire into Work Requests + Service Runs UI surfaces
+1) Identify core UI components for Work Requests and Service Runs rendering (search for existing copy strings):
+   - Any "Contractor" labels
+   - Any "Booking" labels
+   Replace these with resolveCopy().
+
+2) Minimal wiring approach:
+   - Wherever we already have an entryPoint type (publicEntryPoint or derived type), pass it into ctx.entryPoint.
+   - If not available, infer from the underlying object type (lodging/parking/marina/activity/equipment) or default "generic".
+
+3) Required UI replacements (minimum):
+   - Any "Contractor selected / not open for bids" notice -> resolveCopy("ui.market.locked_notice", ctx)
+   - Any "Open to bids", "Invite another" buttons -> CTAs from resolver
+   - Any "Proposed change" banner -> resolver
+   - Any "Declined" / "Unassigned" states -> resolver
+
+4) Ensure “Ask requester vs Just publish” flow uses tokens:
+   - ui.publish.ask_requester.title/body
+   - ui.publish.just_publish.notice
+
+D) Wire into Messaging + Notifications
+1) Identify where messages/notifications are formed for:
+   - invite sent
+   - proposal created
+   - accepted
+   - declined
+   - unassigned
+   Ensure subjects/bodies come from resolveCopy() tokens, not hardcoded strings.
+
+2) Notification builder must accept ctx.entryPoint (and portalTone if known).
+   If entry point unavailable, default to generic.
+
+3) IMPORTANT:
+   - Do not change notification delivery mechanics.
+   - Only change the text generation.
+
+E) Enforce with Lint: forbid hardcoded terms
+1) Create script:
+   scripts/copy-lint.ts
+
+   It must scan these directories:
+   - client/src
+   - server (or the notifications/templates folder used)
+   Exclusions:
+   - node_modules
+   - dist/build
+   - generated
+   - migrations
+   - vendor
+
+2) Forbidden tokens (case-insensitive):
+   - "contractor"
+   - "booking"
+   - "booked"
+   - "bookings"
+
+   Allowlist exceptions:
+   - docs/markdown files (only if they are not shipped)
+   - tests snapshot strings are NOT allowed; tests must conform too.
+
+3) Print clean report:
+   - file path
+   - line number
+   - offending snippet
+   Exit code 1 on any match.
+
+4) Wire into package scripts:
+   - "lint": include copy-lint (run before existing lint)
+   - "test": keep existing tests; optionally add "pnpm run copy-lint" into CI pipeline if present
+
+F) Add tests for resolver + token presence
+1) Create unit tests:
+   client/src/copy/__tests__/CopyResolver.test.ts
+   Tests:
+   - resolves entrypoint-specific overrides
+   - falls back to generic
+   - missing key renders [[key]]
+   - interpolation works
+
+2) Add coverage test:
+   client/src/copy/__tests__/CopyInventory.test.ts
+   Validate:
+   - Every entry point includes all REQUIRED token keys.
+   - No forbidden words appear in any token values.
+
+G) Acceptance Criteria (must pass)
+- No occurrences of forbidden words in shipped UI or templates.
+- Work Requests + Service Runs screens render correct nouns per entry point (lodging vs parking vs generic).
+- Decline -> UNASSIGNED messaging uses tokens and stays neutral.
+- “Targeted / not open” notice uses tokens (no “bids” language if entry point wants different phrasing).
+- All tests pass; lint passes.
+
+DELIVERABLES
+- client/src/copy/entryPointCopy.ts
+- client/src/copy/CopyResolver.ts
+- scripts/copy-lint.ts
+- tests under client/src/copy/__tests__/
+- Updated UI components + notification template generation to use resolveCopy()
+- Updated package.json scripts to include copy-lint
+
+DO NOT DO
+- Do not create a second copy system.
+- Do not rename core workflow objects or states.
+- Do not add new DB tables.
+- Do not change auth, calendar, or routing logic.
