@@ -1,0 +1,328 @@
+REPLIT PROMPT — V3.5 STEP 6 — Attach Multiple Service Requests to Service Runs
+(HOLD → COMMIT with State Transition Guard)
+
+ROLE  
+Senior Platform Engineer implementing STEP 6 of Provider Phase 2.
+
+MODE  
+Evidence-first. Additive-only. No refactors. No parallel systems.
+
+============================================================
+HARD RULES (LOCKED)
+============================================================
+- Use “service provider” (never contractor).
+- Use “reserve / reservation” (never booking).
+- Do NOT introduce the word “calendar” in any NEW code. Use “schedule” or “operations”.
+- BANNED in NEW service fulfillment context: “job” → use “service request” / “work request”.
+  (Employment-domain exception remains frozen.)
+- Read-only by default.
+- ALL state changes must occur ONLY via:
+  (a) Message Action Blocks, OR
+  (b) Existing MarketMode-gated CTAs.
+- No new inboxes, threads, or messaging UIs.
+- Visibility ≠ Competition ≠ Attachment.
+- AI is NOT used in this step.
+- Terminology MUST conform to TERMINOLOGY_CANON.md (v3), including:
+  - Service Request status includes AWAITING_COMMITMENT
+  - Service Run market_mode ∈ { OPEN | INVITE_ONLY | CLOSED }
+
+============================================================
+GOAL (STEP 6)
+============================================================
+Enable a service provider to attach multiple service requests to a service run
+using a **two-phase attachment model**:
+
+1) HOLD (tentative attach)
+   - Used during demand aggregation
+   - Service Request remains AWAITING_COMMITMENT
+   - Does NOT constitute provider commitment
+
+2) COMMIT (final attach)
+   - Service Request transitions to ACCEPTED
+   - Provider is now committed to fulfill
+
+Also support RELEASE:
+- HELD → UNASSIGNED
+- COMMITTED → NOT ALLOWED (unless an existing policy explicitly permits)
+
+============================================================
+SECTION A) AUDIT FIRST (MANDATORY — NO CHANGES)
+============================================================
+Create: proof/v3.5/run-attachments-audit.md
+
+A1) Identify Service Request table + status column
+- rg -n "service_request|work_request|cc_service_requests|cc_work_requests" server
+- Confirm canonical statuses include:
+  DRAFT, SENT/AWAITING_RESPONSE, PROPOSED_CHANGE,
+  AWAITING_COMMITMENT, UNASSIGNED, ACCEPTED,
+  IN_PROGRESS, COMPLETED, CANCELLED
+- If AWAITING_COMMITMENT does NOT exist in schema:
+  STOP. Document. Do NOT invent silently.
+
+A2) Identify existing run ↔ request linkage
+Check for:
+- cc_run_requests join table
+- cc_service_requests.run_id column
+- cc_n3_runs.request_ids array
+- Any other existing linkage
+If none exists, document:
+“NO EXISTING RUN↔REQUEST LINKAGE”.
+
+A3) Confirm STEP 5A table exists (visibility only)
+- cc_run_portal_publications exists
+- MUST NOT be reused for attachments
+
+A4) Verify current provider run detail response
+- Confirm attached_requests is currently [] and why
+- Do NOT break existing response shape
+
+A5) Identify MarketMode / policy gating pattern
+- Determine which action IDs are used for provider CTAs
+- If uncertain, fail closed and document
+
+STOP if audit reveals an attachment model you would break.
+
+============================================================
+SECTION B) DATABASE (ONLY IF REQUIRED)
+============================================================
+
+B1) Preferred attachment model (if none exists)
+Create ONE join table:
+
+Table: cc_run_request_attachments
+Columns:
+- id uuid PK default gen_random_uuid()
+- tenant_id uuid not null
+- run_id uuid not null references cc_n3_runs(id) on delete cascade
+- request_id uuid not null references <service_request_table>(id) on delete cascade
+- status text not null CHECK (status in ('HELD','COMMITTED'))
+- held_at timestamptz null
+- committed_at timestamptz null
+- released_at timestamptz null
+- created_at timestamptz not null default now()
+- updated_at timestamptz not null default now()
+
+Unique:
+- unique(tenant_id, run_id, request_id)
+
+RLS:
+- Enable RLS
+- Tenant isolation policy (tenant_id = current tenant context)
+- Service-bypass policy if pattern already exists elsewhere
+
+Indexes:
+- (tenant_id, run_id)
+- (tenant_id, request_id)
+- (tenant_id, run_id, status)
+- Partial index where released_at is null (if applicable)
+
+B2) If an existing linkage exists:
+- Extend ADDITIVELY to support HELD vs COMMITTED
+- Do NOT create a parallel linkage table
+
+============================================================
+SECTION C) BACKEND — ATTACHMENT ENDPOINTS
+============================================================
+
+All routes MUST:
+- requireAuth()
+- resolveActorParty()
+- enforce tenant isolation via req.ctx?.tenant_id
+- verify run ownership by provider party
+- validate request belongs to same tenant
+- validate request status transitions strictly (see guard below)
+
+------------------------------------------------------------
+C1) GET /api/provider/runs/:id (extend)
+------------------------------------------------------------
+Return:
+{
+  ok: true,
+  run: {...},
+  attached_requests: [
+    {
+      request_id,
+      status: 'HELD' | 'COMMITTED',
+      held_at,
+      committed_at,
+      released_at,
+      request_summary: {...}
+    }
+  ]
+}
+
+------------------------------------------------------------
+C2) POST /api/provider/runs/:id/attachments/hold
+------------------------------------------------------------
+Body:
+{ requestId: string }
+
+Behavior:
+- Verify request is eligible (see State Transition Guard)
+- Create or update attachment to status=HELD
+- Set held_at=now(), released_at=null
+- Transition Service Request to AWAITING_COMMITMENT
+  ONLY if allowed by guard table
+
+DATE CHANGE NOTIFICATIONS:
+If bundling to a run changes the expected service date:
+- Use existing Message Action Block mechanisms
+- Do NOT create new notification systems
+- Notification must be informational unless a response is required
+- If no date-change pattern exists, document and defer
+
+------------------------------------------------------------
+C3) POST /api/provider/runs/:id/attachments/commit
+------------------------------------------------------------
+Body:
+{ requestId: string }
+
+Behavior:
+- Verify attachment exists and is HELD
+- Set status=COMMITTED, committed_at=now()
+- Transition Service Request to ACCEPTED
+
+------------------------------------------------------------
+C4) POST /api/provider/runs/:id/attachments/release
+------------------------------------------------------------
+Body:
+{ requestId: string }
+
+Behavior:
+- If HELD:
+  - set released_at=now()
+  - transition Service Request → UNASSIGNED
+- If COMMITTED:
+  - HARD BLOCK (409)
+  - error.commitment.release_not_allowed
+
+------------------------------------------------------------
+C5) Error Codes (copy-token aligned)
+------------------------------------------------------------
+- error.auth.unauthenticated (401)
+- error.run.not_found (404)
+- error.run.not_owner (403)
+- error.request.not_found (404)
+- error.request.invalid_state (409)
+- error.attachment.exists (409)
+- error.attachment.not_found (404)
+- error.attachment.not_holdable (409)
+- error.attachment.not_committable (409)
+- error.commitment.release_not_allowed (409)
+
+------------------------------------------------------------
+C6) STATE TRANSITION GUARD (MANDATORY)
+------------------------------------------------------------
+Before implementing, document the EXACT transitions performed.
+Print this table in the audit and enforce it in code.
+
+SERVICE REQUEST STATE TRANSITIONS (STEP 6):
+
+| From Status            | Action  | To Status            | Allowed |
+|------------------------|---------|----------------------|---------|
+| SENT                   | HOLD    | AWAITING_COMMITMENT  | ✅      |
+| AWAITING_RESPONSE      | HOLD    | AWAITING_COMMITMENT  | ✅      |
+| PROPOSED_CHANGE        | HOLD    | AWAITING_COMMITMENT  | ✅      |
+| UNASSIGNED             | HOLD    | AWAITING_COMMITMENT  | ✅      |
+| AWAITING_COMMITMENT    | HOLD    | (no change)          | ✅      |
+| AWAITING_COMMITMENT    | COMMIT  | ACCEPTED             | ✅      |
+| AWAITING_COMMITMENT    | RELEASE | UNASSIGNED           | ✅      |
+| ACCEPTED               | RELEASE | ❌ NOT ALLOWED       | ❌      |
+| IN_PROGRESS            | any     | ❌ NOT ALLOWED       | ❌      |
+| COMPLETED              | any     | ❌ NOT ALLOWED       | ❌      |
+| CANCELLED              | any     | ❌ NOT ALLOWED       | ❌      |
+
+FORBIDDEN (HARD BLOCK):
+- PROPOSED_CHANGE → ACCEPTED
+- SENT → ACCEPTED
+- Any terminal state → any other state
+
+If implementation would violate this table:
+STOP and document.
+
+============================================================
+SECTION D) FRONTEND — PROVIDER RUN DETAIL
+============================================================
+
+D1) Attached Requests Section
+- Group by HELD vs COMMITTED
+- Show minimal summary + status badge
+- No new pages
+
+D2) Add Requests to Run (Modal/Drawer)
+- Source list:
+  - Reuse existing provider request list endpoint if present
+  - Otherwise create ONE read-only endpoint
+- Batch HOLD behavior:
+  Option A (preferred): loop per request (POST hold)
+  Option B: batch endpoint only if repo already uses batch pattern
+- Document chosen approach in proof
+
+D3) CTAs (MarketMode-gated)
+- HELD: Commit / Release
+- COMMITTED: no release
+- All gated via useMarketActions()
+- Fail closed if action ID unclear
+
+No optimistic updates — refetch after success.
+
+============================================================
+SECTION E) COPY TOKENS
+============================================================
+Add:
+- provider.run.attachments.title
+- provider.run.attachments.held
+- provider.run.attachments.committed
+- provider.run.attachments.add_cta
+- provider.run.attachments.hold_cta
+- provider.run.attachments.commit_cta
+- provider.run.attachments.release_cta
+- provider.run.attachments.hold_success
+- provider.run.attachments.commit_success
+- provider.run.attachments.release_success
+
+Errors:
+- error.request.invalid_state
+- error.attachment.not_holdable
+- error.attachment.not_committable
+- error.commitment.release_not_allowed
+
+============================================================
+SECTION F) TESTING (MANDATORY — TEST AUTH BOOTSTRAP)
+============================================================
+Use POST /api/test/auth/login with X-TEST-AUTH
+Persona: ellen
+
+Verify:
+1) HOLD request → appears under HELD
+2) COMMIT request → appears under COMMITTED
+3) RELEASE held request → request UNASSIGNED
+4) ACCEPTED request cannot be released
+5) STEP 5 publishing remains unaffected
+6) No UI login used
+
+============================================================
+SECTION G) PROOF
+============================================================
+Create: proof/v3.5/run-attachments-proof.md
+
+Include:
+- Audit findings
+- Chosen attachment model
+- DB evidence
+- Backend route evidence
+- State Transition Guard table
+- Frontend evidence
+- Copy tokens
+- Test results
+
+Verification checkboxes:
+- [ ] AWAITING_COMMITMENT enforced
+- [ ] HOLD ≠ COMMIT preserved
+- [ ] Forbidden transitions blocked
+- [ ] Visibility ≠ Competition ≠ Attachment
+- [ ] No new inbox/thread UI
+- [ ] No “calendar” in new code
+- [ ] Test auth bootstrap used
+
+END.
