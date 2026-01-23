@@ -1,0 +1,291 @@
+✅ REPLIT PROMPT — N3 Calendar Purge + Ruthless Auth Canonicalization Audit (Proof Required)
+
+ROLE: Senior platform architect + QA authority.
+MODE: Ruthless audit + surgical fixes. No guessing. No “should be”. Provide hard proof.
+NON-NEGOTIABLE: The Apple-style calendar view must not exist anywhere. There must be exactly one calendar UX: ScheduleBoard (Operations-style rows left, time across top).
+
+PART 0 — RULES OF ENGAGEMENT (IMPORTANT)
+
+Do not claim something is removed unless you provide proof.
+
+For every claim, include either:
+
+a grep result (file paths + matching lines), and/or
+
+a SQL result (tables/columns found or not found).
+
+If you change anything, you must:
+
+list files changed
+
+list routes changed
+
+list migrations (if any)
+
+run tests and report exact command + result
+
+PART 1 — FIX: “View Portal” loads Apple Calendar (must die)
+Symptom
+
+Clicking Platform → Command Console → Bamfield Snapshot → View Portal loads /p/bamfield/calendar and shows an Apple/iPhone-style calendar UI. This must not exist.
+
+Goal
+
+/p/:portalSlug/calendar must render OpsCalendarBoardPage mode="portal" using ScheduleBoard.
+
+No other calendar UI components may be reachable in routes or nav.
+
+The old Apple calendar pages/components must be deleted or hard-blocked (not merely “marked legacy”).
+
+1A) Identify the Apple calendar entry-point (PROOF)
+
+Run ripgrep and paste results:
+
+rg -n "CalendarGrid|CalendarRunCard|ContractorCalendarPage|ResidentCalendarPage|PortalCalendarPage|Community Schedule|No scheduled community work|Zoom: Day|Week|Month" client/src -S
+
+rg -n "/p/\\:portalSlug/calendar|/p/.*/calendar|portal.*calendar|Community Schedule" client/src -S
+
+rg -n "View Portal" client/src -S
+
+rg -n "bamfield.*calendar|/p/bamfield/calendar" client/src -S
+
+Then state clearly:
+
+Which component renders /p/:portalSlug/calendar right now
+
+Which file defines the View Portal button target URL
+
+1B) Route hardening (MAKE IT IMPOSSIBLE)
+
+Implement all of the following:
+
+(1) Public route must be canonical
+
+In App.tsx (or wherever public routes are composed):
+
+Ensure /p/:portalSlug/calendar → OpsCalendarBoardPage mode="portal"
+
+If it already is, confirm there is no earlier matching route shadowing it.
+
+(2) Remove/disable legacy calendar routes completely
+
+If any routes exist that render CalendarGrid / Apple-style calendar:
+
+Delete those routes OR replace with a component that returns:
+
+a dead-simple message: “Legacy calendar removed”
+
+and a link/button to /p/:portalSlug/calendar canonical page
+
+(3) Delete legacy calendar UI files (preferred)
+
+If safe (no other dependencies), remove:
+
+client/src/components/calendar/CalendarGrid.tsx
+
+old *CalendarPage.tsx that are not OpsCalendarBoardPage
+If not safe to delete immediately, then:
+
+rename/move to client/src/_deprecated/ and ensure no imports exist anywhere.
+
+add a CI/ lint guard so they can’t be reintroduced.
+
+(4) View Portal button must point to the correct canonical page
+
+In Bamfield Snapshot page:
+
+“View Portal” should link to either:
+
+/p/bamfield (portal home), and include a “View Schedule” CTA that goes to /p/bamfield/calendar, OR
+
+directly to /p/bamfield/calendar (acceptable)
+But whichever you choose: it must land on ScheduleBoard ops calendar, not Apple calendar.
+
+1C) Proof the purge worked (MANDATORY)
+
+After changes:
+
+Add a tiny “route identity banner” (DEV only) on the portal calendar page:
+
+show component name “OpsCalendarBoardPage (portal)”
+
+show that it uses ScheduleBoard (e.g., “Time spine: ScheduleBoard”)
+
+Provide screenshots are not possible here, so provide code proof:
+
+show the route snippet from App.tsx
+
+show that CalendarGrid is no longer imported anywhere:
+
+rg -n "from '@/components/calendar/CalendarGrid'|CalendarGrid" client/src -S must return 0 matches
+
+Run and report:
+
+pnpm lint
+
+pnpm test (or the repo’s standard test command)
+
+PART 2 — RUTHLESS AUDIT: “Auth Canonicalization Complete” (verify reality)
+
+Replit previously claimed:
+
+cc_users only
+
+no staging fallbacks
+
+13 legacy tables dropped
+
+host auth quarantined
+
+lint gate prevents regression
+We must confirm this is actually true.
+
+2A) Database reality check (SQL PROOF)
+
+Run these SQL checks and paste results:
+
+(1) Find any staging/legacy user/auth tables
+select tablename
+from pg_tables
+where schemaname='public'
+and (
+  tablename ilike '%staging%'
+  or tablename ilike '%legacy%'
+  or tablename ilike '%host%'
+  or tablename ilike '%session%'
+)
+order by tablename;
+
+(2) Confirm canonical tables exist
+select tablename
+from pg_tables
+where schemaname='public'
+and tablename in ('cc_users','cc_tenants','cc_tenant_users','cc_auth_sessions','cc_auth_accounts')
+order by tablename;
+
+(3) Confirm auth session schema is consistent with code
+select column_name, data_type
+from information_schema.columns
+where table_name='cc_auth_sessions'
+order by ordinal_position;
+
+(4) Confirm no foreign keys still reference staging tables
+select
+  tc.table_name, kcu.column_name, ccu.table_name as foreign_table_name, ccu.column_name as foreign_column_name
+from information_schema.table_constraints tc
+join information_schema.key_column_usage kcu
+  on tc.constraint_name = kcu.constraint_name
+join information_schema.constraint_column_usage ccu
+  on ccu.constraint_name = tc.constraint_name
+where tc.constraint_type='FOREIGN KEY'
+and (ccu.table_name ilike '%staging%' or ccu.table_name ilike '%legacy%')
+order by tc.table_name;
+
+
+If anything staging/legacy remains: we must remove it now (migrations).
+
+2B) Code reality check (GREP PROOF)
+
+Run and paste results:
+
+rg -n "cc_staging_|staging_users|staging_sessions|legacy_|cc_legacy_" server client shared -S
+
+rg -n "from\\s+\"\\.\\/routes\\/auth\"|routes\\/auth\\.ts|\\/api\\/auth\\/login" server -S
+
+rg -n "\\{\\s*success\\s*:\\s*true\\s*\\}" server -S (ensure we are standardized)
+
+rg -n "source:\\s*\"cc_users\"|source:\\s*\"cc_staging_users\"" server -S (should be none if removed)
+
+Then state clearly:
+
+What exact auth endpoints exist (paths)
+
+Which files implement them
+
+Whether any endpoint still reads/writes anything non-canonical
+
+2C) Standardize auth contract (NO SPLIT-BRAIN)
+
+We need one canonical system.
+
+Requirements
+
+Login/register/me/logout must use cc_users only
+
+If refresh tokens exist, they must be consistently supported for cc_users (no “refreshToken:null” split-brain unless we intentionally remove refresh tokens entirely)
+
+Response envelope must be consistent across auth routes:
+
+{ ok: true, ... } on success
+
+{ ok: false, error: '...' } on failure
+No { success: true } anywhere.
+
+If refresh tokens are too messy:
+
+Prefer a single clean approach:
+
+Either fully implement refresh tokens for cc_users via cc_auth_sessions, OR
+
+remove refresh tokens entirely (access token only) and remove cc_auth_sessions usage if it becomes dead weight.
+But choose one, and remove the other completely.
+
+2D) Purge legacy system completely (NO TECH DEBT)
+
+If any of these exist, remove them:
+
+unused routes
+
+unused tables
+
+unused UI flows
+
+unused dev helpers that point at removed routes
+
+quarantine folders that are still imported
+
+Add a lint gate that fails CI if any of these strings appear:
+
+cc_staging_
+
+staging_users
+
+cc_legacy_
+
+/admin/ UI routes (unless explicitly allowed)
+
+CalendarGrid
+
+Provide the exact lint script path and how it’s wired into pnpm lint.
+
+PART 3 — DELIVERABLES
+
+When done, respond with:
+
+Calendar Purge Proof Pack
+
+route snippet for /p/:portalSlug/calendar
+
+grep showing no CalendarGrid imports
+
+what View Portal links to now
+
+tests/lint results
+
+Auth Canonicalization Proof Pack
+
+SQL results for staging/legacy tables (should be none)
+
+grep results (should be none)
+
+list of canonical auth endpoints + files
+
+decision: refresh tokens yes/no, and proof it’s consistent
+
+list of dropped tables (migration numbers + names)
+
+Risk list (if anything couldn’t be removed)
+
+must be explicit and small
+
+but preference is remove everything now

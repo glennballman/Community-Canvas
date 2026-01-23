@@ -776,7 +776,7 @@ export function DebugPanel() {
             <Button 
               size="sm" 
               variant="ghost" 
-              onClick={() => window.open('/c/bamfield/calendar', '_blank')}
+              onClick={() => window.open('/p/bamfield/calendar', '_blank')}
               className="w-full h-6 text-xs"
               data-testid="button-open-portal"
             >

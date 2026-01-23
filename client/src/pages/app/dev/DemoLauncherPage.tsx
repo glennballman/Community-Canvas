@@ -153,7 +153,7 @@ export default function DemoLauncherPage() {
   };
 
   const openBamfieldPortal = () => {
-    window.open('/c/bamfield/calendar', '_blank');
+    window.open('/p/bamfield/calendar', '_blank');
   };
 
   const openEllenContractor = async () => {
@@ -245,7 +245,7 @@ export default function DemoLauncherPage() {
   const copyDemoLinks = () => {
     const baseUrl = window.location.origin;
     const links = `Demo Links:
-- Bamfield Portal Calendar: ${baseUrl}/c/bamfield/calendar
+- Bamfield Portal Calendar: ${baseUrl}/p/bamfield/calendar
 - Ellen Contractor (login required): ${baseUrl}/app/contractor/calendar
 - Wade Resident (login required): ${baseUrl}/app/my-place/calendar
 - Demo Launcher: ${baseUrl}/app/dev/demo`;
