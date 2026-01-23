@@ -149,6 +149,7 @@ import onboardingRouter from "./routes/onboarding";
 import calendarRouter from "./routes/calendar";
 import commandConsoleRouter from "./routes/command-console";
 import publicPortalConditionsRouter from "./routes/public-portal-conditions";
+import messageActionsRouter from "./routes/message-actions";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -271,6 +272,9 @@ export async function registerRoutes(
   // Register cc_conversations/messaging routes
   app.use('/api', conversationsRouter);
   app.use('/api/notifications', notificationsRouter);
+  
+  // Register V3.5 Message Action Blocks routes
+  app.use('/api/messages', messageActionsRouter);
 
   // Register defensive record bundles and contemporaneous notes (legal/CYA spine)
   app.use('/api/record-bundles', recordBundlesRouter);

@@ -1,0 +1,180 @@
+REPLIT PROMPT — V3.5 STEP 1 (Backend) — Message Action Blocks (SAFE Additive)
+
+ROLE: Senior Platform Engineer implementing V3.5 backend-only “Message Action Blocks”.
+MODE: Evidence-first, additive-only. No refactors. No parallel systems. No guessing.
+HARD RULES:
+- Use “service provider” (never contractor).
+- Use “reserve / reservation” (never booking).
+- Do not create new message storage tables.
+- Do not bypass auth or RLS.
+- Do not add duplicate API surfaces.
+- Actions must be explicit (no side effects on view/render).
+- Preserve existing API envelope: { ok, error?, ...data }.
+
+INPUT EVIDENCE (already present):
+- proof/v3.5/messaging-audit.md confirms cc_messages exists w/ RLS, routes exist, use requireAuth/resolveActorParty patterns.
+- Build_12 QA & AUTH proof confirms QA runner + DEV-only Test Auth Bootstrap.
+
+GOAL
+Implement SAFE additive “action blocks” stored on cc_messages and a single action execution endpoint that:
+1) validates auth + party + participation
+2) validates MarketMode eligibility (server-side)
+3) updates message action_block state idempotently
+4) records an audit/attestation event via the existing evidence spine patterns
+5) returns updated action block state
+
+DELIVERABLES
+1) DB migration: add cc_messages.action_block JSONB + optional action_block_state (if you choose) — additive only.
+2) New Zod schema for ActionBlockV1 + server validator.
+3) New endpoint:
+   POST /api/messages/:messageId/action
+   Body: { action: 'accept'|'propose'|'decline'|'ack'|'confirm', payload?: any, idempotencyKey?: string }
+   Returns: { ok: true, action_block: {...}, message_id: ..., conversation_id: ... }
+4) Add server-side MarketMode enforcement (do NOT rely only on UI hook).
+5) Tests + QA runner hooks:
+   - Add a minimal integration test (or route unit test) proving:
+     - 401 if unauthenticated
+     - 403 if authenticated but not a participant
+     - 200 idempotent if repeated with same idempotencyKey
+     - state transitions obey constraints
+6) Proof report written to: proof/v3.5/message-action-blocks-backend.md
+   Include: SQL evidence, file paths, route excerpt, auth/permission proof, test output snippet.
+
+A) DATABASE — ADDITIVE MIGRATION
+1) Find current migration numbering convention (latest migration file) and create next additive migration.
+2) Add columns to cc_messages:
+   - action_block jsonb NULL
+   - action_block_updated_at timestamptz NULL (optional)
+   - action_block_idempotency_key text NULL (optional, if you store last key)
+   - action_block_state text NULL (optional; otherwise keep state inside JSONB)
+
+3) Add a check constraint if appropriate, but ONLY if it won’t break existing rows:
+   - action_block must be an object when not null
+
+Example SQL (adapt to your migration style):
+ALTER TABLE cc_messages ADD COLUMN IF NOT EXISTS action_block jsonb;
+ALTER TABLE cc_messages ADD COLUMN IF NOT EXISTS action_block_updated_at timestamptz;
+ALTER TABLE cc_messages ADD COLUMN IF NOT EXISTS action_block_idempotency_key text;
+-- optional:
+-- ALTER TABLE cc_messages ADD COLUMN IF NOT EXISTS action_block_state text;
+
+IMPORTANT:
+- Do NOT change existing RLS policies unless strictly required. Prefer to rely on existing participant-based RLS.
+- If RLS currently blocks updating cc_messages for participants, add the MINIMAL additive policy for update on action_block ONLY, scoped to participants, consistent with existing RLS style. Document it in proof.
+
+B) ACTION BLOCK SCHEMA (ZOD)
+Create a new module, e.g.:
+- server/schemas/actionBlocks.ts (or existing schemas folder pattern)
+
+Zod schema: ActionBlockV1
+Fields (LOCKED):
+- version: 1
+- domain: 'job' | 'reservation' | 'service_run' | 'incident'
+- type: 'accept' | 'propose' | 'decline' | 'ack' | 'confirm'
+- target_id: string (uuid)
+- attestable: true
+- state: 'pending' | 'accepted' | 'declined' | 'expired'
+- created_at: ISO string
+- expires_at?: ISO string
+- meta?: object (optional, small)
+
+Also define:
+- ActionRequest schema for POST body:
+  { action, payload?, idempotencyKey? }
+
+C) SERVER-SIDE MARKETMODE CHECK
+Locate existing MarketMode policy utilities (used by UI hook useMarketActions()).
+Implement a server-side function:
+- ensureMarketActionAllowed({ actorParty, portalContext, actionType, domain })
+If not allowed => return 409 with error code "marketmode_action_blocked"
+(Do NOT introduce new policy systems; reuse existing MarketMode source-of-truth.)
+
+D) ENDPOINT IMPLEMENTATION (NEW ROUTE)
+1) Create a new route file in server/routes:
+   server/routes/message-actions.ts
+(or extend an existing messages route file if present, but DO NOT create duplicates of conversations routes.)
+
+2) Register the route in server router index exactly once.
+
+Endpoint:
+POST /api/messages/:messageId/action
+
+Steps inside handler (MUST follow):
+1. requireAuth(req)
+2. resolveActorParty(req) (or same helper used in conversations routes)
+3. Parse params/body with zod
+4. Load message by id with:
+   - message id
+   - conversation id
+   - action_block jsonb
+   - any required ownership/participant linkage
+5. Verify actor is a participant (prefer relying on RLS + an explicit participant lookup).
+   If not => 403 { ok:false, error:{ code:'forbidden_not_participant' } }
+
+6. Validate action_block exists on message and state is pending (or allow idempotent repeats).
+   If no action_block => 409 { code:'no_action_block' }
+
+7. Idempotency:
+   - If idempotencyKey present:
+     - If stored last key matches and state already transitioned => return 200 with current state (idempotent)
+     - Else proceed and store key
+   - If no idempotencyKey: still enforce safe transitions and return 409 on repeat action attempt.
+
+8. MarketMode enforcement (server-side) BEFORE writing:
+   - If blocked => 409 { code:'marketmode_action_blocked' }
+
+9. Perform update:
+   - Update cc_messages.action_block JSONB:
+     - set state based on action
+     - set action_block_updated_at
+     - set action_block_idempotency_key if used
+   - IMPORTANT: do NOT mutate other message fields
+
+10. Evidence hook:
+   - Emit an audit event using existing logging/evidence patterns already in repo.
+   - If there is an evidence/attestation table, write a minimal record referencing:
+     - message_id
+     - conversation_id
+     - actor_party_id
+     - action
+     - timestamp
+   - Do NOT invent a new ledger or new spine. Reuse existing “proof/evidence/qa event” mechanisms.
+
+11. Return:
+{ ok:true, message_id, conversation_id, action_block }
+
+Error codes to use (consistent style):
+- unauthenticated (401)
+- forbidden_not_participant (403)
+- no_action_block (409)
+- action_block_expired (409)
+- action_block_already_resolved (409)
+- marketmode_action_blocked (409)
+- invalid_request (400)
+
+E) TESTS
+Add tests following existing test harness:
+- server route test file (where other route tests live)
+Cover:
+1) 401 without auth
+2) 403 when auth but not a participant
+3) 200 when valid participant transitions from pending -> accepted
+4) 200 idempotent repeat with same idempotencyKey
+5) 409 repeat without idempotencyKey after resolved
+6) 409 expired blocks
+
+If test auth bootstrap header is used for tests, use DEV-only header gating correctly.
+
+F) PROOF REPORT
+Write: proof/v3.5/message-action-blocks-backend.md
+Must include:
+- Migration file name + excerpt
+- SQL evidence showing new columns exist
+- Route file path + key excerpt (auth + participant check + update)
+- MarketMode enforcement proof snippet
+- Test output snippet
+
+G) NO FRONTEND CHANGES IN THIS STEP
+Do not add UI components. Do not add BlockRenderer. Backend only.
+
+END.
