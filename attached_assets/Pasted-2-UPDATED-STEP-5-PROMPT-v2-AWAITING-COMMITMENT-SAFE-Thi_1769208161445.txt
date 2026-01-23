@@ -1,0 +1,164 @@
+2️⃣ UPDATED STEP 5 PROMPT (v2 — AWAITING_COMMITMENT SAFE)
+
+This version explicitly supports aggregation-before-commitment
+without conflating publishing, commitment, or acceptance.
+
+REPLIT PROMPT — V3.5 STEP 5 — Selective Publishing to Portals WITH MarketMode (Provider Phase 2)
+
+ROLE
+Senior Platform Engineer implementing STEP 5 of Provider Phase 2.
+
+MODE
+Evidence-first. Additive-only. No refactors. No parallel systems.
+
+============================================================
+HARD RULES (LOCKED)
+============================================================
+- Use “service provider” (never contractor).
+- Use “reserve / reservation” (never booking).
+- Do NOT introduce the word “calendar” in any NEW code.
+- Read-only by default.
+- ALL state changes must occur ONLY via:
+  (a) existing MarketMode-gated CTAs, OR
+  (b) Message Action Blocks.
+- No new inboxes, threads, or messaging UIs.
+- Visibility ≠ Competition.
+- Publishing a run does NOT imply commitment to requests.
+- Copy tokens required for all user-facing strings.
+- Test Auth Bootstrap MUST be used for all verification.
+
+============================================================
+GOAL (STEP 5)
+============================================================
+Enable service providers to:
+
+1) Publish a Service Run to multiple portals (VISIBILITY)
+2) Control whether the run accepts new attachments (MARKET MODE)
+
+This explicitly supports real-world behavior where a provider:
+- has requests in AWAITING_COMMITMENT
+- publishes a run to gather additional demand
+- commits only once capacity is sufficient
+
+Run MarketMode (SUPPLY-SIDE ONLY):
+- OPEN
+- INVITE_ONLY
+- CLOSED
+
+TARGETED is DEMAND-SIDE ONLY (Service Requests).
+
+============================================================
+SECTION A) AUDIT FIRST (NO CHANGES)
+============================================================
+Create: proof/v3.5/run-publishing-audit.md
+
+A1) Portal inventory discovery  
+A2) Existing run→portal publication discovery  
+A3) Tenant isolation enforcement (req.ctx?.tenant_id)
+
+A4) Verify market_mode column on cc_n3_runs:
+- Confirm column exists
+- Document allowed values
+- If missing: STOP and document (do not create)
+
+STOP. Write audit doc before proceeding.
+
+============================================================
+SECTION B) DATABASE (ONLY IF NEEDED)
+============================================================
+Reuse existing publication linkage if present.
+If none exists, create ONE minimal join table
+(cc_run_portal_publications or repo-equivalent).
+
+============================================================
+SECTION C) BACKEND — PROVIDER ENDPOINTS
+============================================================
+
+POST /api/provider/runs/:id/publish
+Body:
+{
+  "portalIds": ["uuid", "..."],
+  "marketMode": "OPEN | INVITE_ONLY | CLOSED"
+}
+
+Behavior:
+- Validate run ownership (party + tenant)
+- Validate portals belong to tenant
+- Update cc_n3_runs.market_mode
+- Upsert publications
+- Return updated publications + marketMode
+
+NOTE:
+- Publishing a run does NOT change any Service Request status.
+- Requests may remain in AWAITING_COMMITMENT after publishing.
+
+============================================================
+SECTION D) FRONTEND — PUBLISH FLOW
+============================================================
+
+Modal has TWO DISTINCT SECTIONS:
+
+------------------------------------------------------------
+D1) VISIBILITY — Portal Selection
+------------------------------------------------------------
+Controls WHERE the run is visible.
+
+- Checkbox list of portals
+- Pre-select existing publications
+
+------------------------------------------------------------
+D2) COMPETITION — MarketMode
+------------------------------------------------------------
+Controls WHO may attach requests.
+
+Options:
+- “Open for responses” → OPEN
+- “By invitation only” → INVITE_ONLY
+
+Rules:
+- Default to existing run.market_mode
+- If null, default to INVITE_ONLY
+- CLOSED is not user-selectable here
+- Labels + helper text via copy tokens
+- Helper text must explain that this does NOT commit requests
+
+============================================================
+SECTION E) MARKETMODE GATING
+============================================================
+- Gate “Publish to Portals” CTA via useMarketActions()
+- Hide CTA if not permitted
+
+============================================================
+SECTION F) COPY TOKENS
+============================================================
+Add tokens:
+- provider.run.publish.market_mode_label
+- provider.run.publish.market_mode_open
+- provider.run.publish.market_mode_open_description
+- provider.run.publish.market_mode_invite_only
+- provider.run.publish.market_mode_invite_only_description
+
+============================================================
+SECTION G) TESTING
+============================================================
+Use Test Auth Bootstrap:
+- Persona: ellen
+- Verify:
+  - Run published to multiple portals
+  - market_mode updates
+  - Requests remain AWAITING_COMMITMENT until explicit commit
+
+============================================================
+SECTION H) PROOF
+============================================================
+Create: proof/v3.5/run-publishing-proof.md
+
+Include verification:
+- [ ] Visibility ≠ Competition enforced
+- [ ] Run MarketMode limited to OPEN | INVITE_ONLY | CLOSED
+- [ ] Publishing does not imply commitment
+- [ ] Requests can remain AWAITING_COMMITMENT
+- [ ] No new inbox/thread UIs
+- [ ] Test auth bootstrap used
+
+END.
