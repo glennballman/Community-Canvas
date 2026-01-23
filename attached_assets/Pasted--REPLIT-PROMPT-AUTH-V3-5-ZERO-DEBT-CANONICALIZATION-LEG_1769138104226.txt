@@ -1,0 +1,158 @@
+✅ REPLIT PROMPT — “AUTH V3.5 ZERO-DEBT CANONICALIZATION + LEGACY PURGE”
+
+Paste this whole thing into Replit:
+
+REPLIT PROMPT — AUTH V3.5 ZERO-DEBT CANONICALIZATION + LEGACY PURGE
+ROLE: Principal engineer doing a permanent canonicalization. No backwards compatibility required. Delete legacy system completely. No technical debt.
+
+NON-NEGOTIABLE GOAL
+There must be exactly one identity/auth spine in the codebase:
+- cc_users (uuid) is the ONLY user table
+- cc_tenants (uuid) is the ONLY tenant table
+- cc_tenant_users (uuid) is the ONLY membership table
+- cc_auth_accounts + cc_auth_sessions (or whichever is canonical) is the ONLY session/auth storage
+
+The following must be FULLY REMOVED from:
+- database (tables, indexes, constraints)
+- server routes / services
+- client calls
+- tests/docs
+- seed/dev tools
+No lingering references, no fallbacks, no “try staging first,” no “source” flags.
+
+PHASE 0 — BASELINE AUDIT (MUST DO FIRST)
+1) Create docs/AUTH_PURGE_AUDIT.md containing:
+   A) A list of ALL tables matching:
+      - cc_staging_*
+      - staging
+      - legacy
+      - old auth
+   B) A ripgrep inventory of code references:
+      rg -n "cc_staging_|staging_users|staging user|legacy user|source:\s*\"cc_staging" server client shared
+   C) Identify exactly which auth tables are canonical today:
+      - cc_auth_accounts columns + FKs
+      - cc_auth_sessions columns + FKs
+      - token hashing columns (refresh_token_hash vs token_hash etc.)
+   D) Identify how JWT/refresh currently works.
+
+2) Fail the task if any canonical ambiguity remains. Resolve it in the audit doc.
+
+PHASE 1 — DEFINE THE CANONICAL AUTH CONTRACT (LOCK IT)
+Update server/routes/auth.ts to be the ONLY auth implementation and it must:
+- Login: cc_users only
+- Register: cc_users only
+- /me: cc_users only
+- Logout: invalidates session properly
+- Refresh: MUST exist and work (even if short-lived access tokens)
+- Password reset: must write cc_users
+- Platform admin check: must be derived from cc_users fields only (or canonical role tables if that’s how it is)
+
+Hard rules:
+- No “source” field in responses
+- No staging fallback
+- No staging reads/writes anywhere
+- All auth endpoints return consistent envelope:
+  { ok: true, user, accessToken, refreshToken }
+  or { ok:false, error, ... }
+
+PHASE 2 — SESSION SPINE PERFECTION (NO HAND-WAVING)
+We must have a single, coherent session model:
+- If cc_auth_sessions FK is to cc_auth_accounts, then every cc_users must have a cc_auth_accounts row.
+- Implement ensureAuthAccount(userId) that creates exactly one account row per user (idempotent).
+- Implement createSession(authAccountId) that stores refresh token hash + expiry.
+- Access tokens are JWT; refresh token rotates and is stored hashed.
+- Logout deletes/invalidates session row.
+- Refresh validates hash and rotates.
+
+Add strict security:
+- httpOnly cookie optional is fine, but if tokens are in localStorage, still keep refresh rotation and allow invalidation.
+- Add rate limit to login + refresh routes (basic in-memory is fine for dev; document production TODO, but implement now).
+
+PHASE 3 — DELETE LEGACY TABLES FROM DB (PERMANENT)
+Create a migration that DROPS legacy tables and any dependent objects.
+This includes (but not limited to):
+- cc_staging_users
+- cc_staging_user_favorites
+- cc_staging_user_vehicles
+- cc_staging_host_accounts
+- any staging auth/session tables if present
+- any sequences tied to those tables
+- any foreign keys referencing those tables
+
+Migration must:
+- first drop FKs
+- then drop indexes
+- then drop tables
+- be safe to run repeatedly (IF EXISTS)
+- output in docs/AUTH_PURGE_AUDIT.md the exact final list of dropped objects
+
+NOTE: We have no production data. No need for migration/porting.
+
+PHASE 4 — DELETE LEGACY CODE PATHS (SERVER)
+Remove entire modules/files if they exist:
+- any staging-user DAL
+- any auth routes that read staging
+- any “compatibility endpoints” that only exist for staging
+- any helper functions that accept int user IDs
+
+Then enforce:
+- A TypeScript type ban: userId must be UUID string (zod uuid) across auth surfaces.
+- Make any compilation fail if server tries to import deleted modules.
+
+PHASE 5 — DELETE LEGACY CODE PATHS (CLIENT)
+- Remove any client assumptions about source fields / staging ids.
+- Ensure login/logout flows still work.
+- Ensure DebugPanel dev login uses canonical login (or dev-login) that writes to cc_users only.
+- Ensure Demo Launcher uses canonical identities only.
+
+PHASE 6 — HARD FAIL LINT GATE (NO REGRESSION)
+Add a CI-safe script: scripts/auth-purge-lint.ts
+It must fail build if ANY of these strings appear anywhere:
+- cc_staging_
+- staging_users
+- staging user
+- source:"cc_staging
+- "migrated_from_staging"
+- "legacy user"
+
+Also fail if any SQL migrations contain "staging" objects.
+
+Wire it into pnpm lint / npm test (whichever is used).
+
+PHASE 7 — QA PROOF PACK (MUST BE OBJECTIVE)
+Create docs/AUTH_V3_PROOF_PACK.md with:
+
+A) Schema proof (SQL)
+- \d cc_users
+- \d cc_tenants
+- \d cc_tenant_users
+- \d cc_auth_accounts
+- \d cc_auth_sessions
+- Confirm NO cc_staging_* tables exist:
+  SELECT tablename FROM pg_tables WHERE tablename LIKE 'cc_staging_%';
+
+B) Route proof
+- List auth routes with guards and show they reference cc_users only.
+
+C) Functional proof (manual steps)
+1) Create a new user (register)
+2) Login (gets access + refresh)
+3) /me works
+4) Refresh rotates token and old refresh is invalid
+5) Logout invalidates refresh
+6) Login as platform admin still works
+
+D) Grep proof
+Paste command outputs:
+rg -n "cc_staging_|staging_users|migrated_from_staging|source:\s*\"cc_staging" server client shared
+Must be ZERO hits.
+
+DELIVERABLES
+- Migration dropping legacy tables
+- auth.ts rewritten to canonical cc_users-only
+- session/refresh unified and correct
+- DebugPanel + Demo Launcher updated to canonical-only
+- scripts/auth-purge-lint.ts wired into lint/test
+- docs/AUTH_PURGE_AUDIT.md + docs/AUTH_V3_PROOF_PACK.md
+
+Proceed. No partial completion allowed. If anything fails, stop and fix before finishing.

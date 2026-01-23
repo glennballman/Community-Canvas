@@ -16,10 +16,11 @@ import { getChamberProgressList, getChamberProgressSummary } from "@shared/chamb
 import { createFleetRouter } from "./routes/fleet";
 import { createAccommodationsRouter } from "./routes/accommodations";
 import stagingRouter from "./routes/staging";
-import hostAuthRouter from "./routes/hostAuth";
-import hostPropertiesRouter from "./routes/hostProperties";
+// DISABLED: Host auth tables were dropped in auth canonicalization
+// import hostAuthRouter from "./routes/hostAuth";
+// import hostPropertiesRouter from "./routes/hostProperties";
+// import hostDashboardRouter from "./routes/host";
 import authRouter from "./routes/auth";
-import hostDashboardRouter from "./routes/host";
 import importRouter from "./routes/import";
 import civosRouter from "./routes/civos";
 import foundationRouter from "./routes/foundation";
@@ -191,17 +192,14 @@ export async function registerRoutes(
   // Register staging network routes
   app.use('/api/staging', stagingRouter);
 
-  // Register host authentication routes
-  app.use('/api/host/auth', hostAuthRouter);
-
-  // Register host property management routes
-  app.use('/api/host', hostPropertiesRouter);
+  // DISABLED: Host auth tables were dropped in auth canonicalization
+  // TODO: Migrate to canonical cc_users if host auth is needed
+  // app.use('/api/host/auth', hostAuthRouter);
+  // app.use('/api/host', hostPropertiesRouter);
+  // app.use('/api/host-dashboard', hostDashboardRouter);
 
   // Register user authentication routes
   app.use('/api/auth', authRouter);
-
-  // Register host dashboard routes (JWT auth)
-  app.use('/api/host-dashboard', hostDashboardRouter);
 
   // Register data import routes (JWT auth)
   app.use('/api/import', importRouter);
