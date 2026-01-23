@@ -59,7 +59,18 @@ export function resolveCopy(
   let value = entryPointCopy?.[key] ?? genericCopy?.[key];
   
   if (!value) {
-    return `[[${key}]]`;
+    const placeholder = `[[${key}]]`;
+    
+    // DEV-only warning for missing tokens
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[CopyResolver] Missing token: "${key}" for entry point "${ctx.entryPoint}"\n` +
+        `  → Returned placeholder: ${placeholder}\n` +
+        `  → Add this token to client/src/copy/entryPointCopy.ts`
+      );
+    }
+    
+    return placeholder;
   }
   
   if (vars) {
