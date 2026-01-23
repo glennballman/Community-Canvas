@@ -26,7 +26,7 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 const SEARCH_DIRS = ['server', 'client', 'shared'];
-const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build'];
+const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build', '_deprecated'];
 const EXCLUDE_FILES = [
   'AUTH_PURGE_AUDIT.md',
   'AUTH_V3_PROOF_PACK.md',
@@ -88,6 +88,8 @@ function main(): void {
   
   // Filter out allowed files/patterns
   const filteredViolations = allViolations.filter(v => {
+    // Allow _deprecated folder (quarantined legacy code)
+    if (v.file.includes('/_deprecated/')) return false;
     // Allow stagingStorage.ts for non-auth staging (properties, spots, etc)
     if (v.file.includes('stagingStorage.ts')) return false;
     // Allow staging.ts route for non-auth staging
@@ -100,14 +102,6 @@ function main(): void {
     if (v.file.includes('routes.ts') && v.content.trim().startsWith('//')) return false;
     // Allow documentation files
     if (v.file.endsWith('.md')) return false;
-    // Allow hostAuthService.ts (deprecated - will be removed in future)
-    if (v.file.includes('hostAuthService.ts')) return false;
-    // Allow hostAuth.ts (deprecated - will be removed in future)
-    if (v.file.includes('hostAuth.ts')) return false;
-    // Allow host.ts dashboard (deprecated - will be removed in future)
-    if (v.file.includes('routes/host.ts')) return false;
-    // Allow hostProperties.ts (deprecated - will be removed in future)
-    if (v.file.includes('hostProperties.ts')) return false;
     return true;
   });
   

@@ -160,7 +160,17 @@ Result: `{"ok":true,"accessToken":"<new>","refreshToken":"<new>"}`
 
 Old refresh token is invalidated in cc_auth_sessions.
 
-### 5. Logout Invalidates Session
+### 5. Access Token Cannot Be Used as Refresh Token
+```bash
+curl -X POST http://localhost:5000/api/auth/refresh \
+  -H 'Content-Type: application/json' \
+  -d '{"refreshToken":"<accessToken>"}'
+```
+Result: `{"ok":false,"error":"Session expired or revoked"}`
+
+Validated by checking `type: 'refresh'` claim in JWT.
+
+### 6. Logout Invalidates Session
 ```bash
 curl -X POST http://localhost:5000/api/auth/logout \
   -H 'Content-Type: application/json' \
@@ -169,7 +179,7 @@ curl -X POST http://localhost:5000/api/auth/logout \
 Result: HTTP 204 No Content
 Session marked as revoked in cc_auth_sessions.
 
-### 6. Platform Admin Login Works
+### 7. Platform Admin Login Works
 Glenn's account has `is_platform_admin = true` in cc_users.
 Login returns `isPlatformAdmin: true` without any staging table lookup.
 
@@ -181,16 +191,17 @@ Login returns `isPlatformAdmin: true` without any staging table lookup.
 rg -n "cc_staging_users|cc_staging_sessions|staging_users|migrated_from_staging|source.*cc_staging" \
    server client shared \
    --glob '!*.md' \
-   --glob '!node_modules/**'
+   --glob '!node_modules/**' \
+   --glob '!_deprecated/**'
 ```
 
 **Result: 0 hits in active auth code**
 
-Excluded files (deprecated, not loaded):
-- server/services/hostAuthService.ts (routes disabled)
-- server/routes/hostAuth.ts (not imported)
-- server/routes/hostProperties.ts (not imported)
-- server/routes/host.ts (not imported)
+Deprecated files (quarantined in server/_deprecated/):
+- hostAuthService.ts
+- hostAuth.ts
+- hostProperties.ts
+- host.ts
 
 ---
 

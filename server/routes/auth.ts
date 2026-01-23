@@ -30,8 +30,13 @@ function checkRateLimit(key: string): boolean {
 }
 
 // Helper: Create session in cc_auth_sessions
-async function createSession(userId: string, refreshToken: string, req: Request): Promise<void> {
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+// Uses distinct hashes: session token hash (random) for tracking, refresh token hash for rotation
+async function createSession(userId: string, refreshToken: string, req: Request): Promise<string> {
+    // Generate unique session identifier (not the refresh token)
+    const sessionId = crypto.randomUUID();
+    const sessionTokenHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+    // Separate hash for refresh token validation
+    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     
     await serviceQuery(`
@@ -41,29 +46,43 @@ async function createSession(userId: string, refreshToken: string, req: Request)
         ) VALUES ($1, $2, $3, $4, 'web', $5, $6, $7, $8)
     `, [
         userId,
-        tokenHash,
-        tokenHash, // Using same hash for both for now
+        sessionTokenHash, // Session identifier hash
+        refreshTokenHash, // Refresh token hash (separate)
         expiresAt,
         req.headers['user-agent']?.slice(0, 100) || 'unknown',
         req.ip || 'unknown',
         req.headers['user-agent'] || 'unknown',
         expiresAt
     ]);
+    
+    return sessionId;
 }
 
 // Helper: Validate and rotate refresh token
-async function validateAndRotateRefresh(refreshToken: string): Promise<{ user: any; newTokens: { accessToken: string; refreshToken: string } } | null> {
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+// Validates token type claim, revokes old session, creates new session with rotated refresh
+async function validateAndRotateRefresh(refreshToken: string, req: Request): Promise<{ user: any; newTokens: { accessToken: string; refreshToken: string } } | null> {
+    // Validate JWT and ensure it's a refresh token (not access token)
+    try {
+        const decoded = jwt.verify(refreshToken, JWT_SECRET) as any;
+        if (decoded.type !== 'refresh') {
+            console.warn('[Auth] Attempted to use non-refresh token for rotation');
+            return null;
+        }
+    } catch (e) {
+        return null;
+    }
+    
+    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     
     const sessionResult = await serviceQuery(`
-        SELECT s.*, u.email, u.is_platform_admin, u.status, u.display_name
+        SELECT s.*, u.email, u.is_platform_admin, u.status, u.display_name, u.given_name, u.family_name
         FROM cc_auth_sessions s
         JOIN cc_users u ON u.id = s.user_id
         WHERE s.refresh_token_hash = $1 
           AND s.revoked_at IS NULL 
           AND s.expires_at > NOW()
           AND s.status = 'active'
-    `, [tokenHash]);
+    `, [refreshTokenHash]);
     
     if (sessionResult.rows.length === 0) {
         return null;
@@ -75,7 +94,7 @@ async function validateAndRotateRefresh(refreshToken: string): Promise<{ user: a
         return null;
     }
     
-    // Revoke old session
+    // Revoke old session (atomic rotation - old refresh hash invalidated)
     await serviceQuery(
         'UPDATE cc_auth_sessions SET revoked_at = NOW(), revoked_reason = $2 WHERE id = $1',
         [session.id, 'token_rotation']
@@ -85,10 +104,15 @@ async function validateAndRotateRefresh(refreshToken: string): Promise<{ user: a
     const userType = session.is_platform_admin ? 'admin' : 'user';
     const newTokens = generateTokens(session.user_id, session.email, userType);
     
+    // Create new session with new refresh token hash
+    await createSession(session.user_id, newTokens.refreshToken, req);
+    
     return {
         user: {
             id: session.user_id,
             email: session.email,
+            firstName: session.given_name,
+            lastName: session.family_name,
             displayName: session.display_name,
             isPlatformAdmin: session.is_platform_admin
         },
@@ -266,15 +290,12 @@ router.post('/refresh', async (req: Request, res: Response) => {
             return res.status(403).json({ ok: false, error: 'Invalid refresh token' });
         }
 
-        // Validate and rotate in cc_auth_sessions
-        const rotationResult = await validateAndRotateRefresh(refreshToken);
+        // Validate, rotate, and create new session atomically
+        const rotationResult = await validateAndRotateRefresh(refreshToken, req);
         
         if (!rotationResult) {
             return res.status(403).json({ ok: false, error: 'Session expired or revoked' });
         }
-
-        // Create new session
-        await createSession(rotationResult.user.id, rotationResult.newTokens.refreshToken, req);
 
         res.json({
             ok: true,
