@@ -3,11 +3,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Play, RotateCcw, AlertTriangle, ExternalLink, Copy, Check, 
-  User, Building2, Calendar, Loader2, RefreshCw 
+  User, Building2, Calendar, Loader2, RefreshCw, TestTube2, 
+  CheckCircle2, XCircle, ChevronDown, Clock, SkipForward
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+interface QaTestResult {
+  id: string;
+  name: string;
+  ok: boolean;
+  durationMs: number;
+  details?: string;
+  error?: string;
+  skipped?: boolean;
+}
+
+interface QaSuiteResult {
+  ok: boolean;
+  runId: string;
+  suite: string;
+  startedAt: string;
+  results: QaTestResult[];
+  totalMs: number;
+}
 
 interface DemoStatus {
   authToken: boolean;
@@ -38,9 +59,12 @@ export default function DemoLauncherPage() {
   });
   const [loading, setLoading] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [qaResult, setQaResult] = useState<QaSuiteResult | null>(null);
+  const [qaLoading, setQaLoading] = useState<string | null>(null);
 
   const TOKEN_KEY = 'cc_token';
   const DEMO_SEED_KEY = 'cc_demo_last_seed';
+  const QA_RESULT_KEY = 'cc_qa_last_result';
 
   const refreshStatus = async () => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -256,6 +280,57 @@ export default function DemoLauncherPage() {
     toast({ title: 'Copied', description: 'Demo links copied to clipboard' });
   };
 
+  const runQaSuite = async (suite: string) => {
+    setQaLoading(suite);
+    try {
+      const res = await fetch('/api/dev/qa/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suite })
+      });
+      
+      if (res.status === 404) {
+        toast({ title: 'QA Disabled', description: 'QA runner not enabled in this environment', variant: 'destructive' });
+        setQaLoading(null);
+        return;
+      }
+      
+      const data: QaSuiteResult = await res.json();
+      setQaResult(data);
+      sessionStorage.setItem(QA_RESULT_KEY, JSON.stringify(data));
+      
+      const passCount = data.results.filter(r => r.ok && !r.skipped).length;
+      const failCount = data.results.filter(r => !r.ok && !r.skipped).length;
+      const skipCount = data.results.filter(r => r.skipped).length;
+      
+      toast({
+        title: data.ok ? 'QA Passed' : 'QA Failed',
+        description: `${passCount} pass, ${failCount} fail, ${skipCount} skip (${data.totalMs}ms)`,
+        variant: data.ok ? 'default' : 'destructive'
+      });
+    } catch (err) {
+      toast({ title: 'QA Error', description: String(err), variant: 'destructive' });
+    } finally {
+      setQaLoading(null);
+    }
+  };
+
+  const clearQaResults = () => {
+    setQaResult(null);
+    sessionStorage.removeItem(QA_RESULT_KEY);
+  };
+
+  useEffect(() => {
+    const savedQa = sessionStorage.getItem(QA_RESULT_KEY);
+    if (savedQa) {
+      try {
+        setQaResult(JSON.parse(savedQa));
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
+  }, []);
+
   return (
     <div className="container max-w-4xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -424,6 +499,133 @@ export default function DemoLauncherPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Separator />
+
+      <h2 className="text-xl font-semibold flex items-center gap-2">
+        <TestTube2 className="h-5 w-5" />
+        QA Checks
+      </h2>
+
+      <div className="grid gap-3 md:grid-cols-6">
+        <Button 
+          variant="default"
+          onClick={() => runQaSuite('pre_demo_smoke')}
+          disabled={qaLoading !== null}
+          data-testid="button-qa-pre-demo"
+        >
+          {qaLoading === 'pre_demo_smoke' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+          Pre-Demo
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => runQaSuite('auth_only')}
+          disabled={qaLoading !== null}
+          data-testid="button-qa-auth"
+        >
+          {qaLoading === 'auth_only' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Auth
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => runQaSuite('calendar_only')}
+          disabled={qaLoading !== null}
+          data-testid="button-qa-calendar"
+        >
+          {qaLoading === 'calendar_only' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Calendar
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => runQaSuite('workflows_only')}
+          disabled={qaLoading !== null}
+          data-testid="button-qa-workflows"
+        >
+          {qaLoading === 'workflows_only' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Workflows
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => runQaSuite('critical_pages')}
+          disabled={qaLoading !== null}
+          data-testid="button-qa-critical-pages"
+        >
+          {qaLoading === 'critical_pages' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Critical Pages
+        </Button>
+        <Button 
+          variant="ghost"
+          onClick={clearQaResults}
+          disabled={!qaResult}
+          data-testid="button-qa-clear"
+        >
+          Clear
+        </Button>
+      </div>
+
+      {qaResult && (
+        <Card data-testid="qa-results-card">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg flex items-center gap-2" data-testid="qa-results-title">
+                {qaResult.ok ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-500" data-testid="qa-overall-pass" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-red-500" data-testid="qa-overall-fail" />
+                )}
+                {qaResult.suite.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+              </CardTitle>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span data-testid="qa-total-duration">{qaResult.totalMs}ms</span>
+                <span className="text-xs" data-testid="qa-run-time">
+                  ({new Date(qaResult.startedAt).toLocaleTimeString()})
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {qaResult.results.map((result, idx) => (
+              <Collapsible key={result.id}>
+                <div 
+                  className="flex items-center gap-2 py-1 px-2 rounded hover-elevate"
+                  data-testid={`qa-result-row-${idx}`}
+                >
+                  {result.skipped ? (
+                    <SkipForward className="h-4 w-4 text-muted-foreground" data-testid={`qa-status-skip-${idx}`} />
+                  ) : result.ok ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" data-testid={`qa-status-pass-${idx}`} />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" data-testid={`qa-status-fail-${idx}`} />
+                  )}
+                  <span 
+                    className={`flex-1 text-sm ${result.skipped ? 'text-muted-foreground' : ''}`}
+                    data-testid={`qa-result-name-${idx}`}
+                  >
+                    {result.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground" data-testid={`qa-result-duration-${idx}`}>
+                    {result.durationMs}ms
+                  </span>
+                  {(result.details || result.error) && (
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" data-testid={`qa-result-expand-${idx}`}>
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </CollapsibleTrigger>
+                  )}
+                </div>
+                <CollapsibleContent>
+                  <div className="ml-6 px-2 py-1 text-xs rounded bg-muted" data-testid={`qa-result-details-${idx}`}>
+                    {result.details && <div className="text-muted-foreground">{result.details}</div>}
+                    {result.error && <div className="text-red-500 font-mono" data-testid={`qa-result-error-${idx}`}>{result.error}</div>}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 

@@ -107,6 +107,7 @@ import devSeedWeddingRouter from "./routes/dev-seed-wedding";
 import devLoginRouter, { ensureDevTestUser, ensureEllenTestUser } from "./routes/dev-login";
 import testAuthRouter from "./routes/test-auth";
 import devDemoRouter from "./routes/dev-demo";
+import qaRunnerRouter from "./routes/qa-runner";
 import proposalsRouter from "./routes/proposals";
 import opsRouter from "./routes/ops";
 import publicJobsRouter from "./routes/public-jobs";
@@ -431,6 +432,7 @@ export async function registerRoutes(
     app.use('/api/dev/seed', devSeedMarinaRouter);
     app.use('/api/dev', devLoginRouter);
     app.use('/api/test/auth', testAuthRouter);
+    app.use('/api/dev/qa', qaRunnerRouter);
     app.use('', devDemoRouter);
     
     // Ensure dev test users exist

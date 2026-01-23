@@ -1,0 +1,80 @@
+REPLIT PROMPT — V3.5 DEMO LAUNCHER QA PANEL (LIGHT, DEV-ONLY)
+
+ROLE: Senior engineer adding a lightweight QA smoke runner visible in DemoLauncher UI.
+HARD RULES:
+- DEV-only (404 in production).
+- No Playwright-in-browser. Use server-side smoke checks only.
+- Additive only. No refactors.
+- Show results in UI with pass/fail + details.
+
+GOAL
+Add a “QA” section to DemoLauncher that can run a small library of smoke tests via API and display results in-app.
+
+A) Server: QA runner endpoint
+1) Create:
+  POST /api/dev/qa/run
+  Body: { suite: "pre_demo_smoke" | "auth_only" | "calendar_only" | "workflows_only" }
+Guards:
+- if NODE_ENV === "production": 404
+- require ALLOW_DEV_QA === "true" (new env var, default off)
+- require header X-DEV-QA matching DEV_QA_SECRET (optional, but recommended if demo is shared)
+
+Response:
+{
+  ok: true,
+  runId,
+  suite,
+  startedAt,
+  results: [
+    { id, name, ok, durationMs, details?, error? }
+  ],
+  totalMs
+}
+
+2) Implement suites as pure functions (no DB schema changes):
+- pre_demo_smoke runs all checks below
+- auth_only runs only auth checks
+- calendar_only runs calendar checks
+- workflows_only runs request/run checks
+
+Checks to include (minimal):
+- env_check: verify ALLOW_TEST_AUTH true, TEST_AUTH_SECRET present, NODE_ENV not prod
+- test_auth_login: call internal test auth function (not via HTTP) to mint token for persona "ellen"
+- protected_probe: use token to call one protected API route (e.g., /api/me or /api/tenant/context) and assert 200
+- demo_seed_status: verify demo seed present OR personas exist (ellen/tester/wade) via DB lookup
+- work_requests_list: call existing list endpoint (auth) and assert 200
+- service_runs_list: call existing list endpoint (auth) and assert 200
+- calendar_probe: call existing calendar data endpoint or schedule query and assert 200 + schema sanity
+
+B) Client: QA panel in DemoLauncher
+1) Update DemoLauncher page (the one shown in screenshot) to add a “QA Checks” section:
+- Buttons:
+  - Run Pre-Demo Smoke
+  - Run Auth Only
+  - Run Calendar Only
+  - Run Workflows Only
+  - Clear
+- On click, POST /api/dev/qa/run with suite
+- Render results:
+  - PASS/FAIL badge
+  - test name
+  - duration
+  - expandable details/error
+
+2) UX requirements:
+- show “Running…” state with spinner
+- show run timestamp
+- persist last results in sessionStorage (optional, light)
+
+C) Add minimal tests (optional but nice)
+- unit test for server suite runner returns structured results
+
+D) Env setup
+- Add ALLOW_DEV_QA=true in dev environment
+- Add DEV_QA_SECRET if you implement header gating
+
+ACCEPTANCE CRITERIA
+- In dev, DemoLauncher shows QA panel and runs suites.
+- In prod mode, /api/dev/qa/run returns 404.
+- Results are visible and copy-pastable for debugging.
+- No Playwright required; these are smoke checks.

@@ -46,6 +46,7 @@ VITE_MAPBOX_TOKEN = "${MAPBOX_ACCESS_TOKEN}"
 INTERNAL_SERVICE_KEY = "secure-internal-key-for-claims-v1"
 IMPERSONATION_PEPPER = "643f24777976a157606880ae990e67a8d2f67e130ebecf19ec7bfe2dd43f528c"
 TEST_AUTH_SECRET = "cc-test-auth-secret-dev-only-2024"
+ALLOW_DEV_QA = "true"
 
 [userenv.development]
 ALLOW_TEST_AUTH = "true"
