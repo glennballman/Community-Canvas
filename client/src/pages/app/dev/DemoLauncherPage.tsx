@@ -11,6 +11,15 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+interface DebugInfo {
+  httpStatus?: number;
+  url?: string;
+  method?: string;
+  responseSnippet?: string;
+  remediationHint?: string;
+  persona?: string;
+}
+
 interface QaTestResult {
   id: string;
   name: string;
@@ -19,6 +28,7 @@ interface QaTestResult {
   details?: string;
   error?: string;
   skipped?: boolean;
+  debug?: DebugInfo;
 }
 
 interface QaSuiteResult {
@@ -607,7 +617,7 @@ export default function DemoLauncherPage() {
                   <span className="text-xs text-muted-foreground" data-testid={`qa-result-duration-${idx}`}>
                     {result.durationMs}ms
                   </span>
-                  {(result.details || result.error) && (
+                  {(result.details || result.error || result.debug) && (
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="sm" data-testid={`qa-result-expand-${idx}`}>
                         <ChevronDown className="h-3 w-3" />
@@ -616,9 +626,49 @@ export default function DemoLauncherPage() {
                   )}
                 </div>
                 <CollapsibleContent>
-                  <div className="ml-6 px-2 py-1 text-xs rounded bg-muted" data-testid={`qa-result-details-${idx}`}>
+                  <div className="ml-6 px-2 py-2 text-xs rounded bg-muted space-y-1" data-testid={`qa-result-details-${idx}`}>
                     {result.details && <div className="text-muted-foreground">{result.details}</div>}
                     {result.error && <div className="text-red-500 font-mono" data-testid={`qa-result-error-${idx}`}>{result.error}</div>}
+                    {result.debug && (
+                      <div className="pt-1 border-t border-border/50 space-y-0.5" data-testid={`qa-debug-${idx}`}>
+                        {result.debug.url && (
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground w-16">Endpoint:</span>
+                            <code className="font-mono text-foreground">
+                              {result.debug.method || 'GET'} {result.debug.url}
+                            </code>
+                          </div>
+                        )}
+                        {result.debug.httpStatus !== undefined && (
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground w-16">Status:</span>
+                            <span className={result.debug.httpStatus >= 400 ? 'text-red-500' : 'text-green-500'}>
+                              {result.debug.httpStatus}
+                            </span>
+                          </div>
+                        )}
+                        {result.debug.persona && (
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground w-16">Persona:</span>
+                            <span className="text-foreground">{result.debug.persona}</span>
+                          </div>
+                        )}
+                        {result.debug.responseSnippet && (
+                          <div className="pt-1">
+                            <span className="text-muted-foreground">Response:</span>
+                            <pre className="mt-0.5 p-1 rounded bg-background/50 text-[10px] font-mono overflow-x-auto max-w-full whitespace-pre-wrap break-all">
+                              {result.debug.responseSnippet}
+                            </pre>
+                          </div>
+                        )}
+                        {result.debug.remediationHint && (
+                          <div className="flex gap-2 pt-1 text-amber-500">
+                            <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                            <span>{result.debug.remediationHint}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </CollapsibleContent>
               </Collapsible>

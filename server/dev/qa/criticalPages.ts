@@ -36,7 +36,8 @@ export const CRITICAL_PAGES: CriticalPage[] = [
         method: 'GET',
         path: '/api/work-requests',
         assert: (json) => {
-          if (!Array.isArray(json)) throw new Error('Expected array of work requests');
+          const workRequests = Array.isArray(json) ? json : json?.workRequests;
+          if (!Array.isArray(workRequests)) throw new Error('Expected {workRequests: []}');
         }
       }
     ],
@@ -56,7 +57,8 @@ export const CRITICAL_PAGES: CriticalPage[] = [
         method: 'GET',
         path: '/api/work-requests',
         assert: (json) => {
-          if (!Array.isArray(json)) throw new Error('Expected array');
+          const workRequests = Array.isArray(json) ? json : json?.workRequests;
+          if (!Array.isArray(workRequests)) throw new Error('Expected {workRequests: []}');
         }
       }
     ],
@@ -77,7 +79,8 @@ export const CRITICAL_PAGES: CriticalPage[] = [
         method: 'GET',
         path: '/api/work-requests/:id',
         assert: (json) => {
-          if (!json || !json.id) throw new Error('Expected work request with id');
+          const wr = json?.workRequest || json;
+          if (!wr || !wr.id) throw new Error('Expected work request with id');
         }
       }
     ]
@@ -92,7 +95,8 @@ export const CRITICAL_PAGES: CriticalPage[] = [
         method: 'GET',
         path: '/api/service-runs/services',
         assert: (json) => {
-          if (!Array.isArray(json)) throw new Error('Expected services array');
+          const services = Array.isArray(json) ? json : json?.services;
+          if (!Array.isArray(services)) throw new Error('Expected services array or {services: []}');
         }
       }
     ],
@@ -111,9 +115,10 @@ export const CRITICAL_PAGES: CriticalPage[] = [
       {
         name: 'get_service_run',
         method: 'GET',
-        path: '/api/service-runs/:slug',
+        path: '/api/service-runs/runs/:slug',
         assert: (json) => {
-          if (!json || !json.id) throw new Error('Expected service run with id');
+          const run = json?.run || json;
+          if (!run || !run.id) throw new Error('Expected service run with id');
         }
       }
     ]
@@ -127,9 +132,9 @@ export const CRITICAL_PAGES: CriticalPage[] = [
       {
         name: 'get_monitor_run',
         method: 'GET',
-        path: '/api/n3/runs/:runId',
+        path: '/api/n3/runs/:runId/monitor',
         assert: (json) => {
-          if (!json) throw new Error('Expected run data');
+          if (!json || typeof json !== 'object') throw new Error('Expected monitor data object');
         }
       }
     ]
@@ -145,7 +150,8 @@ export const CRITICAL_PAGES: CriticalPage[] = [
         method: 'GET',
         path: '/api/work-requests/:id',
         assert: (json) => {
-          if (!json || !json.id) throw new Error('Expected work request');
+          const wr = json?.workRequest || json;
+          if (!wr || !wr.id) throw new Error('Expected work request');
         }
       }
     ]

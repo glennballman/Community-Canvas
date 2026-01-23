@@ -21,6 +21,15 @@ export type SuiteName =
   | 'workflows_only' 
   | 'critical_pages';
 
+export interface DebugInfo {
+  httpStatus?: number;
+  url?: string;
+  method?: string;
+  responseSnippet?: string;
+  remediationHint?: string;
+  persona?: string;
+}
+
 export interface TestResult {
   id: string;
   name: string;
@@ -29,6 +38,7 @@ export interface TestResult {
   details?: string;
   error?: string;
   skipped?: boolean;
+  debug?: DebugInfo;
 }
 
 export interface SuiteResult {
@@ -71,6 +81,14 @@ async function mintTokenForPersona(personaEmail: string): Promise<{ token: strin
   }
 }
 
+export interface ApiResponse {
+  status: number;
+  json: any;
+  error?: string;
+  redirectTo?: string;
+  rawBody?: string;
+}
+
 /**
  * Make an authenticated API request with tenant context
  */
@@ -80,7 +98,7 @@ async function apiRequest(
   token: string,
   tenantId?: string | null,
   body?: any
-): Promise<{ status: number; json: any; error?: string; redirectTo?: string }> {
+): Promise<ApiResponse> {
   const baseUrl = `http://localhost:${process.env.PORT || 5000}`;
   try {
     const headers: Record<string, string> = {
@@ -106,15 +124,36 @@ async function apiRequest(
     
     const contentType = response.headers.get('content-type');
     let json = null;
+    let rawBody: string | undefined;
     
     if (contentType?.includes('application/json')) {
-      json = await response.json();
+      rawBody = await response.text();
+      try {
+        json = JSON.parse(rawBody);
+      } catch {
+        // Keep rawBody for debugging
+      }
+    } else {
+      rawBody = await response.text();
     }
     
-    return { status: response.status, json };
+    return { status: response.status, json, rawBody: rawBody?.substring(0, 300) };
   } catch (e: any) {
     return { status: 0, json: null, error: e.message };
   }
+}
+
+/**
+ * Build remediation hint based on error type
+ */
+function buildRemediationHint(status: number, error?: string, path?: string): string {
+  if (status === 401) return 'Token invalid or expired → check persona/auth';
+  if (status === 403) return 'Permission denied → check tenant context or role';
+  if (status === 404) return `Endpoint not found → verify route exists: ${path}`;
+  if (status === 500) return 'Server error → check server logs for stack trace';
+  if (error?.includes('ECONNREFUSED')) return 'Server not running → restart workflow';
+  if (error?.includes('fixture')) return 'Fixture missing → run Seed Demo or create data';
+  return 'Unknown error → check server logs';
 }
 
 /**
@@ -165,13 +204,22 @@ async function routeProbe(
   }
 }
 
+interface TestFnResult {
+  ok: boolean;
+  details?: string;
+  error?: string;
+  skipped?: boolean;
+  debug?: DebugInfo;
+}
+
 /**
  * Run a single test and return result
  */
 async function runTest(
   id: string, 
   name: string, 
-  fn: () => Promise<{ ok: boolean; details?: string; error?: string; skipped?: boolean }>
+  fn: () => Promise<TestFnResult>,
+  persona?: string
 ): Promise<TestResult> {
   const start = Date.now();
   try {
@@ -183,7 +231,8 @@ async function runTest(
       durationMs: Date.now() - start,
       details: result.details,
       error: result.error,
-      skipped: result.skipped
+      skipped: result.skipped,
+      debug: result.debug ? { ...result.debug, persona } : persona ? { persona } : undefined
     };
   } catch (e: any) {
     return {
@@ -191,7 +240,8 @@ async function runTest(
       name,
       ok: false,
       durationMs: Date.now() - start,
-      error: e.message || String(e)
+      error: e.message || String(e),
+      debug: { persona, remediationHint: 'Unexpected exception → check server logs' }
     };
   }
 }
@@ -267,57 +317,99 @@ async function checkDemoSeedStatus(): Promise<TestResult> {
 }
 
 async function checkWorkRequestsList(token: string, tenantId?: string | null): Promise<TestResult> {
+  const path = '/api/work-requests';
+  const method = 'GET';
+  
   return runTest('work_requests_list', 'Work Requests List API', async () => {
-    const { status, json, error } = await apiRequest('/api/work-requests', 'GET', token, tenantId);
+    const { status, json, error, rawBody } = await apiRequest(path, method, token, tenantId);
+    
+    const debug: DebugInfo = { httpStatus: status, url: path, method };
     
     if (error) {
-      return { ok: false, error };
+      debug.responseSnippet = error;
+      debug.remediationHint = buildRemediationHint(0, error, path);
+      return { ok: false, error, debug };
     }
     if (status === 401 || status === 403) {
-      return { ok: false, error: 'auth_redirect_risk' };
+      debug.remediationHint = buildRemediationHint(status);
+      return { ok: false, error: `auth_redirect_risk: ${status}`, debug };
     }
     if (status !== 200) {
-      return { ok: false, error: `Status ${status}` };
+      debug.responseSnippet = rawBody;
+      debug.remediationHint = buildRemediationHint(status, undefined, path);
+      return { ok: false, error: `Status ${status}`, debug };
     }
-    if (!Array.isArray(json)) {
-      return { ok: false, error: 'Expected array response' };
+    
+    const workRequests = Array.isArray(json) ? json : (json?.workRequests || []);
+    if (!Array.isArray(workRequests)) {
+      debug.responseSnippet = rawBody;
+      debug.remediationHint = 'Expected {workRequests: []} structure → check API response';
+      return { ok: false, error: 'Invalid response structure', debug };
     }
-    return { ok: true, details: `Found ${json.length} work requests` };
-  });
+    return { ok: true, details: `Found ${workRequests.length} work requests`, debug };
+  }, 'ellen@example.com');
 }
 
 async function checkServiceRunsList(token: string, tenantId?: string | null): Promise<TestResult> {
+  const path = '/api/service-runs/runs';
+  const method = 'GET';
+  
   return runTest('service_runs_list', 'Service Runs List API', async () => {
-    const { status, json, error } = await apiRequest('/api/service-runs/services', 'GET', token, tenantId);
+    const { status, json, error, rawBody } = await apiRequest(path, method, token, tenantId);
+    
+    const debug: DebugInfo = { httpStatus: status, url: path, method };
     
     if (error) {
-      return { ok: false, error };
+      debug.responseSnippet = error;
+      debug.remediationHint = buildRemediationHint(0, error, path);
+      return { ok: false, error, debug };
     }
     if (status === 401 || status === 403) {
-      return { ok: false, error: 'auth_redirect_risk' };
+      debug.remediationHint = buildRemediationHint(status);
+      return { ok: false, error: `auth_redirect_risk: ${status}`, debug };
     }
     if (status !== 200) {
-      return { ok: false, error: `Status ${status}` };
+      debug.responseSnippet = rawBody;
+      debug.remediationHint = buildRemediationHint(status, undefined, path);
+      return { ok: false, error: `Status ${status}`, debug };
     }
-    return { ok: true, details: `Services endpoint accessible` };
-  });
+    
+    const runs = Array.isArray(json) ? json : (json?.runs || []);
+    return { ok: true, details: `Found ${runs.length} service runs`, debug };
+  }, 'ellen@example.com');
 }
 
 async function checkCalendarProbe(token: string, tenantId?: string | null): Promise<TestResult> {
-  return runTest('calendar_probe', 'Calendar API Probe', async () => {
-    const { status, error } = await apiRequest('/api/n3/runs', 'GET', token, tenantId);
+  const path = '/api/n3/runs';
+  const method = 'GET';
+  
+  return runTest('calendar_probe', 'Calendar API Probe (N3 Runs)', async () => {
+    const { status, json, error, rawBody } = await apiRequest(path, method, token, tenantId);
+    
+    const debug: DebugInfo = { httpStatus: status, url: path, method };
     
     if (error) {
-      return { ok: false, error };
+      debug.responseSnippet = error;
+      debug.remediationHint = buildRemediationHint(0, error, path);
+      return { ok: false, error, debug };
     }
     if (status === 401 || status === 403) {
-      return { ok: false, error: 'auth_redirect_risk' };
+      debug.remediationHint = buildRemediationHint(status);
+      return { ok: false, error: `auth_redirect_risk: ${status}`, debug };
     }
     if (status === 404) {
-      return { ok: true, details: 'N3 runs endpoint not found (may be expected)' };
+      debug.remediationHint = 'N3 module not enabled → expected in some environments';
+      return { ok: true, details: 'N3 runs endpoint not found (may be expected)', debug };
     }
-    return { ok: true, details: `Calendar endpoint status: ${status}` };
-  });
+    if (status !== 200) {
+      debug.responseSnippet = rawBody;
+      debug.remediationHint = buildRemediationHint(status, undefined, path);
+      return { ok: false, error: `Status ${status}`, debug };
+    }
+    
+    const runs = Array.isArray(json) ? json : (json?.runs || []);
+    return { ok: true, details: `Calendar endpoint: ${runs.length} runs`, debug };
+  }, 'ellen@example.com');
 }
 
 // ============================================================================
@@ -327,6 +419,7 @@ async function checkCalendarProbe(token: string, tenantId?: string | null): Prom
 async function runCriticalPagesSuite(token: string, tenantId?: string | null): Promise<TestResult[]> {
   const results: TestResult[] = [];
   const latestIds = await resolveAllLatestIds();
+  const persona = 'ellen@example.com';
   
   for (const page of CRITICAL_PAGES) {
     if (page.requiresLatestId) {
@@ -336,13 +429,18 @@ async function runCriticalPagesSuite(token: string, tenantId?: string | null): P
         (page.requiresLatestId === 'monitorRun' && latestIds.monitorRunId);
       
       if (!hasId) {
+        const fixtureType = page.requiresLatestId;
         results.push({
           id: page.id,
           name: page.label,
           ok: true,
           skipped: true,
           durationMs: 0,
-          details: 'No fixtures available (skipped)'
+          details: `No ${fixtureType} fixtures available`,
+          debug: {
+            persona,
+            remediationHint: `Fixture missing → run Seed Demo or create a ${fixtureType}`
+          }
         });
         continue;
       }
@@ -358,7 +456,13 @@ async function runCriticalPagesSuite(token: string, tenantId?: string | null): P
           ok: true,
           skipped: true,
           durationMs: 0,
-          details: 'Path requires ID not available'
+          details: 'Path requires ID not available',
+          debug: {
+            persona,
+            url: probe.path,
+            method: probe.method,
+            remediationHint: 'Fixture missing → run Seed Demo or create data'
+          }
         });
         continue;
       }
@@ -367,26 +471,36 @@ async function runCriticalPagesSuite(token: string, tenantId?: string | null): P
         `${page.id}_${probe.name}`,
         `${page.label}: ${probe.name}`,
         async () => {
-          const { status, json, error } = await apiRequest(resolvedPath, probe.method, token, tenantId);
+          const { status, json, error, rawBody } = await apiRequest(resolvedPath, probe.method, token, tenantId);
+          
+          const debug: DebugInfo = { httpStatus: status, url: resolvedPath, method: probe.method };
           
           if (error) {
-            return { ok: false, error };
+            debug.responseSnippet = error;
+            debug.remediationHint = buildRemediationHint(0, error, resolvedPath);
+            return { ok: false, error, debug };
           }
           if (status === 401 || status === 403) {
-            return { ok: false, error: 'auth_redirect_risk' };
+            debug.remediationHint = buildRemediationHint(status);
+            return { ok: false, error: `auth_redirect_risk: ${status}`, debug };
           }
           if (status >= 400) {
-            return { ok: false, error: `Status ${status}` };
+            debug.responseSnippet = rawBody;
+            debug.remediationHint = buildRemediationHint(status, undefined, resolvedPath);
+            return { ok: false, error: `Status ${status}`, debug };
           }
           
           try {
             probe.assert(json);
           } catch (e: any) {
-            return { ok: false, error: `Assert failed: ${e.message}` };
+            debug.responseSnippet = rawBody;
+            debug.remediationHint = 'Assertion failed → API response shape changed';
+            return { ok: false, error: `Assert failed: ${e.message}`, debug };
           }
           
-          return { ok: true, details: `${resolvedPath} → ${status}` };
-        }
+          return { ok: true, details: `${resolvedPath} → ${status}`, debug };
+        },
+        persona
       );
       results.push(result);
     }
@@ -399,8 +513,17 @@ async function runCriticalPagesSuite(token: string, tenantId?: string | null): P
           `${page.id}_route_probe`,
           `${page.label}: Route Check`,
           async () => {
-            return routeProbe(resolvedRoutePath, token, tenantId, page.routeProbe?.mustNotInclude);
-          }
+            const probeResult = await routeProbe(resolvedRoutePath, token, tenantId, page.routeProbe?.mustNotInclude);
+            return {
+              ...probeResult,
+              debug: {
+                url: resolvedRoutePath,
+                method: 'GET',
+                remediationHint: probeResult.ok ? undefined : 'Route redirects to login → check auth cookie'
+              }
+            };
+          },
+          persona
         );
         results.push(routeResult);
       }

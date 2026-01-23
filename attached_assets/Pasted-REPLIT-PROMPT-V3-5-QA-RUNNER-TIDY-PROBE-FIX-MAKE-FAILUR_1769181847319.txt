@@ -1,0 +1,61 @@
+REPLIT PROMPT — V3.5 QA RUNNER TIDY + PROBE FIX (MAKE FAILURES ACTIONABLE)
+
+ROLE: Senior engineer tightening the QA Runner probes so they correctly match the current codebase and produce actionable results.
+HARD RULES:
+- Do not change business logic to satisfy QA checks.
+- Fix QA runner expectations, probe routing, persona/tenant context, and fixture handling.
+- Additive only.
+
+GOALS
+1) Make every failing probe show:
+   - status code
+   - endpoint/path called
+   - short response body snippet (first ~300 chars)
+   - recommended remediation (e.g., “fixture missing → SKIP”, “wrong endpoint”, “needs tenant context”)
+2) Fix “Work Requests List API” and “Service Runs List API” probes to use the *actual* list endpoints used by:
+   - /app/intake/work-requests
+   - /app/work-requests
+   - /app/service-runs/*
+3) Fix fixture-dependent probes to SKIP (not FAIL) when no fixtures exist:
+   - Work request detail
+   - Service run detail
+   - N3 monitor run
+4) Ensure probes run under correct persona + tenant context:
+   - Mint JWT for persona
+   - Ensure tenant context cookie/state is set if required for those endpoints
+   - If a probe requires a different role (e.g. platform admin), run it under that persona and label it clearly.
+
+TASKS
+
+A) Add “debug details” to QA results
+- Extend result object to include:
+  { httpStatus?, url?, method?, responseSnippet?, remediationHint? }
+- UI: expand/collapse should show these fields.
+
+B) Discover & align to real endpoints
+- Inspect the client code for each of these routes and identify their API calls:
+  - /app/intake/work-requests
+  - /app/work-requests
+  - /app/service-runs/new
+  - /app/service-runs/:slug
+  - /app/n3/monitor/:runId
+- Update QA runner probes to call the same endpoints (single source of truth).
+
+C) Fixture rules
+- If “latest work request” returns none, mark:
+  - ok=true, status="SKIP", remediationHint="No fixtures; run Seed Demo or create a request"
+- Same for service runs and N3 monitor.
+
+D) Persona/role routing
+- If a probe requires platform admin endpoints, either:
+  - run it under platformadmin persona, OR
+  - remove it from Pre-Demo Smoke and keep it in Full Suite.
+- Label which persona ran each probe.
+
+E) Output
+- After changes, run Pre-Demo Smoke and paste the result summary with which probes pass/skip/fail.
+
+ACCEPTANCE CRITERIA
+- Pre-Demo Smoke should only FAIL for real breakage (401/403/500/wrong route), not missing fixtures.
+- Workflows-only suite should pass or skip deterministically after Seed Demo.
+- Every failure is actionable (endpoint + status + snippet).
