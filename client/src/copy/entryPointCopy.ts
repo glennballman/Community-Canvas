@@ -152,6 +152,20 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'message.action_block.answered': 'Response submitted',
     'message.action_block.acknowledged': 'Acknowledged',
     'message.action_block.countered': 'Counter proposal submitted',
+    // V3.5 Provider Run Publish tokens
+    'provider.run.publish.cta': 'Publish to Portals',
+    'provider.run.publish.modal_title': 'Publish Service Run',
+    'provider.run.publish.visibility_label': 'Visibility — Where this run appears',
+    'provider.run.publish.visibility_helper': 'Select which community portals will display this run.',
+    'provider.run.publish.competition_label': 'Competition — Who can respond',
+    'provider.run.publish.market_mode_open': 'Open for responses',
+    'provider.run.publish.market_mode_open_helper': 'Anyone can attach requests to this run. Does not commit you to any requests.',
+    'provider.run.publish.market_mode_invite_only': 'By invitation only',
+    'provider.run.publish.market_mode_invite_only_helper': 'Only invited requesters can attach. Does not commit you to any requests.',
+    'provider.run.publish.confirm': 'Publish Run',
+    'provider.run.publish.success': 'Run published successfully',
+    'provider.run.publish.no_portals': 'No community portals available',
+    'error.run.publish.invalid_market_mode': 'Invalid market mode. TARGETED is not valid for runs.',
   },
 
   lodging: {
@@ -517,6 +531,20 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'ui.label.message': 'Message (optional)',
     'ui.placeholder.propose_reason': 'Explain why you are proposing this change...',
     'ui.placeholder.decline_reason': 'Let them know why you cannot take this on...',
+    // V3.5 Provider Run Publish tokens
+    'provider.run.publish.cta': 'Publish to Portals',
+    'provider.run.publish.modal_title': 'Publish Service Run',
+    'provider.run.publish.visibility_label': 'Visibility — Where this run appears',
+    'provider.run.publish.visibility_helper': 'Select which community portals will display this run.',
+    'provider.run.publish.competition_label': 'Competition — Who can respond',
+    'provider.run.publish.market_mode_open': 'Open for responses',
+    'provider.run.publish.market_mode_open_helper': 'Anyone can attach requests to this run. Does not commit you to any requests.',
+    'provider.run.publish.market_mode_invite_only': 'By invitation only',
+    'provider.run.publish.market_mode_invite_only_helper': 'Only invited requesters can attach. Does not commit you to any requests.',
+    'provider.run.publish.confirm': 'Publish Run',
+    'provider.run.publish.success': 'Run published successfully',
+    'provider.run.publish.no_portals': 'No community portals available',
+    'error.run.publish.invalid_market_mode': 'Invalid market mode. TARGETED is not valid for runs.',
   },
 
   activity: {

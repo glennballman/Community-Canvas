@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCopy } from '@/copy/useCopy';
 import { useMarketActions } from '@/policy/useMarketActions';
 import type { ActionKind } from '@/policy/marketModePolicy';
+import { PublishRunModal } from '@/components/provider/PublishRunModal';
 
 function getButtonVariant(kind: ActionKind): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
   switch (kind) {
@@ -28,6 +29,7 @@ interface ServiceRun {
   title: string;
   description: string | null;
   status: string;
+  market_mode: string;
   starts_at: string | null;
   ends_at: string | null;
   portal_id: string | null;
@@ -49,6 +51,7 @@ interface AttachedRequest {
 interface Publication {
   portal_id: string;
   portal_name: string;
+  published_at?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -69,6 +72,7 @@ export default function ProviderRunDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { nouns, resolve } = useCopy({ entryPoint: 'service' });
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery<{ 
     ok: boolean; 
@@ -267,11 +271,11 @@ export default function ProviderRunDetailPage() {
               <Button
                 className="w-full"
                 variant="outline"
-                disabled
-                data-testid="button-publish-stub"
+                onClick={() => setPublishModalOpen(true)}
+                data-testid="button-publish"
               >
                 <Globe className="w-4 h-4 mr-2" />
-                Publish to Portals (Coming Soon)
+                {resolve('provider.run.publish.cta')}
               </Button>
               
               <Button
@@ -296,6 +300,14 @@ export default function ProviderRunDetailPage() {
           </Card>
         </div>
       </div>
+
+      <PublishRunModal
+        open={publishModalOpen}
+        onOpenChange={setPublishModalOpen}
+        runId={id || ''}
+        currentMarketMode={run.market_mode}
+        currentPublications={publications}
+      />
     </div>
   );
 }

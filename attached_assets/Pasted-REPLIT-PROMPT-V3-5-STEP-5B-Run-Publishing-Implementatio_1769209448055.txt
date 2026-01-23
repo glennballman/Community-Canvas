@@ -1,0 +1,215 @@
+REPLIT PROMPT — V3.5 STEP 5B — Run Publishing Implementation
+
+ROLE: Senior Platform Engineer implementing run publishing.
+MODE: Evidence-first. Additive-only. No refactors.
+
+============================================================
+HARD RULES (LOCKED)
+============================================================
+- Use "service provider" (never contractor)
+- Use "reserve / reservation" (never booking)
+- Use "service request" or "work request" (never "job" for service work)
+- No "calendar" in new code (use schedule/operations)
+- Visibility ≠ Competition (two separate UI sections)
+- Publishing ≠ Commitment (requests stay in current status)
+- Run MarketMode: OPEN | INVITE_ONLY | CLOSED only
+- TARGETED is demand-side only — NEVER on runs
+- Test Auth Bootstrap for verification (no UI login)
+- Copy tokens for all user-facing strings
+
+============================================================
+PRECONDITIONS (VERIFIED IN STEP 5A)
+============================================================
+- cc_n3_runs.market_mode column EXISTS
+- cc_run_portal_publications table EXISTS with RLS
+- STEP 4 provider runs pages exist
+
+Do NOT re-run migration 172.
+
+============================================================
+GOAL
+============================================================
+1) GET /api/provider/portals — list available portals
+2) POST /api/provider/runs/:id/publish — set visibility + market_mode
+3) POST /api/provider/runs/:id/unpublish — remove portal visibility
+4) Update GET /api/provider/runs/:id — return publications + market_mode
+5) Publish modal with TWO SECTIONS (Visibility + Competition)
+
+============================================================
+SECTION A) BACKEND ENDPOINTS
+============================================================
+
+Add to server/routes/provider.ts:
+
+------------------------------------------------------------
+A1) GET /api/provider/portals
+------------------------------------------------------------
+Auth: requireAuth() + req.ctx?.tenant_id
+
+Response:
+{ ok: true, portals: [{ id, name, slug, status }] }
+
+Query:
+SELECT id, name, slug, status FROM cc_portals 
+WHERE tenant_id = $1 AND status = 'active'
+
+------------------------------------------------------------
+A2) POST /api/provider/runs/:id/publish
+------------------------------------------------------------
+Auth: requireAuth() + verify run ownership (party_id + tenant_id)
+
+Body:
+{
+  "portalIds": ["uuid", ...],
+  "marketMode": "OPEN" | "INVITE_ONLY" | "CLOSED"
+}
+
+Validation:
+- marketMode must be OPEN, INVITE_ONLY, or CLOSED
+- If marketMode = "TARGETED", return 400 (not allowed on runs)
+- All portalIds must belong to same tenant
+
+Behavior:
+1. Update cc_n3_runs.market_mode
+2. Upsert publications:
+   - INSERT INTO cc_run_portal_publications 
+     (tenant_id, run_id, portal_id, published_at, published_by_party_id)
+   - ON CONFLICT DO UPDATE SET unpublished_at = NULL, published_at = now()
+3. For portals NOT in portalIds: SET unpublished_at = now()
+
+Response:
+{ ok: true, runId, marketMode, publications: [...] }
+
+------------------------------------------------------------
+A3) POST /api/provider/runs/:id/unpublish
+------------------------------------------------------------
+Body: { "portalIds": ["uuid", ...] }
+
+Behavior:
+- SET unpublished_at = now() for matching publications
+
+Response:
+{ ok: true, runId, publications: [...] }
+
+------------------------------------------------------------
+A4) GET /api/provider/runs/:id (UPDATE)
+------------------------------------------------------------
+Add to response:
+{
+  ...existing,
+  market_mode: "OPEN" | "INVITE_ONLY" | "CLOSED",
+  publications: [{ portal_id, portal_name, published_at }]
+}
+
+Query publications WHERE unpublished_at IS NULL.
+
+============================================================
+SECTION B) FRONTEND — PUBLISH MODAL
+============================================================
+
+------------------------------------------------------------
+B1) Add CTA to Provider Run Detail
+------------------------------------------------------------
+- "Publish to Portals" button
+- Gate via useMarketActions() — hide if not permitted
+- Opens PublishRunModal
+
+------------------------------------------------------------
+B2) PublishRunModal Component
+------------------------------------------------------------
+File: client/src/components/provider/PublishRunModal.tsx
+
+TWO VISUALLY SEPARATE SECTIONS:
+
+**SECTION 1: VISIBILITY (Portal Selection)**
+- Label: copy token
+- Checkbox list of portals from GET /api/provider/portals
+- Pre-check currently published portals
+
+**SECTION 2: COMPETITION (MarketMode)**
+- Label: copy token
+- Radio buttons:
+  - "Open for responses" → OPEN
+  - "By invitation only" → INVITE_ONLY
+- Default: current run.market_mode or INVITE_ONLY
+- Helper text from copy tokens
+- Do NOT show CLOSED as option
+
+**CONFIRM:**
+- POST /api/provider/runs/:id/publish
+- On success: refetch run detail (NO optimistic updates), close modal, show toast
+- On error: show error toast, keep modal open
+
+------------------------------------------------------------
+B3) Loading States
+------------------------------------------------------------
+- Fetching portals: spinner
+- Submitting: disable button, spinner
+- Error: re-enable button
+
+============================================================
+SECTION C) COPY TOKENS
+============================================================
+
+Add:
+- provider.run.publish.cta
+- provider.run.publish.modal_title
+- provider.run.publish.visibility_label
+- provider.run.publish.visibility_helper
+- provider.run.publish.competition_label
+- provider.run.publish.market_mode_open
+- provider.run.publish.market_mode_open_helper
+- provider.run.publish.market_mode_invite_only
+- provider.run.publish.market_mode_invite_only_helper
+- provider.run.publish.confirm
+- provider.run.publish.success
+- provider.run.publish.no_portals
+- error.run.publish.invalid_market_mode
+
+============================================================
+SECTION D) TESTING (TEST AUTH BOOTSTRAP)
+============================================================
+
+Use: loginAs('ellen') or POST /api/test/auth/login
+
+Verify:
+1. GET /api/provider/portals returns portals
+2. POST publish with portalIds + marketMode=OPEN
+3. GET run detail shows publications + market_mode=OPEN
+4. POST publish with marketMode=INVITE_ONLY
+5. GET run detail shows market_mode changed
+6. POST unpublish one portal
+7. GET run detail shows publications updated
+8. UI modal has TWO SEPARATE sections
+
+============================================================
+SECTION E) PROOF
+============================================================
+
+Create: proof/v3.5/run-publishing-proof.md
+
+Include:
+- Backend route excerpts (auth + ownership + tenant checks)
+- Frontend modal showing two sections
+- Copy tokens added
+- Test results
+
+Checkboxes:
+- [ ] Visibility ≠ Competition (two UI sections)
+- [ ] TARGETED returns 400 error on runs
+- [ ] market_mode updates correctly
+- [ ] Multi-portal via join table works
+- [ ] No "job" used for service work
+- [ ] No "calendar" introduced
+- [ ] Test auth bootstrap used
+
+============================================================
+DO NOT
+============================================================
+- Re-run migration 172
+- Use "job" when referring to service requests/work
+- Show CLOSED in UI radio buttons
+- Use optimistic updates
+- Create new messaging UIs
+
+END.
