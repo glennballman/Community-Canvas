@@ -1,0 +1,60 @@
+REPLIT PROMPT — V3.5 TEST AUTH BOOTSTRAP (NO HUMAN LOGIN, NO PASSWORDS)
+
+ROLE: Senior engineer implementing deterministic E2E auth for DEV/TEST.
+HARD RULES:
+- Must not work in production.
+- Must not introduce parallel auth systems.
+- Must not weaken real auth; only create a test-only bootstrap.
+- Additive only.
+
+GOAL
+Enable automated tests to authenticate as seeded personas (ellen, tester, wade, etc.) without UI login or human input.
+
+PLAN
+
+A) Add DEV/TEST-only endpoint to mint a session for a persona
+1) Create server route:
+   POST /api/test/auth/login
+   Body: { persona: string }
+   Requirements:
+   - If NODE_ENV === "production": return 404
+   - Require header: X-TEST-AUTH: <secret>
+   - Secret loaded from env var TEST_AUTH_SECRET
+   - Validate persona is in allowlist (e.g. "ellen", "tester", "wade", "bamfield_host", etc.)
+   - Look up or create the corresponding cc_user + cc_tenant_user mapping using existing canonical auth tables.
+   - Create a normal session using the SAME session mechanism as real login (cookie/JWT/etc.) — no new auth scheme.
+   - Return { ok: true, userId, tenantId } and set the session cookie exactly like real auth.
+
+2) Add audit log entry (existing audit mechanism) indicating "test_auth_bootstrap" used with persona name.
+
+B) Ensure seeded personas exist deterministically
+If seed already creates these users/tenants, just reuse.
+If not, add a DEV seed function that guarantees:
+- user exists
+- tenant membership exists
+- required roles exist
+Do NOT store plaintext passwords; this bootstrap bypasses password needs in DEV/TEST only.
+
+C) Add Playwright helper
+1) Create tests/helpers/testAuth.ts:
+   async function loginAs(page, persona) {
+     const res = await page.request.post("/api/test/auth/login", {
+       data: { persona },
+       headers: { "X-TEST-AUTH": process.env.TEST_AUTH_SECRET }
+     })
+     expect(res.ok()).toBeTruthy()
+   }
+
+2) In E2E tests:
+   - Call loginAs(page, "ellen")
+   - Navigate directly to protected routes (/app/work-requests etc.)
+   - Confirm no redirect to /login
+
+D) Add CI wiring
+- Add TEST_AUTH_SECRET to Replit env/secrets for test runs.
+- Ensure tests fail with a clear error if secret missing.
+
+ACCEPTANCE CRITERIA
+- Automated tests can open tenant routes without human login.
+- /api/test/auth/login returns 404 in production mode.
+- All authentication uses existing canonical session mechanism.
