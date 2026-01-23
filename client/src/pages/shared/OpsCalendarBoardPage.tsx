@@ -370,9 +370,12 @@ export default function OpsCalendarBoardPage({ mode }: OpsCalendarBoardPageProps
     >
       {/* DEV-only route identity banner */}
       {import.meta.env.DEV && (
-        <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-3 py-1 text-xs text-yellow-700 dark:text-yellow-400 flex items-center gap-2">
+        <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-3 py-1 text-xs text-yellow-700 dark:text-yellow-400 flex items-center gap-2 flex-wrap">
           <span className="font-mono font-medium">OpsCalendarBoardPage (mode="{mode}")</span>
           <span className="text-muted-foreground">| Time spine: ScheduleBoard</span>
+          <span className="text-muted-foreground">| Endpoint: {apiEndpoint || 'none'}</span>
+          <span className="text-muted-foreground">| Resources: {resources.length}</span>
+          <span className="text-muted-foreground">| Events: {events.length}</span>
         </div>
       )}
       {mode === 'portal' && portalSlug && (

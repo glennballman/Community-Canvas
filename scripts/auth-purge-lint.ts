@@ -33,6 +33,8 @@ const FORBIDDEN_PATTERNS = [
   'ContractorCalendarPage',
   'ResidentCalendarPage',
   'PortalCalendarPage',
+  'ServiceRunsCalendar',
+  'ServiceRunsCalendarPage',
 ];
 
 const SEARCH_DIRS = ['server', 'client', 'shared'];
@@ -42,6 +44,7 @@ const EXCLUDE_FILES = [
   'AUTH_V3_PROOF_PACK.md',
   'auth-purge-lint.ts',
   'stagingStorage.ts', // Non-auth staging storage is allowed
+  'useServiceRuns.ts', // Contains legacy filter hook exported for deprecated page
 ];
 
 interface Violation {

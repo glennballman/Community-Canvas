@@ -188,3 +188,48 @@ Wade Residence (individual tenant) - Wade's tenant
 - [ ] Tenant auto-select never silently picks Bamfield Community for Ellen/Wade
 - [ ] Panic Reset always gets user unstuck
 - [ ] No "tenant context null" warnings in DebugPanel on demo pages
+
+---
+
+## Portal Calendar Quick Check (2 minutes)
+
+### Step 1: Verify Demo Data Seeded
+1. Navigate to `/app/dev/demo`
+2. Click **"Seed Demo"** if needed
+3. Wait for success toast
+
+### Step 2: Open Bamfield Portal Calendar
+1. Navigate to `/p/bamfield/calendar`
+2. Verify the DEV banner appears showing:
+   - `OpsCalendarBoardPage (mode="portal")`
+   - `Time spine: ScheduleBoard`
+   - `Endpoint: /api/portal/.../ops-calendar`
+   - `Resources: 13` (approximately)
+   - `Events: 100+`
+
+### Step 3: Verify Grouped Rows
+Confirm the following lane groups are visible:
+
+| Lane Group | Expected Resources |
+|------------|-------------------|
+| **Scheduled Work** | 4 zones (Deer Group, East Bamfield, Helby Island, West Bamfield) |
+| **Staff** | Staff Availability row |
+| **Dependencies** | Weather, Ferry, Road, Seaplane rows |
+| **Zone Feasibility** | 4 zone feasibility rows |
+
+### Step 4: Verify Events
+1. Confirm at least **6 scheduled events** appear in the Scheduled Work section
+2. Confirm **dependency alerts** (road conditions, ferry status) appear in Dependencies section
+3. Click any event to open the detail panel
+
+### Expected Results
+- [ ] DEV banner shows mode="portal" and ScheduleBoard time spine
+- [ ] 4 lane groups visible (Scheduled Work, Staff, Dependencies, Zone Feasibility)
+- [ ] At least 6 scheduled work events
+- [ ] Dependency events (road/ferry alerts) visible
+- [ ] Events are clickable with detail panel
+
+### Troubleshooting
+- **No events?** Re-run demo seed at `/app/dev/demo`
+- **Wrong calendar style?** You should see horizontal time rows, NOT a month grid
+- **Endpoint errors?** Check server logs for database connection issues

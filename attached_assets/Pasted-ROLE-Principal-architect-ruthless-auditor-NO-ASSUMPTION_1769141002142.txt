@@ -1,0 +1,94 @@
+ROLE: Principal architect + ruthless auditor. NO ASSUMPTIONS. PROVE EVERYTHING with file paths + line numbers + curl/SQL outputs. Goal: eliminate all non-canonical calendars and ensure the Bamfield portal calendar shows the full Operations-style grid rows + seeded events.
+
+CONTEXT / NON-NEGOTIABLES
+- Canonical time-spine renderer is client/src/components/schedule/ScheduleBoard.tsx.
+- There must be exactly ONE calendar renderer in active use: ScheduleBoard.
+- Any Apple/iPhone-style calendar UI must be deleted or quarantined (_deprecated) AND unreachable by routes.
+- Portal calendar at /p/:portalSlug/calendar must show Operations-style grid (rows grouped: Scheduled Work/Staff/Dependencies/Zone Feasibility at minimum) and must have seeded demo events for Bamfield.
+- No caching issues: ensure Vite/asset build is consistent after changes.
+
+TASK A — ROUTE TRUTH TABLE (client)
+1) Produce a definitive table of every route matching:
+   - /p/:portalSlug/calendar
+   - /app/contractor/calendar
+   - /app/my-place/calendar
+   - any /calendar routes
+   Include:
+   - file:line where route is defined (App.tsx or router)
+   - component name rendered
+   - import path of that component
+2) Search for ANY remaining calendar components:
+   ripgrep patterns:
+   - "CalendarGrid"
+   - "CalendarRunCard"
+   - "PortalCalendar"
+   - "ContractorCalendar"
+   - "ResidentCalendar"
+   - "Community Schedule"
+   - "No scheduled community work"
+   - "Zoom: Day" or "Day Week Month"
+   Output: file paths + line numbers for each hit.
+3) Confirm there is exactly ONE active calendar page component per route and that it uses ScheduleBoard (directly or indirectly).
+
+TASK B — RUNTIME PROOF (network payload)
+4) Add TEMP DEV instrumentation (behind IS_DEV) in OpsCalendarBoardPage:
+   - log which endpoint URL is being called for each mode
+   - log counts: resources.length, events.length
+   - show a small banner already exists; extend it to include endpoint path + counts.
+5) Provide curl commands and captured JSON (first ~30 lines) for:
+   - GET /api/portal/:portalId/ops-calendar (or whatever the portal endpoint is)
+   - GET /api/contractor/ops-calendar
+   - GET /api/resident/ops-calendar
+   Ensure you include actual portalId for Bamfield from DB query.
+
+TASK C — SEED DATA VALIDATION (DB)
+6) Prove the demo seed created data that the portal endpoint reads:
+   - Identify which tables the portal ops-calendar endpoint queries (show code + line numbers).
+   - Write SQL queries showing counts for Bamfield portal:
+     - service runs (whatever table is canonical: cc_n3_runs / cc_service_runs / etc)
+     - dependency windows / alerts
+     - zone definitions
+     - staff availability blocks
+     - evidence photo bundles if used
+   If counts are zero, seed is not writing to the right tables.
+
+TASK D — FIX (make portal calendar show full rows + events)
+7) If payload is empty:
+   - Fix demo seed so it writes to the exact tables/columns the ops-calendar endpoint reads.
+   - Ensure Bamfield portal has:
+     - at least 6 scheduled runs spanning 2-3 zones
+     - at least 1 blocked feasibility window (seaplane cancelled)
+     - at least 1 risky window (wind + ferry delay possible)
+     - zone feasibility resources (East/West/Helby/Deer)
+     - dependency resources and events
+8) Ensure portal endpoint returns lane groups:
+   Minimum groups for portal mode:
+   - "Scheduled Work"
+   - "Dependencies"
+   - "Zone Feasibility"
+   - (optional) "Staff" redacted
+   The resources array must include group labels so ScheduleBoard renders grouped rows.
+
+TASK E — PURGE ANY “THIRD CALENDAR”
+9) If any non-ScheduleBoard calendar UI is still reachable:
+   - Remove the routes, remove imports, and delete the files or move to server/_deprecated + client/_deprecated.
+   - Add a lint gate entry (existing purge lint) that fails CI if:
+     - "No scheduled community work" string exists
+     - "Zoom: Day" / "Day Week Month" calendar UI exists
+     - Any CalendarGrid.tsx / *CalendarPage.tsx exists outside _deprecated
+10) After purge, re-run ripgrep to prove zero hits outside _deprecated.
+
+TASK F — QA SCRIPT (manual)
+11) Update docs/DEMO_QA.md with a 2-minute script just for portal calendar:
+   - open /app/dev/demo → Seed Demo
+   - open Bamfield portal calendar
+   - verify you see grouped rows and at least 6 events
+   - click an event → detail panel shows feasibility + evidence badge (if enabled)
+
+DELIVERABLES (must include all)
+- Route truth table (with file:line)
+- ripgrep hit list (with file:line)
+- curl outputs (3 endpoints)
+- SQL outputs (counts)
+- Code changes list (files modified)
+- Proof that /p/bamfield/calendar shows the operations-style grid with seeded events and grouped lanes

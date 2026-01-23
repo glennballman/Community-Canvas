@@ -71,7 +71,7 @@ import OrgDetail from './pages/crm/OrgDetail';
 
 // Pages - Services (restored from legacy - real implementations)
 import ServiceRuns from './pages/services/ServiceRuns';
-import ServiceRunsCalendarPage from './pages/app/ServiceRunsCalendarPage';
+// Legacy month-grid calendar DEPRECATED - use OpsCalendarBoardPage with ScheduleBoard
 import CreateServiceRun from './pages/services/CreateServiceRun';
 import ServiceRunDetail from './pages/services/ServiceRunDetail';
 import ServiceDirectory from './pages/services/ServiceDirectory';
@@ -524,7 +524,7 @@ export default function App() {
                 <Route path="service-runs" element={<ServiceRuns />} />
                 <Route path="service-runs/new" element={<CreateServiceRun />} />
                 <Route path="service-runs/:slug" element={<ServiceRunDetail />} />
-                <Route path="services/calendar" element={<ServiceRunsCalendarPage />} />
+                {/* services/calendar route DEPRECATED - use contractor/calendar with OpsCalendarBoardPage */}
                 <Route path="work-requests/:id" element={<WorkRequestDetail />} />
                 <Route path="services" element={<ServiceDirectory />} />
                 <Route path="bundles" element={<BundlesBrowser />} />
