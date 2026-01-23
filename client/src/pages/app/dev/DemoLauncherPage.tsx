@@ -280,7 +280,7 @@ export default function DemoLauncherPage() {
     const baseUrl = window.location.origin;
     const links = `Demo Links:
 - Bamfield Portal Calendar: ${baseUrl}/p/bamfield/calendar
-- Ellen Contractor (login required): ${baseUrl}/app/contractor/calendar
+- Ellen Service Provider (login required): ${baseUrl}/app/contractor/calendar
 - Wade Resident (login required): ${baseUrl}/app/my-place/calendar
 - Demo Launcher: ${baseUrl}/app/dev/demo`;
     
@@ -469,9 +469,9 @@ export default function DemoLauncherPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <User className="h-5 w-5 text-green-500" />
-              Ellen Contractor
+              Ellen Service Provider
             </CardTitle>
-            <CardDescription>Login as Ellen (Enviropaving admin)</CardDescription>
+            <CardDescription>Login as Ellen (Enviropaving service provider)</CardDescription>
           </CardHeader>
           <CardContent>
             <Button 

@@ -162,7 +162,7 @@ router.post('/api/dev/demo-seed', async (req: Request, res: Response) => {
     } else {
       const result = await serviceQuery(`
         INSERT INTO cc_users (email, password_hash, given_name, family_name, display_name, status)
-        VALUES ('ellen@example.com', $1, 'Ellen', 'Contractor', 'Ellen Contractor', 'active')
+        VALUES ('ellen@example.com', $1, 'Ellen', 'ServiceProvider', 'Ellen Service Provider', 'active')
         RETURNING id
       `, [passwordHash]);
       ellenUserId = result.rows[0].id;
