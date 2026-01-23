@@ -7,11 +7,13 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { pool } from '../db';
+import type { TenantRequest } from '../middleware/tenantContext';
 
 const router = Router();
 
 interface AuthRequest extends Request {
   user?: { id: string; tenantId?: string };
+  ctx?: { tenant_id: string | null };
 }
 
 function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
@@ -313,7 +315,7 @@ router.post('/requests/:id/decline', requireAuth, async (req: AuthRequest, res: 
 router.get('/runs', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.ctx?.tenant_id;
 
     if (!tenantId) {
       return res.status(400).json({ ok: false, error: 'Tenant context required' });
@@ -399,7 +401,7 @@ router.get('/runs', requireAuth, async (req: AuthRequest, res: Response) => {
 router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.ctx?.tenant_id;
     const runId = req.params.id;
 
     if (!tenantId) {

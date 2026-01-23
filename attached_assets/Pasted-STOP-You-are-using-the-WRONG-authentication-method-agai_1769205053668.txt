@@ -1,0 +1,161 @@
+STOP. You are using the WRONG authentication method again.
+
+This repo has a DEV-only TEST AUTH BOOTSTRAP built specifically so automated testing NEVER uses the login UI and NEVER guesses passwords.
+
+HARD RULE:
+- DO NOT use the login page.
+- DO NOT try seeded credentials.
+- Use loginAs() from tests/helpers/testAuth.ts for ALL verification.
+
+NOW DO THIS:
+
+A) RE-RUN STEP 4 VERIFICATION USING TEST AUTH BOOTSTRAP
+
+1) Confirm environment gates are enabled:
+- NODE_ENV != 'production'
+- ALLOW_TEST_AUTH === 'true'
+- TEST_AUTH_SECRET is set
+
+2) Run the verification using the helper:
+- Use tests/helpers/testAuth.ts
+- Login as service provider persona "ellen"
+- Navigate directly to /app/provider/runs and /app/provider/runs/:id
+
+Example (Playwright / e2e):
+```ts
+import { loginAs } from './helpers/testAuth';
+
+test('Provider Runs pages render (service provider)', async ({ page }) => {
+  await loginAs(page, 'ellen'); // service provider
+  await page.goto('/app/provider/runs');
+  await page.waitForURL(/\/app\/provider\/runs/);
+});
+If you are NOT using Playwright, still use POST /api/test/auth/login with X-TEST-AUTH header.
+Do not touch UI login.
+
+B) BACKEND API VERIFICATION (MUST)
+Using the authenticated session from loginAs('ellen'), verify:
+
+GET /api/provider/runs
+
+Returns: { ok: true, runs: [...] }
+
+Must not 401/403
+
+GET /api/provider/runs/:id
+
+Returns: { ok: true, run: {...}, attached_requests: [...], publications: [...] }
+
+ATTACHED REQUESTS DATA SOURCE (READ-ONLY DETECT ONLY):
+Probe in this order and use whatever already exists:
+
+cc_run_requests join table OR
+
+cc_service_requests.run_id OR
+
+cc_n3_runs.request_ids array
+If none exist, return attached_requests: [] and document:
+"NO ATTACHMENT LINKAGE FOUND — returning empty array"
+ULTRA-SAFE LOCK:
+Do NOT create or backfill any attachment linkage in STEP 4. Detect/read only. Creation is STEP 6.
+
+C) UI VERIFICATION (MUST)
+
+/app/provider/runs renders list (may be empty, OK)
+
+/app/provider/runs/:id renders detail (use a real run id if any exist; otherwise document empty state)
+
+Provider nav shows “My Runs” (or “Service Runs”) placed:
+
+after Inbox
+
+before Settings (if present)
+
+Read-only default: no inline edit/delete controls
+
+Any CTAs present are MarketMode-gated (or stubbed per spec)
+
+NO new “calendar” term introduced in new code (use “schedule/operations” only)
+
+D) FINAL PROOF REQUIREMENTS — UPDATE THIS FILE
+Create/update: proof/v3.5/service-runs-management-proof.md
+
+MUST INCLUDE:
+
+DB Evidence
+
+Confirm cc_n3_runs exists and list key columns
+
+Document which attachment linkage pattern exists (or none)
+
+Backend Route Evidence
+
+File path where endpoints live (likely server/routes/provider.ts)
+
+Excerpts showing requireAuth/resolveActorParty + ownership checks
+
+Excerpts for:
+
+GET /api/provider/runs
+
+GET /api/provider/runs/:id
+
+Frontend Evidence
+
+File paths for Provider Runs list + detail pages
+
+Excerpts proving read-only rendering
+
+Excerpts proving MarketMode gating for any CTAs
+
+Excerpts proving “View Messages” is link-out only (no new thread UI)
+
+Nav Wiring Evidence
+
+Nav config file path used (no guessing)
+
+Excerpt showing placement after Inbox and before Settings
+
+Copy Token Evidence
+
+File path where tokens were added
+
+List tokens added
+
+Explicit Verification Statements (include as checkboxes)
+
+ No new "calendar" term introduced in any new code
+
+ No attachment linkage created — detection/read only
+
+ Read-only by default preserved
+
+ All CTAs MarketMode-gated or stubbed
+
+ No new inbox/thread UIs created
+
+ Test auth bootstrap used (no UI login)
+
+Test Results
+
+Paste/describe the test run results showing loginAs('ellen') succeeded and pages rendered
+
+E) OUTPUT BACK TO GLENN
+Return:
+
+The completed proof/v3.5/service-runs-management-proof.md key excerpts
+
+Confirmation that all verification statements are TRUE
+
+Confirmation tests were run using loginAs('ellen') (NOT UI login)
+
+DO NOT ASK GLENN FOR PASSWORDS AGAIN.
+DO NOT USE THE LOGIN PAGE.
+
+bash
+Copy code
+
+## The “final proof requirements” (again, succinct)
+Replit must produce/update: `proof/v3.5/service-runs-management-proof.md` containing DB evidence, endpoint/auth evidence, UI evidence (read-only + MarketMode gating), nav placement evidence, copy token evidence, explicit verification statements, and test results using `loginAs(page,'ellen')`.
+
+If Replit still tries to use UI login after you paste the above, tell it: **“You are blocked until you demonstrate loginAs('ellen') working and paste the test output.”**

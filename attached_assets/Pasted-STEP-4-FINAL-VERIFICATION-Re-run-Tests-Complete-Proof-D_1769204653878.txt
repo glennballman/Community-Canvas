@@ -1,0 +1,86 @@
+STEP 4 FINAL VERIFICATION — Re-run Tests + Complete Proof Document
+
+You said STEP 4 is complete, but tests were skipped due to auth confusion. 
+Now re-run verification using the CORRECT test auth system.
+
+## A) RE-RUN TESTS WITH TEST AUTH BOOTSTRAP
+
+Use the test auth helper for all testing:
+```typescript
+import { loginAs } from './helpers/testAuth';
+
+// Login as Ellen (service provider)
+await loginAs(page, 'ellen');
+
+// Then navigate to provider runs
+await page.goto('/app/provider/runs');
+```
+
+Verify these acceptance criteria:
+
+1. [ ] GET /api/provider/runs returns { ok: true, runs: [...] } for authenticated provider
+2. [ ] GET /api/provider/runs/:id returns { ok: true, run: {...}, attached_requests: [...], publications: [...] }
+3. [ ] /app/provider/runs page renders list (may be empty, that's OK)
+4. [ ] /app/provider/runs/:id page renders detail (test with a real run ID if any exist)
+5. [ ] Navigation shows "My Runs" or "Service Runs" in provider section
+6. [ ] No UI login required — test auth bootstrap works
+
+## B) COMPLETE PROOF DOCUMENT
+
+Create or update: proof/v3.5/service-runs-management-proof.md
+
+MUST INCLUDE:
+
+### 1. DB Evidence
+- Confirm cc_n3_runs table exists
+- List key columns found
+- Document attachment linkage pattern: 
+  - Found: [describe pattern] OR
+  - "NO ATTACHMENT LINKAGE FOUND — returning empty array"
+
+### 2. Backend Route Evidence
+- File path: server/routes/provider.ts (or wherever added)
+- Excerpt showing:
+  - requireAuth() usage
+  - resolveActorParty() or equivalent
+  - party_id ownership check
+  - Route definitions for GET /api/provider/runs and GET /api/provider/runs/:id
+
+### 3. Frontend Page Evidence
+- File paths for:
+  - ProviderRunsPage.tsx (list)
+  - ProviderRunDetailPage.tsx (detail)
+- Excerpt showing:
+  - Read-only rendering (no inline edit/delete)
+  - MarketMode gating for CTAs (stub buttons)
+  - Link-out messaging pattern (not embedded thread)
+
+### 4. Nav Wiring Evidence
+- File path of nav config modified
+- Excerpt showing new "My Runs" / "Service Runs" entry
+- Placement: after Inbox, before Settings
+
+### 5. Copy Token Evidence
+- File path where tokens added
+- List of tokens added (e.g., provider.runs.title, provider.runs.empty_state, etc.)
+
+### 6. Verification Statements
+Include these explicit statements:
+- [ ] "No new 'calendar' term introduced in any new code"
+- [ ] "No attachment linkage created — read-only detection only"
+- [ ] "All CTAs are MarketMode-gated or stubbed"
+- [ ] "Test auth bootstrap used for verification (no UI login)"
+
+### 7. Test Results
+Paste output or summary of test run showing:
+- Auth succeeded via test bootstrap
+- Provider runs list rendered
+- Provider run detail rendered (or "no runs exist yet" if empty)
+
+## C) OUTPUT
+
+1. Paste the key excerpts from the proof document here
+2. Confirm all 6 verification statements are true
+3. Confirm tests passed with test auth bootstrap
+
+DO NOT skip tests again. Use loginAs(page, 'ellen') from tests/helpers/testAuth.ts.
