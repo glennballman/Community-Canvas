@@ -115,27 +115,21 @@ const GLOBAL_LINE_ALLOWLIST: RegExp[] = [
   /booked/,
   /summaryLower\.includes/,
   /blockType.*booked/,
+  /console\.error.*Contractor/,
+  /reason.*Contractor absorbed/,
+  /reason.*Contractor approved/,
+  /Contractor.*calendar.*error/i,
+  /ops-calendar.*error/i,
+  /`Contractor.*\${/,
 ];
 
 const CONTEXT_ALLOWLIST: Array<{ file: RegExp; patterns: RegExp[] }> = [
   {
-    file: /contractor/,
+    file: /contractor/i,
     patterns: [/.*/],
   },
   {
     file: /Contractor/,
-    patterns: [/.*/],
-  },
-  {
-    file: /routes\//,
-    patterns: [/.*/],
-  },
-  {
-    file: /services\//,
-    patterns: [/.*/],
-  },
-  {
-    file: /admin\//,
     patterns: [/.*/],
   },
   {
@@ -145,6 +139,86 @@ const CONTEXT_ALLOWLIST: Array<{ file: RegExp; patterns: RegExp[] }> = [
   {
     file: /App\.tsx$/,
     patterns: [/contractor/, /Contractor/, /Route/],
+  },
+  {
+    file: /routes\/appreciations\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/bids\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/calendar\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/conversations\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/dev-login\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/feedback\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/financing\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/p2-admin\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/p2-platform\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/platform\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/profiles\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/work-requests\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/p2-work-catalog\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/payments\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/public-event\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/shared-runs\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /routes\/trust-signals\.ts$/,
+    patterns: [/contractor/],
+  },
+  {
+    file: /PortalZonesPage\.tsx$/,
+    patterns: [/contractor/, /badgeLabelContractor/, /Contractor/],
+  },
+  {
+    file: /CreateServiceRun\.tsx$/,
+    patterns: [/contractor/i],
+  },
+  {
+    file: /ServiceRunDetail\.tsx$/,
+    patterns: [/contractor/i],
   },
   {
     file: /ZoneBadge\.tsx$/,
