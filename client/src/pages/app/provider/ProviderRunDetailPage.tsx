@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'wouter';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, Truck, 
   MessageSquare, FileText, Globe, AlertCircle
@@ -67,7 +67,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function ProviderRunDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { nouns, resolve } = useCopy({ entryPoint: 'service' });
 
   const { data, isLoading, error } = useQuery<{ 
@@ -110,10 +110,10 @@ export default function ProviderRunDetailPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Run not found</h2>
-            <p className="text-muted-foreground mb-4">The requested run could not be loaded.</p>
-            <Button variant="outline" onClick={() => navigate('/app/provider/runs')}>
-              Back to Runs
+            <h2 className="text-lg font-semibold mb-2">{nouns.run} not found</h2>
+            <p className="text-muted-foreground mb-4">The requested {nouns.run} could not be loaded.</p>
+            <Button variant="outline" onClick={() => setLocation('/app/provider/runs')}>
+              Back to {nouns.run}s
             </Button>
           </CardContent>
         </Card>
@@ -151,7 +151,7 @@ export default function ProviderRunDetailPage() {
   return (
     <div className="flex-1 p-4 space-y-6" data-testid="page-provider-run-detail">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/app/provider/runs')} data-testid="button-back">
+        <Button variant="ghost" size="icon" onClick={() => setLocation('/app/provider/runs')} data-testid="button-back">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
@@ -161,7 +161,7 @@ export default function ProviderRunDetailPage() {
             </Badge>
           </div>
           <h1 className="text-xl font-bold mt-1" data-testid="text-title">
-            {run.title || 'Untitled Run'}
+            {run.title || `Untitled ${nouns.run}`}
           </h1>
         </div>
       </div>
@@ -170,7 +170,7 @@ export default function ProviderRunDetailPage() {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Run Details</CardTitle>
+              <CardTitle className="text-lg">{nouns.run} Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
@@ -207,14 +207,14 @@ export default function ProviderRunDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Attached Requests</CardTitle>
-              <CardDescription>Service requests linked to this run</CardDescription>
+              <CardTitle className="text-lg">Attached {nouns.request}s</CardTitle>
+              <CardDescription>{nouns.request}s linked to this {nouns.run}</CardDescription>
             </CardHeader>
             <CardContent>
               {attachedRequests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p data-testid="text-no-requests">No requests attached to this run yet.</p>
+                  <p data-testid="text-no-requests">No {nouns.request}s attached to this {nouns.run} yet.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -235,13 +235,13 @@ export default function ProviderRunDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Publications</CardTitle>
-              <CardDescription>Portals where this run is visible</CardDescription>
+              <CardDescription>Portals where this {nouns.run} is visible</CardDescription>
             </CardHeader>
             <CardContent>
               {publications.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p data-testid="text-no-publications">This run is not published to any portals yet.</p>
+                  <p data-testid="text-no-publications">This {nouns.run} is not published to any portals yet.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -261,7 +261,7 @@ export default function ProviderRunDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg" data-testid="label-actions">Actions</CardTitle>
-              <CardDescription>Manage this run</CardDescription>
+              <CardDescription>Manage this {nouns.run}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
@@ -281,13 +281,13 @@ export default function ProviderRunDetailPage() {
                 data-testid="button-attach-stub"
               >
                 <FileText className="w-4 h-4 mr-2" />
-                Attach Requests (Coming Soon)
+                Attach {nouns.request}s (Coming Soon)
               </Button>
 
               <Separator />
 
               <Button asChild variant="ghost" className="w-full">
-                <Link to="/app/messages" data-testid="link-view-messages">
+                <Link href="/app/messages" data-testid="link-view-messages">
                   <MessageSquare className="w-4 h-4 mr-2" />
                   View Messages
                 </Link>

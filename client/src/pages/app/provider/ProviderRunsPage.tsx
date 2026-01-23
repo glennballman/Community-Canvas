@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 import { 
   Truck, Clock, Search, ArrowRight, CheckCircle, 
   AlertCircle, Calendar, MapPin
@@ -95,7 +95,7 @@ export default function ProviderRunsPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 mx-auto text-destructive mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Failed to load runs</h2>
+            <h2 className="text-lg font-semibold mb-2">Failed to load {nouns.run}s</h2>
             <p className="text-muted-foreground">Please try again later</p>
           </CardContent>
         </Card>
@@ -108,12 +108,12 @@ export default function ProviderRunsPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Truck className="w-6 h-6" />
-          <h1 className="text-xl font-bold" data-testid="text-runs-title">My Runs</h1>
+          <h1 className="text-xl font-bold" data-testid="text-runs-title">My {nouns.run}s</h1>
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search runs..."
+            placeholder={`Search ${nouns.run}s...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -135,11 +135,11 @@ export default function ProviderRunsPage() {
             <Card>
               <CardContent className="p-8 text-center">
                 <Truck className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h2 className="text-lg font-semibold mb-2" data-testid="text-empty-title">No runs found</h2>
+                <h2 className="text-lg font-semibold mb-2" data-testid="text-empty-title">No {nouns.run}s found</h2>
                 <p className="text-muted-foreground" data-testid="text-empty-description">
                   {filter === 'all' 
-                    ? 'You have no service runs yet.'
-                    : `No ${STATUS_LABELS[filter]?.toLowerCase() || filter} runs.`}
+                    ? `You have no ${nouns.run}s yet.`
+                    : `No ${STATUS_LABELS[filter]?.toLowerCase() || filter} ${nouns.run}s.`}
                 </p>
               </CardContent>
             </Card>
@@ -148,7 +148,7 @@ export default function ProviderRunsPage() {
               {runs.map((run) => (
                 <Link 
                   key={run.id} 
-                  to={`/app/provider/runs/${run.id}`}
+                  href={`/app/provider/runs/${run.id}`}
                   className="block"
                   data-testid={`link-run-${run.id}`}
                 >
@@ -167,7 +167,7 @@ export default function ProviderRunsPage() {
                             )}
                           </div>
                           <h3 className="font-semibold truncate" data-testid="text-run-title">
-                            {run.title || 'Untitled Run'}
+                            {run.title || `Untitled ${nouns.run}`}
                           </h3>
                           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
                             <span className="flex items-center gap-1">
@@ -182,7 +182,7 @@ export default function ProviderRunsPage() {
                             )}
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {run.requests_attached} requests
+                              {run.requests_attached} {nouns.request}s
                             </span>
                           </div>
                         </div>

@@ -62,9 +62,11 @@ No new tokens required.
 
 ## Security
 
-- All endpoints require authenticated session
-- Tenant context enforced via `getProviderContext()` middleware pattern
-- MarketMode gating applied to provider routes
+- All endpoints require authenticated session via `requireAuth` middleware
+- Tenant context validated by extracting `req.user.tenantId` and rejecting if not present
+- All database queries filter by `tenant_id = $1` with parameterized tenantId
+- UUID validation on run IDs via `isValidUUID()` helper
+- MarketMode gating applied to provider routes on frontend
 
 ## Testing Checklist
 
