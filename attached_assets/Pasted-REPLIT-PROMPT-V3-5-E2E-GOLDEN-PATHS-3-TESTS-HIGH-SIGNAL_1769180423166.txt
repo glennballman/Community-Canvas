@@ -1,0 +1,87 @@
+REPLIT PROMPT — V3.5 E2E GOLDEN PATHS (3 TESTS, HIGH SIGNAL)
+
+ROLE: Senior QA engineer implementing Playwright E2E smoke suite using test auth bootstrap.
+HARD RULES:
+- Use /api/test/auth/login with X-TEST-AUTH header.
+- Do not use UI login flows.
+- Tests must be deterministic and run in CI.
+- Use stable selectors (data-testid preferred). Add minimal testids only where missing.
+
+PRE-REQS
+- Ensure ALLOW_TEST_AUTH=true for test runs
+- TEST_AUTH_SECRET set in env for Playwright
+- Demo seed/reset command exists (if needed) OR tests create their own objects via API.
+
+DELIVERABLES
+
+A) Add Playwright config wiring (if not already)
+- Ensure baseURL points to dev server
+- Ensure env vars are read
+
+B) Add E2E helper
+Use existing tests/helpers/testAuth.ts (loginAs) and add:
+- ensureTenantContext(page) if tenant cookies are required for switching
+- optional: resetDemoState() helper calling existing reset endpoint if available
+
+C) Add 3 tests
+Create:
+  tests/e2e/golden-paths.spec.ts
+
+TEST 1 — Targeted request → accept
+1) loginAs(page, "ellen") as requester
+2) Navigate to /app/intake/work-requests
+3) Create a new request using UI (or API if UI creation is flaky):
+   - market mode TARGETED
+   - visibility PRIVATE
+   - invite provider persona email (tester or service_provider)
+4) Capture created request id from URL or UI
+5) logout + loginAs(page, "tester") as provider
+6) Open /app/intake/work-requests/:id
+7) Click action "accept" (use data-testid)
+8) Assert status shows ACCEPTED and a success message banner appears
+
+TEST 2 — Targeted → decline → UNASSIGNED → open to responses
+1) loginAs(page, "ellen")
+2) Create TARGETED request visible to portal (if UI offers), otherwise PRIVATE is ok
+3) loginAs(page, "tester") provider, open request, click "decline"
+4) loginAs(page, "ellen") requester, open request
+5) Assert status UNASSIGNED is visible
+6) Click "open_to_responses" CTA
+7) Assert market mode/state indicates OPEN or “open for responses” notice appears
+
+TEST 3 — Service run create → publish → N3 monitor loads
+1) loginAs(page, "service_provider") (or another provider persona that has run creation perms)
+2) Navigate /app/service-runs/new
+3) Create run with time window + capacity
+4) Publish to a portal (select 1 portal)
+5) Assert run detail page /app/service-runs/:slug loads and shows PUBLISHED/ACTIVE
+6) Extract runId or use a visible link/button to open monitor
+7) Navigate /app/n3/monitor/:runId
+8) Assert monitor page loads and shows run title/identifier
+
+D) Add/patch minimal testids
+Add data-testid only where needed:
+- new request button
+- market mode selector
+- visibility selector
+- provider invite field
+- submit button
+- accept/decline buttons
+- status badge
+- open_to_responses CTA
+- create run submit
+- publish button
+- monitor link
+
+E) Stabilize
+- Add waits for network idle or explicit loading indicators
+- Avoid brittle text asserts; assert via testids/status badges
+
+ACCEPTANCE CRITERIA
+- All 3 tests pass locally in under a couple minutes.
+- No manual steps.
+- If a test fails, output includes screenshot + trace (enable Playwright tracing on failure).
+
+OUTPUT
+- Add a short README in tests/e2e/README.md describing how to run:
+  - ALLOW_TEST_AUTH=true TEST_AUTH_SECRET=... pnpm test:e2e

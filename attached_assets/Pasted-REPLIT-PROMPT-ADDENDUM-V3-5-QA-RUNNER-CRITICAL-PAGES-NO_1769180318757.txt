@@ -1,0 +1,74 @@
+REPLIT PROMPT ADDENDUM — V3.5 QA RUNNER: CRITICAL PAGES NO-LOGIN-REDIRECT CHECK
+
+Add a new suite:
+  suite: "critical_pages"
+
+And include it inside "pre_demo_smoke".
+
+A) Define Critical Page Matrix (single source)
+Create:
+  server/dev/qa/criticalPages.ts
+Export array of:
+  {
+    id: string,
+    label: string,
+    route: string,                 // e.g. "/app/intake/work-requests"
+    apiProbes: Array<{
+      name: string,
+      method: "GET"|"POST",
+      path: string,                // API endpoint hit by the page
+      assert: (resJson) => void     // minimal schema sanity
+    }>,
+    routeProbe?: {
+      method: "GET",
+      path: string,                // same as route
+      mustNotInclude?: string[],    // e.g. ["Welcome Back", "Sign In", "/login"]
+    }
+  }
+
+Include at minimum:
+- /app/intake/work-requests
+- /app/work-requests
+- /app/work-requests/:id (use "latest" id lookup first)
+- /app/service-runs/new
+- /app/service-runs/:slug (use "latest" slug lookup first)
+- /app/n3/monitor/:runId (use "latest" runId lookup first)
+- /preview/contractor/work-request/:workRequestId (use latest id lookup first; token auth if needed)
+
+B) Implement suite runner
+In POST /api/dev/qa/run:
+- For suite "critical_pages":
+  1) Mint JWT for persona "ellen" via internal test-auth function (no HTTP).
+  2) Set Authorization header for all probes.
+  3) For each critical page:
+     - Run apiProbes sequentially:
+       - If any returns 401/403 OR JSON indicates not authenticated -> FAIL with error "auth_redirect_risk"
+     - If routeProbe is configured:
+       - Fetch the route path with Authorization header if supported OR with cookies if route expects them
+       - If response is 302/301 to /login -> FAIL
+       - If body contains any mustNotInclude tokens -> FAIL
+     - Record duration and details.
+
+C) “Latest ID” resolvers (no hardcoding)
+Add helper functions in server/dev/qa/helpers.ts:
+- getLatestWorkRequestId(token) (calls existing list endpoint and picks first)
+- getLatestServiceRunSlugAndId(token)
+- getLatestMonitorRunId(token)
+If none exist, mark test as SKIP with ok=true and details "no fixtures" (do NOT fail the whole suite).
+
+D) Client UI updates
+In DemoLauncher QA panel:
+- Add button: "Run Critical Pages"
+- Show results grouped by page (expandable)
+
+E) Acceptance Criteria
+- Running "critical_pages" verifies:
+  - No API probe returns 401/403
+  - No route probe redirects to /login (where routeProbe enabled)
+- Results show which page failed and why.
+- Works without Playwright.
+- DEV-only guards still enforced.
+
+NOTE
+- Prefer API probes as the authoritative check.
+- RouteProbe is best-effort; keep mustNotInclude minimal and stable.
