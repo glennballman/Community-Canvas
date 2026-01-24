@@ -1,0 +1,243 @@
+REPLIT PROMPT — V3.5 STEP 7A — Route/Zone Suggestions (Advisory + Opt-In Only)
+(Implementable with current geo reality: zones/portals lack geo columns)
+
+ROLE
+Senior Platform Engineer implementing STEP 7 advisory suggestions safely.
+
+MODE
+Evidence-first. Additive-only. No refactors. No automation. Opt-in only.
+
+============================================================
+HARD RULES (LOCKED)
+============================================================
+- Use “service provider” (never contractor).
+- Use “reserve / reservation” (never booking).
+- Do NOT introduce the word “calendar” in any NEW code. Use “schedule” / “operations”.
+- “job” is banned in NEW service fulfillment context (use “service request” / “work request” / “service run”).
+- AI/advisory suggestions are ALWAYS opt-in:
+  - Never auto-apply
+  - Never auto-publish
+  - Never auto-attach
+  - Never change market_mode or visibility without explicit user action
+- Read-only by default: suggestions display only, user chooses to apply.
+- No new inbox/thread UI surfaces.
+- Do NOT add schema in STEP 7 (we already proved the zone/portal geo gap). If schema change is needed, STOP and document for STEP 7B.
+
+============================================================
+CONTEXT (EVIDENCE)
+============================================================
+Confirmed geo anchors exist (examples):
+- Run origin: cc_n3_runs.start_address_id → cc_tenant_start_addresses(lat/lng)
+- Work request location: cc_work_requests.property_id → cc_properties(lat/lng) (when present)
+- Communities/locations exist with lat/lng (cc_communities, cc_sr_communities, cc_locations, etc.)
+Critical constraint:
+- cc_zones has NO geo
+- cc_portals has NO geo columns
+Therefore:
+- STEP 7 cannot compute zone distances directly
+- STEP 7 MUST use geo anchors (start address, communities, properties) and remain advisory.
+
+============================================================
+GOAL (STEP 7A SCOPE)
+============================================================
+Add an opt-in “Suggested portals” section to the Run Publish modal that proposes
+nearby portals/communities based on the run start address.
+
+This is NOT routing. This is NOT zoning. This is a safe, helpful shortlist:
+- “Suggested” portals (within radius of origin)
+- User may select/unselect and publish normally
+
+NO schema changes. NO automation.
+
+============================================================
+SECTION A) AUDIT FIRST (MANDATORY)
+============================================================
+Create: proof/v3.5/step7a-advisory-audit.md
+
+A1) Locate the publish modal used in STEP 5
+- Identify file path (e.g., PublishRunModal.tsx)
+
+A2) Locate existing provider portals endpoint and shape
+- Confirm GET /api/provider/portals exists (from STEP 5)
+- Document current payload fields
+
+A3) Find canonical haversine/distance utility (if exists)
+- rg -n "haversine|distanceKm|distanceMiles" client/src server/
+If missing, we will implement a minimal haversine helper in client (no deps).
+
+A4) Determine how to get a portal geo anchor WITHOUT adding portal columns:
+- Check for joinable anchor:
+  - portals → community table (cc_communities or cc_sr_communities)
+- Check portal settings json for lat/lng:
+  - rg -n "portal.*settings" server/ client/
+If neither exists, STOP and document (cannot suggest “nearby” portals).
+
+A5) Determine how to get run origin lat/lng for a run:
+- Confirm run detail payload includes start_address_id OR start address lat/lng
+- If not present, extend existing GET /api/provider/runs/:id response to include:
+  - origin_lat, origin_lng derived from start_address_id join
+(Adding derived fields to response is OK; no schema changes.)
+
+============================================================
+SECTION B) BACKEND (MINIMAL ADDITIVE SUPPORT)
+============================================================
+
+B1) Extend GET /api/provider/portals to include optional geo anchor fields
+Target payload per portal:
+{
+  id,
+  name,
+  ...existingFields,
+  anchor_lat?: number | null,
+  anchor_lng?: number | null,
+  anchor_label?: string | null
+}
+
+Rules:
+- Do NOT add schema.
+- Compute anchor from existing joins only:
+  Preferred:
+    portals → community FK join (if exists) → community.latitude/longitude
+  Fallback:
+    portals.settings JSON contains coordinate keys (document exact key path)
+- If no anchor available, return nulls (still list portal).
+
+B2) Extend GET /api/provider/runs/:id to include derived origin lat/lng
+If run.start_address_id is set:
+- join cc_tenant_start_addresses → latitude/longitude
+Return:
+{
+  ...existing,
+  origin_lat?: number | null,
+  origin_lng?: number | null
+}
+
+Do NOT change run schema. Do NOT auto-set.
+
+============================================================
+SECTION C) FRONTEND — ADVISORY SUGGESTIONS (OPT-IN)
+============================================================
+
+C1) Add “Suggested portals” section to PublishRunModal (VISUALLY SEPARATE)
+In the publish modal, add a new section ABOVE the portal checkbox list:
+
+SECTION: SUGGESTED (Advisory)
+- Only shown if:
+  - run origin lat/lng exists AND
+  - at least one portal has anchor_lat/lng
+- Show explanation text (copy tokens):
+  “Suggestions are based on the run’s start address and nearby communities. Nothing is applied automatically.”
+
+List up to N suggestions (N=10 default):
+- Portal name
+- Distance badge (e.g., “42 km”)
+- “Add” button OR checkbox toggle that checks the portal in the VISIBILITY list
+
+C2) Suggestion algorithm (client-side, simple & safe)
+Inputs:
+- origin_lat/origin_lng from run detail
+- portals list with anchor_lat/anchor_lng
+
+Compute haversine distance and sort ascending.
+Filter:
+- exclude portals with null anchors
+- (optional) filter by max distance (default 150 km) — make it a local constant
+
+IMPORTANT:
+- Suggestions DO NOT auto-check portals.
+- Clicking “Add” checks the portal checkbox (explicit user action).
+
+C3) Handle “No origin set” gracefully
+If no run start address:
+- Show small inline prompt (copy tokens):
+  “Set a start address to see nearby portal suggestions.”
+- Provide a link/button that opens the StartAddressPickerModal (from STEP 6.5B)
+This is still opt-in.
+
+C4) No optimistic mutation changes
+Suggestions are display-only.
+Publishing remains the same action as STEP 5:
+- user selects portals + competition mode
+- clicks publish
+
+============================================================
+SECTION D) MARKETMODE (COMPETITION) — NO CHANGE
+============================================================
+Do not change the STEP 5 MarketMode control.
+We are only adding advisory suggestions for VISIBILITY selection.
+
+Maintain the locked separation:
+Visibility ≠ Competition ≠ Attachments
+
+============================================================
+SECTION E) COPY TOKENS (MANDATORY)
+============================================================
+Add tokens:
+
+Advisory section:
+- provider.run.publish.suggestions_title
+- provider.run.publish.suggestions_helper
+- provider.run.publish.suggestions_none
+- provider.run.publish.suggestions_set_start_address_cta
+- provider.run.publish.suggestions_distance_km
+
+Optional distance formatting:
+- provider.distance.km_suffix
+
+No hardcoded strings.
+
+============================================================
+SECTION F) TESTING (MANDATORY — TEST AUTH BOOTSTRAP)
+============================================================
+Use test auth bootstrap ONLY:
+await loginAs(page, 'ellen');
+
+Verify:
+1) Open a run with start address set:
+   - Publish modal shows Suggested section
+   - Suggestions list is sorted by distance
+   - Clicking “Add” checks the portal in Visibility list (no auto-check)
+2) Open a run with NO start address:
+   - Suggestions section shows helper + CTA to set start address
+3) If a portal has no anchor:
+   - It may appear in Visibility list, but not in Suggestions
+4) No changes occur unless user clicks publish
+
+API checks:
+- GET /api/provider/portals includes anchor_lat/anchor_lng when available
+- GET /api/provider/runs/:id includes origin_lat/origin_lng when start address set
+
+============================================================
+SECTION G) PROOF (MANDATORY)
+============================================================
+Create: proof/v3.5/step7a-advisory-proof.md
+
+Must include:
+- Audit findings (portal anchor derivation path, run origin derivation)
+- Backend excerpts:
+  - portals endpoint returning anchor fields
+  - runs/:id returning origin fields
+- Frontend excerpts:
+  - Suggested portals section (JSX)
+  - Haversine helper (if added)
+  - Explicit “no auto-apply” behavior
+- Copy tokens list
+- Test results summary using loginAs('ellen')
+
+Verification checklist (explicit):
+- [ ] Suggestions are advisory only (no auto-check, no auto-publish)
+- [ ] No schema changes were made
+- [ ] No “calendar” added
+- [ ] Terminology compliant (“service provider”, “reservation”)
+- [ ] Visibility ≠ Competition preserved
+- [ ] Works even when origin or portal anchors are missing (graceful)
+
+============================================================
+SECTION H) STOP CONDITIONS
+============================================================
+STOP and document (do not proceed) if:
+- No join path exists to derive portal anchor lat/lng AND no portal.settings coordinate keys exist
+- Run origin lat/lng cannot be derived from start_address_id
+In that case, produce a “STEP 7B Schema Proposal” doc only (no code).
+
+END.
