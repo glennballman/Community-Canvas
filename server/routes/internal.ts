@@ -1648,4 +1648,264 @@ router.get(
   }
 );
 
+// V3.5 STEP 10C: Visibility Edge Management (Admin CRUD)
+// List visibility edges with optional filters
+router.get(
+  '/visibility/edges',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { source_type, source_id, target_type, target_id, direction, include_archived } = req.query;
+      
+      let conditions: string[] = [];
+      let params: any[] = [];
+      let paramIdx = 1;
+      
+      if (source_type) {
+        conditions.push(`source_type = $${paramIdx++}`);
+        params.push(source_type);
+      }
+      if (source_id) {
+        conditions.push(`source_id = $${paramIdx++}`);
+        params.push(source_id);
+      }
+      if (target_type) {
+        conditions.push(`target_type = $${paramIdx++}`);
+        params.push(target_type);
+      }
+      if (target_id) {
+        conditions.push(`target_id = $${paramIdx++}`);
+        params.push(target_id);
+      }
+      if (direction) {
+        conditions.push(`direction = $${paramIdx++}`);
+        params.push(direction);
+      }
+      if (include_archived !== 'true') {
+        conditions.push(`archived_at IS NULL`);
+      }
+      
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      
+      const result = await serviceQuery(
+        `SELECT e.*, 
+                p_src.name as source_portal_name, z_src.name as source_zone_name,
+                p_tgt.name as target_portal_name, z_tgt.name as target_zone_name
+         FROM cc_visibility_edges e
+         LEFT JOIN cc_portals p_src ON e.source_type = 'portal' AND e.source_id = p_src.id
+         LEFT JOIN cc_zones z_src ON e.source_type = 'zone' AND e.source_id = z_src.id
+         LEFT JOIN cc_portals p_tgt ON e.target_type = 'portal' AND e.target_id = p_tgt.id
+         LEFT JOIN cc_zones z_tgt ON e.target_type = 'zone' AND e.target_id = z_tgt.id
+         ${whereClause}
+         ORDER BY e.created_at DESC`,
+        params
+      );
+      
+      return res.json({
+        ok: true,
+        edges: result.rows.map(e => ({
+          id: e.id,
+          tenant_id: e.tenant_id,
+          source_type: e.source_type,
+          source_id: e.source_id,
+          source_name: e.source_portal_name || e.source_zone_name,
+          target_type: e.target_type,
+          target_id: e.target_id,
+          target_name: e.target_portal_name || e.target_zone_name,
+          direction: e.direction,
+          reason: e.reason,
+          created_at: e.created_at,
+          archived_at: e.archived_at
+        }))
+      });
+    } catch (error) {
+      console.error('List visibility edges error:', error);
+      return res.status(500).json({ ok: false, error: 'Failed to list edges' });
+    }
+  }
+);
+
+// Create a new visibility edge
+router.post(
+  '/visibility/edges',
+  requirePlatformRole('platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { tenant_id, source_type, source_id, target_type, target_id, direction, reason } = req.body;
+      
+      // Validate required fields
+      if (!tenant_id || !source_type || !source_id || !target_type || !target_id || !direction) {
+        return res.status(400).json({ ok: false, error: 'missing_required_fields' });
+      }
+      
+      // Validate enums
+      if (!['portal', 'zone'].includes(source_type)) {
+        return res.status(400).json({ ok: false, error: 'invalid_source_type' });
+      }
+      if (!['portal', 'zone'].includes(target_type)) {
+        return res.status(400).json({ ok: false, error: 'invalid_target_type' });
+      }
+      if (!['up', 'down', 'lateral'].includes(direction)) {
+        return res.status(400).json({ ok: false, error: 'invalid_direction' });
+      }
+      
+      // Reject self-referential edges
+      if (source_id === target_id) {
+        return res.status(400).json({ ok: false, error: 'self_reference_not_allowed' });
+      }
+      
+      // Validate source exists
+      const sourceTable = source_type === 'portal' ? 'cc_portals' : 'cc_zones';
+      const sourceCheck = await serviceQuery(
+        `SELECT id, tenant_id FROM ${sourceTable} WHERE id = $1`,
+        [source_id]
+      );
+      if (!sourceCheck.rows || sourceCheck.rows.length === 0) {
+        return res.status(400).json({ ok: false, error: 'invalid_source' });
+      }
+      
+      // Validate target exists
+      const targetTable = target_type === 'portal' ? 'cc_portals' : 'cc_zones';
+      const targetCheck = await serviceQuery(
+        `SELECT id, tenant_id FROM ${targetTable} WHERE id = $1`,
+        [target_id]
+      );
+      if (!targetCheck.rows || targetCheck.rows.length === 0) {
+        return res.status(400).json({ ok: false, error: 'invalid_target' });
+      }
+      
+      // Insert the edge (unique index will catch duplicates)
+      try {
+        const result = await serviceQuery(
+          `INSERT INTO cc_visibility_edges 
+           (tenant_id, source_type, source_id, target_type, target_id, direction, reason)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING *`,
+          [tenant_id, source_type, source_id, target_type, target_id, direction, reason || null]
+        );
+        
+        return res.status(201).json({
+          ok: true,
+          edge: result.rows[0]
+        });
+      } catch (insertError: any) {
+        if (insertError.code === '23505') { // Unique violation
+          return res.status(409).json({ ok: false, error: 'duplicate_edge' });
+        }
+        throw insertError;
+      }
+    } catch (error) {
+      console.error('Create visibility edge error:', error);
+      return res.status(500).json({ ok: false, error: 'Failed to create edge' });
+    }
+  }
+);
+
+// Archive (soft delete) a visibility edge
+router.patch(
+  '/visibility/edges/:id/archive',
+  requirePlatformRole('platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const edgeId = req.params.id;
+      const { archived } = req.body;
+      
+      if (archived !== true) {
+        return res.status(400).json({ ok: false, error: 'archived_must_be_true' });
+      }
+      
+      const result = await serviceQuery(
+        `UPDATE cc_visibility_edges 
+         SET archived_at = COALESCE(archived_at, now())
+         WHERE id = $1
+         RETURNING *`,
+        [edgeId]
+      );
+      
+      if (!result.rows || result.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'edge_not_found' });
+      }
+      
+      return res.json({
+        ok: true,
+        edge: result.rows[0]
+      });
+    } catch (error) {
+      console.error('Archive visibility edge error:', error);
+      return res.status(500).json({ ok: false, error: 'Failed to archive edge' });
+    }
+  }
+);
+
+// Update a visibility edge (reason or direction only)
+router.patch(
+  '/visibility/edges/:id',
+  requirePlatformRole('platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const edgeId = req.params.id;
+      const { reason, direction } = req.body;
+      
+      // Check edge exists
+      const existing = await serviceQuery(
+        `SELECT * FROM cc_visibility_edges WHERE id = $1`,
+        [edgeId]
+      );
+      
+      if (!existing.rows || existing.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'edge_not_found' });
+      }
+      
+      const edge = existing.rows[0];
+      
+      // Build update
+      let updates: string[] = [];
+      let params: any[] = [];
+      let paramIdx = 1;
+      
+      if (reason !== undefined) {
+        updates.push(`reason = $${paramIdx++}`);
+        params.push(reason);
+      }
+      
+      if (direction !== undefined) {
+        if (!['up', 'down', 'lateral'].includes(direction)) {
+          return res.status(400).json({ ok: false, error: 'invalid_direction' });
+        }
+        updates.push(`direction = $${paramIdx++}`);
+        params.push(direction);
+      }
+      
+      if (updates.length === 0) {
+        return res.status(400).json({ ok: false, error: 'no_updates_provided' });
+      }
+      
+      params.push(edgeId);
+      
+      try {
+        const result = await serviceQuery(
+          `UPDATE cc_visibility_edges 
+           SET ${updates.join(', ')}
+           WHERE id = $${paramIdx}
+           RETURNING *`,
+          params
+        );
+        
+        return res.json({
+          ok: true,
+          edge: result.rows[0]
+        });
+      } catch (updateError: any) {
+        if (updateError.code === '23505') { // Unique violation
+          return res.status(409).json({ ok: false, error: 'duplicate_edge' });
+        }
+        throw updateError;
+      }
+    } catch (error) {
+      console.error('Update visibility edge error:', error);
+      return res.status(500).json({ ok: false, error: 'Failed to update edge' });
+    }
+  }
+);
+
 export default router;
