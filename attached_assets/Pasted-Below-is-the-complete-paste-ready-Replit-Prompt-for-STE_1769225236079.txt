@@ -1,0 +1,367 @@
+Below is the complete, paste-ready Replit Prompt for STEP 7B, rewritten with the refreshed, correct understanding:
+
+Anchor ≠ Identity (anchors are geometry only)
+
+No guessing (explicit mapping table included)
+
+No schema changes (Migration 176 already done)
+
+Adds Anacla as a zone (identity target)
+
+Uses “schedule/operations” language (no “calendar”)
+
+Uses “service provider” and “reservation”
+
+No new inbox/thread UI
+
+AI advisory is opt-in (STEP 7 later)
+
+REPLIT PROMPT — V3.5 STEP 7B — Populate Portal Geo Anchors + Add Anacla Zone (Identity Preserved)
+
+ROLE: Senior Platform Engineer
+MODE: Data population + minimal API extension (optional). NO schema changes.
+VERSION: V3.5
+
+============================================================
+CRITICAL RULE (NON-NEGOTIABLE)
+
+ANCHOR ≠ IDENTITY
+
+cc_portals.anchor_community_id is GEOMETRY ONLY (distance scoring / advisory ranking).
+
+Portal names + zone names are IDENTITY (what people call themselves).
+
+DO NOT rename portals.
+
+DO NOT rename zones.
+
+DO NOT collapse East Bamfield / West Bamfield / Helby Island / Deer Group / Anacla into “Bamfield”.
+
+Suggestions must present zones (micro-identities) first in STEP 7.
+
+============================================================
+HARD RULES (LOCKED)
+
+Use “service provider” (never contractor).
+
+Use “reservation” (never booking).
+
+No “calendar” in new code (use schedule/operations).
+
+No new inbox/thread UIs.
+
+AI suggestions are ALWAYS opt-in (not implemented in this step).
+
+Read-only by default: no state change flows except existing gated CTAs / Message Action Blocks (not part of this step).
+
+This step: data population + optional API read extension only.
+
+============================================================
+GOAL
+
+Populate cc_portals.anchor_community_id for all 12 portals using explicit mapping (geometry only).
+
+Add Anacla as a zone under the Bamfield Community Portal (identity target).
+
+Verify:
+
+Anchors populated
+
+Identity unchanged
+
+Bamfield micro-zone list includes Anacla
+
+OPTIONAL 4) Extend GET /api/provider/portals response to include anchor_lat/anchor_lng
+(READ-ONLY response enrichment only; no UI change in this step unless already required by STEP 7 later.)
+
+============================================================
+SECTION A) AUDIT — CAPTURE CURRENT STATE (MANDATORY)
+
+A1) Snapshot portals (identity baseline):
+
+SELECT id, name, slug, status, anchor_community_id
+FROM cc_portals
+ORDER BY name;
+
+
+A2) Snapshot Bamfield zones (identity baseline):
+
+SELECT z.id, z.name, z.key, z.kind, p.slug AS portal_slug
+FROM cc_zones z
+JOIN cc_portals p ON p.id = z.portal_id
+WHERE p.slug = 'bamfield'
+ORDER BY z.name;
+
+
+A3) Confirm available geo anchors (communities with lat/lng):
+
+SELECT id, name, latitude, longitude
+FROM cc_sr_communities
+WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+ORDER BY name;
+
+
+A4) Confirm required community rows exist (STOP if missing):
+
+SELECT id, name, latitude, longitude
+FROM cc_sr_communities
+WHERE name IN (
+  'Bamfield',
+  'Deep Cove',
+  'West Vancouver',
+  'Cloverdale',
+  'Surrey',
+  'Victoria',
+  'Saanich',
+  'New Westminster'
+)
+ORDER BY name;
+
+
+STOP CONDITION:
+
+If any of the above community names are missing, STOP and document which are missing.
+
+Do NOT add new community rows in this step.
+
+============================================================
+SECTION B) EXPLICIT MAPPING TABLE (NO GUESSING)
+
+Use this mapping EXACTLY as provided by Glenn.
+If any portal slug differs, STOP and adjust using the actual slug list (do not guess).
+
+MAPPING (IDENTITY PRESERVED; ANCHOR IS GEOMETRY ONLY):
+
+Bamfield-area portals (coarse geo anchor = Bamfield):
+
+Bamfield Community Portal → Bamfield
+
+Bamfield Adventure Center → Bamfield
+
+Bamfield QA Portal → Bamfield
+
+Woods End Landing Cottages → Bamfield
+
+Save Paradise Parking → Bamfield
+
+Other portals:
+
+AdrenalineCanada → Deep Cove
+
+CanadaDirect → West Vancouver
+
+Enviro Bright Lights → Cloverdale
+
+Enviropaving BC → Surrey
+
+OffpeakAirBNB → Victoria
+
+Parts Unknown BC → Saanich
+
+Remote Serve → New Westminster
+
+============================================================
+SECTION C) APPLY ANCHORS (GEOMETRY ONLY, IDEMPOTENT)
+
+C1) Resolve community IDs into psql variables (or copy/paste UUIDs):
+
+SELECT id, name
+FROM cc_sr_communities
+WHERE name IN (
+  'Bamfield',
+  'Deep Cove',
+  'West Vancouver',
+  'Cloverdale',
+  'Surrey',
+  'Victoria',
+  'Saanich',
+  'New Westminster'
+)
+ORDER BY name;
+
+
+C2) Confirm portal slugs exactly match expected targets:
+
+SELECT id, name, slug
+FROM cc_portals
+ORDER BY name;
+
+
+C3) UPDATE statements (replace <...> with real UUIDs from C1):
+
+-- Bamfield-area portals → Bamfield (GEOMETRY ONLY)
+UPDATE cc_portals
+SET anchor_community_id = '<BAMFIELD_ID>'
+WHERE slug IN (
+  'bamfield',
+  'bamfield-adventure',
+  'bamfield-qa',
+  'woods-end-landing',
+  'save-paradise-parking'
+)
+AND anchor_community_id IS DISTINCT FROM '<BAMFIELD_ID>';
+
+-- Other portals (GEOMETRY ONLY)
+UPDATE cc_portals SET anchor_community_id = '<DEEP_COVE_ID>'
+WHERE slug = 'adrenalinecanada'
+AND anchor_community_id IS DISTINCT FROM '<DEEP_COVE_ID>';
+
+UPDATE cc_portals SET anchor_community_id = '<WEST_VANCOUVER_ID>'
+WHERE slug = 'canadadirect'
+AND anchor_community_id IS DISTINCT FROM '<WEST_VANCOUVER_ID>';
+
+UPDATE cc_portals SET anchor_community_id = '<CLOVERDALE_ID>'
+WHERE slug = 'enviro-bright'
+AND anchor_community_id IS DISTINCT FROM '<CLOVERDALE_ID>';
+
+UPDATE cc_portals SET anchor_community_id = '<SURREY_ID>'
+WHERE slug = 'enviropaving'
+AND anchor_community_id IS DISTINCT FROM '<SURREY_ID>';
+
+UPDATE cc_portals SET anchor_community_id = '<VICTORIA_ID>'
+WHERE slug = 'offpeakairbnb'
+AND anchor_community_id IS DISTINCT FROM '<VICTORIA_ID>';
+
+UPDATE cc_portals SET anchor_community_id = '<SAANICH_ID>'
+WHERE slug = 'parts-unknown-bc'
+AND anchor_community_id IS DISTINCT FROM '<SAANICH_ID>';
+
+UPDATE cc_portals SET anchor_community_id = '<NEW_WESTMINSTER_ID>'
+WHERE slug = 'remote-serve'
+AND anchor_community_id IS DISTINCT FROM '<NEW_WESTMINSTER_ID>';
+
+============================================================
+SECTION D) ADD ANACLA ZONE (IDENTITY TARGET, IDEMPOTENT)
+
+Anacla must exist as a zone identity target under the Bamfield Community Portal.
+
+D1) Insert Anacla zone under portal slug 'bamfield' if missing:
+
+INSERT INTO cc_zones (
+  id, tenant_id, portal_id, key, name, kind, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  p.owning_tenant_id,
+  p.id,
+  'anacla',
+  'Anacla',
+  'neighborhood',
+  now(),
+  now()
+FROM cc_portals p
+WHERE p.slug = 'bamfield'
+AND NOT EXISTS (
+  SELECT 1 FROM cc_zones z
+  WHERE z.portal_id = p.id
+    AND z.key = 'anacla'
+);
+
+
+D2) Verify Bamfield zones now include Anacla:
+
+SELECT z.name, z.key, z.kind
+FROM cc_zones z
+JOIN cc_portals p ON p.id = z.portal_id
+WHERE p.slug = 'bamfield'
+ORDER BY z.name;
+
+============================================================
+SECTION E) VERIFICATION (MANDATORY)
+
+E1) Verify portal anchors populated:
+
+SELECT
+  p.name AS portal_identity,
+  p.slug,
+  c.name AS geo_anchor_name,
+  c.latitude AS anchor_lat,
+  c.longitude AS anchor_lng
+FROM cc_portals p
+LEFT JOIN cc_sr_communities c ON c.id = p.anchor_community_id
+ORDER BY p.name;
+
+
+E2) Anchored vs unanchored count:
+
+SELECT
+  COUNT(*) FILTER (WHERE anchor_community_id IS NOT NULL) AS anchored,
+  COUNT(*) FILTER (WHERE anchor_community_id IS NULL) AS unanchored
+FROM cc_portals;
+
+
+E3) Identity preserved (no renames): compare portal names/slugs to Section A snapshot.
+
+============================================================
+SECTION F) OPTIONAL — EXTEND GET /api/provider/portals (READ-ONLY ENRICHMENT)
+
+Only do this if STEP 7 will need it immediately in code; otherwise defer.
+
+If doing now:
+
+Update the SQL backing GET /api/provider/portals to LEFT JOIN cc_sr_communities
+
+Return these additional read-only fields per portal:
+
+anchor_community_id
+
+anchor_community_name
+
+anchor_lat
+
+anchor_lng
+
+IMPORTANT RESPONSE SHAPE:
+
+name remains portal identity (unchanged)
+
+anchor fields are separate and clearly labeled as geo anchor
+
+Example:
+
+{
+  "id": "…",
+  "name": "Bamfield Adventure Center",
+  "slug": "bamfield-adventure",
+  "anchor_community_name": "Bamfield",
+  "anchor_lat": 48.833,
+  "anchor_lng": -125.136
+}
+
+
+No UI changes in this step.
+
+============================================================
+SECTION G) PROOF (MANDATORY)
+
+Create: proof/v3.5/step7b-portal-anchors-and-anacla-zone-proof.md
+
+Include:
+
+Pre-state snapshots (Section A outputs)
+
+Community ID lookup output (Section C1)
+
+Executed UPDATE statements (Section C3) with real UUIDs
+
+Anacla insert + verification output (Section D)
+
+Post-state verification outputs (Section E)
+
+Checkboxes:
+
+ Anchor ≠ Identity rule respected (no renames)
+
+ 12 portals anchored OR list any intentionally left unanchored
+
+ Bamfield zones include Anacla
+
+ No schema changes
+
+ No new UI / no new inbox/thread UI
+
+ No “calendar” introduced in new code
+
+ Terminology bans respected (“service provider”, “reservation”)
+
+END.
