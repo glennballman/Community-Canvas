@@ -40,7 +40,7 @@ import type { ZonePricingModifiers } from '@shared/zonePricing';
 
 interface WorkRequest {
   id: string;
-  status: 'new' | 'contacted' | 'quoted' | 'scheduled' | 'completed' | 'dropped' | 'spam';
+  status: 'draft' | 'sent' | 'proposed_change' | 'awaiting_commitment' | 'unassigned' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
   contact_channel_type: string;
   contact_channel_value: string;
   person_id: string | null;
@@ -88,14 +88,17 @@ interface WorkRequestNote {
   created_at: string;
 }
 
+// TERMINOLOGY_CANON.md v3: Canonical work_request_status values only
 const STATUS_CONFIG = {
-  new: { label: 'New', color: 'bg-blue-500/20 text-blue-400' },
-  contacted: { label: 'Contacted', color: 'bg-yellow-500/20 text-yellow-400' },
-  quoted: { label: 'Quoted', color: 'bg-purple-500/20 text-purple-400' },
-  scheduled: { label: 'Scheduled', color: 'bg-green-500/20 text-green-400' },
+  draft: { label: 'Draft', color: 'bg-slate-500/20 text-slate-400' },
+  sent: { label: 'Sent', color: 'bg-blue-500/20 text-blue-400' },
+  proposed_change: { label: 'Proposed Change', color: 'bg-yellow-500/20 text-yellow-400' },
+  awaiting_commitment: { label: 'Awaiting Commitment', color: 'bg-purple-500/20 text-purple-400' },
+  unassigned: { label: 'Unassigned', color: 'bg-orange-500/20 text-orange-400' },
+  accepted: { label: 'Accepted', color: 'bg-green-500/20 text-green-400' },
+  in_progress: { label: 'In Progress', color: 'bg-cyan-500/20 text-cyan-400' },
   completed: { label: 'Completed', color: 'bg-emerald-500/20 text-emerald-400' },
-  dropped: { label: 'Dropped', color: 'bg-muted text-muted-foreground' },
-  spam: { label: 'Spam', color: 'bg-red-500/20 text-red-400' },
+  cancelled: { label: 'Cancelled', color: 'bg-muted text-muted-foreground' },
 } as const;
 
 const CHANNEL_ICONS = {
@@ -219,17 +222,17 @@ export default function WorkRequestDetail() {
   const dropMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', `/api/work-requests/${id}/drop`, {
-        reason: dropReason || 'dropped',
+        reason: dropReason || 'cancelled',
       });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/work-requests'] });
-      toast({ title: 'Dropped', description: 'Work request marked as dropped' });
+      toast({ title: 'Cancelled', description: 'Work request marked as cancelled' });
       setDropDialogOpen(false);
     },
     onError: () => {
-      toast({ title: 'Error', description: 'Failed to drop', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to cancel', variant: 'destructive' });
     }
   });
 
@@ -373,9 +376,10 @@ export default function WorkRequestDetail() {
   const statusConfig = STATUS_CONFIG[request.status];
   const notes = notesData?.notes || [];
 
-  const canSchedule = ['new', 'contacted', 'quoted'].includes(request.status);
-  const canDrop = ['new', 'contacted', 'quoted'].includes(request.status);
-  const canComplete = ['new', 'contacted', 'quoted', 'scheduled'].includes(request.status);
+  // TERMINOLOGY_CANON.md v3: Use canonical status values for workflow guards
+  const canSchedule = ['draft', 'sent', 'proposed_change', 'unassigned'].includes(request.status);
+  const canDrop = ['draft', 'sent', 'proposed_change', 'unassigned'].includes(request.status);
+  const canComplete = ['draft', 'sent', 'proposed_change', 'unassigned', 'accepted', 'in_progress'].includes(request.status);
 
   return (
     <div className="flex-1 p-4 space-y-6" data-testid="page-work-request-detail">
@@ -655,32 +659,32 @@ export default function WorkRequestDetail() {
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => updateMutation.mutate({ status: 'contacted' })}
-                disabled={request.status !== 'new'}
-                data-testid="button-mark-contacted"
+                onClick={() => updateMutation.mutate({ status: 'sent' })}
+                disabled={request.status !== 'draft'}
+                data-testid="button-mark-sent"
               >
                 <Phone className="w-4 h-4 mr-2" />
-                Mark Contacted
+                Mark Sent
               </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => updateMutation.mutate({ status: 'quoted' })}
-                disabled={!['new', 'contacted'].includes(request.status)}
-                data-testid="button-mark-quoted"
+                onClick={() => updateMutation.mutate({ status: 'proposed_change' })}
+                disabled={!['draft', 'sent'].includes(request.status)}
+                data-testid="button-mark-proposed"
               >
                 <DollarSign className="w-4 h-4 mr-2" />
-                Mark Quoted
+                Send Proposal
               </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start text-red-400"
-                onClick={() => updateMutation.mutate({ status: 'spam' })}
-                disabled={request.status === 'spam'}
-                data-testid="button-mark-spam"
+                onClick={() => updateMutation.mutate({ status: 'cancelled' })}
+                disabled={request.status === 'cancelled' || request.status === 'completed'}
+                data-testid="button-mark-cancelled"
               >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Mark as Spam
+                <X className="w-4 h-4 mr-2" />
+                Cancel Request
               </Button>
             </CardContent>
           </Card>

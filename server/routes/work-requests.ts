@@ -593,8 +593,9 @@ router.post('/:id/reserve', requireAuth, requireTenant, async (req: Request, res
 
     const wr = wrResult.rows[0];
 
-    if (wr.status === 'scheduled') {
-      return res.status(400).json({ error: 'Work request already scheduled' });
+    // TERMINOLOGY_CANON.md v3: 'accepted' replaces legacy 'scheduled'
+    if (wr.status === 'accepted') {
+      return res.status(400).json({ error: 'Work request already accepted' });
     }
 
     // Create the project
@@ -624,10 +625,10 @@ router.post('/:id/reserve', requireAuth, requireTenant, async (req: Request, res
 
     const project = projectResult.rows[0];
 
-    // Update work request status to scheduled
+    // TERMINOLOGY_CANON.md v3: Use canonical 'accepted' status
     await tenantReq.tenantQuery!(
       `UPDATE cc_work_requests SET 
-        status = 'scheduled',
+        status = 'accepted',
         converted_to_project_id = $2,
         converted_at = NOW(),
         converted_by_actor_id = $3
@@ -653,9 +654,10 @@ router.post('/:id/drop', requireAuth, requireTenant, async (req: Request, res: R
     const { id } = req.params;
     const { reason } = req.body;
 
+    // TERMINOLOGY_CANON.md v3: Use canonical 'cancelled' status
     const result = await tenantReq.tenantQuery!(
       `UPDATE cc_work_requests SET 
-        status = 'dropped'::work_request_status,
+        status = 'cancelled'::work_request_status,
         closed_reason = $2
       WHERE id = $1
       RETURNING *`,

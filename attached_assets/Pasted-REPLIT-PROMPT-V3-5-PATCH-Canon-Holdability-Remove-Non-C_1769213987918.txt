@@ -1,0 +1,156 @@
+REPLIT PROMPT — V3.5 PATCH — Canon Holdability + Remove Non-Canonical Status References
+
+ROLE: Senior Platform Engineer applying terminology canonicalization patch.
+MODE: Additive-only. No refactors. Evidence-first.
+
+============================================================
+HARD RULES
+============================================================
+- Use "service provider" (never contractor)
+- Use "reservation" (never booking)
+- No "calendar" in new code
+- "job" banned in service fulfillment context
+- Do NOT invent new statuses
+- Do NOT add values to the canonical enum
+
+============================================================
+CONTEXT
+============================================================
+Migration 174 canonicalized work_request_status to 9 values:
+draft, sent, proposed_change, awaiting_commitment, unassigned,
+accepted, in_progress, completed, cancelled
+
+STEP 6 State Transition Guard allows HOLD from:
+- draft, sent, proposed_change, unassigned, awaiting_commitment
+
+Current HOLDABLE_STATUSES is missing awaiting_commitment.
+This blocks the viral workflow where a request already in 
+AWAITING_COMMITMENT needs to be held/attached to a run.
+
+============================================================
+SECTION A) AUDIT
+============================================================
+
+1) Confirm canonical enum is applied:
+```sql
+SELECT unnest(enum_range(NULL::work_request_status))::text ORDER BY 1;
+```
+
+Expected result (exactly 9 values):
+- accepted, awaiting_commitment, cancelled, completed, draft,
+  in_progress, proposed_change, sent, unassigned
+
+2) Search for non-canonical status strings in codebase:
+```bash
+rg -n "awaiting_response" server client
+rg -n "'new'|'contacted'|'quoted'|'converted'|'scheduled'|'dropped'|'spam'|'closed'" server client --type ts --type tsx
+```
+
+Exclude false positives (e.g., "new Date()", variable names).
+Document any real references to non-canonical statuses.
+
+3) Find current HOLDABLE_STATUSES definition:
+```bash
+rg -n "HOLDABLE_STATUSES" server
+```
+
+Print current value.
+
+============================================================
+SECTION B) PATCH
+============================================================
+
+1) Update HOLDABLE_STATUSES to include awaiting_commitment:
+
+File: server/routes/provider.ts (or wherever HOLDABLE_STATUSES is defined)
+
+Before:
+```typescript
+const HOLDABLE_STATUSES = ['draft', 'sent', 'proposed_change', 'unassigned'];
+```
+
+After:
+```typescript
+const HOLDABLE_STATUSES = ['draft', 'sent', 'proposed_change', 'unassigned', 'awaiting_commitment'];
+```
+
+2) Verify hold endpoint behavior for awaiting_commitment:
+- If request is already AWAITING_COMMITMENT and HOLD is called:
+  - Create/update attachment to HELD
+  - Do NOT change request status (it stays awaiting_commitment)
+- This matches the State Transition Guard:
+  | AWAITING_COMMITMENT | HOLD | (no change) | ✅ |
+
+3) If "awaiting_response" is referenced anywhere:
+- It was a synonym for "sent" in the old model
+- It is NOT in the canonical enum
+- Replace with "sent" (canonical equivalent)
+- Do NOT add awaiting_response to the enum
+
+4) If any other legacy status references remain:
+- contacted → remove or replace with appropriate canonical status
+- quoted → remove or replace with 'sent' or 'proposed_change' as appropriate
+- converted → remove (not a service fulfillment concept)
+- scheduled → replace with 'accepted' (closest canonical)
+- dropped → replace with 'cancelled'
+- spam → remove (not a service fulfillment concept)
+- closed → replace with 'completed' or 'cancelled' as appropriate
+- new → replace with 'draft'
+
+Document each replacement in proof.
+
+============================================================
+SECTION C) VERIFICATION
+============================================================
+
+After patch:
+
+1) Re-run search for non-canonical statuses:
+```bash
+rg -n "awaiting_response|contacted|quoted|converted|scheduled|dropped|spam|closed" server client --type ts
+```
+
+Expected: 0 results in service fulfillment code (false positives excluded)
+
+2) Confirm HOLDABLE_STATUSES includes awaiting_commitment:
+```bash
+rg -A1 "HOLDABLE_STATUSES" server
+```
+
+3) Test hold endpoint with awaiting_commitment request:
+- Use test auth bootstrap (loginAs('ellen'))
+- Find or create a request with status = awaiting_commitment
+- Call POST /api/provider/runs/:id/attachments/hold
+- Verify: attachment created, request status unchanged
+
+============================================================
+SECTION D) PROOF
+============================================================
+
+Update: proof/v3.5/work-request-status-canon-proof.md
+
+Append section: "Post-Migration Patch (Holdability Fix)"
+
+Include:
+- Audit grep results (before)
+- HOLDABLE_STATUSES code excerpt (after)
+- Any status replacements made
+- Verification grep results (after)
+- Test result for hold with awaiting_commitment
+
+Checkboxes:
+- [ ] awaiting_commitment added to HOLDABLE_STATUSES
+- [ ] No awaiting_response references remain
+- [ ] No other legacy status references remain
+- [ ] Hold from awaiting_commitment works (no state change)
+- [ ] Test auth bootstrap used (no UI login)
+
+============================================================
+DO NOT
+============================================================
+- Add new values to the enum
+- Use UI login for testing
+- Create new status synonyms
+- Skip the audit step
+
+END.

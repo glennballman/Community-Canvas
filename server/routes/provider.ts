@@ -700,7 +700,7 @@ router.post('/runs/:id/unpublish', requireAuth, async (req: AuthRequest, res: Re
 
 // State Transition Guard - defines valid request status transitions
 // Canonical statuses from TERMINOLOGY_CANON.md v3 that can be held
-const HOLDABLE_STATUSES = ['draft', 'sent', 'proposed_change', 'unassigned'];
+const HOLDABLE_STATUSES = ['draft', 'sent', 'proposed_change', 'unassigned', 'awaiting_commitment'];
 const TERMINAL_STATUSES = ['in_progress', 'completed', 'cancelled'];
 
 // GET /api/provider/requests - List holdable service requests for the tenant

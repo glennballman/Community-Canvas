@@ -178,3 +178,70 @@ Server started successfully on port 5000 after migration.
 - DECLINED: Not present ✅
 - BOOKED/BOOKING: Not present ✅
 - All 8 legacy values: Removed ✅
+
+---
+
+## Post-Migration Patch (Holdability Fix)
+
+Date: 2026-01-24
+
+### Issue
+
+HOLDABLE_STATUSES was missing `awaiting_commitment`, blocking the workflow where a request already in AWAITING_COMMITMENT needs to be held/attached to a run.
+
+### Audit (Before Patch)
+
+```bash
+rg -n "awaiting_response" server client
+# Found: server/migrations/115_disputes.sql (different domain, not work_request_status)
+
+rg -n "HOLDABLE_STATUSES" server
+# server/routes/provider.ts:703: ['draft', 'sent', 'proposed_change', 'unassigned']
+# MISSING: awaiting_commitment
+```
+
+### Files Patched
+
+1. **server/routes/provider.ts**
+   - Added `awaiting_commitment` to HOLDABLE_STATUSES
+
+2. **server/routes/work-requests.ts**
+   - `'scheduled'` → `'accepted'` (reserve endpoint)
+   - `'dropped'` → `'cancelled'` (drop endpoint)
+
+3. **client/src/pages/intake/WorkRequestDetail.tsx**
+   - WorkRequest interface: legacy → canonical status types
+   - STATUS_CONFIG: legacy → canonical status labels
+   - Quick Actions: `contacted/quoted/spam` → `sent/proposed_change/cancelled`
+   - Workflow guards: updated to canonical statuses
+
+### Verification (After Patch)
+
+```bash
+rg -A1 "HOLDABLE_STATUSES" server
+# ['draft', 'sent', 'proposed_change', 'unassigned', 'awaiting_commitment']
+# ✅ awaiting_commitment now included
+
+rg -n "'dropped'|'scheduled'|'spam'|'contacted'|'quoted'" server/routes/work-requests.ts
+# Only comment references remain
+# ✅ No legacy status values in active code
+```
+
+### Status Replacements Made
+
+| Legacy Status | Canonical Replacement |
+|--------------|----------------------|
+| new          | draft                |
+| contacted    | sent                 |
+| quoted       | proposed_change      |
+| scheduled    | accepted             |
+| dropped      | cancelled            |
+| spam         | cancelled            |
+
+### Patch Compliance Checklist
+
+- [x] awaiting_commitment added to HOLDABLE_STATUSES
+- [x] No awaiting_response references remain (was different domain)
+- [x] No other legacy status references remain in work request code
+- [x] Hold from awaiting_commitment works (no state change)
+- [x] Test auth bootstrap used (no UI login)
