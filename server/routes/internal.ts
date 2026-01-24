@@ -1509,4 +1509,52 @@ router.get(
   }
 );
 
+// V3.5 STEP 10A: Visibility Graph Resolution (Read-Only, Proof Only)
+// This endpoint exists to prove correctness of visibility edges - not used by UI or publishing
+router.get(
+  '/visibility/resolve',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { source_type, source_id } = req.query;
+      
+      if (!source_type || !source_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'source_type and source_id required'
+        });
+      }
+      
+      if (!['portal', 'zone'].includes(source_type as string)) {
+        return res.status(400).json({
+          success: false,
+          error: 'source_type must be "portal" or "zone"'
+        });
+      }
+      
+      const result = await serviceQuery(
+        `SELECT * FROM resolve_visibility_targets($1, $2)`,
+        [source_type, source_id]
+      );
+      
+      return res.json({
+        source: {
+          type: source_type,
+          id: source_id
+        },
+        visible_to: result.rows.map(row => ({
+          type: row.target_type,
+          id: row.target_id
+        }))
+      });
+    } catch (error) {
+      console.error('Visibility resolve error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to resolve visibility'
+      });
+    }
+  }
+);
+
 export default router;

@@ -1,0 +1,309 @@
+REPLIT PROMPT — V3.5 STEP 10A
+Visibility Rollup Graph (Read-Only, Identity-Preserving)
+
+ROLE: Senior Platform Architect
+MODE: Read-only visibility graph. No execution logic. No automation. No UI.
+
+🔒 NON-NEGOTIABLE CONSTRAINTS (READ FIRST)
+1. THREE LAYERS — NEVER CONFLATE (LOCKED)
+Layer	Purpose	Tables	Visible to Users
+IDENTITY	What people call themselves	cc_portals.name, cc_zones.name, cc_work_areas.title	✅ YES
+VISIBILITY	Where a run may be seen	NEW visibility graph (this step)	⚠️ INDIRECT
+EXECUTION	How work actually happens	cc_work_areas, surfaces, constraints	❌ NO
+
+RULE:
+Visibility may reference identity, but must never overwrite, rename, collapse, or infer identity.
+
+2. WHAT STEP 10A IS NOT
+
+This step MUST NOT:
+
+❌ Auto-publish runs
+
+❌ Modify publishing behavior
+
+❌ Affect MarketMode or pricing
+
+❌ Affect execution feasibility
+
+❌ Touch surfaces, routes, or constraints
+
+❌ Rename portals or zones
+
+❌ Infer visibility from geo distance
+
+❌ Add UI
+
+This step is visibility modeling only.
+
+🎯 GOAL
+
+Introduce an explicit, auditable, opt-in visibility rollup graph that answers:
+
+“If a service run is visible in this place, where else is it allowed to be visible?”
+
+Key properties:
+
+Explicit (never inferred)
+
+Directional
+
+Identity-preserving
+
+Tenant-isolated
+
+Read-only resolution (v1)
+
+🧠 CORE PRINCIPLE
+
+Visibility is NOT derived from:
+
+Geography
+
+Distance
+
+Naming
+
+Hierarchy
+
+MarketMode
+
+Visibility exists ONLY where an explicit relationship is defined.
+
+📐 DATA MODEL — VISIBILITY GRAPH
+New Table: cc_visibility_edges
+CREATE TABLE cc_visibility_edges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  tenant_id UUID NOT NULL
+    REFERENCES cc_tenants(id) ON DELETE CASCADE,
+
+  source_type TEXT NOT NULL
+    CHECK (source_type IN ('portal', 'zone')),
+  source_id UUID NOT NULL,
+
+  target_type TEXT NOT NULL
+    CHECK (target_type IN ('portal', 'zone')),
+  target_id UUID NOT NULL,
+
+  direction TEXT NOT NULL
+    CHECK (direction IN ('up', 'down', 'lateral')),
+
+  reason TEXT, -- e.g. "micro-community rollup"
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  archived_at TIMESTAMPTZ
+);
+
+Hard Rules
+
+source_id ≠ target_id
+
+No implicit symmetry
+
+No recursion in v1
+
+Soft-delete only (archived_at)
+
+Each row represents intentional governance
+
+🔐 SECURITY (MANDATORY)
+ALTER TABLE cc_visibility_edges ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation
+ON cc_visibility_edges
+USING (tenant_id::text = current_setting('app.tenant_id', true));
+
+🧭 DIRECTION SEMANTICS (CRITICAL)
+Direction	Meaning
+up	Visibility rolls upward (micro-identity → rollup)
+down	Visibility rolls downward (rare, explicit, opt-in)
+lateral	Peer visibility (siblings, explicit only)
+🧪 INITIAL DATA — BAMFIELD MODEL (EXPLICIT)
+
+Insert only the following relationships.
+No guessing. No automation.
+
+Zone → Portal (Upward Rollups)
+-- Anacla → Bamfield Community Portal
+INSERT INTO cc_visibility_edges (
+  tenant_id, source_type, source_id,
+  target_type, target_id,
+  direction, reason
+)
+SELECT
+  z.tenant_id,
+  'zone',
+  z.id,
+  'portal',
+  p.id,
+  'up',
+  'micro-community rollup'
+FROM cc_zones z
+JOIN cc_portals p ON p.slug = 'bamfield'
+WHERE z.key = 'anacla';
+
+
+Repeat explicitly for:
+
+east-bamfield → bamfield
+
+west-bamfield → bamfield
+
+helby-island → bamfield
+
+deer-group → bamfield
+
+⚠️ Do NOT loop.
+⚠️ Do NOT infer.
+Each insert must be reviewable.
+
+🔍 RESOLVER — READ-ONLY (V1)
+Function: resolve_visibility_targets
+CREATE OR REPLACE FUNCTION resolve_visibility_targets(
+  input_type TEXT,
+  input_id UUID
+)
+RETURNS TABLE (
+  target_type TEXT,
+  target_id UUID
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    target_type,
+    target_id
+  FROM cc_visibility_edges
+  WHERE source_type = input_type
+    AND source_id = input_id
+    AND archived_at IS NULL;
+$$;
+
+Resolver Rules
+
+No recursion (v1)
+
+No geo logic
+
+No execution awareness
+
+No publishing side-effects
+
+🔌 INTERNAL API (PROOF ONLY)
+Endpoint
+GET /api/internal/visibility/resolve
+
+Params
+source_type=zone
+source_id=<uuid>
+
+Response
+{
+  "source": {
+    "type": "zone",
+    "id": "..."
+  },
+  "visible_to": [
+    { "type": "portal", "id": "..." }
+  ]
+}
+
+
+⚠️ This endpoint:
+
+Is not used by UI
+
+Is not used by publishing
+
+Exists only to prove correctness
+
+🧪 VERIFICATION QUERIES
+-- 1. List all visibility edges
+SELECT
+  source_type, source_id,
+  target_type, target_id,
+  direction, reason
+FROM cc_visibility_edges
+WHERE archived_at IS NULL;
+
+-- 2. Resolve Anacla visibility
+SELECT * FROM resolve_visibility_targets(
+  'zone',
+  (SELECT id FROM cc_zones WHERE key = 'anacla')
+);
+
+-- 3. Ensure no unintended downward edges
+SELECT * FROM cc_visibility_edges
+WHERE direction = 'down';
+
+📋 PROOF REQUIREMENTS
+
+Create:
+
+proof/v3.5/step10a-visibility-rollup-proof.md
+
+
+Must include:
+
+Table schema
+
+Insert statements (explicit)
+
+Resolver outputs
+
+Complete edge list
+
+Confirmation that:
+
+No portal or zone names changed
+
+No publishing behavior changed
+
+No execution logic referenced
+
+Checklist
+
+ Identity preserved
+
+ Visibility explicit
+
+ No inference
+
+ No automation
+
+ Resolver read-only
+
+🚫 DO NOT
+
+Do NOT auto-generate edges
+
+Do NOT infer from geo
+
+Do NOT collapse identities
+
+Do NOT affect STEP 7 logic
+
+Do NOT add UI
+
+Do NOT touch execution layers
+
+✅ EXPECTED OUTCOME
+
+After STEP 10A:
+
+The platform knows how visibility may roll up
+
+Nothing happens automatically
+
+Governance is explicit and auditable
+
+This unlocks:
+
+STEP 10B — Admin-managed visibility rules
+
+STEP 11 — Market expansion
+
+STEP 12 — Paid amplification / distribution controls
+
+END STEP 10A PROMPT

@@ -8680,3 +8680,39 @@ export const insertDemoSeedLogSchema = createInsertSchema(ccDemoSeedLog).omit({
 });
 export type DemoSeedLog = typeof ccDemoSeedLog.$inferSelect;
 export type InsertDemoSeedLog = z.infer<typeof insertDemoSeedLogSchema>;
+
+// ============================================================================
+// V3.5 STEP 10A: Visibility Rollup Graph
+// Explicit, auditable, opt-in visibility rollup edges
+// ============================================================================
+
+export const ccVisibilityEdgeDirectionEnum = pgEnum('cc_visibility_edge_direction', ['up', 'down', 'lateral']);
+export const ccVisibilityNodeTypeEnum = pgEnum('cc_visibility_node_type', ['portal', 'zone']);
+
+export const ccVisibilityEdges = pgTable("cc_visibility_edges", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  
+  sourceType: ccVisibilityNodeTypeEnum("source_type").notNull(),
+  sourceId: uuid("source_id").notNull(),
+  
+  targetType: ccVisibilityNodeTypeEnum("target_type").notNull(),
+  targetId: uuid("target_id").notNull(),
+  
+  direction: ccVisibilityEdgeDirectionEnum("direction").notNull(),
+  reason: text("reason"),
+  
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  // NOTE: Database has CHECK constraint cc_visibility_edges_no_self_reference: source_id != target_id
+}, (table) => [
+  index("idx_visibility_edges_tenant").on(table.tenantId),
+  index("idx_visibility_edges_source").on(table.sourceType, table.sourceId),
+  index("idx_visibility_edges_target").on(table.targetType, table.targetId),
+]);
+
+export const insertVisibilityEdgeSchema = createInsertSchema(ccVisibilityEdges).omit({
+  id: true, createdAt: true, archivedAt: true
+});
+export type VisibilityEdge = typeof ccVisibilityEdges.$inferSelect;
+export type InsertVisibilityEdge = z.infer<typeof insertVisibilityEdgeSchema>;
