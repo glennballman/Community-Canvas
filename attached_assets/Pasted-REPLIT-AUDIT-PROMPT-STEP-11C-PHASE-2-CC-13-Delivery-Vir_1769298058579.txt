@@ -1,0 +1,105 @@
+REPLIT AUDIT PROMPT — STEP 11C PHASE 2 (CC-13) Delivery + Virality + Controls (Email + In-App + Campaigns)
+
+ROLE: Senior Platform Architect + QA Gatekeeper (READ-ONLY AUDIT)
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+GOAL: Inventory what already exists to implement Phase 2 for Directed Operational Presence:
+1) In-app notifications on invite created / viewed / claimed
+2) Optional email delivery (if plumbing exists / can be added safely)
+3) Outreach campaigns + bulk invite (leveraging cc_run_outreach_campaigns)
+4) Revocation / resend + abuse controls (rate limits, caps)
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+Use: “notify”, “invitation”, “stakeholders”, “private ops”.
+
+------------------------------------------------------------
+A) EMAIL DELIVERY PLUMBING (critical dependency)
+------------------------------------------------------------
+1) Search for any existing email sender implementation:
+rg -n "sendEmail|mailer|nodemailer|postmark|sendgrid|ses|mailgun|smtp|transport" server
+rg -n "EMAIL_|SMTP_|SENDGRID_|POSTMARK_|MAILGUN_|SES_" server .env* README* docs*
+
+2) If found, report:
+- file path(s)
+- how it’s called (function signature)
+- whether it supports templates + variables
+- whether it is used anywhere in production paths
+
+3) If NOT found, report “NO EMAIL PLUMBING FOUND”.
+
+------------------------------------------------------------
+B) NOTIFICATIONS SYSTEM (in-app delivery)
+------------------------------------------------------------
+1) Identify cc_notifications schema + templates:
+\d+ cc_notifications
+rg -n "cc_notifications|createNotification\\(|notification template|template_key" server
+
+2) Identify notification channels + dispatch behavior:
+- Is there an in-app bell / notifications page?
+- Any real-time delivery (websocket) or polling?
+- Where are notifications rendered?
+
+Report:
+- route files under /api/notifications
+- template keys in use
+- any helper like messagingRoutingService.createNotification()
+
+------------------------------------------------------------
+C) INVITATION & CAMPAIGN TABLES (Phase 2 leverage)
+------------------------------------------------------------
+1) Inspect schemas:
+\d+ cc_invitations
+\d+ cc_run_outreach_campaigns
+\d+ cc_shared_run_invites
+\d+ cc_shared_run_members
+
+2) Confirm:
+- cc_run_outreach_campaigns intended fields (target emails? message? status?)
+- whether cc_invitations can link to a campaign id (metadata? column?)
+- whether revocation exists (revoked_at, archived_at, status enum includes revoked/expired)
+
+------------------------------------------------------------
+D) EXISTING UI SURFACES (where Phase 2 hooks land)
+------------------------------------------------------------
+1) Provider run detail:
+- confirm ProviderRunDetailPage has both “Publish” and “Notify stakeholders”
+- find NotifyStakeholdersModal
+
+Commands:
+rg -n "NotifyStakeholdersModal|notify stakeholders|stakeholder" client/src/pages/app/provider client/src/components/provider
+rg -n "/api/provider/runs/.*stakeholder-invites" client/src
+
+2) Notifications UI:
+rg -n "NotificationsPage|/api/notifications" client/src
+
+------------------------------------------------------------
+E) ABUSE CONTROLS / RATE LIMITING (must-have for virality)
+------------------------------------------------------------
+1) Search for any existing rate limit middleware:
+rg -n "rate limit|ratelimit|express-rate|slow down|throttle" server
+2) Search for “limits” on invitations:
+rg -n "invite.*limit|limit.*invite|max.*invite" server
+
+Report whether ANY controls exist today.
+
+------------------------------------------------------------
+F) OUTPUT FORMAT (REQUIRED)
+------------------------------------------------------------
+Return:
+
+1) EMAIL: Exists? If yes, how to call it. If no, confirm absence.
+2) NOTIFICATIONS: Template keys + how to insert notifications for invite events.
+3) CAMPAIGNS: How cc_run_outreach_campaigns is intended to be used (as-built fields).
+4) REVOCATION/RESEND: What fields/statuses already exist for invitations.
+5) RATE LIMITS: Existing middleware or none.
+6) RECOMMENDED PHASE 2 MINIMAL PATH:
+   - 4–8 steps
+   - call out what can be done without email
+   - call out what requires adding a mailer module (if absent)
+
+IMPORTANT:
+- Do NOT implement.
+- Do NOT propose schema changes unless audit proves they’re missing.
+- Paste the full audit report back into ChatGPT.
