@@ -1,0 +1,182 @@
+REPLIT AUDIT PROMPT — STEP 11C (CC-13) Directed Operational Presence: Notify + Invitations Inventory
+
+ROLE: Senior Platform Architect + QA Gatekeeper (READ-ONLY AUDIT)
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+GOAL: Determine what already exists (DB tables, routes, UI, notification/email plumbing) to implement STEP 11C:
+“Directed Operational Presence” = private stakeholder notifications + invitations tied to a service run,
+distinct from public portal publishing.
+
+TERMINOLOGY LOCKED:
+- Use “service provider” and “reservation”
+- DO NOT use “booking”, “contractor”, or “calendar”
+- Use “notify”, “invitation”, “stakeholders”, “private ops”
+
+------------------------------------------------------------
+A) DATABASE INVENTORY (Postgres / Drizzle)
+------------------------------------------------------------
+1) List all tables that look related to:
+- messages / notifications / inbox
+- invitations / invites / tokens / links
+- email delivery / templates
+- run sharing / visibility grants
+- contacts / address books / imports
+
+Run SQL:
+-- A1: message & notification tables
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%message%'
+    OR table_name ILIKE '%notify%'
+    OR table_name ILIKE '%notification%'
+    OR table_name ILIKE '%inbox%'
+    OR table_name ILIKE '%template%'
+  )
+ORDER BY table_name;
+
+-- A2: invitation / token tables
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%invite%'
+    OR table_name ILIKE '%invitation%'
+    OR table_name ILIKE '%token%'
+    OR table_name ILIKE '%magic%'
+    OR table_name ILIKE '%share%'
+    OR table_name ILIKE '%link%'
+  )
+ORDER BY table_name;
+
+-- A3: run publication / visibility tables (for context)
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%run%'
+    OR table_name ILIKE '%visibility%'
+    OR table_name ILIKE '%publication%'
+  )
+ORDER BY table_name;
+
+-- A4: contacts / imports tables
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%contact%'
+    OR table_name ILIKE '%address_book%'
+    OR table_name ILIKE '%import%'
+    OR table_name ILIKE '%crm%'
+    OR table_name ILIKE '%client_list%'
+  )
+ORDER BY table_name;
+
+2) For any tables found in A1/A2 that look relevant, output:
+- columns + types
+- primary keys
+- unique indexes
+- foreign keys
+
+Use:
+\d+ <table_name>
+and/or query pg_catalog for indexes/constraints.
+
+------------------------------------------------------------
+B) BACKEND ROUTES / SERVICES INVENTORY (Node)
+------------------------------------------------------------
+Search for existing endpoints related to:
+- messaging inbox / notifications
+- invitation sending / acceptance
+- email sending helpers
+- token generation / verification
+- run sharing beyond portal publishing
+
+Run ripgrep:
+rg -n "cc_messages|messages|inbox|notification|notify|template" server
+rg -n "invite|invitation|magic link|token|share link|accept invite" server
+rg -n "sendEmail|send_email|mailer|nodemailer|postmark|sendgrid|ses|mailgun" server
+rg -n "run.*notify|notify.*run|presence" server
+rg -n "/api/.*invite|/api/.*notification|/api/.*message" server
+
+For each match, report:
+- file path
+- route path(s)
+- brief excerpt (max 15 lines) showing handler signature + key logic
+- any auth/tenant checks used
+
+Also identify:
+- where email templates live (files or DB)
+- whether there is a job/queue system for email/notifications (BullMQ, pg queue, cron, etc.)
+
+------------------------------------------------------------
+C) UI INVENTORY (React)
+------------------------------------------------------------
+Find existing UI for:
+- Messages / Inbox / Notifications center
+- Any “Invite” flows (users, tenants, portals, staff)
+- Any “Share link” UI
+- Provider run detail actions (where STEP 11C button would live)
+
+Run:
+rg -n "Messages|Inbox|Notifications" client/src
+rg -n "invite|invitation|share link|magic link|stakeholder" client/src
+rg -n "ProviderRunDetailPage|PublishRunModal|publish" client/src/pages/app/provider client/src/components/provider
+rg -n "/api/.*message|/api/.*notification|/api/.*invite" client/src
+
+Report:
+- route/page files
+- component files
+- existing modals that could be extended or reused
+- data fetching pattern (React Query hooks, apiRequest usage)
+
+------------------------------------------------------------
+D) AUTH / IDENTITY / RECIPIENT MODEL (CRITICAL)
+------------------------------------------------------------
+We need to know how recipients are represented:
+- user id?
+- tenant id?
+- email address (external)?
+- portal staff roles?
+
+Audit:
+- how the system maps email -> user (if at all)
+- any “pending invite” concept
+- any existing single-use token system (preview tokens exist; see if reusable)
+
+Report:
+- any existing user lookup by email endpoint
+- any invite acceptance route
+- any token verification middleware
+
+------------------------------------------------------------
+E) OUTPUT FORMAT (REQUIRED)
+------------------------------------------------------------
+Return a concise report:
+
+1) EXISTING BUILDING BLOCKS (what we can reuse)
+- Tables:
+- Routes/services:
+- UI components/pages:
+- Email/notification plumbing:
+
+2) GAPS (what’s missing for STEP 11C)
+- DB:
+- API:
+- UI:
+
+3) RECOMMENDED MINIMAL IMPLEMENTATION PATH
+- “MVP-but-not-refactor” sequence of 3–6 steps
+- Identify the ONE best existing place to add:
+  a) “Notify stakeholders” action (private)
+  b) invitation entry (emails)
+  c) acceptance experience (view run context)
+
+IMPORTANT:
+- DO NOT implement anything.
+- DO NOT propose schema changes yet.
+- Just inventory and recommend based on what exists.
+
+DELIVERABLE:
+Paste the full audit report back into ChatGPT.
