@@ -1,0 +1,85 @@
+REPLIT AUDIT PROMPT — V3.5 Provider Publish Modal UI Stack & Integration Points
+
+ROLE: UI Architect + Repo Auditor (read-only)
+MODE: Evidence-first. Do NOT implement anything. Do NOT refactor. Do NOT change schema.
+GOAL: Determine the exact UI stack and the correct integration points for implementing the Provider “Publish service run” modal with grouping (tenant_owned vs community) and STEP 7 suggestions.
+
+INSTRUCTIONS:
+1) Identify the UI framework + component stack used for modals/dialogs:
+   - Is this React? (confirm)
+   - Which router? (React Router / Next / other)
+   - Which component library is used for modals? (shadcn/ui Dialog, Radix directly, MUI, Chakra, Headless UI, custom)
+   - Which styling system? (Tailwind, CSS modules, styled-components, etc.)
+   - Any existing “Modal” wrapper component? (name + path)
+
+2) Find where service provider runs are displayed (the page + component):
+   - Locate the route/page for provider runs list / ops board
+   - Provide file paths and component names
+   - Identify the existing “Publish” button (if present) and where it is rendered
+
+3) Find any existing publish-related UI:
+   - Search for components/pages that call:
+     - GET /api/provider/portals
+     - POST /api/provider/runs/:id/publish
+     - GET /api/provider/runs/:id/publish-suggestions
+     - POST /api/provider/runs/:id/visibility-preview
+     - POST /api/provider/runs/:id/unpublish
+   - List file paths and the functions/hooks used (fetch wrapper, react-query, SWR, etc.)
+
+4) Identify the API client pattern:
+   - Is there a shared api.ts client? (path)
+   - Does the app use react-query? SWR? custom hooks?
+   - Provide the exact helper function for calling APIs (signature + example usage)
+
+5) Identify i18n/copy token system:
+   - Is there a copy token file (e.g., publicCopy.ts, copy.ts, strings.ts)?
+   - How are copy strings accessed? (t('key'), copy.key, etc.)
+   - Provide file paths and a short example.
+
+6) Output format (REQUIRED):
+Return a concise audit report with:
+
+A) UI Stack Summary
+- Framework:
+- Modal/Dialog system:
+- Styling:
+- State/data fetching:
+
+B) Provider Runs UI Location
+- Route(s):
+- Page file(s):
+- Component(s):
+- Where to attach “Publish” button:
+
+C) Existing Publish UI (if any)
+- Files and components:
+- APIs called:
+
+D) API Client Pattern
+- Files:
+- Example call pattern:
+
+E) Copy/i18n Pattern
+- Files:
+- Example usage:
+
+F) Recommendation
+- The single best place to implement the new Publish modal component
+- The best place to add copy tokens
+
+SEARCH COMMANDS TO RUN (use ripgrep):
+- rg -n "provider/runs" client/src
+- rg -n "publish-suggestions" client/src
+- rg -n "/api/provider/portals" client/src
+- rg -n "visibility-preview" client/src
+- rg -n "Dialog" client/src
+- rg -n "Modal" client/src
+- rg -n "shadcn" client/src
+- rg -n "radix" client/src
+- rg -n "react-query|@tanstack/react-query|SWR|useQuery|useMutation" client/src
+- rg -n "publicCopy|copy|i18n|t\\(" client/src
+
+IMPORTANT:
+- Do NOT modify code.
+- Do NOT implement the modal.
+- Only report findings with file paths, component names, and brief excerpts (max 10 lines per excerpt).
