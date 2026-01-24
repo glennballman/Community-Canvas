@@ -73,6 +73,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **P-UI-09 Proposal UI**: 8 React components for proposal/approver workflow.
 - **P-UI-10 Availability → Proposal Handoff**: Complete flow from availability search to confirmed reservation.
 - **V3.5 Universal Copy-Token Layer**: Dynamic terminology system that replaces hardcoded industry-specific terms with entry-point-specific copy tokens. Supports 8 entry point types (lodging, parking, marina, restaurant, equipment, service, activity, generic) with variable interpolation for message templates. Forbidden terms ("contractor", "booking", etc.) are enforced via copy-lint script. Client hook (useCopy) and server resolver (server/copy/entryPointCopy.ts) are kept in sync with automated tests.
+- **Tenant Start Address Book (STEP 6.5B)**: Amazon-style saved addresses for service runs. Tenant-scoped cc_tenant_start_addresses table with RLS, FK on cc_n3_runs.start_address_id. Provider endpoints: GET/POST/PATCH start-addresses, PATCH runs/:id/start-address. StartAddressPickerModal component for selecting/creating addresses. Private/advisory only, does NOT imply person/asset assignment.
 
 ### Feature Specifications
 - **Dual-view Mode**: Sources View (data source URLs) and Data View (live monitoring).

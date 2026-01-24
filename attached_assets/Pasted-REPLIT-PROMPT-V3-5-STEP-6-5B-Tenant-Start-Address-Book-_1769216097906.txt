@@ -1,0 +1,479 @@
+REPLIT PROMPT — V3.5 STEP 6.5B — Tenant Start Address Book + Run start_address_id
+(Amazon-style saved start addresses, late binding preserved)
+
+ROLE
+Senior Platform Engineer implementing optional start address capture for service runs.
+
+MODE
+Evidence-first. Additive-only. Zero automation. No refactors.
+
+============================================================
+HARD RULES (LOCKED)
+============================================================
+- Use "service provider" (never contractor).
+- Use "reserve / reservation" (never booking).
+- Do NOT introduce the word "calendar" in any NEW code. Use "schedule" / "operations".
+- BANNED in NEW service fulfillment context: "job" → use "service request" / "work request".
+- Optional only: user can skip, set later, edit later.
+- Private: start addresses are never visible to residents/public.
+- Advisory foundation only: no routing, zoning, AI, pricing, enforcement in this step.
+- Do NOT couple start addresses to assets or individuals (late assignment is allowed).
+- No auto-apply: never auto-set start_address_id.
+- Test Auth Bootstrap ONLY for all testing (no UI login).
+
+============================================================
+GOAL
+============================================================
+Create a tenant-level "Start Address Book" and allow a service provider to optionally
+pick a start address for a service run via start_address_id on cc_n3_runs.
+
+============================================================
+SECTION A) AUDIT FIRST (MANDATORY — NO CHANGES)
+============================================================
+Create: proof/v3.5/start-address-book-audit.md
+
+A1) Confirm cc_n3_runs exists and lacks any start address fields today
+- psql: \d cc_n3_runs
+
+A2) Confirm tenant isolation pattern for RLS (GUC)
+- Find existing policies on step 5 tables (e.g., cc_run_portal_publications)
+
+A3) Confirm copy token file location and pattern
+- Identify where provider/run copy tokens are defined
+
+A4) Confirm provider run detail page file path
+- Identify ProviderRunDetailPage / Publish modal locations
+
+STOP if RLS pattern cannot be followed.
+
+============================================================
+SECTION B) DATABASE (MIGRATION 175)
+============================================================
+Create: server/migrations/175_tenant_start_addresses.sql
+
+------------------------------------------------------------
+B1) Create table: cc_tenant_start_addresses
+------------------------------------------------------------
+
+CREATE TABLE cc_tenant_start_addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,                      -- "John's House", "South Yard"
+  address_line_1 TEXT,
+  address_line_2 TEXT,
+  city TEXT,
+  region TEXT,
+  postal_code TEXT,
+  country TEXT NOT NULL DEFAULT 'CA',
+  latitude NUMERIC(10,7),                   -- align to cc_assets pattern
+  longitude NUMERIC(10,7),
+  notes TEXT,                               -- "Gate code: 1234"
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  archived_at TIMESTAMPTZ,                  -- soft delete
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Unique label per tenant (active addresses only)
+CREATE UNIQUE INDEX idx_start_addresses_unique_label 
+ON cc_tenant_start_addresses(tenant_id, label) 
+WHERE archived_at IS NULL;
+
+-- Standard indexes
+CREATE INDEX idx_start_addresses_tenant 
+ON cc_tenant_start_addresses(tenant_id);
+
+CREATE INDEX idx_start_addresses_active 
+ON cc_tenant_start_addresses(tenant_id) 
+WHERE archived_at IS NULL;
+
+CREATE INDEX idx_start_addresses_default 
+ON cc_tenant_start_addresses(tenant_id, is_default) 
+WHERE archived_at IS NULL AND is_default = true;
+
+-- RLS
+ALTER TABLE cc_tenant_start_addresses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY cc_tenant_start_addresses_tenant_isolation 
+ON cc_tenant_start_addresses
+FOR ALL
+USING (tenant_id::text = current_setting('app.tenant_id', true));
+
+CREATE POLICY cc_tenant_start_addresses_service_bypass 
+ON cc_tenant_start_addresses
+FOR ALL
+USING (current_setting('app.tenant_id', true) = '__SERVICE__');
+
+-- Comments
+COMMENT ON TABLE cc_tenant_start_addresses IS 
+'Tenant-level saved start addresses (Amazon-style address book). Used for service run departure points. Private, advisory only.';
+
+COMMENT ON COLUMN cc_tenant_start_addresses.label IS 
+'Human-readable name: "John''s House", "South Yard", "Marina Dock"';
+
+COMMENT ON COLUMN cc_tenant_start_addresses.is_default IS 
+'Single default per tenant. Used as suggestion only, never auto-applied.';
+
+------------------------------------------------------------
+B2) Extend cc_n3_runs with start_address_id
+------------------------------------------------------------
+
+ALTER TABLE cc_n3_runs
+ADD COLUMN start_address_id UUID 
+REFERENCES cc_tenant_start_addresses(id);
+
+COMMENT ON COLUMN cc_n3_runs.start_address_id IS 
+'Optional run departure address from tenant address book. Does NOT imply person/asset assignment. Advisory only.';
+
+-- Index for lookups
+CREATE INDEX idx_n3_runs_start_address 
+ON cc_n3_runs(start_address_id) 
+WHERE start_address_id IS NOT NULL;
+
+------------------------------------------------------------
+B3) DO NOT DO
+------------------------------------------------------------
+- Do NOT add lat/lng columns directly to cc_n3_runs
+- Do NOT add departure_location_id to cc_locations
+- Do NOT couple this to cc_assets or cc_individuals
+
+============================================================
+SECTION C) BACKEND (MINIMAL ENDPOINTS)
+============================================================
+
+All routes:
+- requireAuth()
+- tenant isolation via req.ctx?.tenant_id (not req.user.*)
+- provider party verification where appropriate
+- never exposed to public viewer
+
+------------------------------------------------------------
+C1) GET /api/provider/start-addresses
+------------------------------------------------------------
+Return active (archived_at IS NULL) start addresses for tenant.
+
+Response:
+{
+  ok: true,
+  startAddresses: [
+    {
+      id: "uuid",
+      label: "John's House",
+      address_line_1: "123 Main St",
+      city: "Victoria",
+      region: "BC",
+      postal_code: "V8V 1A1",
+      latitude: 48.4284,
+      longitude: -123.3656,
+      notes: "Gate code: 1234",
+      is_default: true
+    }
+  ]
+}
+
+------------------------------------------------------------
+C2) POST /api/provider/start-addresses
+------------------------------------------------------------
+Create a start address.
+
+Body:
+{
+  label: string,              // REQUIRED
+  address_line_1?: string,
+  address_line_2?: string,
+  city?: string,
+  region?: string,
+  postal_code?: string,
+  country?: string,           // defaults to 'CA'
+  latitude?: number,
+  longitude?: number,
+  notes?: string,
+  is_default?: boolean
+}
+
+Behavior:
+- Validate label is non-empty
+- If is_default=true:
+  - Clear is_default on all other addresses for this tenant (within transaction)
+- Return created address
+
+Response:
+{ ok: true, startAddress: {...} }
+
+------------------------------------------------------------
+C3) PATCH /api/provider/start-addresses/:id
+------------------------------------------------------------
+Update fields including is_default and archived_at.
+
+Body (all optional):
+{
+  label?: string,
+  address_line_1?: string,
+  city?: string,
+  region?: string,
+  postal_code?: string,
+  latitude?: number,
+  longitude?: number,
+  notes?: string,
+  is_default?: boolean,
+  archived_at?: string | null   // ISO timestamp for soft delete, null to restore
+}
+
+Behavior:
+- Verify address belongs to tenant
+- If is_default=true: clear other defaults
+- If archived_at set: soft delete (still exists but hidden from active list)
+- Enforce unique label (active only) — return 409 on conflict
+
+Response:
+{ ok: true, startAddress: {...} }
+
+------------------------------------------------------------
+C4) PATCH /api/provider/runs/:id/start-address
+------------------------------------------------------------
+Set or clear the start address for a run.
+
+Body:
+{ startAddressId: string | null }
+
+Behavior:
+- Verify run belongs to provider party + tenant
+- If startAddressId is non-null:
+  - Verify it belongs to same tenant
+  - Verify it is not archived
+- Update cc_n3_runs.start_address_id
+
+Response:
+{ ok: true, runId: "...", startAddressId: "..." | null }
+
+------------------------------------------------------------
+C5) Error Codes (copy-token aligned)
+------------------------------------------------------------
+- error.auth.unauthenticated (401)
+- error.run.not_found (404)
+- error.run.not_owner (403)
+- error.start_address.not_found (404)
+- error.start_address.label_exists (409)
+- error.start_address.archived (409)
+- error.request.invalid (400)
+
+============================================================
+SECTION D) FRONTEND (OPT-IN, NON-BLOCKING)
+============================================================
+
+------------------------------------------------------------
+D1) Add "Start Address" section to ProviderRunDetailPage
+------------------------------------------------------------
+Location: Below run details, before attachments section
+
+Display:
+- Label: "Start Location" (copy token)
+- Value: Selected address label OR "Not set"
+- If set: show address summary (city, region)
+- Edit button → opens StartAddressPickerModal
+- Never blocks publishing or attachments
+
+------------------------------------------------------------
+D2) StartAddressPickerModal (new component)
+------------------------------------------------------------
+File: client/src/components/provider/StartAddressPickerModal.tsx
+
+Two sections/tabs:
+
+SECTION 1: Select Existing
+- Radio list of saved addresses
+- Show: label, city/region summary
+- Pre-select current if set
+- "None" option to clear
+
+SECTION 2: Add New
+- Simple form:
+  - Label (required)
+  - Address Line 1
+  - City
+  - Region/Province
+  - Postal Code
+  - Notes (optional, e.g., "Gate code")
+- "Set as default" checkbox
+- On save: POST create, then auto-select
+
+Actions:
+- "Save" → PATCH /api/provider/runs/:id/start-address
+- "Cancel" → close without changes
+- "Clear" → set null
+
+No optimistic updates — refetch run detail on success.
+
+------------------------------------------------------------
+D3) Privacy/Helper Text (copy tokens)
+------------------------------------------------------------
+- "Start address is private and helps improve future suggestions."
+- "You can change this anytime."
+- "This does not affect who is assigned to the run."
+
+------------------------------------------------------------
+D4) DO NOT
+------------------------------------------------------------
+- Do NOT block run creation/publishing if no start address
+- Do NOT auto-select default address
+- Do NOT show start addresses to public/residents
+- Do NOT use "calendar" in any UI text
+
+============================================================
+SECTION E) COPY TOKENS (MANDATORY)
+============================================================
+
+Add tokens to existing copy token file (provider/run context):
+
+# Run detail - start address section
+provider.run.start_address.title: "Start Location"
+provider.run.start_address.not_set: "Not set"
+provider.run.start_address.edit: "Edit"
+provider.run.start_address.clear: "Clear"
+provider.run.start_address.helper_private: "Start address is private and helps improve future suggestions."
+provider.run.start_address.helper_changeable: "You can change this anytime."
+provider.run.start_address.helper_no_assignment: "This does not affect who is assigned to the run."
+
+# Start address picker modal
+provider.start_address.modal_title: "Select Start Address"
+provider.start_address.select_label: "Choose from saved addresses"
+provider.start_address.add_new_label: "Add new address"
+provider.start_address.none_option: "None (clear start address)"
+
+# Add new address form
+provider.start_address.form.label: "Address Name"
+provider.start_address.form.label_placeholder: "e.g., John's House, South Yard"
+provider.start_address.form.address1: "Street Address"
+provider.start_address.form.city: "City"
+provider.start_address.form.region: "Province/Region"
+provider.start_address.form.postal: "Postal Code"
+provider.start_address.form.notes: "Notes (optional)"
+provider.start_address.form.notes_placeholder: "e.g., Gate code: 1234"
+provider.start_address.form.is_default: "Set as default address"
+provider.start_address.save: "Save"
+provider.start_address.cancel: "Cancel"
+provider.start_address.create_success: "Address saved"
+provider.start_address.update_success: "Start address updated"
+
+# Errors
+error.start_address.not_found: "Address not found"
+error.start_address.label_exists: "An address with this name already exists"
+error.start_address.archived: "This address has been archived"
+
+============================================================
+SECTION F) TESTING (MANDATORY — TEST AUTH BOOTSTRAP)
+============================================================
+
+Use test auth bootstrap ONLY:
+
+await loginAs(page, 'ellen');
+// OR
+POST /api/test/auth/login with X-TEST-AUTH header, persona: ellen
+
+Verify:
+
+1) GET /api/provider/start-addresses
+   - Returns ok: true
+   - Returns empty array initially (or seeded data)
+
+2) POST /api/provider/start-addresses
+   - Create "Ellen's House" with city/region
+   - Returns created address with id
+
+3) POST /api/provider/start-addresses (with is_default: true)
+   - Create "South Yard" as default
+   - Verify previous default is cleared
+
+4) GET /api/provider/start-addresses
+   - Returns both addresses
+   - Only "South Yard" has is_default: true
+
+5) PATCH /api/provider/runs/:id/start-address
+   - Set run start_address_id to "Ellen's House"
+   - Returns ok: true
+
+6) GET /api/provider/runs/:id
+   - Verify start_address_id is set
+   - Verify response includes start address details (or just ID)
+
+7) PATCH /api/provider/runs/:id/start-address with null
+   - Clear start address
+   - Verify start_address_id is null
+
+8) PATCH /api/provider/start-addresses/:id with archived_at
+   - Soft delete "South Yard"
+   - Verify it no longer appears in GET active list
+
+9) Verify NO public access
+   - Unauthenticated request to /api/provider/start-addresses returns 401
+
+10) Verify label uniqueness
+    - Try to create duplicate "Ellen's House" label
+    - Should return 409 error
+
+============================================================
+SECTION G) PROOF
+============================================================
+
+Create: proof/v3.5/start-address-book-proof.md
+
+Must include:
+
+G1) Audit Evidence
+- cc_n3_runs schema before (no start_address_id)
+- RLS pattern identified
+
+G2) Migration Evidence
+- Migration 175 SQL excerpt
+- Table creation verification query:
+  \d cc_tenant_start_addresses
+- Column addition verification:
+  SELECT column_name FROM information_schema.columns 
+  WHERE table_name = 'cc_n3_runs' AND column_name = 'start_address_id';
+- RLS policies verification:
+  SELECT policyname FROM pg_policies 
+  WHERE tablename = 'cc_tenant_start_addresses';
+
+G3) Backend Evidence
+- Route file path
+- Auth + tenant isolation code excerpts
+- Error handling excerpts
+
+G4) Frontend Evidence
+- Component file paths
+- Modal JSX excerpt showing two sections
+- Run detail section showing start address display
+
+G5) Copy Token Evidence
+- File path
+- List of tokens added
+
+G6) Test Results
+- Test auth bootstrap used (show loginAs or API call)
+- Each test case result
+
+G7) Verification Checkboxes
+- [ ] Optional only (skip/clear supported)
+- [ ] Private (no public exposure)
+- [ ] No automation (no routing/AI/pricing)
+- [ ] Late binding preserved (not tied to assets/individuals)
+- [ ] No "calendar" introduced
+- [ ] No "job" in service fulfillment context
+- [ ] Uses "service provider", "reservation"
+- [ ] Unique label per tenant enforced
+- [ ] Soft delete works (archived_at)
+- [ ] Single default enforced
+- [ ] Test auth bootstrap used (no UI login)
+
+============================================================
+DO NOT
+============================================================
+- Do NOT add lat/lng columns directly to cc_n3_runs
+- Do NOT couple addresses to assets or individuals
+- Do NOT auto-assign addresses to runs
+- Do NOT expose addresses to public/residents
+- Do NOT add routing or zone logic
+- Do NOT use UI login for testing
+- Do NOT use "calendar", "contractor", "booking", or "job" (service context)
+
+END.

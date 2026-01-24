@@ -6,10 +6,19 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import type { TenantRequest } from '../middleware/tenantContext';
+import { JWT_SECRET } from '../middleware/auth';
 
 const router = Router();
+
+interface JWTPayload {
+  userId: string;
+  email: string;
+  isPlatformAdmin?: boolean;
+  activeTenantId?: string;
+}
 
 interface AuthRequest extends Request {
   user?: { id: string; tenantId?: string };
@@ -17,10 +26,41 @@ interface AuthRequest extends Request {
 }
 
 function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
-  if (!req.user?.id) {
-    return res.status(401).json({ ok: false, error: 'Authentication required' });
+  // First check if user is already populated
+  if (req.user?.id) {
+    // Try to get tenantId from JWT if not already set
+    if (!req.user.tenantId) {
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1];
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+          req.user.tenantId = decoded.activeTenantId;
+        } catch (e) {
+          // Token invalid but user exists from other auth - continue
+        }
+      }
+    }
+    return next();
   }
-  next();
+
+  // If no user, try to decode from JWT directly
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    req.user = {
+      id: decoded.userId,
+      tenantId: decoded.activeTenantId
+    };
+    next();
+  } catch (e) {
+    return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+  }
 }
 
 function isValidUUID(str: string): boolean {
@@ -315,7 +355,7 @@ router.post('/requests/:id/decline', requireAuth, async (req: AuthRequest, res: 
 router.get('/runs', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
 
     if (!tenantId) {
       return res.status(400).json({ ok: false, error: 'Tenant context required' });
@@ -401,7 +441,7 @@ router.get('/runs', requireAuth, async (req: AuthRequest, res: Response) => {
 router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
     const runId = req.params.id;
 
     if (!tenantId) {
@@ -423,14 +463,19 @@ router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => 
         r.ends_at,
         r.portal_id,
         r.zone_id,
+        r.start_address_id,
         r.metadata,
         r.created_at,
         r.updated_at,
         p.name as portal_name,
-        z.name as zone_name
+        z.name as zone_name,
+        sa.label as start_address_label,
+        sa.city as start_address_city,
+        sa.region as start_address_region
       FROM cc_n3_runs r
       LEFT JOIN cc_portals p ON r.portal_id = p.id
       LEFT JOIN cc_zones z ON r.zone_id = z.id
+      LEFT JOIN cc_tenant_start_addresses sa ON r.start_address_id = sa.id
       WHERE r.id = $1 AND r.tenant_id = $2
     `, [runId, tenantId]);
 
@@ -486,6 +531,10 @@ router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => 
         portal_name: run.portal_name,
         zone_id: run.zone_id,
         zone_name: run.zone_name,
+        start_address_id: run.start_address_id,
+        start_address_label: run.start_address_label,
+        start_address_city: run.start_address_city,
+        start_address_region: run.start_address_region,
         metadata: run.metadata,
         created_at: run.created_at,
         updated_at: run.updated_at
@@ -521,7 +570,7 @@ router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => 
 
 router.get('/portals', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
 
     if (!tenantId) {
       return res.status(400).json({ ok: false, error: 'Tenant context required' });
@@ -544,7 +593,7 @@ router.get('/portals', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/runs/:id/publish', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
     const runId = req.params.id;
     const { portalIds, marketMode } = req.body;
 
@@ -642,7 +691,7 @@ router.post('/runs/:id/publish', requireAuth, async (req: AuthRequest, res: Resp
 router.post('/runs/:id/unpublish', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
     const runId = req.params.id;
     const { portalIds } = req.body;
 
@@ -706,7 +755,7 @@ const TERMINAL_STATUSES = ['in_progress', 'completed', 'cancelled'];
 // GET /api/provider/requests - List holdable service requests for the tenant
 router.get('/requests', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
 
     if (!tenantId) {
       return res.status(400).json({ ok: false, error: 'Tenant context required' });
@@ -759,7 +808,7 @@ router.get('/requests', requireAuth, async (req: AuthRequest, res: Response) => 
 // POST /api/provider/runs/:id/attachments/hold - Attach a request in HELD state
 router.post('/runs/:id/attachments/hold', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
     const runId = req.params.id;
     const { requestId } = req.body;
 
@@ -874,7 +923,7 @@ router.post('/runs/:id/attachments/hold', requireAuth, async (req: AuthRequest, 
 // POST /api/provider/runs/:id/attachments/commit - Commit a held attachment
 router.post('/runs/:id/attachments/commit', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
     const runId = req.params.id;
     const { requestId } = req.body;
 
@@ -975,7 +1024,7 @@ router.post('/runs/:id/attachments/commit', requireAuth, async (req: AuthRequest
 // POST /api/provider/runs/:id/attachments/release - Release a held attachment
 router.post('/runs/:id/attachments/release', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = req.ctx?.tenant_id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
     const runId = req.params.id;
     const { requestId } = req.body;
 
@@ -1044,6 +1093,331 @@ router.post('/runs/:id/attachments/release', requireAuth, async (req: AuthReques
   } catch (error: any) {
     console.error('Provider release attachment error:', error);
     res.status(500).json({ ok: false, error: 'Failed to release request' });
+  }
+});
+
+// ============================================================
+// START ADDRESS BOOK ENDPOINTS (STEP 6.5B)
+// ============================================================
+
+// C1) GET /api/provider/start-addresses - List active start addresses
+router.get('/start-addresses', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        id, label, address_line_1, address_line_2, city, region, 
+        postal_code, country, latitude, longitude, notes, is_default,
+        created_at, updated_at
+      FROM cc_tenant_start_addresses
+      WHERE tenant_id = $1 AND archived_at IS NULL
+      ORDER BY is_default DESC, label ASC
+    `, [tenantId]);
+
+    res.json({
+      ok: true,
+      startAddresses: result.rows.map(row => ({
+        id: row.id,
+        label: row.label,
+        address_line_1: row.address_line_1,
+        address_line_2: row.address_line_2,
+        city: row.city,
+        region: row.region,
+        postal_code: row.postal_code,
+        country: row.country,
+        latitude: row.latitude ? parseFloat(row.latitude) : null,
+        longitude: row.longitude ? parseFloat(row.longitude) : null,
+        notes: row.notes,
+        is_default: row.is_default
+      }))
+    });
+  } catch (error: any) {
+    console.error('Get start addresses error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to load start addresses' });
+  }
+});
+
+// C2) POST /api/provider/start-addresses - Create a start address
+router.post('/start-addresses', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+    }
+
+    const {
+      label,
+      address_line_1,
+      address_line_2,
+      city,
+      region,
+      postal_code,
+      country = 'CA',
+      latitude,
+      longitude,
+      notes,
+      is_default = false
+    } = req.body;
+
+    // Validate label
+    if (!label || typeof label !== 'string' || label.trim().length === 0) {
+      return res.status(400).json({ ok: false, error: 'error.request.invalid', message: 'Label is required' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // If is_default, clear other defaults
+      if (is_default) {
+        await client.query(`
+          UPDATE cc_tenant_start_addresses 
+          SET is_default = false, updated_at = now()
+          WHERE tenant_id = $1 AND is_default = true AND archived_at IS NULL
+        `, [tenantId]);
+      }
+
+      // Insert new address
+      const result = await client.query(`
+        INSERT INTO cc_tenant_start_addresses (
+          tenant_id, label, address_line_1, address_line_2, city, region,
+          postal_code, country, latitude, longitude, notes, is_default
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING id, label, address_line_1, address_line_2, city, region,
+          postal_code, country, latitude, longitude, notes, is_default
+      `, [
+        tenantId, label.trim(), address_line_1 || null, address_line_2 || null,
+        city || null, region || null, postal_code || null, country,
+        latitude || null, longitude || null, notes || null, is_default
+      ]);
+
+      await client.query('COMMIT');
+
+      const row = result.rows[0];
+      res.json({
+        ok: true,
+        startAddress: {
+          id: row.id,
+          label: row.label,
+          address_line_1: row.address_line_1,
+          address_line_2: row.address_line_2,
+          city: row.city,
+          region: row.region,
+          postal_code: row.postal_code,
+          country: row.country,
+          latitude: row.latitude ? parseFloat(row.latitude) : null,
+          longitude: row.longitude ? parseFloat(row.longitude) : null,
+          notes: row.notes,
+          is_default: row.is_default
+        }
+      });
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      // Check for unique constraint violation
+      if (err.code === '23505' && err.constraint?.includes('label')) {
+        return res.status(409).json({ ok: false, error: 'error.start_address.label_exists' });
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error('Create start address error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to create start address' });
+  }
+});
+
+// C3) PATCH /api/provider/start-addresses/:id - Update a start address
+router.patch('/start-addresses/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+    }
+
+    const addressId = req.params.id;
+    if (!isValidUUID(addressId)) {
+      return res.status(400).json({ ok: false, error: 'error.request.invalid' });
+    }
+
+    // Verify ownership
+    const existing = await pool.query(`
+      SELECT id FROM cc_tenant_start_addresses WHERE id = $1 AND tenant_id = $2
+    `, [addressId, tenantId]);
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.start_address.not_found' });
+    }
+
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    const {
+      label,
+      address_line_1,
+      address_line_2,
+      city,
+      region,
+      postal_code,
+      latitude,
+      longitude,
+      notes,
+      is_default,
+      archived_at
+    } = req.body;
+
+    if (label !== undefined) {
+      if (typeof label !== 'string' || label.trim().length === 0) {
+        return res.status(400).json({ ok: false, error: 'error.request.invalid', message: 'Label cannot be empty' });
+      }
+      updates.push(`label = $${paramCount++}`);
+      values.push(label.trim());
+    }
+    if (address_line_1 !== undefined) { updates.push(`address_line_1 = $${paramCount++}`); values.push(address_line_1); }
+    if (address_line_2 !== undefined) { updates.push(`address_line_2 = $${paramCount++}`); values.push(address_line_2); }
+    if (city !== undefined) { updates.push(`city = $${paramCount++}`); values.push(city); }
+    if (region !== undefined) { updates.push(`region = $${paramCount++}`); values.push(region); }
+    if (postal_code !== undefined) { updates.push(`postal_code = $${paramCount++}`); values.push(postal_code); }
+    if (latitude !== undefined) { updates.push(`latitude = $${paramCount++}`); values.push(latitude); }
+    if (longitude !== undefined) { updates.push(`longitude = $${paramCount++}`); values.push(longitude); }
+    if (notes !== undefined) { updates.push(`notes = $${paramCount++}`); values.push(notes); }
+    if (archived_at !== undefined) { 
+      updates.push(`archived_at = $${paramCount++}`); 
+      values.push(archived_at === null ? null : new Date(archived_at)); 
+    }
+
+    if (updates.length === 0 && is_default === undefined) {
+      return res.status(400).json({ ok: false, error: 'error.request.invalid', message: 'No fields to update' });
+    }
+
+    updates.push('updated_at = now()');
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Handle is_default toggle
+      if (is_default === true) {
+        await client.query(`
+          UPDATE cc_tenant_start_addresses 
+          SET is_default = false, updated_at = now()
+          WHERE tenant_id = $1 AND is_default = true AND archived_at IS NULL AND id != $2
+        `, [tenantId, addressId]);
+        updates.push(`is_default = true`);
+      } else if (is_default === false) {
+        updates.push(`is_default = false`);
+      }
+
+      values.push(addressId);
+      values.push(tenantId);
+
+      const result = await client.query(`
+        UPDATE cc_tenant_start_addresses 
+        SET ${updates.join(', ')}
+        WHERE id = $${paramCount++} AND tenant_id = $${paramCount}
+        RETURNING id, label, address_line_1, address_line_2, city, region,
+          postal_code, country, latitude, longitude, notes, is_default, archived_at
+      `, values);
+
+      await client.query('COMMIT');
+
+      const row = result.rows[0];
+      res.json({
+        ok: true,
+        startAddress: {
+          id: row.id,
+          label: row.label,
+          address_line_1: row.address_line_1,
+          address_line_2: row.address_line_2,
+          city: row.city,
+          region: row.region,
+          postal_code: row.postal_code,
+          country: row.country,
+          latitude: row.latitude ? parseFloat(row.latitude) : null,
+          longitude: row.longitude ? parseFloat(row.longitude) : null,
+          notes: row.notes,
+          is_default: row.is_default,
+          archived_at: row.archived_at
+        }
+      });
+    } catch (err: any) {
+      await client.query('ROLLBACK');
+      if (err.code === '23505' && err.constraint?.includes('label')) {
+        return res.status(409).json({ ok: false, error: 'error.start_address.label_exists' });
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error('Update start address error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to update start address' });
+  }
+});
+
+// C4) PATCH /api/provider/runs/:id/start-address - Set/clear run start address
+router.patch('/runs/:id/start-address', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+    }
+
+    const runId = req.params.id;
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.request.invalid' });
+    }
+
+    const { startAddressId } = req.body;
+
+    // Verify run belongs to tenant
+    const runResult = await pool.query(`
+      SELECT id FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2
+    `, [runId, tenantId]);
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    // If startAddressId is provided, verify it exists and belongs to tenant
+    if (startAddressId !== null && startAddressId !== undefined) {
+      if (!isValidUUID(startAddressId)) {
+        return res.status(400).json({ ok: false, error: 'error.request.invalid' });
+      }
+
+      const addressResult = await pool.query(`
+        SELECT id, archived_at FROM cc_tenant_start_addresses 
+        WHERE id = $1 AND tenant_id = $2
+      `, [startAddressId, tenantId]);
+
+      if (addressResult.rows.length === 0) {
+        return res.status(404).json({ ok: false, error: 'error.start_address.not_found' });
+      }
+
+      if (addressResult.rows[0].archived_at) {
+        return res.status(409).json({ ok: false, error: 'error.start_address.archived' });
+      }
+    }
+
+    // Update run
+    await pool.query(`
+      UPDATE cc_n3_runs SET start_address_id = $1, updated_at = now()
+      WHERE id = $2
+    `, [startAddressId || null, runId]);
+
+    res.json({
+      ok: true,
+      runId,
+      startAddressId: startAddressId || null
+    });
+  } catch (error: any) {
+    console.error('Set run start address error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to update run start address' });
   }
 });
 

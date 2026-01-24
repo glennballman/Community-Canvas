@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams, useLocation } from 'wouter';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, Truck, 
-  MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus
+  MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus, Edit2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import { useMarketActions } from '@/policy/useMarketActions';
 import type { ActionKind } from '@/policy/marketModePolicy';
 import { PublishRunModal } from '@/components/provider/PublishRunModal';
 import { AddRequestsModal } from '@/components/provider/AddRequestsModal';
+import { StartAddressPickerModal } from '@/components/provider/StartAddressPickerModal';
 import { apiRequest } from '@/lib/queryClient';
 
 function getButtonVariant(kind: ActionKind): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
@@ -42,6 +43,10 @@ interface ServiceRun {
   metadata: Record<string, any> | null;
   created_at: string;
   updated_at: string;
+  start_address_id: string | null;
+  start_address_label: string | null;
+  start_address_city: string | null;
+  start_address_region: string | null;
 }
 
 interface AttachedRequest {
@@ -203,6 +208,7 @@ export default function ProviderRunDetailPage() {
   const queryClient = useQueryClient();
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [addRequestsModalOpen, setAddRequestsModalOpen] = useState(false);
+  const [startAddressModalOpen, setStartAddressModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery<{ 
     ok: boolean; 
@@ -321,6 +327,34 @@ export default function ProviderRunDetailPage() {
                   <span data-testid="text-zone">{run.zone_name}</span>
                 </div>
               )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm text-muted-foreground">Start Location: </span>
+                    {run.start_address_label ? (
+                      <span data-testid="text-start-address">
+                        {run.start_address_label}
+                        {run.start_address_city && ` (${run.start_address_city}${run.start_address_region ? `, ${run.start_address_region}` : ''})`}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground italic" data-testid="text-start-address-not-set">Not set</span>
+                    )}
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => setStartAddressModalOpen(true)}
+                  data-testid="button-edit-start-address"
+                >
+                  <Edit2 className="w-3 h-3" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground pl-6">
+                Start address is private and helps improve future suggestions.
+              </p>
 
               <Separator />
 
@@ -482,6 +516,13 @@ export default function ProviderRunDetailPage() {
         open={addRequestsModalOpen}
         onOpenChange={setAddRequestsModalOpen}
         runId={id || ''}
+      />
+
+      <StartAddressPickerModal
+        open={startAddressModalOpen}
+        onOpenChange={setStartAddressModalOpen}
+        runId={id || ''}
+        currentAddressId={run.start_address_id}
       />
     </div>
   );
