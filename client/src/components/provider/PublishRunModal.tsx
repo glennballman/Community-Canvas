@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
-import { Loader2, Globe, Users, MapPin, Lightbulb, AlertCircle, Navigation, Eye } from 'lucide-react';
+import { Loader2, Globe, Users, MapPin, Lightbulb, AlertCircle, Navigation, Eye, Info, Plus, Check } from 'lucide-react';
 import { StartAddressPickerModal } from './StartAddressPickerModal';
 
 interface Portal {
@@ -19,6 +19,8 @@ interface Portal {
   name: string;
   slug: string;
   status: string;
+  portal_type?: string;
+  source?: 'tenant_owned' | 'community' | string;
 }
 
 interface Publication {
@@ -28,15 +30,16 @@ interface Publication {
 }
 
 interface Suggestion {
-  zone_id: string;
-  zone_name: string;
-  zone_key: string;
+  zone_id: string | null;
+  zone_name: string | null;
+  zone_key: string | null;
   portal_id: string;
   portal_name: string;
   portal_slug: string;
   distance_meters: number | null;
   distance_label: string | null;
   distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords';
+  suggestion_source?: 'tenant_zone' | 'community_portal' | string;
 }
 
 interface SuggestionsResponse {
@@ -219,6 +222,21 @@ export function PublishRunModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* V3.5 STEP 11B-FIX: Rule Block */}
+          <div className="rounded-md border p-3 bg-muted/30" data-testid="section-rule-block">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium" data-testid="text-rule-title">
+                  {resolve('provider.publish.rule.title')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1" data-testid="text-rule-body">
+                  {resolve('provider.publish.rule.body')}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* V3.5 STEP 8: Origin Readiness Preflight Banner */}
           {suggestionsData && suggestionsData.origin.origin_state !== 'has_coords' && (
             <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20" data-testid="alert-origin-readiness">
@@ -245,7 +263,7 @@ export function PublishRunModal({
             </Alert>
           )}
 
-          {/* Suggestions Section (STEP 7) */}
+          {/* Suggestions Section (STEP 7 + STEP 11B-FIX badges) */}
           {suggestions.length > 0 && (
             <div className="space-y-3" data-testid="section-suggestions">
               <div className="flex items-center gap-2">
@@ -259,35 +277,68 @@ export function PublishRunModal({
                 {suggestions.map((suggestion) => {
                   const isAlreadySelected = selectedPortals.includes(suggestion.portal_id);
                   const distanceDisplay = getDistanceDisplay(suggestion);
+                  const suggestionKey = suggestion.zone_id || suggestion.portal_id;
+                  const isCommunityPortal = suggestion.suggestion_source === 'community_portal';
                   
                   return (
-                    <button
-                      key={suggestion.zone_id}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      disabled={isAlreadySelected}
-                      className={`w-full text-left p-2 rounded-md border transition-colors ${
+                    <div
+                      key={suggestionKey}
+                      className={`w-full p-2 rounded-md border transition-colors ${
                         isAlreadySelected 
-                          ? 'bg-muted/50 border-muted cursor-default opacity-60' 
-                          : 'hover-elevate border-border cursor-pointer'
+                          ? 'bg-muted/50 border-muted opacity-60' 
+                          : 'border-border'
                       }`}
-                      data-testid={`button-suggestion-${suggestion.zone_id}`}
+                      data-testid={`suggestion-${suggestionKey}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <span className="font-medium text-sm block truncate" data-testid={`text-zone-name-${suggestion.zone_id}`}>
-                            {suggestion.zone_name}
-                          </span>
-                          <span className="text-xs text-muted-foreground block truncate">
-                            {resolve('provider.publish.suggestions.in_portal').replace('{portalName}', suggestion.portal_name)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate" data-testid={`text-suggestion-name-${suggestionKey}`}>
+                              {isCommunityPortal ? suggestion.portal_name : (suggestion.zone_name || suggestion.portal_name)}
+                            </span>
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs flex-shrink-0"
+                              data-testid={`badge-source-${suggestionKey}`}
+                            >
+                              {isCommunityPortal 
+                                ? resolve('provider.publish.suggestions.badge.community_portal')
+                                : resolve('provider.publish.suggestions.badge.tenant_zone')}
+                            </Badge>
+                          </div>
+                          {!isCommunityPortal && suggestion.zone_name && (
+                            <span className="text-xs text-muted-foreground block truncate">
+                              {resolve('provider.publish.suggestions.in_portal').replace('{portalName}', suggestion.portal_name)}
+                            </span>
+                          )}
+                          {distanceDisplay && (
+                            <span className="text-xs text-muted-foreground" data-testid={`text-distance-${suggestionKey}`}>
+                              {distanceDisplay}
+                            </span>
+                          )}
                         </div>
-                        {distanceDisplay && (
-                          <span className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-distance-${suggestion.zone_id}`}>
-                            {distanceDisplay}
-                          </span>
-                        )}
+                        <Button
+                          variant={isAlreadySelected ? 'ghost' : 'outline'}
+                          size="sm"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          disabled={isAlreadySelected}
+                          className="flex-shrink-0"
+                          data-testid={`button-add-suggestion-${suggestionKey}`}
+                        >
+                          {isAlreadySelected ? (
+                            <>
+                              <Check className="w-3 h-3 mr-1" />
+                              {resolve('provider.publish.suggestions.added')}
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3 h-3 mr-1" />
+                              {resolve('provider.publish.suggestions.add')}
+                            </>
+                          )}
+                        </Button>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -308,7 +359,7 @@ export function PublishRunModal({
 
           <Separator />
 
-          {/* Portal Checkboxes */}
+          {/* Portal Checkboxes - Grouped by Source (STEP 11B-FIX) */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-muted-foreground" />
@@ -329,23 +380,101 @@ export function PublishRunModal({
                 {resolve('provider.run.publish.no_portals')}
               </p>
             ) : (
-              <div className="space-y-2">
-                {portals.map((portal) => (
-                  <div key={portal.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`portal-${portal.id}`}
-                      checked={selectedPortals.includes(portal.id)}
-                      onCheckedChange={(checked) => handlePortalToggle(portal.id, checked === true)}
-                      data-testid={`checkbox-portal-${portal.id}`}
-                    />
-                    <Label 
-                      htmlFor={`portal-${portal.id}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {portal.name}
-                    </Label>
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {/* Tenant Owned Portals (includes undefined source per spec) */}
+                {(() => {
+                  const tenantOwnedPortals = portals
+                    .filter(p => p.source === 'tenant_owned' || !p.source)
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                  
+                  return (
+                    <div className="space-y-2" data-testid="section-portals-tenant-owned">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-medium uppercase text-muted-foreground" data-testid="text-tenant-owned-title">
+                          {resolve('provider.publish.portals.tenant_owned.title')}
+                        </Label>
+                      </div>
+                      {tenantOwnedPortals.length === 0 ? (
+                        <p className="text-sm text-muted-foreground pl-1" data-testid="text-tenant-owned-empty">
+                          {resolve('provider.publish.portals.tenant_owned.empty')}
+                        </p>
+                      ) : (
+                        <div className="space-y-1">
+                          {tenantOwnedPortals.map((portal) => (
+                            <div key={portal.id} className="flex items-center justify-between gap-2 py-1">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`portal-${portal.id}`}
+                                  checked={selectedPortals.includes(portal.id)}
+                                  onCheckedChange={(checked) => handlePortalToggle(portal.id, checked === true)}
+                                  data-testid={`checkbox-portal-${portal.id}`}
+                                />
+                                <Label 
+                                  htmlFor={`portal-${portal.id}`}
+                                  className="text-sm font-normal cursor-pointer"
+                                >
+                                  {portal.name}
+                                </Label>
+                              </div>
+                              <Badge variant="secondary" className="text-xs" data-testid={`badge-owned-${portal.id}`}>
+                                {resolve('provider.publish.badge.owned')}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Community Portals */}
+                {(() => {
+                  const communityPortals = portals
+                    .filter(p => p.source === 'community')
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                  
+                  return (
+                    <div className="space-y-2" data-testid="section-portals-community">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-xs font-medium uppercase text-muted-foreground" data-testid="text-community-title">
+                          {resolve('provider.publish.portals.community.title')}
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground" data-testid="text-community-help">
+                        {resolve('provider.publish.portals.community.help')}
+                      </p>
+                      {communityPortals.length === 0 ? (
+                        <p className="text-sm text-muted-foreground pl-1" data-testid="text-community-empty">
+                          {resolve('provider.publish.portals.community.empty')}
+                        </p>
+                      ) : (
+                        <div className="space-y-1">
+                          {communityPortals.map((portal) => (
+                            <div key={portal.id} className="flex items-center justify-between gap-2 py-1">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`portal-${portal.id}`}
+                                  checked={selectedPortals.includes(portal.id)}
+                                  onCheckedChange={(checked) => handlePortalToggle(portal.id, checked === true)}
+                                  data-testid={`checkbox-portal-${portal.id}`}
+                                />
+                                <Label 
+                                  htmlFor={`portal-${portal.id}`}
+                                  className="text-sm font-normal cursor-pointer"
+                                >
+                                  {portal.name}
+                                </Label>
+                              </div>
+                              <Badge variant="outline" className="text-xs" data-testid={`badge-community-${portal.id}`}>
+                                {resolve('provider.publish.badge.community')}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

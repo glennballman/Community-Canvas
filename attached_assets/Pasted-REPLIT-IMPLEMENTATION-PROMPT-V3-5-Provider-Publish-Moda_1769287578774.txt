@@ -1,0 +1,173 @@
+REPLIT IMPLEMENTATION PROMPT — V3.5 Provider Publish Modal Grouping + Copy (STEP 11B-FIX UI)
+
+ROLE: UI Engineer + QA Gatekeeper
+MODE: Minimal surgical UI enhancement. No refactors. Do not change backend. Do not change schema.
+TERMINOLOGY LOCKED:
+- Use “service provider” and “reservation”
+- DO NOT use “booking”, “contractor”, or “calendar”
+
+GOAL
+Enhance the existing Provider PublishRunModal UI to:
+1) Group portals into “Your portals” vs “Community portals” using the backend-provided `source` field (`tenant_owned` | `community`).
+2) Reinforce the rule: “Visible to you” ≠ “Published by you” via modal copy.
+3) Display publish suggestions using `suggestion_source` (`tenant_zone` | `community_portal`) with clear badges.
+4) Keep existing API calls and mutations unchanged, just adapt to new response fields.
+
+AUDIT CONFIRMED CONTEXT (DO NOT CHANGE)
+- Modal already exists: client/src/components/provider/PublishRunModal.tsx
+- Uses shadcn/ui Dialog + Tailwind
+- Uses React Query v5 (useQuery/useMutation)
+- Uses apiRequest from client/src/lib/queryClient.ts
+- Uses copy tokens via useCopy().resolve(...)
+- Already calls:
+  GET /api/provider/portals
+  GET /api/provider/runs/:id/publish-suggestions
+  POST /api/provider/runs/:id/visibility-preview
+  POST /api/provider/runs/:id/publish
+
+FILES TO MODIFY
+1) client/src/components/provider/PublishRunModal.tsx
+2) client/src/copy/CopyResolver.ts
+
+========================================================
+A) PublishRunModal.tsx — Update Types
+========================================================
+1) Update the Portal type/interface used for GET /api/provider/portals to include new fields:
+- portal_type: string
+- source: 'tenant_owned' | 'community' | string (tolerate unknown)
+
+Example:
+type Portal = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  portal_type?: string;
+  source?: 'tenant_owned' | 'community' | string;
+};
+
+2) Update the Suggestion type/interface used for GET publish-suggestions to include:
+- suggestion_source: 'tenant_zone' | 'community_portal' | string
+- zone_* may be null for community portal suggestions (zone_id/zone_name/zone_key)
+
+Example:
+type Suggestion = {
+  portal_id: string;
+  portal_name: string;
+  portal_slug: string;
+  zone_id: string | null;
+  zone_name: string | null;
+  zone_key: string | null;
+  distance_meters: number | null;
+  distance_label: string | null;
+  distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords';
+  suggestion_source?: 'tenant_zone' | 'community_portal' | string;
+};
+
+Do not change API endpoints. Only adapt rendering.
+
+========================================================
+B) PublishRunModal.tsx — Add Copy Block Reinforcing Rule
+========================================================
+Near the top of the modal content (above portal checkboxes), add a compact info block:
+
+- Title (bold): resolve('provider.publish.rule.title')
+- Body (small): resolve('provider.publish.rule.body')
+
+Styling: Tailwind, subtle background, e.g. rounded-md border p-3 text-sm
+Do not mention “calendar”.
+
+========================================================
+C) PublishRunModal.tsx — Group Portals by `source`
+========================================================
+Replace the current flat portal checkbox list with grouped sections:
+
+Group 1: tenant_owned
+- Header: resolve('provider.publish.portals.tenant_owned.title')
+- Helper: resolve('provider.publish.portals.tenant_owned.help') (optional small text)
+
+Group 2: community
+- Header: resolve('provider.publish.portals.community.title')
+- Helper: resolve('provider.publish.portals.community.help') (optional small text)
+
+Rules:
+- Use `portal.source` field from backend. Treat undefined/unknown as tenant_owned ONLY if portal.id is in the selected tenant-owned list already; otherwise place in a small third section “Other” only if needed. Prefer: if unknown, put under tenant_owned to avoid hiding portals.
+- Within each group, sort by portal.name ASC.
+- Render groups in order: tenant_owned first, then community.
+- Keep checkbox selection behavior identical.
+- Add a small badge/pill at row end:
+  - tenant_owned: resolve('provider.publish.badge.owned')
+  - community: resolve('provider.publish.badge.community')
+Use a subtle shadcn/Tailwind badge style already used in the project.
+
+Empty states:
+- If no tenant_owned portals: show helper resolve('provider.publish.portals.tenant_owned.empty')
+- If no community portals: show helper resolve('provider.publish.portals.community.empty')
+
+========================================================
+D) PublishRunModal.tsx — Suggestions Panel with Badges + “Add” action
+========================================================
+In the “Suggested targets” area (already exists per current modal), update rendering to:
+- Show badge based on suggestion.suggestion_source:
+  - tenant_zone => resolve('provider.publish.suggestions.badge.tenant_zone')
+  - community_portal => resolve('provider.publish.suggestions.badge.community_portal')
+- For community_portal suggestions, show portal_name (no zone_name)
+- For tenant_zone suggestions, show zone_name + portal_name (existing pattern if present)
+- Add an “Add” button (if not already) that checks the corresponding portal checkbox by adding portal_id to selectedPortals state.
+- If portal already selected, show resolve('provider.publish.suggestions.added') or disable the button.
+
+Do not change suggestion sorting logic (backend already sorts). UI just displays.
+
+========================================================
+E) PublishRunModal.tsx — Preview Reach Link Copy
+========================================================
+Ensure the preview area/button uses copy that does NOT imply publishing.
+Label should resolve to something like:
+- resolve('provider.publish.preview.cta') => “Preview reach”
+If the modal currently uses “Preview visibility”, keep it unless copy tokens say otherwise. Do not introduce “calendar”.
+
+========================================================
+F) CopyResolver.ts — Add Copy Tokens
+========================================================
+Add these tokens under provider.publish.* and provider.run.publish.* namespaces consistent with existing usage:
+
+Required tokens:
+provider.publish.rule.title = "Visible to you ≠ Published by you"
+provider.publish.rule.body = "Visibility shows where this run may appear through the network. Publishing controls where the public can see it."
+
+provider.publish.portals.tenant_owned.title = "Your portals"
+provider.publish.portals.tenant_owned.help = "Portals owned by your tenant."
+provider.publish.portals.tenant_owned.empty = "No tenant portals are available."
+
+provider.publish.portals.community.title = "Community portals"
+provider.publish.portals.community.help = "Publishing here makes this run visible in a community feed."
+provider.publish.portals.community.empty = "No community portals are available for publishing."
+
+provider.publish.badge.owned = "Owned"
+provider.publish.badge.community = "Community"
+
+provider.publish.suggestions.badge.tenant_zone = "Nearby zone"
+provider.publish.suggestions.badge.community_portal = "Nearby community"
+provider.publish.suggestions.add = "Add"
+provider.publish.suggestions.added = "Added"
+
+provider.publish.preview.cta = "Preview reach"
+
+NOTE: Do not remove existing tokens. Only add missing ones. Keep consistent style with CopyResolver structure.
+
+========================================================
+G) QA Checklist (Must Pass)
+========================================================
+1) Modal opens on ProviderRunDetailPage (already wired) and renders without TS errors.
+2) Portals list now grouped into:
+   - Your portals
+   - Community portals
+3) Rule block appears and uses copy resolver tokens.
+4) Suggestions show badges and “Add” checks the portal.
+5) Publishing flow still works unchanged (selectedPortals posted to /publish).
+6) No forbidden terminology appears in UI strings.
+
+DELIVERABLES
+- Updated PublishRunModal.tsx with grouping + rule copy + suggestion badges
+- Updated CopyResolver.ts with new tokens
+- No other files changed unless absolutely required for compilation

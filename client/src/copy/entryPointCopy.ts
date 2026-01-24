@@ -239,6 +239,23 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'provider.publish.preview.loading': 'Calculating visibility...',
     'provider.publish.preview.empty': 'No additional visibility',
     'provider.publish.preview.error': 'Could not calculate visibility',
+    'provider.publish.preview.cta': 'Preview reach',
+    
+    // V3.5 STEP 11B-FIX: Portal grouping and rule block tokens
+    'provider.publish.rule.title': 'Visible to you ≠ Published by you',
+    'provider.publish.rule.body': 'Visibility shows where this run may appear through the network. Publishing controls where the public can see it.',
+    'provider.publish.portals.tenant_owned.title': 'Your portals',
+    'provider.publish.portals.tenant_owned.help': 'Portals owned by your tenant.',
+    'provider.publish.portals.tenant_owned.empty': 'No tenant portals are available.',
+    'provider.publish.portals.community.title': 'Community portals',
+    'provider.publish.portals.community.help': 'Publishing here makes this run visible in a community feed.',
+    'provider.publish.portals.community.empty': 'No community portals are available for publishing.',
+    'provider.publish.badge.owned': 'Owned',
+    'provider.publish.badge.community': 'Community',
+    'provider.publish.suggestions.badge.tenant_zone': 'Nearby zone',
+    'provider.publish.suggestions.badge.community_portal': 'Nearby community',
+    'provider.publish.suggestions.add': 'Add',
+    'provider.publish.suggestions.added': 'Added',
   },
 
   lodging: {
