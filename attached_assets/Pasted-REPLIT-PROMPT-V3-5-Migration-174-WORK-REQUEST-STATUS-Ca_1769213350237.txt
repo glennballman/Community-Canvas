@@ -1,0 +1,94 @@
+REPLIT PROMPT — V3.5 Migration 174 — WORK_REQUEST_STATUS Canonicalization (Remove Legacy Values)
+
+ROLE
+Senior Platform Engineer performing a one-time enum canonicalization cleanup.
+Context: Not live, no customers/data. Eliminate permanent ambiguity now.
+
+NON-NEGOTIABLES
+- Terminology source of truth: TERMINOLOGY_CANON.md (v3)
+- Service fulfillment domain must use ONLY these statuses:
+  draft, sent, proposed_change, awaiting_commitment, unassigned,
+  accepted, in_progress, completed, cancelled
+- Do NOT introduce “job” in service context, do NOT use “calendar”.
+
+============================================================
+A) AUDIT FIRST (MANDATORY)
+============================================================
+1) Identify where work_request_status enum is used:
+   - Query information_schema / pg_catalog to find all columns using the enum type.
+   - Print: table, column, nullability, default.
+
+2) Count usage of each enum value across ALL referencing columns:
+   - For each (table,column), run:
+     SELECT <column> AS status, COUNT(*) FROM <table> GROUP BY 1 ORDER BY 2 DESC;
+
+3) HARD STOP CONDITIONS:
+   If ANY rows exist with any legacy values below, STOP and report counts:
+   legacy = ('new','contacted','quoted','converted','closed','spam','scheduled','dropped')
+   Do NOT proceed until we decide mapping rules.
+
+If ALL legacy values are unused (0 rows everywhere), proceed.
+
+============================================================
+B) MIGRATION PLAN (ENUM SWAP PATTERN)
+============================================================
+Create: server/migrations/174_work_request_status_canon.sql
+
+Steps inside the migration (transactional where possible):
+
+1) Create new enum type:
+   work_request_status_v3 with ONLY canonical values:
+   ('draft','sent','proposed_change','awaiting_commitment','unassigned',
+    'accepted','in_progress','completed','cancelled')
+
+2) For each column using old enum:
+   - Drop default (capture it first if needed)
+   - Alter column type to new enum using cast:
+     ALTER TABLE ... ALTER COLUMN ... TYPE work_request_status_v3
+       USING (<col>::text::work_request_status_v3);
+   - Reapply default if it was one of the canonical values.
+
+3) Rename types:
+   - ALTER TYPE work_request_status RENAME TO work_request_status_legacy;
+   - ALTER TYPE work_request_status_v3 RENAME TO work_request_status;
+
+4) Drop legacy type:
+   - DROP TYPE work_request_status_legacy;
+
+Notes:
+- If any columns are NULLable, casting NULL is safe.
+- This is only safe because audit proved no legacy values in use.
+
+============================================================
+C) POST-MIGRATION VERIFICATION (MANDATORY)
+============================================================
+After migration:
+1) Re-run enum listing:
+   SELECT unnest(enum_range(NULL::work_request_status))::text;
+
+Must equal EXACT canonical list (9 values).
+
+2) Re-run counts on all referencing columns to prove no unexpected values.
+
+3) Confirm app boots and STEP 6 endpoints still operate.
+
+============================================================
+D) PROOF DOCUMENTATION
+============================================================
+Create: proof/v3.5/work-request-status-canon-proof.md
+
+Must include:
+- Audit queries + results (showing 0 counts for legacy values)
+- List of tables/columns affected
+- Migration SQL excerpt (enum swap)
+- Post-migration enum list
+- Confirmation that canonical statuses exactly match TERMINOLOGY_CANON.md v3
+
+Explicit checkboxes:
+- [ ] Legacy funnel statuses removed: new/contacted/quoted/converted/closed/spam/scheduled/dropped
+- [ ] Only canonical 9 values remain
+- [ ] No rows were mapped (not needed) OR mapping was executed and proven (if we stopped)
+- [ ] No “job” added in service context
+- [ ] No “calendar” added in new code
+
+END.
