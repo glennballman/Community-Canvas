@@ -213,6 +213,14 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'error.start_address.not_found': 'Address not found',
     'error.start_address.label_exists': 'An address with this name already exists',
     'error.start_address.archived': 'This address has been archived',
+    
+    // V3.5 STEP 7: Publish Suggestions tokens
+    'provider.publish.suggestions.title': 'Suggested additional areas',
+    'provider.publish.suggestions.distance_format': '~{distance} away',
+    'provider.publish.suggestions.distance_unknown': 'Distance unknown',
+    'provider.publish.suggestions.no_origin': 'Set a start address for distance estimates',
+    'provider.publish.suggestions.empty': 'No additional areas to suggest',
+    'provider.publish.suggestions.in_portal': 'In: {portalName}',
   },
 
   lodging: {

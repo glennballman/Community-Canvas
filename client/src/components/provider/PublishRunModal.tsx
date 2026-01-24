@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
-import { Loader2, Globe, Users } from 'lucide-react';
+import { Loader2, Globe, Users, MapPin, Lightbulb } from 'lucide-react';
 
 interface Portal {
   id: string;
@@ -22,6 +22,29 @@ interface Publication {
   portal_id: string;
   portal_name: string;
   published_at?: string;
+}
+
+interface Suggestion {
+  zone_id: string;
+  zone_name: string;
+  zone_key: string;
+  portal_id: string;
+  portal_name: string;
+  portal_slug: string;
+  distance_meters: number | null;
+  distance_label: string | null;
+  distance_confidence: 'ok' | 'unknown' | 'no_origin';
+}
+
+interface SuggestionsResponse {
+  ok: boolean;
+  run_id: string;
+  origin: {
+    start_address_id: string | null;
+    origin_lat: number | null;
+    origin_lng: number | null;
+  };
+  suggestions: Suggestion[];
 }
 
 interface PublishRunModalProps {
@@ -49,6 +72,11 @@ export function PublishRunModal({
   const { data: portalsData, isLoading: portalsLoading } = useQuery<{ ok: boolean; portals: Portal[] }>({
     queryKey: ['/api/provider/portals'],
     enabled: open,
+  });
+
+  const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery<SuggestionsResponse>({
+    queryKey: ['/api/provider/runs', runId, 'publish-suggestions'],
+    enabled: open && !!runId,
   });
 
   useEffect(() => {
@@ -99,12 +127,29 @@ export function PublishRunModal({
     }
   };
 
+  const handleSuggestionClick = (suggestion: Suggestion) => {
+    if (!selectedPortals.includes(suggestion.portal_id)) {
+      setSelectedPortals(prev => [...prev, suggestion.portal_id]);
+    }
+  };
+
   const portals = portalsData?.portals || [];
+  const suggestions = suggestionsData?.suggestions || [];
   const canSubmit = selectedPortals.length > 0 && !publishMutation.isPending;
+
+  const getDistanceDisplay = (suggestion: Suggestion) => {
+    if (suggestion.distance_confidence === 'ok' && suggestion.distance_label) {
+      return resolve('provider.publish.suggestions.distance_format').replace('{distance}', suggestion.distance_label.replace('~', ''));
+    }
+    if (suggestion.distance_confidence === 'unknown') {
+      return resolve('provider.publish.suggestions.distance_unknown');
+    }
+    return null;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" data-testid="dialog-publish-run">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto" data-testid="dialog-publish-run">
         <DialogHeader>
           <DialogTitle data-testid="text-publish-modal-title">
             {resolve('provider.run.publish.modal_title')}
@@ -112,6 +157,77 @@ export function PublishRunModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Suggestions Section (STEP 7) */}
+          {suggestions.length > 0 && (
+            <div className="space-y-3" data-testid="section-suggestions">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-amber-500" />
+                <Label className="text-sm font-medium" data-testid="text-suggestions-title">
+                  {resolve('provider.publish.suggestions.title')}
+                </Label>
+              </div>
+              
+              {suggestionsData?.origin.origin_lat == null && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1" data-testid="text-no-origin-notice">
+                  <MapPin className="w-3 h-3" />
+                  {resolve('provider.publish.suggestions.no_origin')}
+                </p>
+              )}
+
+              <div className="space-y-2">
+                {suggestions.map((suggestion) => {
+                  const isAlreadySelected = selectedPortals.includes(suggestion.portal_id);
+                  const distanceDisplay = getDistanceDisplay(suggestion);
+                  
+                  return (
+                    <button
+                      key={suggestion.zone_id}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      disabled={isAlreadySelected}
+                      className={`w-full text-left p-2 rounded-md border transition-colors ${
+                        isAlreadySelected 
+                          ? 'bg-muted/50 border-muted cursor-default opacity-60' 
+                          : 'hover-elevate border-border cursor-pointer'
+                      }`}
+                      data-testid={`button-suggestion-${suggestion.zone_id}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium text-sm block truncate" data-testid={`text-zone-name-${suggestion.zone_id}`}>
+                            {suggestion.zone_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground block truncate">
+                            {resolve('provider.publish.suggestions.in_portal').replace('{portalName}', suggestion.portal_name)}
+                          </span>
+                        </div>
+                        {distanceDisplay && (
+                          <span className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-distance-${suggestion.zone_id}`}>
+                            {distanceDisplay}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {suggestions.length === 0 && !suggestionsLoading && open && (
+            <div className="text-sm text-muted-foreground text-center py-2" data-testid="text-no-suggestions">
+              {resolve('provider.publish.suggestions.empty')}
+            </div>
+          )}
+
+          {suggestionsLoading && (
+            <div className="flex items-center justify-center py-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Portal Checkboxes */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-muted-foreground" />
@@ -155,6 +271,7 @@ export function PublishRunModal({
 
           <Separator />
 
+          {/* Market Mode Selection */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-muted-foreground" />
