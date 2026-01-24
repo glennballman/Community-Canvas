@@ -219,8 +219,17 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'provider.publish.suggestions.distance_format': '~{distance} away',
     'provider.publish.suggestions.distance_unknown': 'Distance unknown',
     'provider.publish.suggestions.no_origin': 'Set a start address for distance estimates',
+    'provider.publish.suggestions.no_origin_coords': 'Add coordinates to enable distance estimates',
     'provider.publish.suggestions.empty': 'No additional areas to suggest',
     'provider.publish.suggestions.in_portal': 'In: {portalName}',
+    
+    // V3.5 STEP 8: Start Address Coordinates tokens
+    'provider.start_address.latitude_label': 'Latitude (optional)',
+    'provider.start_address.longitude_label': 'Longitude (optional)',
+    'provider.start_address.coords_helper': 'Optional: add coordinates to enable distance estimates.',
+    'provider.start_address.coords_error': 'Enter both latitude and longitude (or leave both blank).',
+    'provider.publish.preflight.set_address': 'Set start address',
+    'provider.publish.preflight.add_coords': 'Add coordinates',
   },
 
   lodging: {

@@ -6,10 +6,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
-import { Loader2, Globe, Users, MapPin, Lightbulb } from 'lucide-react';
+import { Loader2, Globe, Users, MapPin, Lightbulb, AlertCircle, Navigation } from 'lucide-react';
+import { StartAddressPickerModal } from './StartAddressPickerModal';
 
 interface Portal {
   id: string;
@@ -33,7 +35,7 @@ interface Suggestion {
   portal_slug: string;
   distance_meters: number | null;
   distance_label: string | null;
-  distance_confidence: 'ok' | 'unknown' | 'no_origin';
+  distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords';
 }
 
 interface SuggestionsResponse {
@@ -43,6 +45,7 @@ interface SuggestionsResponse {
     start_address_id: string | null;
     origin_lat: number | null;
     origin_lng: number | null;
+    origin_state: 'no_address' | 'has_address_no_coords' | 'has_coords';
   };
   suggestions: Suggestion[];
 }
@@ -68,6 +71,7 @@ export function PublishRunModal({
 
   const [selectedPortals, setSelectedPortals] = useState<string[]>([]);
   const [marketMode, setMarketMode] = useState<string>(currentMarketMode || 'INVITE_ONLY');
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
 
   const { data: portalsData, isLoading: portalsLoading } = useQuery<{ ok: boolean; portals: Portal[] }>({
     queryKey: ['/api/provider/portals'],
@@ -157,6 +161,32 @@ export function PublishRunModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* V3.5 STEP 8: Origin Readiness Preflight Banner */}
+          {suggestionsData && suggestionsData.origin.origin_state !== 'has_coords' && (
+            <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20" data-testid="alert-origin-readiness">
+              <Navigation className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="flex flex-col gap-2">
+                <span className="text-sm" data-testid="text-origin-banner-message">
+                  {suggestionsData.origin.origin_state === 'no_address'
+                    ? resolve('provider.publish.suggestions.no_origin')
+                    : resolve('provider.publish.suggestions.no_origin_coords')}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddressModalOpen(true)}
+                  className="w-fit"
+                  data-testid="button-origin-cta"
+                >
+                  <MapPin className="w-3 h-3 mr-1" />
+                  {suggestionsData.origin.origin_state === 'no_address'
+                    ? resolve('provider.publish.preflight.set_address')
+                    : resolve('provider.publish.preflight.add_coords')}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Suggestions Section (STEP 7) */}
           {suggestions.length > 0 && (
             <div className="space-y-3" data-testid="section-suggestions">
@@ -166,13 +196,6 @@ export function PublishRunModal({
                   {resolve('provider.publish.suggestions.title')}
                 </Label>
               </div>
-              
-              {suggestionsData?.origin.origin_lat == null && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1" data-testid="text-no-origin-notice">
-                  <MapPin className="w-3 h-3" />
-                  {resolve('provider.publish.suggestions.no_origin')}
-                </p>
-              )}
 
               <div className="space-y-2">
                 {suggestions.map((suggestion) => {
@@ -340,6 +363,20 @@ export function PublishRunModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* V3.5 STEP 8: StartAddressPickerModal for origin setup */}
+      <StartAddressPickerModal
+        open={addressModalOpen}
+        onOpenChange={(isOpen) => {
+          setAddressModalOpen(isOpen);
+          if (!isOpen) {
+            // Refresh suggestions when address modal closes
+            queryClient.invalidateQueries({ queryKey: ['/api/provider/runs', runId, 'publish-suggestions'] });
+          }
+        }}
+        runId={runId}
+        currentAddressId={suggestionsData?.origin.start_address_id || null}
+      />
     </Dialog>
   );
 }

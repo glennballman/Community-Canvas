@@ -1168,6 +1168,23 @@ router.post('/start-addresses', requireAuth, async (req: AuthRequest, res: Respo
       return res.status(400).json({ ok: false, error: 'error.request.invalid', message: 'Label is required' });
     }
 
+    // V3.5 STEP 8: Validate coordinates (both-or-none rule)
+    const hasLat = latitude !== undefined && latitude !== null && latitude !== '';
+    const hasLng = longitude !== undefined && longitude !== null && longitude !== '';
+    if (hasLat !== hasLng) {
+      return res.status(400).json({ ok: false, error: 'invalid_coordinates', message: 'Enter both latitude and longitude (or leave both blank)' });
+    }
+    if (hasLat && hasLng) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        return res.status(400).json({ ok: false, error: 'invalid_coordinates', message: 'Latitude must be between -90 and 90' });
+      }
+      if (isNaN(lng) || lng < -180 || lng > 180) {
+        return res.status(400).json({ ok: false, error: 'invalid_coordinates', message: 'Longitude must be between -180 and 180' });
+      }
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -1283,8 +1300,32 @@ router.patch('/start-addresses/:id', requireAuth, async (req: AuthRequest, res: 
     if (city !== undefined) { updates.push(`city = $${paramCount++}`); values.push(city); }
     if (region !== undefined) { updates.push(`region = $${paramCount++}`); values.push(region); }
     if (postal_code !== undefined) { updates.push(`postal_code = $${paramCount++}`); values.push(postal_code); }
-    if (latitude !== undefined) { updates.push(`latitude = $${paramCount++}`); values.push(latitude); }
-    if (longitude !== undefined) { updates.push(`longitude = $${paramCount++}`); values.push(longitude); }
+    
+    // V3.5 STEP 8: Validate coordinates (both-or-none rule)
+    // When updating, both must be provided together or both must be cleared
+    const latProvided = latitude !== undefined;
+    const lngProvided = longitude !== undefined;
+    if (latProvided || lngProvided) {
+      // If either is provided, enforce both-or-none on the provided values
+      const hasLat = latitude !== null && latitude !== '';
+      const hasLng = longitude !== null && longitude !== '';
+      if (hasLat !== hasLng) {
+        return res.status(400).json({ ok: false, error: 'invalid_coordinates', message: 'Enter both latitude and longitude (or leave both blank)' });
+      }
+      if (hasLat && hasLng) {
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        if (isNaN(lat) || lat < -90 || lat > 90) {
+          return res.status(400).json({ ok: false, error: 'invalid_coordinates', message: 'Latitude must be between -90 and 90' });
+        }
+        if (isNaN(lng) || lng < -180 || lng > 180) {
+          return res.status(400).json({ ok: false, error: 'invalid_coordinates', message: 'Longitude must be between -180 and 180' });
+        }
+      }
+    }
+    
+    if (latitude !== undefined) { updates.push(`latitude = $${paramCount++}`); values.push(latitude === '' ? null : latitude); }
+    if (longitude !== undefined) { updates.push(`longitude = $${paramCount++}`); values.push(longitude === '' ? null : longitude); }
     if (notes !== undefined) { updates.push(`notes = $${paramCount++}`); values.push(notes); }
     if (archived_at !== undefined) { 
       updates.push(`archived_at = $${paramCount++}`); 
@@ -1463,9 +1504,10 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
     const run = runResult.rows[0];
 
     // 2) Load origin lat/lng if start_address_id exists
+    // V3.5 STEP 8: Track three origin states: no_address, has_address_no_coords, has_coords
     let originLat: number | null = null;
     let originLng: number | null = null;
-    let hasOrigin = false;
+    let originState: 'no_address' | 'has_address_no_coords' | 'has_coords' = 'no_address';
 
     if (run.start_address_id) {
       const addrResult = await pool.query(`
@@ -1479,7 +1521,9 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
         if (addr.latitude != null && addr.longitude != null) {
           originLat = parseFloat(addr.latitude);
           originLng = parseFloat(addr.longitude);
-          hasOrigin = true;
+          originState = 'has_coords';
+        } else {
+          originState = 'has_address_no_coords';
         }
       }
     }
@@ -1524,6 +1568,7 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
     const candidatesResult = await pool.query(candidatesQuery, params);
 
     // 5) Compute distance and confidence for each candidate
+    // V3.5 STEP 8: Added 'no_origin_coords' confidence mode
     interface Suggestion {
       zone_id: string;
       zone_name: string;
@@ -1533,16 +1578,18 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
       portal_slug: string;
       distance_meters: number | null;
       distance_label: string | null;
-      distance_confidence: 'ok' | 'unknown' | 'no_origin';
+      distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords';
     }
 
     const suggestions: Suggestion[] = candidatesResult.rows.map(row => {
       let distance_meters: number | null = null;
       let distance_label: string | null = null;
-      let distance_confidence: 'ok' | 'unknown' | 'no_origin' = 'no_origin';
+      let distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords' = 'no_origin';
 
-      if (!hasOrigin) {
+      if (originState === 'no_address') {
         distance_confidence = 'no_origin';
+      } else if (originState === 'has_address_no_coords') {
+        distance_confidence = 'no_origin_coords';
       } else if (row.anchor_lat == null || row.anchor_lng == null) {
         distance_confidence = 'unknown';
       } else {
@@ -1567,10 +1614,10 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
       };
     });
 
-    // 6) Sort: ok by distance ascending, then unknown alphabetically, then no_origin alphabetically
+    // 6) Sort: ok by distance ascending, then unknown/no_origin/no_origin_coords alphabetically
     suggestions.sort((a, b) => {
-      // Priority: ok < unknown < no_origin
-      const confidenceOrder = { ok: 0, unknown: 1, no_origin: 2 };
+      // Priority: ok < unknown < no_origin_coords < no_origin
+      const confidenceOrder: Record<string, number> = { ok: 0, unknown: 1, no_origin_coords: 2, no_origin: 3 };
       const aOrder = confidenceOrder[a.distance_confidence];
       const bOrder = confidenceOrder[b.distance_confidence];
 
@@ -1596,7 +1643,8 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
       origin: {
         start_address_id: run.start_address_id || null,
         origin_lat: originLat,
-        origin_lng: originLng
+        origin_lng: originLng,
+        origin_state: originState  // V3.5 STEP 8: 'no_address' | 'has_address_no_coords' | 'has_coords'
       },
       suggestions: limitedSuggestions
     });

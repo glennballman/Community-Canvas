@@ -1,0 +1,277 @@
+REPLIT PROMPT — V3.5 STEP 8 — Origin Readiness (Start Address Coordinates + Publish Preflight)
+
+ROLE: Senior Platform Engineer
+MODE: No schema changes. Minimal UI + validation. Evidence-first.
+
+============================================================
+HARD RULES (NON-NEGOTIABLE)
+
+Use “service provider” (never contractor)
+
+Use “reservation” (never booking/booked)
+
+Do NOT introduce the term “calendar” in NEW code
+
+Do NOT use “job” in service context (employment-only exception remains)
+
+No changes to Work Area / Work Zone / Surfaces / Constraints logic
+
+No schema changes in this step
+
+Read-only suggestions remain advisory (never auto-publish)
+
+============================================================
+GOAL
+
+Make publish suggestions more accurate by improving run origin readiness:
+
+A) Start address coordinates can be captured/edited safely
+B) Publish modal guides user to set/complete origin so distance estimates work
+C) Suggestions endpoint returns consistent confidence modes
+
+============================================================
+SECTION A) AUDIT FIRST (STOP IF UNCLEAR)
+
+Locate current StartAddressPickerModal and its create/edit flows.
+
+Confirm backend PATCH /api/provider/start-addresses/:id supports updating latitude/longitude.
+
+Confirm where PublishRunModal currently fetches:
+
+run details (start_address_id present?)
+
+start address details (lat/lng present?)
+
+Find existing numeric validation patterns (e.g., zod, manual checks).
+If you cannot find the create/edit flow wiring, STOP and document in:
+proof/v3.5/step8-origin-readiness-audit.md
+
+============================================================
+SECTION B) BACKEND — VALIDATION PATCH (NO NEW ENDPOINTS)
+
+Update existing endpoints ONLY:
+
+B1) POST /api/provider/start-addresses
+B2) PATCH /api/provider/start-addresses/:id
+
+Add validation rules:
+
+latitude and longitude must be BOTH present or BOTH null/undefined
+
+latitude range: -90..90
+
+longitude range: -180..180
+
+return 400 with { ok:false, error:'invalid_coordinates' } when invalid
+
+Do NOT require coordinates — they are optional.
+
+Also ensure responses include latitude/longitude (if not already).
+
+============================================================
+SECTION C) FRONTEND — START ADDRESS COORDINATES UX
+
+In StartAddressPickerModal (or its create/edit child form):
+
+C1) Add optional fields:
+
+Latitude (decimal)
+
+Longitude (decimal)
+
+C2) UI behavior:
+
+If user fills one but not the other, show inline error and disable Save
+
+If both blank, Save is allowed
+
+Display a small helper text:
+“Optional: add coordinates to enable distance estimates.”
+
+C3) Formatting:
+
+Do not auto-round aggressively; preserve user input
+
+Accept typical decimal strings and convert safely
+
+No map UI. No geocoding. No external APIs.
+
+============================================================
+SECTION D) FRONTEND — PUBLISH MODAL PREFLIGHT
+
+In PublishRunModal:
+
+D1) Detect origin readiness:
+
+run.start_address_id present?
+
+start address lat/lng present?
+
+D2) Add an “Origin readiness” advisory banner ABOVE suggestions:
+Case 1: start_address_id is null
+
+Show copy token: provider.publish.suggestions.no_origin
+
+Show CTA button: “Set start address”
+
+Clicking opens StartAddressPickerModal (existing)
+
+Case 2: start_address exists but lat/lng null
+
+Show copy token: provider.publish.suggestions.no_origin_coords
+
+Show CTA: “Add coordinates”
+
+Clicking opens StartAddressPickerModal in edit mode for that address
+
+Case 3: coords exist
+
+No banner (or subtle “Distance estimates enabled” if you already have a pattern)
+
+D3) Suggestions list behavior:
+
+If coords missing, still show suggestions (alphabetical)
+
+Distances hidden in UI when distance_confidence != 'ok'
+
+Unanchored portals still show “Distance unknown” per STEP 7 behavior
+
+============================================================
+SECTION E) BACKEND — SUGGESTIONS CONFIDENCE MODES
+
+In GET /api/provider/runs/:id/publish-suggestions:
+
+E1) Determine distance_confidence:
+
+'no_origin' if run.start_address_id is null
+
+'no_origin_coords' if start address exists but lat/lng missing
+
+'unknown' if destination anchor missing (unanchored portal)
+
+'ok' when both origin coords + destination anchor coords exist
+
+E2) Ranking rules:
+
+If confidence != 'ok', return candidates in alphabetical order by zone_name (or zone then portal)
+
+If confidence == 'ok', sort by distance ascending
+
+E3) Response must include:
+
+zone_name (primary identity)
+
+portal_name (secondary identity)
+
+portal_id
+
+distance_meters (nullable)
+
+distance_confidence (string enum above)
+
+E4) Exclude already-published portals where unpublished_at IS NULL (keep your current logic).
+
+============================================================
+STEP 8F — COPY TOKENS (MANDATORY)
+
+Add tokens (no hardcoded strings):
+
+provider.publish.suggestions.no_origin:
+“Set a start address for distance estimates”
+
+provider.publish.suggestions.no_origin_coords:
+“Add coordinates to enable distance estimates”
+
+provider.start_address.latitude_label:
+“Latitude (optional)”
+
+provider.start_address.longitude_label:
+“Longitude (optional)”
+
+provider.start_address.coords_helper:
+“Optional: add coordinates to enable distance estimates.”
+
+provider.start_address.coords_error:
+“Enter both latitude and longitude (or leave both blank).”
+
+(If existing similar tokens exist, reuse them and document reuse.)
+
+============================================================
+SECTION G) TESTING (TEST AUTH BOOTSTRAP ONLY)
+
+Use test auth bootstrap:
+
+await loginAs(page, 'ellen');
+
+Test cases:
+
+G1) No start address on run
+
+Open PublishRunModal
+
+Expect banner “Set a start address…”
+
+Suggestions render without distances (alphabetical)
+
+G2) Start address assigned but lat/lng null
+
+Assign “Home Base” to run
+
+Open PublishRunModal
+
+Expect banner “Add coordinates…”
+
+Suggestions render without distances
+
+G3) Start address with coordinates
+
+Edit address to set lat/lng (valid ranges)
+
+Open PublishRunModal
+
+Expect distances show for anchored portals
+
+Unanchored portals show “Distance unknown”
+
+G4) Validation
+
+Try saving with only lat or only lng → UI blocks and backend returns 400 if forced
+
+============================================================
+SECTION H) PROOF
+
+Create: proof/v3.5/step8-origin-readiness-proof.md
+
+Include:
+
+Audit notes (what files you found)
+
+Backend validation code excerpt + example 400 response
+
+UI screenshots/description of both banners
+
+Example suggestions payloads for:
+
+no_origin
+
+no_origin_coords
+
+ok
+
+Confirmation of hard rules (no banned terms)
+
+Checkboxes:
+
+ No schema changes
+
+ Coordinates optional, but validated (both-or-none)
+
+ Publish modal preflight added
+
+ Suggestions still work without origin (alphabetical)
+
+ Distances appear only when confidence == ok
+
+ Test auth bootstrap used (ellen)
+
+END.

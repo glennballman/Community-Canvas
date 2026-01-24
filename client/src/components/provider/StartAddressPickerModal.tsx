@@ -52,9 +52,12 @@ export function StartAddressPickerModal({
     region: '',
     postal_code: '',
     notes: '',
-    is_default: false
+    is_default: false,
+    latitude: '',
+    longitude: ''
   });
   const [creatingNew, setCreatingNew] = useState(false);
+  const [coordsError, setCoordsError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<{ ok: boolean; startAddresses: StartAddress[] }>({
     queryKey: ['/api/provider/start-addresses'],
@@ -88,9 +91,40 @@ export function StartAddressPickerModal({
     setSaving(false);
   };
 
+  // V3.5 STEP 8: Validate coordinates (both-or-none rule)
+  const validateCoordinates = (): boolean => {
+    const hasLat = newAddress.latitude.trim() !== '';
+    const hasLng = newAddress.longitude.trim() !== '';
+    
+    if (hasLat !== hasLng) {
+      setCoordsError('Enter both latitude and longitude (or leave both blank).');
+      return false;
+    }
+    
+    if (hasLat && hasLng) {
+      const lat = parseFloat(newAddress.latitude);
+      const lng = parseFloat(newAddress.longitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        setCoordsError('Latitude must be between -90 and 90');
+        return false;
+      }
+      if (isNaN(lng) || lng < -180 || lng > 180) {
+        setCoordsError('Longitude must be between -180 and 180');
+        return false;
+      }
+    }
+    
+    setCoordsError(null);
+    return true;
+  };
+
   const handleCreateNew = async () => {
     if (!newAddress.label.trim()) {
       toast({ title: 'Error', description: 'Address name is required', variant: 'destructive' });
+      return;
+    }
+
+    if (!validateCoordinates()) {
       return;
     }
 
@@ -103,7 +137,9 @@ export function StartAddressPickerModal({
         region: newAddress.region || null,
         postal_code: newAddress.postal_code || null,
         notes: newAddress.notes || null,
-        is_default: newAddress.is_default
+        is_default: newAddress.is_default,
+        latitude: newAddress.latitude.trim() || null,
+        longitude: newAddress.longitude.trim() || null
       });
       const result = await response.json();
       if (result.ok) {
@@ -111,7 +147,8 @@ export function StartAddressPickerModal({
         queryClient.invalidateQueries({ queryKey: ['/api/provider/start-addresses'] });
         setSelectedId(result.startAddress.id);
         setActiveTab('select');
-        setNewAddress({ label: '', address_line_1: '', city: '', region: '', postal_code: '', notes: '', is_default: false });
+        setNewAddress({ label: '', address_line_1: '', city: '', region: '', postal_code: '', notes: '', is_default: false, latitude: '', longitude: '' });
+        setCoordsError(null);
       } else {
         toast({ title: 'Error', description: result.message || result.error, variant: 'destructive' });
       }
@@ -268,6 +305,47 @@ export function StartAddressPickerModal({
                   data-testid="input-notes"
                 />
               </div>
+              
+              {/* V3.5 STEP 8: Coordinates fields */}
+              <div className="border-t pt-3 mt-3">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Optional: add coordinates to enable distance estimates.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="latitude">Latitude (optional)</Label>
+                    <Input
+                      id="latitude"
+                      placeholder="e.g., 48.8330"
+                      value={newAddress.latitude}
+                      onChange={(e) => {
+                        setNewAddress(prev => ({ ...prev, latitude: e.target.value }));
+                        setCoordsError(null);
+                      }}
+                      data-testid="input-latitude"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="longitude">Longitude (optional)</Label>
+                    <Input
+                      id="longitude"
+                      placeholder="e.g., -125.1360"
+                      value={newAddress.longitude}
+                      onChange={(e) => {
+                        setNewAddress(prev => ({ ...prev, longitude: e.target.value }));
+                        setCoordsError(null);
+                      }}
+                      data-testid="input-longitude"
+                    />
+                  </div>
+                </div>
+                {coordsError && (
+                  <p className="text-xs text-destructive mt-1" data-testid="text-coords-error">
+                    {coordsError}
+                  </p>
+                )}
+              </div>
+              
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_default"
