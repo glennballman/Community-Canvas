@@ -1,0 +1,272 @@
+REPLIT PROMPT — V3.5 STEP 11B-AUDIT
+
+Portal Taxonomy, Brand Structure, and Publish Eligibility Audit (NO CHANGES)
+
+ROLE: Senior Platform Engineer
+MODE: AUDIT ONLY — no code changes, no migrations, no data updates. Evidence-first.
+OUTPUT: proof/v3.5/step11b-portal-taxonomy-publish-eligibility-audit.md
+
+HARD RULES
+
+Do not modify schema, data, or code.
+
+Do not infer portal categories from names.
+
+Do not assume portal_type exists.
+
+Everything must be proven via SQL outputs + code excerpts.
+
+Terminology: service provider / reservation only.
+
+A) SCHEMA: WHAT FIELDS EXIST TO EXPRESS PORTAL “TYPE” AND OWNERSHIP?
+A1) Full portal table definition
+\d cc_portals
+
+A2) Extract likely taxonomy columns (if any)
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name='cc_portals'
+  AND (
+    column_name ILIKE '%type%'
+ OR column_name ILIKE '%kind%'
+ OR column_name ILIKE '%category%'
+ OR column_name ILIKE '%mode%'
+ OR column_name ILIKE '%audience%'
+ OR column_name ILIKE '%module%'
+ OR column_name ILIKE '%is_%'
+  )
+ORDER BY ordinal_position;
+
+A3) Ownership + anchor columns
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name='cc_portals'
+  AND column_name IN ('owning_tenant_id','anchor_community_id','status','slug','name')
+ORDER BY column_name;
+
+B) DATA: CLASSIFY ALL PORTALS USING ONLY REAL COLUMNS
+B1) List all portals with all taxonomy/ownership fields discovered in A2/A3
+
+(Manually adjust the SELECT list to include the real columns you discovered.)
+
+SELECT
+  p.id,
+  p.name,
+  p.slug,
+  p.status,
+  p.owning_tenant_id,
+  t.name AS owning_tenant_name,
+  t.slug AS owning_tenant_slug,
+  p.anchor_community_id,
+  c.name AS anchor_community_name,
+  -- add discovered taxonomy columns here:
+  -- p.portal_type,
+  -- p.kind,
+  -- p.category,
+  -- p.mode,
+  -- p.primary_audience,
+  -- p.modules,
+  -- etc
+  p.created_at
+FROM cc_portals p
+LEFT JOIN cc_tenants t ON t.id = p.owning_tenant_id
+LEFT JOIN cc_sr_communities c ON c.id = p.anchor_community_id
+ORDER BY p.name;
+
+B2) Identify “platform-owned” portals
+
+We need objective criteria. Run:
+
+SELECT
+  p.id, p.name, p.slug,
+  p.owning_tenant_id,
+  t.name AS tenant_name
+FROM cc_portals p
+LEFT JOIN cc_tenants t ON t.id = p.owning_tenant_id
+WHERE p.owning_tenant_id IS NULL
+   OR t.name ILIKE '%platform%'
+   OR t.slug ILIKE '%platform%'
+ORDER BY p.name;
+
+
+If you have a dedicated “platform tenant”, this will reveal it.
+
+C) MULTI-BRAND TENANT STRUCTURE: 1252093 BC LTD
+
+Goal: Prove how “brands off one tenant” is encoded.
+
+C1) Find tenant row
+SELECT id, name, slug
+FROM cc_tenants
+WHERE name ILIKE '%1252093%'
+   OR slug ILIKE '%1252093%'
+ORDER BY name;
+
+C2) List portals owned by that tenant (brand portals)
+SELECT
+  p.id, p.name, p.slug, p.status,
+  p.anchor_community_id,
+  c.name AS anchor_community_name
+  -- add taxonomy columns if they exist
+FROM cc_portals p
+JOIN cc_tenants t ON t.id = p.owning_tenant_id
+LEFT JOIN cc_sr_communities c ON c.id = p.anchor_community_id
+WHERE t.name ILIKE '%1252093%'
+   OR t.slug ILIKE '%1252093%'
+ORDER BY p.name;
+
+C3) Prove “shared assets across brands” lives at tenant level
+
+Search schema for asset tables and tenant FK:
+
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%asset%'
+ OR table_name ILIKE '%vehicle%'
+ OR table_name ILIKE '%equipment%'
+ OR table_name ILIKE '%trailer%'
+  )
+ORDER BY table_name;
+
+
+For each table found, inspect schema:
+
+-- repeat for each table found
+\d <table_name>
+
+
+Then prove assets link to tenant_id (or equivalent):
+
+SELECT column_name
+FROM information_schema.columns
+WHERE table_name = '<table_name>'
+  AND column_name ILIKE '%tenant%';
+
+
+(If assets are stored elsewhere, capture that structure instead.)
+
+D) COMMUNITY PORTALS VS BUSINESS/BRAND PORTALS — HOW IS THIS EXPRESSED?
+
+We must prove what “community portal” means in DB terms.
+
+D1) Identify which portals have zones (and whether that implies “community portal”)
+SELECT
+  p.id AS portal_id,
+  p.name AS portal_name,
+  p.slug AS portal_slug,
+  COUNT(z.id) AS zone_count
+FROM cc_portals p
+LEFT JOIN cc_zones z ON z.portal_id = p.id
+GROUP BY p.id, p.name, p.slug
+ORDER BY zone_count DESC, p.name;
+
+D2) Print zones + parent portal list
+SELECT
+  z.id, z.name, z.key, z.kind,
+  p.name AS portal_name,
+  p.slug AS portal_slug
+FROM cc_zones z
+JOIN cc_portals p ON p.id = z.portal_id
+ORDER BY p.name, z.name;
+
+
+(Do NOT conclude “zones = community” unless Glenn has said that’s a rule. Just record.)
+
+E) PUBLISH ELIGIBILITY: WHAT DOES THE CODE DO TODAY?
+
+This is the most important section.
+
+E1) Locate provider publish endpoints
+rg -n "publish-suggestions|visibility-preview|run_portal_publications|Confirm" server/routes client/src -S
+
+E2) Show the full handler for:
+
+GET /api/provider/runs/:id/publish-suggestions
+
+POST /api/provider/runs/:id/visibility-preview
+
+the endpoint that actually writes cc_run_portal_publications (publish confirm)
+
+For each, paste the whole function into the audit doc (not just snippets).
+
+E3) Determine the actual candidate portal query conditions
+
+In the code excerpts, extract:
+
+whether it filters by owning_tenant_id = tenant_id
+
+whether it filters by portal type
+
+whether it allows cross-tenant community portals
+
+whether it allows only own portal
+
+whether it excludes other tenants’ business portals
+
+whether it relies on visibility edges to “roll up” visibility
+
+No assumptions—only what the code says.
+
+F) VISIBILITY GRAPH SAFETY: DOES IT TARGET BUSINESS TENANT PORTALS?
+F1) List all active edges with resolved names + portal ownership/type fields
+
+(Adjust column names based on what you found in A2.)
+
+SELECT
+  e.id,
+  e.source_type,
+  COALESCE(zs.name, ps.name) AS source_name,
+  e.direction,
+  e.target_type,
+  COALESCE(zt.name, pt.name) AS target_name,
+  pt.owning_tenant_id AS target_portal_owner,
+  -- include pt.portal_type / pt.kind / etc if exists
+  e.reason,
+  e.archived_at
+FROM cc_visibility_edges e
+LEFT JOIN cc_zones zs ON e.source_type='zone' AND e.source_id=zs.id
+LEFT JOIN cc_portals ps ON e.source_type='portal' AND e.source_id=ps.id
+LEFT JOIN cc_zones zt ON e.target_type='zone' AND e.target_id=zt.id
+LEFT JOIN cc_portals pt ON e.target_type='portal' AND e.target_id=pt.id
+WHERE e.archived_at IS NULL
+ORDER BY e.direction, source_name, target_name;
+
+F2) Specifically detect any edge that would make runs appear in other tenants’ business portals
+
+This depends on how “community portal” is encoded. If there is a portal_type, filter by it. If not, use proxy evidence (zones existence + owning tenant patterns) but label it as “heuristic”.
+
+G) OUTPUT DOCUMENT REQUIREMENTS
+
+Create proof/v3.5/step11b-portal-taxonomy-publish-eligibility-audit.md with:
+
+Portal Taxonomy Columns Found (from Section A)
+
+Full Portal List with ownership + anchors + taxonomy cols (from B)
+
+1252093 BC LTD brand structure evidence:
+
+tenant row
+
+its portals
+
+proof assets are tenant-level
+
+Platform portals evidence:
+
+which portals are platform-owned (NULL tenant or platform tenant)
+
+whether they require geo (based on existing code paths, not opinion)
+
+Publish Eligibility Rules As Implemented
+
+direct quotes (short) + paraphrase of code behavior
+
+Visibility Graph Risk Assessment
+
+whether any edge could surface runs into business tenant portals
+
+If fixes are needed, list them without implementing.
+
+END.
