@@ -1,0 +1,390 @@
+REPLIT PROMPT — V3.5 STEP 9 — REFERENCE GEO EXPANSION (cc_sr_communities)
+
+ROLE: Senior Platform Engineer (Evidence-first, additive-only)
+MODE: REFERENCE DATA ONLY (no schema changes unless STOP requires)
+VERSION: V3.5 (after M176, STEP 7B, STEP 7, STEP 8)
+
+============================================================
+NON-NEGOTIABLE HARD RULES
+============================================================
+
+BANNED TERMINOLOGY (NEW CODE / NEW DOCS)
+- ❌ contractor → ✅ service provider
+- ❌ booking/booked → ✅ reservation/reserved
+- ❌ calendar (in new code) → ✅ schedule/operations
+- ❌ job (service context) → ✅ service request / work request
+  (Employment domain exception: "job" only for cc_jobs / employment.)
+
+THREE-LAYER SEPARATION (LOCKED)
+- IDENTITY = portal/zone/work area names (user-facing)
+- GEO ANCHOR = coarse lat/lng used for distance scoring ONLY
+- EXECUTION = work areas, properties, surfaces, constraints (OUT OF SCOPE)
+
+STEP 9 SCOPE
+✅ Allowed:
+- Add missing reference communities to cc_sr_communities (name + lat/lng)
+- Produce proof docs with query evidence
+- No UI changes required
+
+❌ Forbidden:
+- Any schema migration unless STOP requires (see below)
+- Renaming portals/zones
+- Changing any publishing behavior
+- Touching work areas / surfaces / constraints / pricing
+- Guessing or inventing portal identity mappings
+
+DATA QUALITY RULES
+- Communities inserted here are REFERENCE GEO ONLY
+- Must be idempotent: safe to re-run
+- Must not create duplicates (case/whitespace/alias collisions)
+
+============================================================
+GOAL
+============================================================
+
+Unblock full portal geo anchoring by ensuring cc_sr_communities contains
+the missing BC communities needed by existing portals:
+
+Target community names (exact identity labels for reference geo):
+- Deep Cove
+- West Vancouver
+- Cloverdale
+- Surrey
+- Victoria
+- Saanich
+- New Westminster
+
+After STEP 9:
+- These communities exist with lat/lng in cc_sr_communities
+- Portals remain unchanged
+- Anchors remain unchanged unless explicitly updated (STEP 9 does NOT assign portal anchors)
+
+============================================================
+OUTPUTS (MANDATORY)
+============================================================
+
+Create: proof/v3.5/step9-reference-geo-expansion-proof.md with:
+- Audit queries + results
+- Exact insert/upsert statements executed
+- Before/after counts
+- Duplicate-prevention evidence
+- Checklist (provided at end)
+
+============================================================
+SECTION A) AUDIT FIRST (STOP CONDITIONS)
+============================================================
+
+A1) Confirm cc_sr_communities schema (DO NOT ASSUME column names):
+```sql
+\d cc_sr_communities
+```
+
+Record required columns (not nulls, defaults), and whether these columns exist:
+- id (uuid)
+- name (text)
+- latitude (numeric/decimal)
+- longitude (numeric/decimal)
+- region / province / country (if required)
+- portal_id (if exists, leave NULL — STEP 9 does not link portals)
+
+A2) Inventory existing matching/near-matching community names:
+```sql
+SELECT id, name, latitude, longitude
+FROM cc_sr_communities
+WHERE
+  name ILIKE '%deep%cove%'
+  OR name ILIKE '%west%vancouver%'
+  OR name ILIKE '%cloverdale%'
+  OR name ILIKE '%surrey%'
+  OR name ILIKE '%victoria%'
+  OR name ILIKE '%saanich%'
+  OR name ILIKE '%new%westminster%'
+ORDER BY name;
+```
+
+A3) Duplicate-collision scan (case/whitespace normalization):
+```sql
+WITH norm AS (
+  SELECT
+    id,
+    name,
+    lower(regexp_replace(trim(name), '\s+', ' ', 'g')) AS norm_name
+  FROM cc_sr_communities
+)
+SELECT norm_name, COUNT(*) AS n, STRING_AGG(name, ' | ' ORDER BY name) AS variants
+FROM norm
+WHERE norm_name IN (
+  'deep cove',
+  'west vancouver',
+  'cloverdale',
+  'surrey',
+  'victoria',
+  'saanich',
+  'new westminster'
+)
+GROUP BY norm_name
+HAVING COUNT(*) > 1
+ORDER BY n DESC;
+```
+
+A4) STOP CONDITIONS
+- If cc_sr_communities is missing latitude/longitude columns → STOP and document.
+- If duplicates already exist for any target norm_name → STOP and document (do not insert).
+- If required NOT NULL columns exist that we cannot safely populate (e.g., mandatory portal_id) → STOP and document.
+
+Write the audit findings into the proof doc BEFORE proceeding.
+
+============================================================
+SECTION B) REFERENCE COORDINATES (INPUTS)
+============================================================
+
+We need lat/lng for each missing community.
+
+CRITICAL RULE:
+- Use authoritative coordinates (municipal/official or reputable geo sources).
+- If your environment has no approved data source, use the reference table below.
+
+AUTHORITATIVE BC MUNICIPALITY COORDINATES:
+
+| Community       | Latitude | Longitude  | Source              |
+|-----------------|----------|------------|---------------------|
+| Deep Cove       | 49.3297  | -122.9469  | BC municipality     |
+| West Vancouver  | 49.3270  | -123.1662  | BC municipality     |
+| Cloverdale      | 49.1032  | -122.7235  | Surrey district     |
+| Surrey          | 49.1913  | -122.8490  | BC municipality     |
+| Victoria        | 48.4284  | -123.3656  | BC capital          |
+| Saanich         | 48.4843  | -123.3817  | BC municipality     |
+| New Westminster | 49.2057  | -122.9110  | BC municipality     |
+
+If the repo already contains a seed/reference file for communities (preferred), use it:
+```bash
+rg -n "cc_sr_communities|sr_communities|communities seed|Victoria|Surrey|Saanich|New Westminster|Cloverdale|Deep Cove|West Vancouver" server/ client/ proof/ data/ seeds/
+```
+
+If found, cite file paths and use those coordinates instead.
+If not found, use the table above.
+
+Document coordinate source in the proof doc.
+
+============================================================
+SECTION C) INSERT MISSING COMMUNITIES (IDEMPOTENT)
+============================================================
+
+C1) Create a temp mapping CTE to check what's missing vs present:
+```sql
+WITH desired AS (
+  SELECT * FROM (VALUES
+    ('Deep Cove',        49.3297::numeric, -122.9469::numeric),
+    ('West Vancouver',   49.3270::numeric, -123.1662::numeric),
+    ('Cloverdale',       49.1032::numeric, -122.7235::numeric),
+    ('Surrey',           49.1913::numeric, -122.8490::numeric),
+    ('Victoria',         48.4284::numeric, -123.3656::numeric),
+    ('Saanich',          48.4843::numeric, -123.3817::numeric),
+    ('New Westminster',  49.2057::numeric, -122.9110::numeric)
+  ) AS v(name, latitude, longitude)
+),
+existing AS (
+  SELECT id, lower(regexp_replace(trim(name), '\s+', ' ', 'g')) AS norm_name
+  FROM cc_sr_communities
+)
+SELECT
+  d.name,
+  d.latitude,
+  d.longitude,
+  CASE WHEN e.id IS NULL THEN 'MISSING' ELSE 'PRESENT' END AS status
+FROM desired d
+LEFT JOIN existing e
+  ON e.norm_name = lower(regexp_replace(trim(d.name), '\s+', ' ', 'g'))
+ORDER BY status DESC, d.name;
+```
+
+This query must show exactly which are missing before you insert.
+Record the output in proof.
+
+C2) Insert ONLY missing rows.
+Use an INSERT…SELECT with a NOT EXISTS guard based on normalized name.
+```sql
+WITH desired AS (
+  SELECT * FROM (VALUES
+    ('Deep Cove',        49.3297::numeric, -122.9469::numeric),
+    ('West Vancouver',   49.3270::numeric, -123.1662::numeric),
+    ('Cloverdale',       49.1032::numeric, -122.7235::numeric),
+    ('Surrey',           49.1913::numeric, -122.8490::numeric),
+    ('Victoria',         48.4284::numeric, -123.3656::numeric),
+    ('Saanich',          48.4843::numeric, -123.3817::numeric),
+    ('New Westminster',  49.2057::numeric, -122.9110::numeric)
+  ) AS v(name, latitude, longitude)
+),
+to_insert AS (
+  SELECT d.*
+  FROM desired d
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM cc_sr_communities c
+    WHERE lower(regexp_replace(trim(c.name), '\s+', ' ', 'g')) =
+          lower(regexp_replace(trim(d.name), '\s+', ' ', 'g'))
+  )
+)
+INSERT INTO cc_sr_communities (
+  id,
+  name,
+  latitude,
+  longitude
+  -- add any other required columns here discovered in A1
+)
+SELECT
+  gen_random_uuid(),
+  name,
+  latitude,
+  longitude
+  -- add any other required values here
+FROM to_insert
+RETURNING id, name, latitude, longitude;
+```
+
+NOTE: If Section A1 reveals additional required columns (e.g., region, country),
+add them to both the SELECT and VALUES with appropriate defaults.
+
+C3) HARD DATA VALIDATION
+Immediately after insert, verify all 7 now exist:
+```sql
+SELECT name, latitude, longitude
+FROM cc_sr_communities
+WHERE lower(regexp_replace(trim(name), '\s+', ' ', 'g')) IN (
+  'deep cove',
+  'west vancouver',
+  'cloverdale',
+  'surrey',
+  'victoria',
+  'saanich',
+  'new westminster'
+)
+ORDER BY name;
+```
+
+Also validate coordinate ranges (should return 0 rows):
+```sql
+SELECT name, latitude, longitude
+FROM cc_sr_communities
+WHERE
+  latitude IS NULL OR longitude IS NULL
+  OR latitude < -90 OR latitude > 90
+  OR longitude < -180 OR longitude > 180
+ORDER BY name;
+```
+
+Expected: 0 bad rows.
+
+C4) Count before/after:
+```sql
+SELECT COUNT(*) AS total_communities FROM cc_sr_communities;
+```
+
+Document both counts in proof (before insert, after insert).
+
+============================================================
+SECTION D) NO PORTAL ANCHOR ASSIGNMENT IN STEP 9
+============================================================
+
+STEP 9 does NOT update cc_portals.anchor_community_id.
+We are only adding missing reference communities.
+
+However, verify that after insertion, the target anchors are now available:
+```sql
+SELECT
+  p.id AS portal_id,
+  p.name AS portal_identity,
+  p.slug,
+  p.anchor_community_id,
+  c.name AS current_anchor_name
+FROM cc_portals p
+LEFT JOIN cc_sr_communities c ON p.anchor_community_id = c.id
+ORDER BY p.name;
+```
+
+Confirm:
+- 5 portals already anchored to Bamfield (unchanged)
+- 7 portals still have anchor_community_id = NULL (unchanged)
+- The 7 new communities now exist and are AVAILABLE for future anchoring
+
+Do NOT change anchors in this step.
+
+============================================================
+SECTION E) PROOF DOCUMENTATION
+============================================================
+
+Write proof/v3.5/step9-reference-geo-expansion-proof.md with:
+
+**Executive Summary**
+- Why STEP 9 exists (unblocks anchoring, advisory suggestions)
+- Confirm "anchor ≠ identity" again
+
+**Section A — Audit Results**
+- Paste results of A1–A4
+- Explicit STOP condition checks (all passed)
+
+**Section B — Coordinate Source Table**
+- 7 rows with (name, lat, lng, source_note)
+- State whether from seed file or authoritative reference table
+
+**Section C — Insert Execution**
+- The "missing vs present" output (C1)
+- The INSERT statement executed (C2)
+- The RETURNING rows (what was inserted)
+- Before/after community counts (C4)
+
+**Section C.3 — Post-Insert Validation**
+- Results of validation queries
+- 0 out-of-range coordinates check
+
+**Section D — Confirmation No Anchors Changed**
+- Show the portal anchor query output
+- Confirm no updates to cc_portals were performed
+- List the 7 portals that CAN NOW be anchored (but weren't in this step)
+
+============================================================
+SECTION F) CHECKLIST (MUST COMPLETE)
+============================================================
+
+- [ ] Confirmed cc_sr_communities has lat/lng columns (A1)
+- [ ] Confirmed no duplicate collisions for target names (A3)
+- [ ] Located or documented coordinate sources for all 7 (B)
+- [ ] Inserted ONLY missing community rows (C2)
+- [ ] Verified inserted coords are in valid ranges (C3)
+- [ ] Verified target names now exist in cc_sr_communities (C3)
+- [ ] Documented before/after community counts (C4)
+- [ ] Confirmed NO portal/zone identity changes (Hard Rules)
+- [ ] Confirmed NO updates to cc_portals in this step (D)
+- [ ] Proof doc created with full evidence (E)
+
+============================================================
+DO NOT
+============================================================
+
+- Do NOT add schema/migrations
+- Do NOT rename portals or zones
+- Do NOT assign portal anchors (that's STEP 9B if needed)
+- Do NOT touch work areas / surfaces / constraints / pricing
+- Do NOT guess or invent identity mappings
+- Do NOT add communities not in the target list without explicit approval
+
+============================================================
+OPTIONAL FOLLOW-UP: STEP 9B (SEPARATE PROMPT)
+============================================================
+
+After STEP 9 completes successfully, a separate STEP 9B can assign anchors
+to the remaining 7 portals. This is NOT part of STEP 9.
+
+Example (for reference only — do NOT execute in STEP 9):
+```sql
+-- STEP 9B example (future)
+UPDATE cc_portals SET anchor_community_id = (SELECT id FROM cc_sr_communities WHERE name = 'Deep Cove')
+WHERE slug = 'adrenalinecanada';
+
+UPDATE cc_portals SET anchor_community_id = (SELECT id FROM cc_sr_communities WHERE name = 'West Vancouver')
+WHERE slug = 'canadadirect';
+
+-- ... etc
+```
+
+END OF STEP 9 PROMPT.
