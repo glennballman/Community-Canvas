@@ -1421,4 +1421,189 @@ router.patch('/runs/:id/start-address', requireAuth, async (req: AuthRequest, re
   }
 });
 
+// Haversine distance calculation (returns kilometers)
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// STEP 7: GET /api/provider/runs/:id/publish-suggestions - Zone-first suggestions for publishing
+router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+    }
+
+    const runId = req.params.id;
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.request.invalid' });
+    }
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 10, 1), 50);
+
+    // 1) Load run and verify tenant ownership
+    const runResult = await pool.query(`
+      SELECT id, tenant_id, start_address_id
+      FROM cc_n3_runs
+      WHERE id = $1 AND tenant_id = $2
+    `, [runId, tenantId]);
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    const run = runResult.rows[0];
+
+    // 2) Load origin lat/lng if start_address_id exists
+    let originLat: number | null = null;
+    let originLng: number | null = null;
+    let hasOrigin = false;
+
+    if (run.start_address_id) {
+      const addrResult = await pool.query(`
+        SELECT latitude, longitude
+        FROM cc_tenant_start_addresses
+        WHERE id = $1 AND tenant_id = $2 AND archived_at IS NULL
+      `, [run.start_address_id, tenantId]);
+
+      if (addrResult.rows.length > 0) {
+        const addr = addrResult.rows[0];
+        if (addr.latitude != null && addr.longitude != null) {
+          originLat = parseFloat(addr.latitude);
+          originLng = parseFloat(addr.longitude);
+          hasOrigin = true;
+        }
+      }
+    }
+
+    // 3) Get already published portals for this run
+    const publishedResult = await pool.query(`
+      SELECT portal_id
+      FROM cc_run_portal_publications
+      WHERE tenant_id = $1 AND run_id = $2 AND unpublished_at IS NULL
+    `, [tenantId, runId]);
+
+    const publishedPortalIds = publishedResult.rows.map(r => r.portal_id);
+
+    // 4) Query candidate zones (zones-first)
+    // Exclude portals already published
+    let candidatesQuery = `
+      SELECT
+        z.id as zone_id,
+        z.name as zone_name,
+        z.key as zone_key,
+        p.id as portal_id,
+        p.name as portal_name,
+        p.slug as portal_slug,
+        p.anchor_community_id,
+        c.latitude as anchor_lat,
+        c.longitude as anchor_lng
+      FROM cc_zones z
+      JOIN cc_portals p ON p.id = z.portal_id
+      LEFT JOIN cc_sr_communities c ON c.id = p.anchor_community_id
+      WHERE z.tenant_id = $1
+        AND p.owning_tenant_id = $1
+        AND p.status = 'active'
+    `;
+
+    const params: any[] = [tenantId];
+
+    if (publishedPortalIds.length > 0) {
+      candidatesQuery += ` AND p.id != ALL($2::uuid[])`;
+      params.push(publishedPortalIds);
+    }
+
+    const candidatesResult = await pool.query(candidatesQuery, params);
+
+    // 5) Compute distance and confidence for each candidate
+    interface Suggestion {
+      zone_id: string;
+      zone_name: string;
+      zone_key: string;
+      portal_id: string;
+      portal_name: string;
+      portal_slug: string;
+      distance_meters: number | null;
+      distance_label: string | null;
+      distance_confidence: 'ok' | 'unknown' | 'no_origin';
+    }
+
+    const suggestions: Suggestion[] = candidatesResult.rows.map(row => {
+      let distance_meters: number | null = null;
+      let distance_label: string | null = null;
+      let distance_confidence: 'ok' | 'unknown' | 'no_origin' = 'no_origin';
+
+      if (!hasOrigin) {
+        distance_confidence = 'no_origin';
+      } else if (row.anchor_lat == null || row.anchor_lng == null) {
+        distance_confidence = 'unknown';
+      } else {
+        const anchorLat = parseFloat(row.anchor_lat);
+        const anchorLng = parseFloat(row.anchor_lng);
+        const distanceKm = haversineDistance(originLat!, originLng!, anchorLat, anchorLng);
+        distance_meters = Math.round(distanceKm * 1000);
+        distance_label = `~${Math.round(distanceKm)} km`;
+        distance_confidence = 'ok';
+      }
+
+      return {
+        zone_id: row.zone_id,
+        zone_name: row.zone_name,
+        zone_key: row.zone_key,
+        portal_id: row.portal_id,
+        portal_name: row.portal_name,
+        portal_slug: row.portal_slug,
+        distance_meters,
+        distance_label,
+        distance_confidence
+      };
+    });
+
+    // 6) Sort: ok by distance ascending, then unknown alphabetically, then no_origin alphabetically
+    suggestions.sort((a, b) => {
+      // Priority: ok < unknown < no_origin
+      const confidenceOrder = { ok: 0, unknown: 1, no_origin: 2 };
+      const aOrder = confidenceOrder[a.distance_confidence];
+      const bOrder = confidenceOrder[b.distance_confidence];
+
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+      }
+
+      // Within same confidence
+      if (a.distance_confidence === 'ok' && b.distance_confidence === 'ok') {
+        return (a.distance_meters || 0) - (b.distance_meters || 0);
+      }
+
+      // Alphabetical by zone_name
+      return a.zone_name.localeCompare(b.zone_name);
+    });
+
+    // 7) Apply limit
+    const limitedSuggestions = suggestions.slice(0, limit);
+
+    res.json({
+      ok: true,
+      run_id: runId,
+      origin: {
+        start_address_id: run.start_address_id || null,
+        origin_lat: originLat,
+        origin_lng: originLng
+      },
+      suggestions: limitedSuggestions
+    });
+  } catch (error: any) {
+    console.error('Publish suggestions error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to get publish suggestions' });
+  }
+});
+
 export default router;

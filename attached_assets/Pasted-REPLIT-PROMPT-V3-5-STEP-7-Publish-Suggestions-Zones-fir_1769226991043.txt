@@ -1,0 +1,336 @@
+REPLIT PROMPT — V3.5 STEP 7 — Publish Suggestions (Zones-first, Advisory-only)
+
+ROLE: Senior Platform Architect / Senior Platform Engineer
+MODE: Implementation + Proof (NO schema changes)
+SCOPE: Add advisory “Suggested additional areas” in the Publish Run flow.
+DATE: 2026-01-24
+
+============================================================
+HARD RULES (NON-NEGOTIABLE)
+============================================================
+1) THREE LAYERS — NEVER CONFLATE
+   - IDENTITY (user-visible): cc_portals.name, cc_zones.name, cc_work_areas.title
+   - GEO ANCHOR (geometry only): cc_portals.anchor_community_id → cc_sr_communities(lat/lng)
+   - EXECUTION (internal): cc_work_areas, cc_properties, surfaces, constraints (OUT OF SCOPE)
+
+2) ANCHOR ≠ IDENTITY
+   - anchor_community_id is GEOMETRY ONLY for distance scoring.
+   - NEVER show anchor community NAMES in UI where identity belongs.
+   - UI must show zone/portal identity names only.
+
+3) TERMINOLOGY (LOCKED)
+   - ✅ “service provider”, “reservation”, “schedule/operations”
+   - ❌ banned in NEW service-domain code/UI/docs: contractor, booking/booked, calendar, job (service context)
+   - Employment exception: “job” only for employment features (cc_jobs, applications). Not here.
+
+4) STEP 7 IS ADVISORY ONLY
+   - MUST NOT auto-publish
+   - MUST NOT auto-check portals
+   - MUST NOT auto-change market_mode
+   - Suggestions can be clicked to *assist* the user (e.g., highlight / pre-check), but the user must explicitly confirm Publish.
+
+5) NO SCHEMA CHANGES
+   - Migration 176 already exists.
+   - Step 7 adds routes/UI only.
+
+6) TESTING
+   - Use TEST AUTH BOOTSTRAP ONLY (no UI login):
+     await loginAs(page, 'ellen');
+
+============================================================
+GOAL
+============================================================
+In the Publish Run modal:
+- Show “Suggested additional areas” (zones-first) above the portal checklist.
+- Suggestions are computed using:
+  ORIGIN: run.start_address_id → cc_tenant_start_addresses(lat/lng)
+  DEST:   portal.anchor_community_id → cc_sr_communities(lat/lng)
+  SCORE:  distance via existing haversine (DB or TS), but NO surface traversal.
+- Exclude portals already published for the run (unpublished_at IS NULL).
+- Handle missing origin and missing anchors safely.
+
+============================================================
+STEP 7A — AUDIT FIRST (MANDATORY)
+============================================================
+STOP if any required table/column is missing. Do not invent schema.
+
+A1) Verify required tables exist:
+- cc_n3_runs (must include start_address_id, zone_id, tenant_id)
+- cc_tenant_start_addresses (must include latitude, longitude)
+- cc_run_portal_publications (must include run_id, portal_id, unpublished_at)
+- cc_portals (must include anchor_community_id, owning_tenant_id, status)
+- cc_zones (must include portal_id, name, key, kind, tenant_id)
+- cc_sr_communities (must include latitude, longitude)
+
+A2) Confirm “exclude already published” logic is supported:
+The run is currently published to portals via:
+cc_run_portal_publications WHERE run_id = $run_id AND unpublished_at IS NULL
+
+A3) Confirm current anchored portals count:
+- 5 anchored (Bamfield area), 7 unanchored (expected)
+
+A4) Confirm no-origin behavior (LOCKED):
+Treat BOTH cases as “no_origin”:
+- run.start_address_id IS NULL
+- start address exists but latitude/longitude IS NULL
+
+In “no_origin” case:
+- return candidates unscored (distance_meters = null)
+- distance_confidence = "no_origin"
+- sort alphabetically by zone_name
+
+A5) Create / update audit note:
+Create: proof/v3.5/step7-audit.md
+Include A1–A4 findings and the exact SQL used.
+
+============================================================
+STEP 7B — ENDPOINT SPECIFICATION (LOCKED)
+============================================================
+Add read-only endpoint:
+
+Route:
+GET /api/provider/runs/:id/publish-suggestions
+
+Auth:
+- requireAuth()
+- tenant isolation via req.ctx.tenant_id
+- validate :id is UUID
+
+Query params:
+- limit (number, default 10, max 50)
+
+Response (ok envelope):
+{
+  ok: true,
+  run_id: string,
+  origin: {
+    start_address_id: string | null,
+    origin_lat: number | null,
+    origin_lng: number | null
+  },
+  suggestions: Array<{
+    zone_id: string,
+    zone_name: string,         // IDENTITY
+    zone_key: string,
+    portal_id: string,
+    portal_name: string,       // IDENTITY
+    portal_slug: string,
+    distance_meters: number | null,
+    distance_label: string | null,   // "~12 km" or null
+    distance_confidence: "ok" | "unknown" | "no_origin"
+  }>
+}
+
+Rules:
+- Candidate set is ZONES (zones-first).
+- Each suggestion references the zone’s portal.
+- Exclude any candidate whose portal is already published for this run (active publication).
+- Distance scoring:
+  - If origin missing => no_origin for ALL candidates
+  - Else if portal anchor missing => unknown for those candidates
+  - Else => ok with haversine meters
+
+Sorting:
+- If origin present:
+  1) distance_confidence="ok" ascending by distance_meters
+  2) then "unknown" alphabetically by zone_name
+- If no_origin:
+  - all alphabetical by zone_name
+
+Limit applied after sorting.
+
+============================================================
+STEP 7C — BACKEND IMPLEMENTATION
+============================================================
+FILES:
+- server/routes/provider.ts (extend existing provider router)
+
+C1) Add endpoint handler: GET /api/provider/runs/:id/publish-suggestions
+Implementation steps:
+1) Validate UUID param.
+2) Load run:
+   - Ensure run belongs to tenant_id (req.ctx.tenant_id)
+   - Read: id, tenant_id, start_address_id
+3) Load origin lat/lng (if start_address_id exists):
+   SELECT latitude, longitude FROM cc_tenant_start_addresses
+   WHERE id = $start_address_id AND tenant_id = $tenant_id AND archived_at IS NULL (if column exists)
+   If latitude/longitude null => treat as no_origin.
+4) Determine “already published” portals:
+   SELECT portal_id
+   FROM cc_run_portal_publications
+   WHERE tenant_id = $tenant_id
+     AND run_id = $run_id
+     AND unpublished_at IS NULL
+5) Candidate zones query (zones-first):
+   - Only zones belonging to ACTIVE portals owned by tenant
+   - Exclude portals already published
+   Example shape:
+   SELECT
+     z.id as zone_id, z.name as zone_name, z.key as zone_key,
+     p.id as portal_id, p.name as portal_name, p.slug as portal_slug,
+     p.anchor_community_id,
+     c.latitude as anchor_lat,
+     c.longitude as anchor_lng
+   FROM cc_zones z
+   JOIN cc_portals p ON p.id = z.portal_id
+   LEFT JOIN cc_sr_communities c ON c.id = p.anchor_community_id
+   WHERE z.tenant_id = $tenant_id
+     AND p.owning_tenant_id = $tenant_id
+     AND p.status = 'active'
+     AND p.id NOT IN (
+       SELECT portal_id
+       FROM cc_run_portal_publications
+       WHERE tenant_id = $tenant_id
+         AND run_id = $run_id
+         AND unpublished_at IS NULL
+     )
+
+6) Compute distance_meters:
+   - If no_origin => all null + confidence "no_origin"
+   - Else:
+     - If anchor lat/lng null => null + confidence "unknown"
+     - Else compute meters:
+       Prefer DB fn_haversine_meters if already present.
+       If not available or not used elsewhere, use TypeScript haversine helper already in repo.
+   Produce a user-friendly distance_label:
+     - meters -> rounded kilometers (e.g. "~12 km")
+     - DO NOT include anchor community names.
+
+7) Sort + limit per rules above.
+8) Return response envelope.
+
+C2) Safety rails:
+- NEVER return anchor_community_name in response (names are forbidden in UI here).
+- NEVER leak any public/community list beyond what tenant already owns (tenant filter required).
+- Read-only endpoint only.
+
+============================================================
+STEP 7D — FRONTEND IMPLEMENTATION (PublishRunModal)
+============================================================
+FILES:
+- client/src/provider/components/PublishRunModal.tsx (or wherever it exists from STEP 5B)
+- copy tokens file (entryPointCopy.ts or existing provider copy module)
+
+D1) UI placement & behavior
+Inside the Publish modal, ABOVE the portal checkbox list, add a new section:
+
+Title: token provider.publish.suggestions.title
+
+Behavior:
+- When modal opens (and runId is known), call:
+  GET /api/provider/runs/:id/publish-suggestions?limit=10
+- Render states:
+  a) Loading: simple spinner/skeleton (no hardcoded strings)
+  b) Empty suggestions: show token provider.publish.suggestions.empty
+  c) Suggestions list: zone-first rows
+
+Each suggestion row shows:
+- zone_name (primary, bold)   ✅ identity
+- portal_name (secondary)     ✅ identity
+- distance label:
+   - if confidence="ok": token provider.publish.suggestions.distance_format with value
+   - if confidence="unknown": token provider.publish.suggestions.distance_unknown
+   - if confidence="no_origin": token provider.publish.suggestions.no_origin
+
+D2) Advisory-only click behavior (no auto-publish)
+If user clicks a suggestion:
+- It may “assist selection” by toggling the portal checkbox ON
+- It MUST NOT submit Publish automatically
+- It MUST NOT change market mode automatically
+- It MUST visually indicate the portal checkbox changed (user can undo)
+
+D3) Respect “exclude already published”
+Because endpoint already excludes already-published portals, suggestions should never include zones whose portal is already active for this run.
+Still, add a defensive UI check:
+- If portal already selected in the modal, disable the suggestion row (non-clickable).
+
+D4) No new inbox/thread UIs
+Do not add messaging systems. This is modal-only.
+
+============================================================
+STEP 7E — COPY TOKENS (MANDATORY)
+============================================================
+Add tokens (no hardcoded UI strings):
+
+provider.publish.suggestions.title: "Suggested additional areas"
+provider.publish.suggestions.distance_format: "~{distance} away"
+provider.publish.suggestions.distance_unknown: "Distance unknown"
+provider.publish.suggestions.no_origin: "Set a start address for distance estimates"
+provider.publish.suggestions.empty: "No additional areas to suggest"
+
+If the UI needs an additional label like “Included in: {portal}”, add token(s) explicitly.
+Do not introduce the word “calendar”.
+
+============================================================
+STEP 7F — TESTING (TEST AUTH BOOTSTRAP ONLY)
+============================================================
+Use Playwright test auth bootstrap:
+- await loginAs(page, 'ellen');
+
+Test cases (minimum):
+
+F1) No origin
+Precondition:
+- run.start_address_id is NULL OR start address lat/lng null
+Expected:
+- endpoint returns distance_confidence="no_origin" for all suggestions
+- distance_meters null
+- UI shows no_origin token message per row (or as a helper line if you choose)
+
+F2) Origin present (if you can set lat/lng safely in existing test data)
+Precondition:
+- set start address lat/lng and attach run.start_address_id
+Expected:
+- some suggestions have confidence "ok" (anchored portals)
+- any unanchored portal zones show "unknown"
+- sorted with ok distances first, then unknown
+
+F3) Exclude already published
+Precondition:
+- run is published to Bamfield Community Portal (already true)
+Expected:
+- endpoint returns no zones whose portal is Bamfield Community Portal
+- UI suggestion list must not include: Anacla / East Bamfield / West Bamfield / Helby Island / Deer Group (because all are zones under bamfield portal)
+  (If it does, your exclude logic is wrong.)
+
+Also verify:
+- No auto-selection beyond click
+- Publish still requires explicit user confirmation
+- No new banned terminology in new code
+
+============================================================
+STEP 7G — PROOF (MANDATORY)
+============================================================
+Create: proof/v3.5/step7-publish-suggestions-proof.md
+
+Include:
+1) Audit excerpts (from proof/v3.5/step7-audit.md)
+2) Endpoint code excerpt + response sample for:
+   - no_origin scenario
+   - exclude already published scenario
+3) UI screenshots or DOM excerpts showing:
+   - “Suggested additional areas” section
+   - zone-first rendering
+   - click-to-toggle behavior (advisory only)
+4) Verification checklist (checkboxes):
+
+- [ ] ANCHOR ≠ IDENTITY enforced (no anchor community names in UI)
+- [ ] Zones are primary suggestion units
+- [ ] Exclude already published portals (active publications)
+- [ ] Missing origin handled as no_origin (not STOP)
+- [ ] Unanchored portals handled as unknown
+- [ ] No schema changes
+- [ ] Test auth bootstrap used (ellen)
+- [ ] No banned terminology in new service-domain code
+
+============================================================
+DO NOT
+============================================================
+- Do NOT add schema/migrations
+- Do NOT add surface traversal logic (robot routing) in this step
+- Do NOT change work area / work zone execution precision system
+- Do NOT rename portals or zones
+- Do NOT show anchor community names in UI
+- Do NOT auto-publish or auto-confirm actions
+
+END
