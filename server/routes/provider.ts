@@ -27,7 +27,24 @@ interface AuthRequest extends Request {
 }
 
 function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
-  // First check if user is already populated
+  const session = (req as any).session;
+
+  // Session-based auth support (dev-demo login, tenant switching)
+  if (session?.userId) {
+    // Ensure req.user is populated for downstream code that expects it
+    req.user = req.user ?? { id: session.userId };
+    req.user.id = req.user.id ?? session.userId;
+
+    // Populate tenantId from session if available (supports tenant switching)
+    const sessionTenantId = session.current_tenant_id || session.tenant_id;
+    if (sessionTenantId && !req.user.tenantId) {
+      req.user.tenantId = sessionTenantId;
+    }
+
+    return next();
+  }
+
+  // If req.user already populated (e.g., optionalAuth from JWT), allow through
   if (req.user?.id) {
     // Try to get tenantId from JWT if not already set
     if (!req.user.tenantId) {
@@ -45,7 +62,7 @@ function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
     return next();
   }
 
-  // If no user, try to decode from JWT directly
+  // JWT bearer fallback - decode from Authorization header
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) {

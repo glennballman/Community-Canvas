@@ -1,0 +1,99 @@
+REPLIT IMPLEMENTATION PROMPT — Fix Tenant Switch 401 for /api/provider/* (Session Auth Compatible)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal surgical patch. No refactors. No schema changes.
+SCOPE: Fix 401 on provider routes when using session-based dev-demo auth + tenant switching.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+Make server/routes/provider.ts `requireAuth` accept BOTH:
+1) session-based auth (dev-demo login) using (req as any).session.userId
+2) JWT bearer auth (existing behavior)
+
+And ensure tenant context after switch works by deriving tenantId from:
+- session.current_tenant_id (preferred)
+- session.tenant_id (fallback)
+while preserving existing tenantId derivation in handlers:
+  const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+
+TARGET FILE
+server/routes/provider.ts
+
+========================================================
+A) PATCH requireAuth (near top of provider.ts)
+========================================================
+Find the local function:
+function requireAuth(req: AuthRequest, res: Response, next: NextFunction) { ... }
+
+Modify it minimally as follows:
+
+1) Add a session-auth acceptance block at the TOP, before any JWT checks:
+- If session.userId exists:
+  - Ensure req.user exists and has id set
+  - Populate req.user.tenantId from session.current_tenant_id || session.tenant_id IF available
+  - DO NOT require Authorization header
+  - Call next()
+
+2) Preserve existing JWT behavior for non-session requests.
+
+PSEUDOCODE (implement in real TS):
+
+function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
+  const session = (req as any).session;
+
+  // (NEW) Session-based auth support
+  if (session?.userId) {
+    // Ensure req.user is populated for downstream code that expects it
+    req.user = req.user ?? { id: session.userId };
+    req.user.id = req.user.id ?? session.userId;
+
+    const sessionTenantId = session.current_tenant_id || session.tenant_id;
+    if (sessionTenantId && !req.user.tenantId) {
+      req.user.tenantId = sessionTenantId;
+    }
+
+    return next();
+  }
+
+  // (EXISTING) If req.user already populated (e.g., optionalAuth from JWT), allow through
+  if (req.user?.id) {
+    // Keep any existing logic you have here (do not break)
+    return next();
+  }
+
+  // (EXISTING) JWT bearer fallback (keep exactly)
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ ok: false, error: 'error.auth.unauthenticated' });
+  }
+  // existing jwt verify + req.user population...
+}
+
+IMPORTANT:
+- Do NOT remove or refactor other auth middleware globally.
+- Only change provider.ts local requireAuth.
+- Keep response errors consistent with existing code.
+
+========================================================
+B) PROOF DOC (REQUIRED)
+========================================================
+Create or update:
+proof/v3.5/tenant-switch-401-fix-proof.md
+
+Include:
+1) Before/after description of the bug.
+2) Evidence that session-based auth now works:
+   - With dev-demo login (no Bearer token), call GET /api/provider/runs returns 200 (not 401)
+3) Evidence tenant switching works:
+   - call POST /api/me/switch-tenant (session.current_tenant_id updated)
+   - then call GET /api/provider/runs and confirm it returns runs scoped to the new tenant (or at minimum returns 200 and tenantId resolves).
+4) Mention that no schema changes were made.
+
+DONE WHEN:
+- GET /api/provider/runs no longer returns 401 after tenant switch under session auth
+- proof doc exists under proof/v3.5/
