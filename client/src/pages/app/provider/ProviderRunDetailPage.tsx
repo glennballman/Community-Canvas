@@ -16,6 +16,7 @@ import type { ActionKind } from '@/policy/marketModePolicy';
 import { PublishRunModal } from '@/components/provider/PublishRunModal';
 import { AddRequestsModal } from '@/components/provider/AddRequestsModal';
 import { StartAddressPickerModal } from '@/components/provider/StartAddressPickerModal';
+import { NotifyStakeholdersModal } from '@/components/provider/NotifyStakeholdersModal';
 import { apiRequest } from '@/lib/queryClient';
 
 function getButtonVariant(kind: ActionKind): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
@@ -209,6 +210,7 @@ export default function ProviderRunDetailPage() {
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [addRequestsModalOpen, setAddRequestsModalOpen] = useState(false);
   const [startAddressModalOpen, setStartAddressModalOpen] = useState(false);
+  const [notifyModalOpen, setNotifyModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery<{ 
     ok: boolean; 
@@ -491,6 +493,16 @@ export default function ProviderRunDetailPage() {
                 {resolve('provider.run.attachments.add_cta')}
               </Button>
 
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => setNotifyModalOpen(true)}
+                data-testid="button-notify-stakeholders"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                {resolve('provider.run.notify.button')}
+              </Button>
+
               <Separator />
 
               <Button asChild variant="ghost" className="w-full">
@@ -523,6 +535,13 @@ export default function ProviderRunDetailPage() {
         onOpenChange={setStartAddressModalOpen}
         runId={id || ''}
         currentAddressId={run.start_address_id}
+      />
+
+      <NotifyStakeholdersModal
+        open={notifyModalOpen}
+        onOpenChange={setNotifyModalOpen}
+        runId={id || ''}
+        runName={run.title}
       />
     </div>
   );

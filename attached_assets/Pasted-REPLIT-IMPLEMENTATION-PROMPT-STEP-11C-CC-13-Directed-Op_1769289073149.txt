@@ -1,0 +1,294 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C (CC-13) Directed Operational Presence (Notify + Invitation Links)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive implementation. No refactors. No schema changes unless absolutely required (prefer none).
+EVIDENCE-FIRST: Update proof docs under proof/v3.5/.
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ “booking”
+- ❌ “contractor”
+- ❌ “calendar”
+Use “notify”, “invitation”, “stakeholders”, “private ops”.
+
+GOAL
+Implement Directed Operational Presence for service runs:
+A) Service provider can create stakeholder invitations for a specific run (email + optional name/message).
+B) System returns a copy/paste claim link (no email send required).
+C) Public read-only page `/i/:token` shows run context (safe subset) and marks invitation as viewed.
+D) Provider run detail gets a “Notify stakeholders” action that opens a modal:
+   - create invitations
+   - list existing invitations + statuses
+   - copy links
+
+AS-BUILT PRIMITIVES (DO NOT REBUILD)
+- DB: `cc_invitations` includes `context_type='service_run'`, `context_id`, `claim_token`, `status`, timestamps. 【step11c-directed-presence-audit.md】
+- Existing token generation pattern: `randomBytes(16).toString('hex')` exists in shared-runs invites. 【step11c-directed-presence-audit.md】
+- Notifications exist but no email sender exists; MVP is link-based. 【step11c-directed-presence-audit.md】
+
+============================================================
+1) BACKEND — Provider endpoints (server/routes/provider.ts)
+============================================================
+
+1A) POST /api/provider/runs/:id/stakeholder-invites
+Purpose: Create one or more invitations for this run and return claim URLs.
+
+Auth:
+- requireAuth
+- tenantId = req.ctx?.tenant_id || req.user?.tenantId
+- run ownership must be enforced:
+  SELECT id, tenant_id, name FROM cc_n3_runs WHERE id=$1 AND tenant_id=$2
+
+Request body:
+{
+  invitees: Array<{
+    email: string,
+    name?: string,
+    message?: string
+  }>
+}
+
+Validation:
+- runId must be UUID
+- invitees length 1..50
+- email basic validation
+- message max 1000 chars
+- name max 200 chars
+
+Insert into cc_invitations:
+- inviter_tenant_id = tenantId
+- inviter_individual_id = req.user!.id (if that is individual id in your auth model; use the existing pattern in provider routes)
+- context_type = 'service_run'
+- context_id = runId
+- context_name = run.name (or safe display name)
+- invitee_email, invitee_name, message
+- claim_token = randomBytes(16).toString('hex') (MVP)
+- claim_token_expires_at = now() + interval '30 days' (unless table default already exists)
+- status = 'sent'
+- sent_at = now()
+- metadata jsonb = { kind: 'stakeholder_invite', created_from: 'provider_run', version: 1 }
+
+Return:
+{
+  ok: true,
+  run_id,
+  invitations: Array<{
+    id,
+    invitee_email,
+    invitee_name,
+    status,
+    claim_token_expires_at,
+    claim_url
+  }>
+}
+
+claim_url format:
+- Use relative path: `/i/${claim_token}`
+(Frontend will render full URL as needed.)
+
+IMPORTANT:
+- DO NOT create portal publications here.
+- This is private ops notify only.
+
+1B) GET /api/provider/runs/:id/stakeholder-invites
+Purpose: List invitations already created for the run.
+
+Auth + run ownership required as above.
+
+Return safe fields:
+{
+  ok: true,
+  run_id,
+  invitations: [{
+    id,
+    invitee_email,
+    invitee_name,
+    status,
+    sent_at,
+    viewed_at,
+    claimed_at,
+    claim_token_expires_at
+  }]
+}
+Order by created_at desc (or sent_at desc).
+
+============================================================
+2) BACKEND — Public token view (server/routes/public.ts or equivalent)
+============================================================
+
+2A) GET /api/i/:token
+Purpose: Public read-only view of run context for invited stakeholders.
+No auth required.
+
+Steps:
+- validate token format (hex, length >= 16*2 if using randomBytes(16))
+- find invitation:
+  SELECT * FROM cc_invitations
+  WHERE claim_token=$1
+    AND context_type='service_run'
+    AND status IN ('sent','viewed','claimed')
+    AND (claim_token_expires_at IS NULL OR claim_token_expires_at > now())
+
+If not found: return 404 { ok:false, error:'error.invite.invalid_or_expired' }
+
+On success:
+- if status='sent', update to 'viewed' and set viewed_at=now() (idempotent)
+- load run context safely:
+  SELECT id, name, start_at, end_at, market_mode
+  FROM cc_n3_runs
+  WHERE id = invitation.context_id
+
+Return SAFE payload:
+{
+  ok: true,
+  invitation: {
+    status,
+    invitee_name,
+    invitee_email_masked,  // mask like j***@domain.com
+    expires_at: claim_token_expires_at
+  },
+  run: {
+    id,
+    name,
+    start_at,
+    end_at,
+    market_mode
+  },
+  copy: {
+    title: "You’ve been invited to view a service run",
+    disclaimer: "This link provides read-only access."
+  }
+}
+
+Hard rule:
+- Do NOT leak tenant_id, portal_id lists, addresses, or other sensitive fields.
+- Keep it strictly read-only. No “calendar” language.
+
+(Phase 2 can add claim/accept, role grants, and internal notifications.)
+
+============================================================
+3) FRONTEND — Wouter route + public page
+============================================================
+
+3A) Add a Wouter route for `/i/:token`
+Find the app/router entry for public routes and add:
+- `InvitationClaimPage.tsx` (read-only view page)
+
+Create: client/src/pages/public/InvitationClaimPage.tsx (or the closest existing public pages folder)
+Behavior:
+- Reads token from route params
+- useQuery to GET `/api/i/${token}`
+- Renders:
+  - Title: “Invitation”
+  - Run name
+  - Date/time range (format)
+  - Badge: “Read-only”
+  - Expiry date if present
+  - If invalid/expired: friendly error + CTA “Request a new invitation”
+No “calendar” or “booking”.
+
+============================================================
+4) FRONTEND — Provider UI (NotifyStakeholdersModal)
+============================================================
+
+4A) Add “Notify stakeholders” button to ProviderRunDetailPage.tsx
+Location: actions section (near Publish action). 【step11c audit says this is the natural place.】
+- Button label token: `provider.run.notify.button`
+- Opens modal
+
+4B) Create modal component:
+client/src/components/provider/NotifyStakeholdersModal.tsx
+
+Use same stack as PublishRunModal:
+- shadcn/ui Dialog
+- Tailwind
+- React Query v5
+- apiRequest helper
+
+Modal features:
+- Rule block at top:
+  Title token: `provider.notify.rule.title`
+  Body token: `provider.notify.rule.body`
+  Must reinforce separation:
+  “Publishing controls public portal visibility. Notify sends private invitations.”
+
+- “Invite stakeholders” form:
+  - email input (allow multiple lines OR comma-separated; MVP can do one-per-line)
+  - optional name field (optional; can be left blank)
+  - optional message textarea
+  - Submit calls POST `/api/provider/runs/${runId}/stakeholder-invites`
+  - Render returned invitations with:
+    - invitee label (masked email ok)
+    - status
+    - expiry
+    - claim link (relative) with Copy button
+
+- “Existing invitations” list:
+  - useQuery GET `/api/provider/runs/${runId}/stakeholder-invites`
+  - Show invitee + status badges: pending/sent/viewed/claimed/expired/revoked
+  - Show timestamps if present
+  - Copy link button can be shown only for active (sent/viewed/claimed) if token is not exposed by list endpoint. If list endpoint does not return token (recommended), only show copy for newly created invites.
+
+NOTE:
+- If you choose to NOT expose claim_token in GET list (better), then:
+  - List endpoint shows tracking only.
+  - After POST create, show copy links immediately in a “Created invitations” section.
+
+============================================================
+5) COPY TOKENS (client/src/copy/*)
+============================================================
+
+Add tokens consistent with useCopy().resolve patterns:
+
+Provider run detail:
+- provider.run.notify.button = "Notify stakeholders"
+
+Modal:
+- provider.notify.modal.title = "Notify stakeholders"
+- provider.notify.rule.title = "Private ops notifications"
+- provider.notify.rule.body = "Notify sends private invitations. Publishing controls what appears on public portals."
+
+Form:
+- provider.notify.invitees.label = "Email addresses"
+- provider.notify.invitees.help = "One per line."
+- provider.notify.name.label = "Name (optional)"
+- provider.notify.message.label = "Message (optional)"
+- provider.notify.send = "Create invitations"
+
+Results:
+- provider.notify.created.title = "Invitation links"
+- provider.notify.copy = "Copy link"
+- provider.notify.copied = "Copied"
+- provider.notify.list.title = "Invitation tracking"
+- provider.notify.status.sent = "Sent"
+- provider.notify.status.viewed = "Viewed"
+- provider.notify.status.claimed = "Claimed"
+- provider.notify.status.expired = "Expired"
+- provider.notify.status.revoked = "Revoked"
+
+Public page:
+- public.invite.title = "You’ve been invited to view a service run"
+- public.invite.read_only = "Read-only"
+- public.invite.expired = "This invitation link is invalid or expired."
+
+============================================================
+6) PROOF DOCS (REQUIRED)
+============================================================
+
+Create:
+proof/v3.5/step11c-directed-presence-proof.md
+
+Include:
+1) Example POST stakeholder-invites request + response (show masked emails)
+2) Example GET stakeholder-invites response (tracking view)
+3) Example GET /api/i/:token success response (safe subset)
+4) Screenshot or text capture of:
+   - Provider “Notify stakeholders” modal
+   - Public invitation page
+5) Explicit confirmation: no portal publication writes occur in STEP 11C.
+
+DONE WHEN
+- Provider can create stakeholder invitations for a run and copy links
+- Public `/i/:token` page renders run context read-only and marks viewed
+- Provider run detail has Notify action
+- Proof doc exists under proof/v3.5/

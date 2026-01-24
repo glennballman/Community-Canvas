@@ -144,6 +144,7 @@ import contractorEventRouter from "./routes/contractor-event";
 import contractorIntelligenceRouter from "./routes/contractor-ingestion-intelligence";
 import contractorPhotoBundlesRouter from "./routes/contractor-photo-bundles";
 import publicEventRouter from "./routes/public-event";
+import publicInvitationsRouter from "./routes/public-invitations";
 import publicOnboardRouter from "./routes/public-onboard";
 import onboardingRouter from "./routes/onboarding";
 import calendarRouter from "./routes/calendar";
@@ -600,6 +601,9 @@ export async function registerRoutes(
   // Public Event Lead Capture (Prompt A2.5)
   app.use('/api/public/event', publicEventRouter);
   app.use('/api/public/onboard', publicOnboardRouter);
+  
+  // STEP 11C: Public invitation view (token-based, no auth)
+  app.use('/api/i', publicInvitationsRouter);
   
   // ONB-04: Authenticated Onboarding routes
   app.use('/api/onboarding', onboardingRouter);

@@ -7,6 +7,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 import { pool } from '../db';
 import type { TenantRequest } from '../middleware/tenantContext';
 import { JWT_SECRET } from '../middleware/auth';
@@ -1917,6 +1918,180 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
   } catch (error: any) {
     console.error('Publish suggestions error:', error);
     res.status(500).json({ ok: false, error: 'Failed to get publish suggestions' });
+  }
+});
+
+// ============================================================
+// STEP 11C: Directed Operational Presence - Stakeholder Invites
+// ============================================================
+
+/**
+ * POST /api/provider/runs/:id/stakeholder-invites
+ * Create stakeholder invitations for a run (private ops notifications)
+ */
+router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const runId = req.params.id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'error.auth.no_tenant' });
+    }
+
+    const { invitees } = req.body;
+
+    if (!Array.isArray(invitees) || invitees.length === 0 || invitees.length > 50) {
+      return res.status(400).json({ ok: false, error: 'error.notify.invitees_required' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const inv of invitees) {
+      if (!inv.email || !emailRegex.test(inv.email)) {
+        return res.status(400).json({ ok: false, error: 'error.notify.invalid_email' });
+      }
+      if (inv.name && inv.name.length > 200) {
+        return res.status(400).json({ ok: false, error: 'error.notify.name_too_long' });
+      }
+      if (inv.message && inv.message.length > 1000) {
+        return res.status(400).json({ ok: false, error: 'error.notify.message_too_long' });
+      }
+    }
+
+    const runResult = await pool.query(
+      `SELECT id, tenant_id, name FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2`,
+      [runId, tenantId]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    const run = runResult.rows[0];
+
+    const createdInvitations: any[] = [];
+
+    for (const inv of invitees) {
+      const claimToken = randomBytes(16).toString('hex');
+
+      const insertResult = await pool.query(
+        `INSERT INTO cc_invitations (
+          inviter_tenant_id,
+          inviter_individual_id,
+          context_type,
+          context_id,
+          context_name,
+          invitee_email,
+          invitee_name,
+          invitee_role,
+          claim_token,
+          claim_token_expires_at,
+          status,
+          sent_at,
+          message,
+          metadata
+        ) VALUES ($1, $2, 'service_run', $3, $4, $5, $6, 'crew', $7, now() + interval '30 days', 'sent', now(), $8, $9)
+        RETURNING id, invitee_email, invitee_name, status, claim_token, claim_token_expires_at`,
+        [
+          tenantId,
+          userId,
+          runId,
+          run.name || 'Service Run',
+          inv.email,
+          inv.name || null,
+          claimToken,
+          inv.message || null,
+          JSON.stringify({ kind: 'stakeholder_invite', created_from: 'provider_run', version: 1 })
+        ]
+      );
+
+      const created = insertResult.rows[0];
+      createdInvitations.push({
+        id: created.id,
+        invitee_email: created.invitee_email,
+        invitee_name: created.invitee_name,
+        status: created.status,
+        claim_token_expires_at: created.claim_token_expires_at,
+        claim_url: `/i/${created.claim_token}`
+      });
+    }
+
+    res.json({
+      ok: true,
+      run_id: runId,
+      invitations: createdInvitations
+    });
+  } catch (error: any) {
+    console.error('Create stakeholder invites error:', error);
+    res.status(500).json({ ok: false, error: 'error.notify.create_failed' });
+  }
+});
+
+/**
+ * GET /api/provider/runs/:id/stakeholder-invites
+ * List existing stakeholder invitations for a run
+ */
+router.get('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const runId = req.params.id;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'error.auth.no_tenant' });
+    }
+
+    const runResult = await pool.query(
+      `SELECT id FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2`,
+      [runId, tenantId]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    const invitationsResult = await pool.query(
+      `SELECT 
+        id,
+        invitee_email,
+        invitee_name,
+        status,
+        sent_at,
+        viewed_at,
+        claimed_at,
+        claim_token_expires_at
+      FROM cc_invitations
+      WHERE context_type = 'service_run'
+        AND context_id = $1
+        AND inviter_tenant_id = $2
+      ORDER BY created_at DESC`,
+      [runId, tenantId]
+    );
+
+    res.json({
+      ok: true,
+      run_id: runId,
+      invitations: invitationsResult.rows.map(row => ({
+        id: row.id,
+        invitee_email: row.invitee_email,
+        invitee_name: row.invitee_name,
+        status: row.status,
+        sent_at: row.sent_at,
+        viewed_at: row.viewed_at,
+        claimed_at: row.claimed_at,
+        claim_token_expires_at: row.claim_token_expires_at
+      }))
+    });
+  } catch (error: any) {
+    console.error('List stakeholder invites error:', error);
+    res.status(500).json({ ok: false, error: 'error.notify.list_failed' });
   }
 });
 

@@ -221,6 +221,7 @@ import EventCapturePage from './pages/contractor/EventCapturePage';
 
 // Pages - Public Event (A2.5)
 import EventQuotePage from './pages/public/EventQuotePage';
+import InvitationClaimPage from './pages/public/InvitationClaimPage';
 import OnboardIntentPage from './pages/public/onboard/OnboardIntentPage';
 import OnboardWorkspacePage from './pages/public/onboard/OnboardWorkspacePage';
 import OnboardReviewPage from './pages/public/onboard/OnboardReviewPage';
@@ -371,6 +372,9 @@ export default function App() {
               
               {/* Public Event Lead Capture (A2.5) */}
               <Route path="/event/quote" element={<EventQuotePage />} />
+              
+              {/* STEP 11C: Public invitation view */}
+              <Route path="/i/:token" element={<InvitationClaimPage />} />
 
               {/* ========================================== */}
               {/* PUBLIC ONBOARD - /onboard/*               */}
