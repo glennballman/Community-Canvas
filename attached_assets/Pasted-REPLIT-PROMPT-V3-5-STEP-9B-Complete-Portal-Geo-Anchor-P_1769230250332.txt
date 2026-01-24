@@ -1,0 +1,250 @@
+REPLIT PROMPT — V3.5 STEP 9B
+Complete Portal Geo Anchor Population (Reference-Only)
+
+ROLE: Senior Platform Engineer
+MODE: Data population only (NO schema, NO identity changes)
+
+🔒 NON-NEGOTIABLE RULES
+
+ANCHOR ≠ IDENTITY
+
+anchor_community_id is geometry only
+
+Portal names, zone names, UI labels are identity
+
+DO NOT rename portals
+
+DO NOT rename zones
+
+DO NOT expose anchor community names in UI
+
+NO SCHEMA CHANGES
+
+Migration 176 already exists
+
+cc_sr_communities already populated (STEP 9)
+
+NO EXECUTION LOGIC
+
+No cc_work_areas
+
+No surfaces
+
+No constraints
+
+No scheduling
+
+EXPLICIT MAPPING ONLY
+
+No guessing
+
+No fuzzy matching
+
+Every UPDATE must be intentional and documented
+
+🎯 GOAL
+
+Populate cc_portals.anchor_community_id for the remaining 7 unanchored portals, using existing reference communities added in STEP 9.
+
+This enables:
+
+Full distance scoring in STEP 7
+
+No change to identity, visibility, or execution layers
+
+📍 INPUT STATE (ASSUMED TRUE)
+
+cc_sr_communities contains:
+
+Deep Cove
+
+West Vancouver
+
+Cloverdale
+
+Surrey
+
+Victoria
+
+Saanich
+
+New Westminster
+
+5 Bamfield-area portals are already anchored
+
+7 portals remain with anchor_community_id IS NULL
+
+SECTION A — VERIFY COMMUNITY IDS
+
+Run and record UUIDs:
+
+SELECT id, name, latitude, longitude
+FROM cc_sr_communities
+WHERE name IN (
+  'Deep Cove',
+  'West Vancouver',
+  'Cloverdale',
+  'Surrey',
+  'Victoria',
+  'Saanich',
+  'New Westminster'
+)
+ORDER BY name;
+
+
+❗If any are missing, STOP and document.
+
+SECTION B — VERIFY UNANCHORED PORTALS
+SELECT id, name, slug
+FROM cc_portals
+WHERE anchor_community_id IS NULL
+ORDER BY name;
+
+
+Expected 7 rows.
+
+SECTION C — EXPLICIT ANCHOR MAPPING
+Mapping Table (LOCKED)
+Portal Identity (unchanged)	Anchor Community (geometry only)
+AdrenalineCanada	Deep Cove
+CanadaDirect	West Vancouver
+Enviro Bright Lights	Cloverdale
+Enviropaving BC	Surrey
+OffpeakAirBNB	Victoria
+Parts Unknown BC	Saanich
+Remote Serve	New Westminster
+SECTION D — APPLY UPDATES (IDEMPOTENT)
+
+Replace <UUID> placeholders with values from Section A.
+
+UPDATE cc_portals
+SET anchor_community_id = '<DEEP_COVE_ID>'
+WHERE slug = 'adrenalinecanada'
+AND anchor_community_id IS DISTINCT FROM '<DEEP_COVE_ID>';
+
+UPDATE cc_portals
+SET anchor_community_id = '<WEST_VANCOUVER_ID>'
+WHERE slug = 'canadadirect'
+AND anchor_community_id IS DISTINCT FROM '<WEST_VANCOUVER_ID>';
+
+UPDATE cc_portals
+SET anchor_community_id = '<CLOVERDALE_ID>'
+WHERE slug = 'enviro-bright'
+AND anchor_community_id IS DISTINCT FROM '<CLOVERDALE_ID>';
+
+UPDATE cc_portals
+SET anchor_community_id = '<SURREY_ID>'
+WHERE slug = 'enviropaving'
+AND anchor_community_id IS DISTINCT FROM '<SURREY_ID>';
+
+UPDATE cc_portals
+SET anchor_community_id = '<VICTORIA_ID>'
+WHERE slug = 'offpeakairbnb'
+AND anchor_community_id IS DISTINCT FROM '<VICTORIA_ID>';
+
+UPDATE cc_portals
+SET anchor_community_id = '<SAANICH_ID>'
+WHERE slug = 'parts-unknown-bc'
+AND anchor_community_id IS DISTINCT FROM '<SAANICH_ID>';
+
+UPDATE cc_portals
+SET anchor_community_id = '<NEW_WESTMINSTER_ID>'
+WHERE slug = 'remote-serve'
+AND anchor_community_id IS DISTINCT FROM '<NEW_WESTMINSTER_ID>';
+
+SECTION E — VERIFICATION
+E1. All portals anchored
+SELECT
+  p.name AS portal_identity,
+  c.name AS anchor_geo,
+  c.latitude,
+  c.longitude
+FROM cc_portals p
+LEFT JOIN cc_sr_communities c
+  ON p.anchor_community_id = c.id
+ORDER BY p.name;
+
+
+Expected:
+
+12 portals
+
+0 NULL anchors
+
+E2. Count check
+SELECT
+  COUNT(*) FILTER (WHERE anchor_community_id IS NOT NULL) AS anchored,
+  COUNT(*) FILTER (WHERE anchor_community_id IS NULL) AS unanchored
+FROM cc_portals;
+
+
+Expected:
+
+anchored = 12
+
+unanchored = 0
+
+E3. Identity integrity check
+SELECT name, slug FROM cc_portals ORDER BY name;
+
+
+Names must match pre-STEP-9B exactly.
+
+SECTION F — PROOF
+
+Create:
+
+proof/v3.5/step9b-portal-anchor-completion-proof.md
+
+
+Include:
+
+Community UUID lookup (Section A)
+
+Portal list before/after
+
+Mapping table
+
+UPDATE statements executed
+
+Verification query results
+
+Checkboxes:
+
+ 7 portals anchored
+
+ 12/12 portals have anchor_community_id
+
+ No portal renamed
+
+ No zone renamed
+
+ No schema changes
+
+ Geometry-only change confirmed
+
+🚫 DO NOT
+
+Add new communities
+
+Rename portals or zones
+
+Change UI labels
+
+Touch execution or surfaces
+
+Auto-publish anything
+
+✅ EXPECTED RESULT
+
+After STEP 9B:
+
+STEP 7 suggestions are fully distance-ranked
+
+Identity remains intact
+
+Geometry is invisible but complete
+
+Platform is ready for STEP 10 (rollups / visibility graph) or STEP 11 (market expansion)
+
+END OF STEP 9B PROMPT
