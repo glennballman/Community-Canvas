@@ -1,0 +1,159 @@
+REPLIT AUDIT PROMPT — STEP 11C.1 (CC-13) Invitation “Claim” Flow (Join + Role + Linkage)
+
+ROLE: Senior Platform Architect + QA Gatekeeper (READ-ONLY AUDIT)
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+GOAL: Inventory what exists to implement Option A:
+A stakeholder who opens `/i/:token` can “Claim invitation” by signing in or creating an account, then becomes an authenticated internal entity linked to the invitation and (optionally) the run as a stakeholder.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking
+- ❌ contractor
+- ❌ calendar
+Use: “claim invitation”, “stakeholder”, “private ops access”, “read-only link”.
+
+------------------------------------------------------------
+A) DB INVENTORY — invitation linkage + identity primitives
+------------------------------------------------------------
+1) Inspect cc_invitations schema (columns + indexes)
+- Need to know if it already supports:
+  - claimed_by_individual_id / claimed_by_user_id
+  - claimed_by_tenant_id
+  - status enum includes 'claimed'
+  - claimed_at exists
+  - any metadata jsonb fields
+
+Commands:
+\d+ cc_invitations
+
+2) Inspect identity tables likely involved:
+- individuals / users
+- tenants
+- tenant membership / roles
+- email verification tables (if any)
+
+Run SQL:
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%user%'
+    OR table_name ILIKE '%individual%'
+    OR table_name ILIKE '%tenant%'
+    OR table_name ILIKE '%membership%'
+    OR table_name ILIKE '%role%'
+    OR table_name ILIKE '%email%'
+    OR table_name ILIKE '%verification%'
+  )
+ORDER BY table_name;
+
+For relevant tables, output:
+\d+ <table_name>
+
+3) Check for any existing “stakeholder” or “run access grant” constructs:
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (
+    table_name ILIKE '%stakeholder%'
+    OR table_name ILIKE '%access%'
+    OR table_name ILIKE '%grant%'
+    OR table_name ILIKE '%share%'
+    OR table_name ILIKE '%run_%'
+  )
+ORDER BY table_name;
+
+------------------------------------------------------------
+B) Backend inventory — auth, onboarding, claim patterns
+------------------------------------------------------------
+1) Find existing invite claim endpoints/patterns (shared runs, staff invites, etc.)
+rg -n "claim" server/routes server
+rg -n "invitation" server/routes server
+rg -n "shared_run" server/routes server
+rg -n "/i/:" server/routes server
+rg -n "accept.*invite|accept.*invitation" server/routes server
+
+For each relevant match, report:
+- file path
+- route
+- excerpt (max 20 lines)
+- how it verifies token
+- what it updates (status, claimed_at, linked user)
+
+2) Find existing login/signup endpoints and their behavior:
+rg -n "signup|sign up|register" server/routes server
+rg -n "login|authenticate|password" server/routes server
+rg -n "/api/auth|/api/login|/api/me" server/routes server
+
+We need to know:
+- Does signup exist?
+- Does it require email verification?
+- How sessions/JWT are issued
+- How “current tenant” is set (if any)
+
+3) Identify how the server maps email -> individual/user:
+- Is there a “find user by email” helper?
+- Is email normalized/lowercased?
+- Any unique constraints?
+
+------------------------------------------------------------
+C) Frontend inventory — existing auth pages and route guards
+------------------------------------------------------------
+1) Locate sign-in and sign-up UI:
+rg -n "Sign in|Sign In|Login|log in" client/src
+rg -n "Sign up|Sign Up|Register|create account" client/src
+rg -n "Auth" client/src/pages client/src/components
+
+Report:
+- route paths (Wouter)
+- page component files
+- whether they redirect back to a returnUrl
+
+2) Locate the existing InvitationClaimPage implementation (from STEP 11C):
+- file path
+- how it loads /api/i/:token
+- whether it can add a “Claim invitation” button
+
+3) Identify route guard utilities:
+rg -n "RequireAuth|requireAuth|ProtectedRoute|isAuthenticated" client/src
+Report how auth state is detected (token, session, /api/me).
+
+------------------------------------------------------------
+D) Required UX decisions to support (report what exists)
+------------------------------------------------------------
+We need to know if the system can support either:
+1) “Claim by signing in” only (no public signup), OR
+2) “Claim by creating account” (public signup) + optional verification, OR
+3) “Claim by magic link” (no password) if primitives already exist
+
+Audit should report what # is currently feasible without schema changes.
+
+Also audit whether there is an existing “select role” UI or role assignment pattern:
+- stakeholder role could be something like “resident/host/client” but do not invent names; just find what exists.
+
+------------------------------------------------------------
+E) Output format (REQUIRED)
+------------------------------------------------------------
+Return:
+
+1) EXISTING PRIMITIVES (reusable)
+- DB columns in cc_invitations relevant to claim
+- identity tables (users/individuals) + membership tables
+- any existing invite claim endpoints
+- existing signup/sign-in flows
+- frontend auth pages and route guard patterns
+
+2) GAPS (what is missing for claim flow)
+- DB fields missing (if any)
+- API endpoint missing (likely POST /api/i/:token/claim or similar)
+- UI changes missing
+
+3) RECOMMENDED MINIMAL IMPLEMENTATION PATH (no code yet)
+- 3–6 steps
+- call out whether schema change is unavoidable or not
+
+IMPORTANT:
+- DO NOT implement anything.
+- DO NOT propose new schemas unless audit proves they’re missing.
+- Paste the full audit report back into ChatGPT.
