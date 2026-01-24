@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,10 +7,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
-import { Loader2, Globe, Users, MapPin, Lightbulb, AlertCircle, Navigation } from 'lucide-react';
+import { Loader2, Globe, Users, MapPin, Lightbulb, AlertCircle, Navigation, Eye } from 'lucide-react';
 import { StartAddressPickerModal } from './StartAddressPickerModal';
 
 interface Portal {
@@ -50,6 +51,24 @@ interface SuggestionsResponse {
   suggestions: Suggestion[];
 }
 
+interface EffectivePortal {
+  portal_id: string;
+  portal_name: string;
+  visibility_source: 'direct' | 'rollup';
+  via_type: 'portal' | 'zone' | null;
+  via_id: string | null;
+  via_name: string | null;
+  depth: number;
+}
+
+interface VisibilityPreviewResponse {
+  ok: boolean;
+  run_id: string;
+  selected_portal_ids: string[];
+  zone_id: string | null;
+  effective_portals: EffectivePortal[];
+}
+
 interface PublishRunModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,13 +102,48 @@ export function PublishRunModal({
     enabled: open && !!runId,
   });
 
+  // V3.5 STEP 11A: Visibility preview state
+  const [visibilityPreview, setVisibilityPreview] = useState<VisibilityPreviewResponse | null>(null);
+  const [visibilityLoading, setVisibilityLoading] = useState(false);
+  const [visibilityError, setVisibilityError] = useState(false);
+
+  // Fetch visibility preview when selection changes
+  const fetchVisibilityPreview = useCallback(async (portalIds: string[]) => {
+    if (!runId) return;
+    
+    setVisibilityLoading(true);
+    setVisibilityError(false);
+    
+    try {
+      const res = await apiRequest('POST', `/api/provider/runs/${runId}/visibility-preview`, {
+        selected_portal_ids: portalIds
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setVisibilityPreview(data);
+      } else {
+        setVisibilityError(true);
+      }
+    } catch {
+      setVisibilityError(true);
+    } finally {
+      setVisibilityLoading(false);
+    }
+  }, [runId]);
+
   useEffect(() => {
     if (open) {
       const publishedIds = currentPublications.map(p => p.portal_id);
       setSelectedPortals(publishedIds);
       setMarketMode(currentMarketMode || 'INVITE_ONLY');
+      // Initial visibility preview fetch
+      fetchVisibilityPreview(publishedIds);
+    } else {
+      // Reset preview when modal closes
+      setVisibilityPreview(null);
+      setVisibilityError(false);
     }
-  }, [open, currentPublications, currentMarketMode]);
+  }, [open, currentPublications, currentMarketMode, fetchVisibilityPreview]);
 
   const publishMutation = useMutation({
     mutationFn: async () => {
@@ -124,16 +178,20 @@ export function PublishRunModal({
   });
 
   const handlePortalToggle = (portalId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedPortals(prev => [...prev, portalId]);
-    } else {
-      setSelectedPortals(prev => prev.filter(id => id !== portalId));
-    }
+    const newSelection = checked 
+      ? [...selectedPortals, portalId]
+      : selectedPortals.filter(id => id !== portalId);
+    setSelectedPortals(newSelection);
+    // Trigger visibility preview update
+    fetchVisibilityPreview(newSelection);
   };
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     if (!selectedPortals.includes(suggestion.portal_id)) {
-      setSelectedPortals(prev => [...prev, suggestion.portal_id]);
+      const newSelection = [...selectedPortals, suggestion.portal_id];
+      setSelectedPortals(newSelection);
+      // Trigger visibility preview update
+      fetchVisibilityPreview(newSelection);
     }
   };
 
@@ -288,6 +346,60 @@ export function PublishRunModal({
                     </Label>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* V3.5 STEP 11A: Also Visible In Preview Section */}
+          <div className="space-y-3" data-testid="section-visibility-preview">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-sm font-medium" data-testid="text-preview-title">
+                {resolve('provider.publish.preview.title')}
+              </Label>
+            </div>
+
+            {visibilityLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span data-testid="text-preview-loading">
+                  {resolve('provider.publish.preview.loading')}
+                </span>
+              </div>
+            ) : visibilityError ? (
+              <div className="text-sm text-destructive" data-testid="text-preview-error">
+                {resolve('provider.publish.preview.error')}
+              </div>
+            ) : visibilityPreview?.effective_portals && visibilityPreview.effective_portals.length > 0 ? (
+              <div className="space-y-2">
+                {visibilityPreview.effective_portals.map((portal) => (
+                  <div 
+                    key={portal.portal_id} 
+                    className="flex items-center justify-between gap-2 p-2 rounded-md bg-muted/50"
+                    data-testid={`preview-portal-${portal.portal_id}`}
+                  >
+                    <span className="text-sm font-medium truncate" data-testid={`text-portal-name-${portal.portal_id}`}>
+                      {portal.portal_name}
+                    </span>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {portal.visibility_source === 'direct' ? (
+                        <Badge variant="secondary" className="text-xs" data-testid={`badge-direct-${portal.portal_id}`}>
+                          {resolve('provider.publish.preview.direct_badge')}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs" data-testid={`badge-rollup-${portal.portal_id}`}>
+                          {portal.via_name 
+                            ? resolve('provider.publish.preview.via_format').replace('{name}', portal.via_name)
+                            : resolve('provider.publish.preview.rollup_badge')}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground py-2" data-testid="text-preview-empty">
+                {resolve('provider.publish.preview.empty')}
               </div>
             )}
           </div>

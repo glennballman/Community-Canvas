@@ -230,6 +230,15 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'provider.start_address.coords_error': 'Enter both latitude and longitude (or leave both blank).',
     'provider.publish.preflight.set_address': 'Set start address',
     'provider.publish.preflight.add_coords': 'Add coordinates',
+    
+    // V3.5 STEP 11A: Provider Visibility Preview tokens
+    'provider.publish.preview.title': 'Also visible in',
+    'provider.publish.preview.direct_badge': 'Direct',
+    'provider.publish.preview.rollup_badge': 'Via rollup',
+    'provider.publish.preview.via_format': 'via {name}',
+    'provider.publish.preview.loading': 'Calculating visibility...',
+    'provider.publish.preview.empty': 'No additional visibility',
+    'provider.publish.preview.error': 'Could not calculate visibility',
   },
 
   lodging: {

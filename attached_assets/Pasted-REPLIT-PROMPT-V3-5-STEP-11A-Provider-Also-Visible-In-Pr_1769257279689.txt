@@ -1,0 +1,417 @@
+REPLIT PROMPT — V3.5 STEP 11A
+Provider “Also Visible In” Preview (Identity-Preserving, Advisory-Only)
+
+ROLE: Senior Platform Engineer
+MODE: Provider-safe read-only preview. No schema changes. No publishing side-effects.
+
+============================================================
+HARD RULES (NON-NEGOTIABLE)
+
+IDENTITY ≠ VISIBILITY ≠ EXECUTION (LOCKED)
+
+Identity = portal/zone/work area names users identify with (MUST be shown)
+
+Visibility = where a run may be seen (graph + rollups)
+
+Execution = work areas, surfaces, constraints (OUT OF SCOPE)
+
+This step MUST NOT:
+
+❌ Auto-publish or auto-change visibility
+
+❌ Modify cc_run_portal_publications
+
+❌ Modify STEP 7 suggestion logic
+
+❌ Add geo inference or show anchor labels in UI
+
+❌ Touch cc_work_areas / cc_properties / surfaces / constraints
+
+Terminology enforcement:
+
+✅ “service provider” (never contractor)
+
+✅ “reservation” (never booking)
+
+✅ “schedule / operations” (no new “calendar”)
+
+✅ “work request / service request” (no “job” in service context)
+
+Testing MUST use TEST AUTH BOOTSTRAP
+
+Use: await loginAs(page, 'ellen');
+
+DO NOT use UI login.
+
+============================================================
+GOAL
+
+Add a provider-safe preview that answers:
+
+“Given my current visibility checkbox selections (staged), and the visibility graph, where will this run ALSO be visible?”
+
+This is a preview only. User still must click Confirm to apply changes.
+
+============================================================
+DELIVERABLES
+
+A) Backend endpoint (provider-authenticated, tenant-safe):
+
+POST /api/provider/runs/:id/visibility-preview
+
+B) UI enhancement in PublishRunModal:
+
+New section: “Also visible in”
+
+Shows portal identities (names) and provenance (Direct vs Via rollup)
+
+No anchor community names ever shown
+
+C) Copy tokens (mandatory)
+
+D) Proof document:
+
+proof/v3.5/step11a-provider-visibility-preview-proof.md
+
+============================================================
+SECTION A) AUDIT FIRST (NO CODE CHANGES YET)
+
+A1) Confirm existing graph + resolver functions exist:
+
+resolve_visibility_targets_recursive
+
+resolve_run_effective_visibility_recursive (exists but uses DB publications; we will NOT use it directly for preview)
+
+A2) Confirm publish modal currently has:
+
+Visibility portal checkbox list
+
+Confirm button that triggers publish endpoint (must remain the only write)
+
+A3) Confirm tenant context pattern in provider routes:
+
+requireAuth
+
+req.ctx.tenant_id present
+
+RLS enforced
+
+Document in proof: file references + quick notes.
+
+============================================================
+SECTION B) BACKEND — NEW PROVIDER SAFE PREVIEW ENDPOINT
+
+Create in server/routes/provider.ts (or the canonical provider router file):
+
+Route:
+POST /api/provider/runs/:id/visibility-preview
+
+Auth:
+
+requireAuth()
+
+Request body:
+
+{
+  "selected_portal_ids": ["uuid", "..."]  // the current staged checkbox selections
+}
+
+
+Validation rules:
+
+If body missing/invalid: 400 { ok:false, error:'invalid_payload' }
+
+Cap max portals: 50 (defensive)
+
+Tenant validation (MANDATORY):
+
+Verify run belongs to tenant before computing:
+
+If not found or tenant mismatch: 404 { ok:false, error:'run_not_found' }
+
+No DB writes. No changes to publications.
+
+B1) Preview semantics (IMPORTANT)
+
+Compute “effective visibility” from staged selections + run zone rollups:
+
+Inputs:
+
+selected_portal_ids (direct candidates chosen in modal)
+
+run.zone_id (if present, zone rollups apply)
+
+Outputs:
+
+List of portals that would see this run if user confirms those selections,
+including rollups via visibility graph.
+
+Dedup rules:
+
+Prefer visibility_source='direct' over rollup
+
+If rollup duplicates exist: prefer shortest depth, lexical tie-break for stability
+
+Return only portals (not zones) to keep UI simple
+
+Provenance fields required:
+
+portal_id
+
+portal_name (IDENTITY ONLY)
+
+visibility_source: 'direct' | 'rollup'
+
+via_type: 'portal' | 'zone' | null
+
+via_id: UUID or null
+
+via_name: identity name of via portal/zone if available (optional but recommended)
+
+depth: number (0 for direct)
+
+path: array of { type, id, name } (optional; include if easy since resolver provides it)
+
+IMPORTANT: Do NOT include anchor community names/IDs in response.
+
+B2) Implementation approach (NO NEW SQL FUNCTIONS)
+
+Do this using single SQL query with CTEs + resolve_visibility_targets_recursive, without creating new schema or functions.
+
+Pseudo-SQL shape (implement in code as parameterized query):
+
+Load run:
+
+SELECT id, tenant_id, zone_id FROM cc_n3_runs WHERE id=$1
+
+Direct portals (from staged selection):
+
+Use unnest($selected_portal_ids::uuid[]) as direct set
+
+Rollups from each selected portal:
+
+For each selected portal id:
+
+SELECT * FROM resolve_visibility_targets_recursive('portal', portal_id, /* allow_down */ false, /* max_depth */ 6)
+
+Filter to target_type='portal'
+
+Rollups from run.zone_id (if present):
+
+resolve_visibility_targets_recursive('zone', run.zone_id, false, 6)
+
+Filter to portals
+
+Union:
+
+direct portals (depth 0, via null, source direct)
+
+rollup portals (source rollup, via portal/zone, with depth/path)
+
+Dedup:
+
+DISTINCT ON (portal_id) ordered by:
+
+source direct first
+
+depth asc
+
+portal_id asc (stable)
+
+Join portal names:
+
+JOIN cc_portals p ON p.id = portal_id
+
+(Optional) join via names:
+
+if via_type='portal' join cc_portals
+
+if via_type='zone' join cc_zones
+
+Return final array sorted with direct first, then rollups by depth.
+
+B3) Response shape
+{
+  "ok": true,
+  "run_id": "uuid",
+  "selected_portal_ids": ["uuid", "..."],
+  "zone_id": "uuid-or-null",
+  "effective_portals": [
+    {
+      "portal_id": "uuid",
+      "portal_name": "Bamfield Community Portal",
+      "visibility_source": "direct",
+      "via_type": null,
+      "via_id": null,
+      "via_name": null,
+      "depth": 0
+    },
+    {
+      "portal_id": "uuid",
+      "portal_name": "Bamfield Adventure Center",
+      "visibility_source": "rollup",
+      "via_type": "portal",
+      "via_id": "uuid",
+      "via_name": "Bamfield Community Portal",
+      "depth": 1
+    }
+  ]
+}
+
+B4) Tests (API-level)
+
+Use TEST AUTH BOOTSTRAP:
+
+await loginAs(page, 'ellen');
+
+Test cases:
+
+Run exists, selected_portal_ids contains 1 portal:
+
+Returns direct portal + any rollups via graph
+
+selected_portal_ids empty:
+
+Still returns zone-derived rollups if run.zone_id exists
+
+Otherwise returns empty list
+
+Tenant mismatch run id:
+
+404 run_not_found
+
+Invalid payload:
+
+400 invalid_payload
+
+Record outputs in proof.
+
+============================================================
+SECTION C) FRONTEND — PublishRunModal “Also visible in”
+
+File: client/src/components/provider/PublishRunModal.tsx (or actual location)
+
+C1) Add new section below “Visibility” checkboxes and above “Competition” (market_mode):
+Title: uses copy token provider.publish.preview.title
+
+Behavior:
+
+On modal open AND whenever checkbox selection changes:
+
+Call POST /api/provider/runs/:id/visibility-preview
+
+Body: { selected_portal_ids: [checkedPortalIds...] }
+
+Display returned effective_portals:
+
+UI rules:
+
+Show portal identity (portal_name) only
+
+Indicate badge:
+
+“Direct” for direct
+
+“Via rollup” for rollup (optionally “via {via_name}”)
+
+No anchor community labels ever shown
+
+This section is read-only (no toggles here; toggles remain in Visibility list)
+
+Loading/empty states:
+
+While loading: show skeleton/“Loading…” token
+
+If empty: show token “No additional visibility”
+
+C2) Ensure no behavior changes:
+
+Confirm button still calls existing publish endpoint and is the only write
+
+The preview endpoint does not publish anything
+
+============================================================
+STEP 11A COPY TOKENS (MANDATORY)
+
+Add to the existing provider copy token file (likely client/src/copy/entryPointCopy.ts or similar):
+
+provider.publish.preview.title: "Also visible in"
+
+provider.publish.preview.direct_badge: "Direct"
+
+provider.publish.preview.rollup_badge: "Via rollup"
+
+provider.publish.preview.via_format: "via {name}"
+
+provider.publish.preview.loading: "Calculating visibility…"
+
+provider.publish.preview.empty: "No additional visibility"
+
+provider.publish.preview.error: "Could not calculate visibility"
+
+No hardcoded strings in the new UI section.
+
+============================================================
+SECTION D) PERFORMANCE + SAFETY
+
+Ensure endpoint uses parameterized queries only
+
+Enforce max selected_portal_ids (<= 50)
+
+Keep recursion max_depth <= 6 (consistent with Step 10D defaults)
+
+No recursion allow_down unless explicitly requested later (default false)
+
+Do NOT leak cross-tenant portal/zone names:
+
+All joins must be tenant-scoped implicitly via IDs coming from tenant-owned records
+
+Run tenant validated first
+
+============================================================
+SECTION E) PROOF REQUIREMENTS
+
+Create: proof/v3.5/step11a-provider-visibility-preview-proof.md
+
+Include:
+
+Endpoint definition + request/response examples
+
+SQL/CTE outline (or code excerpt) showing no writes
+
+UI screenshot or rendered description of “Also visible in” section
+
+Test auth bootstrap evidence (loginAs('ellen'))
+
+Verification checklist:
+
+ No schema changes
+
+ No publish side effects
+
+ No anchor community labels shown in UI
+
+ Identity preserved
+
+ Dedup prefers direct over rollup
+
+ Handles empty selection + zone-only correctly
+
+ Terminology compliant (no banned terms)
+
+============================================================
+DO NOT
+
+Do NOT modify STEP 7 suggestion endpoint/behavior
+
+Do NOT call admin/internal endpoints from provider UI
+
+Do NOT show anchor community in UI
+
+Do NOT add execution logic (work areas/surfaces/constraints)
+
+Do NOT change market_mode behavior
+
+Do NOT auto-select or auto-publish anything
+
+END.

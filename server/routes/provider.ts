@@ -688,6 +688,171 @@ router.post('/runs/:id/publish', requireAuth, async (req: AuthRequest, res: Resp
   }
 });
 
+// V3.5 STEP 11A: Provider Visibility Preview (Read-Only, No Publishing Side Effects)
+// Answers: "Given my staged checkbox selections, where will this run ALSO be visible?"
+router.post('/runs/:id/visibility-preview', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const runId = req.params.id;
+    const { selected_portal_ids } = req.body;
+
+    // Validate tenant context
+    if (!tenantId) {
+      return res.status(401).json({ ok: false, error: 'Tenant context required' });
+    }
+
+    // Validate run ID format
+    if (!isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'invalid_payload' });
+    }
+
+    // Validate payload
+    if (!Array.isArray(selected_portal_ids)) {
+      return res.status(400).json({ ok: false, error: 'invalid_payload' });
+    }
+
+    // Cap max portals (defensive)
+    if (selected_portal_ids.length > 50) {
+      return res.status(400).json({ ok: false, error: 'invalid_payload' });
+    }
+
+    // Validate all portal IDs are UUIDs
+    for (const portalId of selected_portal_ids) {
+      if (typeof portalId !== 'string' || !isValidUUID(portalId)) {
+        return res.status(400).json({ ok: false, error: 'invalid_payload' });
+      }
+    }
+
+    // Load run and verify tenant ownership
+    const runResult = await pool.query(`
+      SELECT id, tenant_id, zone_id FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2
+    `, [runId, tenantId]);
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'run_not_found' });
+    }
+
+    const run = runResult.rows[0];
+
+    // If no portals selected and no zone, return empty
+    if (selected_portal_ids.length === 0 && !run.zone_id) {
+      return res.json({
+        ok: true,
+        run_id: runId,
+        selected_portal_ids: [],
+        zone_id: null,
+        effective_portals: []
+      });
+    }
+
+    // Enable service mode for visibility functions (provider query pattern)
+    await pool.query(`SELECT set_config('app.service_mode', 'on', true)`);
+
+    // Compute effective visibility using CTE query
+    // This combines:
+    // 1. Direct portals (from selected_portal_ids)
+    // 2. Rollups from each selected portal via visibility graph
+    // 3. Rollups from run.zone_id if present
+    const previewResult = await pool.query(`
+      WITH direct_portals AS (
+        -- Direct selections (depth 0)
+        SELECT 
+          p.id as portal_id,
+          p.name as portal_name,
+          'direct'::text as visibility_source,
+          NULL::text as via_type,
+          NULL::uuid as via_id,
+          NULL::text as via_name,
+          0 as depth
+        FROM unnest($1::uuid[]) AS sel(id)
+        JOIN cc_portals p ON p.id = sel.id
+        WHERE p.owning_tenant_id = $2
+      ),
+      rollup_from_portals AS (
+        -- For each selected portal, get visibility rollups
+        SELECT DISTINCT ON (v.target_id)
+          v.target_id as portal_id,
+          p.name as portal_name,
+          'rollup'::text as visibility_source,
+          'portal'::text as via_type,
+          dp.portal_id as via_id,
+          dp.portal_name as via_name,
+          v.depth
+        FROM direct_portals dp
+        CROSS JOIN LATERAL resolve_visibility_targets_recursive('portal', dp.portal_id, 6, false) v
+        JOIN cc_portals p ON p.id = v.target_id
+        WHERE v.target_type = 'portal'
+          AND v.target_id NOT IN (SELECT portal_id FROM direct_portals)
+        ORDER BY v.target_id, v.depth ASC
+      ),
+      rollup_from_zone AS (
+        -- If run has zone_id, get visibility rollups from zone
+        SELECT DISTINCT ON (v.target_id)
+          v.target_id as portal_id,
+          p.name as portal_name,
+          'rollup'::text as visibility_source,
+          'zone'::text as via_type,
+          $3::uuid as via_id,
+          z.name as via_name,
+          v.depth
+        FROM resolve_visibility_targets_recursive('zone', $3::uuid, 6, false) v
+        JOIN cc_portals p ON p.id = v.target_id
+        LEFT JOIN cc_zones z ON z.id = $3
+        WHERE $3 IS NOT NULL
+          AND v.target_type = 'portal'
+          AND v.target_id NOT IN (SELECT portal_id FROM direct_portals)
+        ORDER BY v.target_id, v.depth ASC
+      ),
+      combined AS (
+        SELECT * FROM direct_portals
+        UNION ALL
+        SELECT * FROM rollup_from_portals
+        UNION ALL
+        SELECT * FROM rollup_from_zone
+      ),
+      deduped AS (
+        -- Dedup: prefer direct over rollup, then shortest depth
+        SELECT DISTINCT ON (portal_id)
+          portal_id,
+          portal_name,
+          visibility_source,
+          via_type,
+          via_id,
+          via_name,
+          depth
+        FROM combined
+        ORDER BY portal_id, 
+          CASE WHEN visibility_source = 'direct' THEN 0 ELSE 1 END,
+          depth ASC
+      )
+      SELECT * FROM deduped
+      ORDER BY 
+        CASE WHEN visibility_source = 'direct' THEN 0 ELSE 1 END,
+        depth ASC,
+        portal_name ASC
+    `, [selected_portal_ids, tenantId, run.zone_id]);
+
+    return res.json({
+      ok: true,
+      run_id: runId,
+      selected_portal_ids,
+      zone_id: run.zone_id,
+      effective_portals: previewResult.rows.map(row => ({
+        portal_id: row.portal_id,
+        portal_name: row.portal_name,
+        visibility_source: row.visibility_source,
+        via_type: row.via_type,
+        via_id: row.via_id,
+        via_name: row.via_name,
+        depth: row.depth
+      }))
+    });
+  } catch (error: any) {
+    console.error('Provider visibility preview error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to calculate visibility preview' });
+  }
+});
+
 router.post('/runs/:id/unpublish', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
