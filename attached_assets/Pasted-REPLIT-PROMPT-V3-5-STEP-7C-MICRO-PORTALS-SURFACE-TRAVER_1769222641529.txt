@@ -1,0 +1,285 @@
+REPLIT PROMPT — V3.5 STEP 7C — MICRO PORTALS + SURFACE TRAVERSAL AUDIT (NO CODE)
+
+ROLE
+Senior Platform Engineer
+
+MODE
+AUDIT ONLY. Evidence-first. Zero implementation.
+
+============================================================
+HARD RULES (NON-NEGOTIABLE)
+============================================================
+- DO NOT write code, migrations, routes, UI, or scripts.
+- DO NOT guess portal/community relationships (no Ucluelet/Tofino assumptions).
+- DO NOT create new “nearby” systems.
+- No new inbox/thread UIs.
+- No “calendar” in any new artifacts (use schedule/operations language).
+- Terminology: “service provider”, “reservation”.
+- “job” is banned in service fulfillment context (employment domain exception only).
+- STEP 7 suggestions must remain OPT-IN (advisory only).
+
+============================================================
+GOAL
+============================================================
+Produce an authoritative map of:
+1) Micro Portals + zones/neighborhoods (e.g., West Bamfield, East Bamfield, Helby Island, Anacla)
+2) The existing “nearby/adjacent/rollup” mechanisms (explicit relationships if they exist)
+3) The surface traversal spine that governs “getting there” beyond just community distance
+4) The constraint model (tide/weather/schedule windows) that binds feasibility
+5) The exact “candidate publish targets” list for STEP 7 suggestions, WITHOUT inventing anything
+
+============================================================
+OUTPUTS (MANDATORY)
+============================================================
+Create: proof/v3.5/step7c-microportals-surfaces-audit.md
+
+============================================================
+SECTION A) MICRO PORTAL + ZONE INVENTORY (FACTS ONLY)
+============================================================
+
+A1) Portals (full)
+```sql
+SELECT id, name, slug, status, owning_tenant_id, default_zone_id, anchor_community_id
+FROM cc_portals
+ORDER BY name;
+A2) Zones (grouped by portal)
+
+sql
+Copy code
+SELECT
+  p.id AS portal_id,
+  p.name AS portal_name,
+  z.id AS zone_id,
+  z.name AS zone_name,
+  z.key,
+  z.kind
+FROM cc_zones z
+JOIN cc_portals p ON p.id = z.portal_id
+ORDER BY p.name, z.name;
+A3) Focus list: Bamfield micro-areas (do NOT assume; detect by data)
+
+sql
+Copy code
+SELECT 'portal' AS type, id, name, slug
+FROM cc_portals
+WHERE name ILIKE '%bamfield%' OR name ILIKE '%helby%' OR name ILIKE '%anacla%' OR slug ILIKE '%bamfield%' OR slug ILIKE '%helby%' OR slug ILIKE '%anacla%'
+
+UNION ALL
+
+SELECT 'zone' AS type, z.id, z.name, z.key
+FROM cc_zones z
+WHERE z.name ILIKE '%bamfield%' OR z.name ILIKE '%west%' OR z.name ILIKE '%east%' OR z.name ILIKE '%helby%' OR z.name ILIKE '%anacla%'
+ORDER BY type, name;
+Record exactly what exists (including whether “Anacla” is present as a zone or not).
+
+============================================================
+SECTION B) “NEARBY / ADJACENT / ROLLUP” MECHANISMS (DISCOVER, DON’T INVENT)
+B1) Look for relationship tables (portals/zones/communities adjacency or rollups)
+
+sql
+Copy code
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+AND (
+  table_name ILIKE '%adjacent%'
+  OR table_name ILIKE '%nearby%'
+  OR table_name ILIKE '%neighbor%'
+  OR table_name ILIKE '%rollup%'
+  OR table_name ILIKE '%hierarchy%'
+  OR table_name ILIKE '%relationship%'
+  OR table_name ILIKE '%graph%'
+)
+ORDER BY table_name;
+B2) If any candidates found, inspect schema for each:
+
+sql
+Copy code
+-- Run: \d <table_name> for each candidate
+B3) Code search for “nearby portals/zones” logic
+
+bash
+Copy code
+rg -n "nearby|adjacent|neighbor|rollup|hierarch|graph" server client
+For every match:
+
+Paste file path + line ranges
+
+Summarize what it does
+
+Identify whether it uses explicit adjacency tables, geo proximity, or both
+
+STOP if no adjacency mechanism exists — document “No explicit adjacency; any suggestion must be derived from existing geo anchors + constraints only (advisory).”
+
+============================================================
+SECTION C) SURFACE SPINE INVENTORY (PATENT MODEL ALIGNMENT)
+C1) Find surface tables
+
+sql
+Copy code
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+AND (
+  table_name ILIKE '%surface%'
+  OR table_name ILIKE '%standing%'
+  OR table_name ILIKE '%mobility%'
+  OR table_name ILIKE '%movement%'
+  OR table_name ILIKE '%utility%'
+)
+ORDER BY table_name;
+C2) For each surface table: schema + 10-row sample
+
+sql
+Copy code
+-- For each table found:
+-- 1) \d <table>
+-- 2) SELECT * FROM <table> LIMIT 10;
+C3) Confirm how surfaces bind to portal/zone/community
+
+Find FK relationships from surface tables to portals/zones/communities
+
+sql
+Copy code
+SELECT
+  tc.table_name AS from_table,
+  kcu.column_name AS from_column,
+  ccu.table_name AS to_table,
+  ccu.column_name AS to_column
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type='FOREIGN KEY'
+AND (
+  tc.table_name ILIKE '%surface%'
+  OR tc.table_name ILIKE '%standing%'
+  OR tc.table_name ILIKE '%mobility%'
+  OR tc.table_name ILIKE '%utility%'
+)
+ORDER BY tc.table_name, kcu.column_name;
+Record the canonical traversal primitives you actually have (StandingSurface, MobilitySurfaces, UtilitySurface, etc.).
+
+============================================================
+SECTION D) CONSTRAINTS (WEATHER / TIDES / SCHEDULE WINDOWS)
+D1) Locate constraint tables
+
+sql
+Copy code
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+AND (
+  table_name ILIKE '%tide%'
+  OR table_name ILIKE '%weather%'
+  OR table_name ILIKE '%forecast%'
+  OR table_name ILIKE '%constraint%'
+  OR table_name ILIKE '%window%'
+  OR table_name ILIKE '%schedule%'
+)
+ORDER BY table_name;
+D2) Code search for N3 evaluator + tide window optimization + probabilistic logic
+
+bash
+Copy code
+rg -n "n3|tide|window|forecast|probabilistic|deterministic" server
+For each relevant module:
+
+Paste file path + line ranges
+
+Summarize what it computes and what inputs it requires
+
+============================================================
+SECTION E) WORK AREA / EXECUTION PRECISION (DO NOT LOSE TRACK)
+E1) Confirm Work Area tables and property geo source
+
+sql
+Copy code
+\d cc_work_areas
+\d cc_properties
+
+SELECT
+  wa.id AS work_area_id,
+  wa.title,
+  p.id AS property_id,
+  p.lat, p.lon
+FROM cc_work_areas wa
+JOIN cc_properties p ON p.id = wa.property_id
+LIMIT 10;
+E2) Confirm how work requests connect
+
+sql
+Copy code
+\d cc_work_requests
+
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name='cc_work_requests'
+ORDER BY ordinal_position;
+Document the execution chain:
+
+Work request → property → work areas (execution precision)
+
+Work request → zone/portal (visibility/advisory)
+
+============================================================
+SECTION F) STEP 7 “SUGGESTABLE TARGETS” DERIVATION (AUDIT OUTPUT ONLY)
+Produce TWO lists (facts-based):
+
+F1) “Visibility suggestions” candidate set:
+
+exact portal IDs
+
+exact zone IDs (micro-areas)
+
+exact community anchors used (if any)
+
+F2) “Execution complexity signals” available for future ranking:
+
+which surface types exist in the portal/zone context
+
+which constraint systems can gate feasibility (tide windows, weather)
+
+IMPORTANT:
+
+Do NOT compute distances.
+
+Do NOT rank.
+
+Do NOT recommend specific places.
+
+Just list what the system can reference without adding new schema.
+
+============================================================
+SECTION G) STOP CONDITIONS + QUESTIONS FOR GLENN
+If any of these are true, STOP and ask:
+
+No explicit micro-portal adjacency mechanism exists AND geo anchors are insufficient
+
+Surface traversal cannot be referenced from the run → work request path
+
+Constraints exist but have no join path to the publish/advisory context
+
+Questions must be specific and grounded in evidence.
+
+============================================================
+SECTION H) FINAL SUMMARY (1 PAGE)
+Summarize:
+
+The micro-portal model as actually implemented (Bamfield micro-areas)
+
+What “nearby” means today (explicit adjacency vs geo anchors)
+
+What surface traversal assets exist for “getting there”
+
+What constraints exist (weather/tides/schedules)
+
+What STEP 7 can safely do without new schema
+
+END.
+
+pgsql
+Copy code
+
+---
+
+If you paste the resulting audit output back here (or even just the **Bamfield portal + zone rows** and whether any **adjacency/rollup tables** exist), I’ll write the **STEP 7A advisory prompt** that suggests **West Bamfield / East Bamfield / Helby Island / Anacla** correctly — and keeps **Work Areas** as the execution truth while using **Surfaces + constraints** for feasibility signals.
