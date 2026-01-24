@@ -1,0 +1,343 @@
+REPLIT PROMPT — V3.5 STEP 10E
+Visibility-Aware Run Feeds (Read Path Only, Recursive Graph, No Publishing Side-Effects)
+
+ROLE: Senior Platform Engineer
+MODE: Read-only visibility application. This step applies STEP 10B/10D resolution to read/list queries only.
+
+============================================================
+NON-NEGOTIABLES (READ FIRST)
+
+IDENTITY ≠ VISIBILITY ≠ EXECUTION (LOCKED)
+
+Identity: portal/zone/work area names (user-facing)
+
+Visibility: publications + visibility edges + resolvers
+
+Execution: work areas, properties, surfaces, constraints (OUT OF SCOPE)
+
+MUST NOT:
+
+❌ Auto-publish runs
+
+❌ Modify cc_run_portal_publications
+
+❌ Infer edges from geo/naming
+
+❌ Touch STEP 7/8 UI behavior
+
+❌ Reference execution tables
+
+Terminology compliance:
+
+✅ “service provider”, “reservation”
+
+❌ banned terms per canon (and no “calendar” in new code)
+
+============================================================
+GOAL
+
+Make the platform able to answer, in the read path:
+
+“Which runs are visible in Portal X either directly (published to X) or indirectly (published to a zone/portal that rolls up to X through explicit visibility edges, recursively)?”
+
+Deliverables:
+A) SQL function: resolve_run_effective_visibility_recursive(p_run_id)
+B) SQL function: is_run_visible_in_portal(p_run_id, p_portal_id)
+C) Internal endpoint (admin):
+
+GET /api/internal/visibility/portals/:id/runs (read-only listing)
+D) Proof doc with deterministic examples and “no side effects” confirmation.
+
+============================================================
+SECTION A) AUDIT-FIRST
+
+Run and record results (for proof):
+
+-- confirm prior functions exist
+SELECT proname
+FROM pg_proc
+WHERE proname IN (
+  'resolve_run_effective_visibility',
+  'resolve_visibility_targets_recursive'
+)
+ORDER BY proname;
+
+-- active publications index exists (from 10B)
+SELECT indexname
+FROM pg_indexes
+WHERE tablename = 'cc_run_portal_publications'
+ORDER BY indexname;
+
+-- confirm we have some runs
+SELECT COUNT(*) AS run_count FROM cc_n3_runs;
+
+
+STOP if required functions are missing.
+
+============================================================
+SECTION B) FUNCTION: resolve_run_effective_visibility_recursive
+
+Create a new function that returns direct + rolled-up visibility targets, but using recursive graph resolution.
+
+Rules:
+
+Read-only
+
+Deterministic
+
+Dedup by (type,id) preferring direct over rollup
+
+Recursive rollups use resolve_visibility_targets_recursive(...)
+
+Only returns portal targets for now (keep scope tight)
+
+Signature:
+resolve_run_effective_visibility_recursive(p_run_id UUID, max_depth INT DEFAULT 6)
+
+Return columns:
+
+target_type (always 'portal' for now)
+
+target_id (portal id)
+
+source ('direct' | 'rollup')
+
+via_type ('zone'|'portal'|NULL)
+
+via_id (uuid|NULL)
+
+depth (int|NULL) — only for rollup paths
+
+path_nodes (text[]|NULL) — only for rollup paths
+
+SQL (use as a template; adjust to match your existing 10B patterns):
+
+CREATE OR REPLACE FUNCTION resolve_run_effective_visibility_recursive(
+  p_run_id UUID,
+  max_depth INT DEFAULT 6
+)
+RETURNS TABLE (
+  target_type TEXT,
+  target_id UUID,
+  source TEXT,
+  via_type TEXT,
+  via_id UUID,
+  depth INT,
+  path_nodes TEXT[]
+)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH run_row AS (
+    SELECT id, tenant_id, zone_id
+    FROM cc_n3_runs
+    WHERE id = p_run_id
+  ),
+  direct_portals AS (
+    SELECT
+      'portal'::text AS target_type,
+      pub.portal_id  AS target_id,
+      'direct'::text AS source,
+      NULL::text     AS via_type,
+      NULL::uuid     AS via_id,
+      NULL::int      AS depth,
+      NULL::text[]   AS path_nodes
+    FROM cc_run_portal_publications pub
+    JOIN run_row r ON r.id = pub.run_id
+    WHERE pub.run_id = p_run_id
+      AND pub.unpublished_at IS NULL
+  ),
+  rollup_from_zone AS (
+    -- If run has a zone_id, compute portals reachable from that zone via recursive graph
+    SELECT
+      'portal'::text AS target_type,
+      t.target_id    AS target_id,
+      'rollup'::text AS source,
+      'zone'::text   AS via_type,
+      r.zone_id      AS via_id,
+      t.depth        AS depth,
+      t.path_nodes   AS path_nodes
+    FROM run_row r
+    JOIN LATERAL resolve_visibility_targets_recursive('zone', r.zone_id, max_depth, false) t
+      ON t.target_type = 'portal'
+    WHERE r.zone_id IS NOT NULL
+  ),
+  rollup_from_direct_portals AS (
+    -- If a run is directly published to some portal, it may roll up further via explicit edges (rare but supported)
+    SELECT
+      'portal'::text AS target_type,
+      t.target_id    AS target_id,
+      'rollup'::text AS source,
+      'portal'::text AS via_type,
+      dp.target_id   AS via_id,
+      t.depth        AS depth,
+      t.path_nodes   AS path_nodes
+    FROM direct_portals dp
+    JOIN LATERAL resolve_visibility_targets_recursive('portal', dp.target_id, max_depth, false) t
+      ON t.target_type = 'portal'
+  ),
+  combined AS (
+    SELECT * FROM direct_portals
+    UNION ALL
+    SELECT * FROM rollup_from_zone
+    UNION ALL
+    SELECT * FROM rollup_from_direct_portals
+  ),
+  ranked AS (
+    SELECT
+      c.*,
+      ROW_NUMBER() OVER (
+        PARTITION BY c.target_type, c.target_id
+        ORDER BY
+          CASE WHEN c.source = 'direct' THEN 0 ELSE 1 END,
+          COALESCE(c.depth, 0) ASC,
+          COALESCE(array_to_string(c.path_nodes, '>'), '') ASC
+      ) AS rn
+    FROM combined c
+  )
+  SELECT target_type, target_id, source, via_type, via_id, depth, path_nodes
+  FROM ranked
+  WHERE rn = 1;
+$$;
+
+============================================================
+SECTION C) FUNCTION: is_run_visible_in_portal
+
+Create helper:
+
+is_run_visible_in_portal(p_run_id UUID, p_portal_id UUID) RETURNS BOOLEAN
+
+CREATE OR REPLACE FUNCTION is_run_visible_in_portal(
+  p_run_id UUID,
+  p_portal_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM resolve_run_effective_visibility_recursive(p_run_id, 6) v
+    WHERE v.target_type = 'portal'
+      AND v.target_id = p_portal_id
+  );
+$$;
+
+============================================================
+SECTION D) INTERNAL API (ADMIN, READ-ONLY)
+
+Add endpoint:
+
+GET /api/internal/visibility/portals/:id/runs
+
+Requirements:
+
+Platform admin auth (same as 10B/10C/10D)
+
+tenant_id query param required
+
+Validate portal belongs to tenant_id (404 if not)
+
+Optional params:
+
+limit (default 50, max 200)
+
+offset (default 0)
+
+Behavior:
+
+Return recent runs (e.g., newest starts_at or created_at first) that are visible in this portal:
+
+A run is included if is_run_visible_in_portal(run.id, portalId) = true
+
+Response includes:
+
+run_id, run_name, starts_at, status
+
+visibility_source for this portal (“direct” or “rollup”) + via info if rollup
+
+portal_identity name (portal name) — identity only
+
+Implementation hint (keep it simple):
+
+Query candidate runs for tenant (bounded by limit/offset)
+
+For each run, compute resolve_run_effective_visibility_recursive(run_id) and filter in code OR do a SQL lateral join if preferred.
+
+Keep it deterministic and readable; this is internal/admin only.
+
+============================================================
+SECTION E) TESTING (TEST AUTH BOOTSTRAP ONLY)
+
+Use:
+
+await loginAs(page, 'ellen');
+
+
+Tests:
+
+A run directly published to Bamfield Community Portal appears in:
+/api/internal/visibility/portals/<bamfieldPortalId>/runs?tenant_id=<...>
+
+A run with zone_id = anacla but no direct publication to bamfield:
+
+Create direct publication to the Anacla zone’s portal if your model uses portals only (or set up the run so that visibility edge applies via zone_id).
+
+Verify it appears as source='rollup' with via_type='zone', via_id=<anaclaZoneId>, depth=1+
+
+Cycle safety:
+
+Confirm endpoint returns normally even with cyclic edges present (no hangs)
+
+============================================================
+SECTION F) PROOF
+
+Create:
+proof/v3.5/step10e-visibility-aware-run-feed-proof.md
+
+Include:
+
+Audit outputs (Section A)
+
+Function definitions (B, C)
+
+Example output from API for Bamfield portal showing at least:
+
+one direct-visible run
+
+one rollup-visible run (if you can create it safely)
+
+Explicit confirmations:
+
+No publications were modified
+
+No UI changes
+
+No geo inference
+
+No execution systems referenced
+
+Checklist:
+
+ Recursive effective visibility function works
+
+ Helper boolean works
+
+ Admin endpoint returns correct runs
+
+ Provenance preserved (direct vs rollup)
+
+ Test auth bootstrap used
+
+============================================================
+DO NOT
+
+Do NOT write to publications
+
+Do NOT add inference rules
+
+Do NOT touch provider/public UI
+
+Do NOT pull in execution tables
+
+END.

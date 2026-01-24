@@ -1747,6 +1747,115 @@ router.get(
   }
 );
 
+// V3.5 STEP 10E: Visibility-Aware Run Feeds (Read Path Only)
+// Returns runs visible in a specific portal (direct + rollup)
+router.get(
+  '/visibility/portals/:id/runs',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const portalId = req.params.id;
+      const { tenant_id, limit: limitStr, offset: offsetStr } = req.query;
+      
+      // Validate required params
+      if (!tenant_id || typeof tenant_id !== 'string') {
+        return res.status(400).json({
+          ok: false,
+          error: 'missing_tenant_id'
+        });
+      }
+      
+      if (!portalId || !/^[0-9a-f-]{36}$/i.test(portalId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_portal_id'
+        });
+      }
+      
+      // Parse pagination
+      const limit = Math.min(Math.max(1, parseInt(limitStr as string, 10) || 50), 200);
+      const offset = Math.max(0, parseInt(offsetStr as string, 10) || 0);
+      
+      // Validate portal belongs to tenant
+      const portalCheck = await serviceQuery(
+        `SELECT id, name FROM cc_portals WHERE id = $1`,
+        [portalId]
+      );
+      
+      if (!portalCheck.rows || portalCheck.rows.length === 0) {
+        return res.status(404).json({
+          ok: false,
+          error: 'portal_not_found'
+        });
+      }
+      
+      const portalName = portalCheck.rows[0].name;
+      
+      // Set tenant context for the visibility functions
+      await serviceQuery(`SELECT set_config('app.tenant_id', $1, true)`, [tenant_id]);
+      await serviceQuery(`SELECT set_config('app.service_mode', 'off', true)`);
+      
+      // Get recent runs for this tenant
+      const runsResult = await serviceQuery(
+        `SELECT id, title, starts_at, status, zone_id, created_at
+         FROM cc_n3_runs
+         WHERE tenant_id = $1
+         ORDER BY COALESCE(starts_at, created_at) DESC
+         LIMIT $2 OFFSET $3`,
+        [tenant_id, limit + 50, offset]
+      );
+      
+      // For each run, check if it's visible in this portal and get visibility info
+      const visibleRuns: any[] = [];
+      
+      for (const run of runsResult.rows) {
+        // Set service mode to check visibility
+        await serviceQuery(`SELECT set_config('app.service_mode', 'on', true)`);
+        
+        const visResult = await serviceQuery(
+          `SELECT target_type, target_id, source, via_type, via_id, depth, path_nodes
+           FROM resolve_run_effective_visibility_recursive($1, 6)
+           WHERE target_type = 'portal' AND target_id = $2`,
+          [run.id, portalId]
+        );
+        
+        if (visResult.rows && visResult.rows.length > 0) {
+          const vis = visResult.rows[0];
+          visibleRuns.push({
+            run_id: run.id,
+            run_title: run.title,
+            starts_at: run.starts_at,
+            status: run.status,
+            visibility_source: vis.source,
+            via_type: vis.via_type,
+            via_id: vis.via_id,
+            depth: vis.depth,
+            path: vis.path_nodes
+          });
+          
+          if (visibleRuns.length >= limit) break;
+        }
+      }
+      
+      return res.json({
+        ok: true,
+        portal_id: portalId,
+        portal_name: portalName,
+        tenant_id,
+        limit,
+        offset,
+        runs: visibleRuns
+      });
+    } catch (error) {
+      console.error('Portal runs visibility error:', error);
+      return res.status(500).json({
+        ok: false,
+        error: 'Failed to fetch visible runs'
+      });
+    }
+  }
+);
+
 // V3.5 STEP 10C: Visibility Edge Management (Admin CRUD)
 // List visibility edges with optional filters
 router.get(
