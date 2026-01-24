@@ -1,0 +1,138 @@
+REPLIT PROMPT — V3.5 MIGRATION 176 — Portal Anchor Community FK (Schema Only)
+(Unblocks STEP 7 advisory suggestions safely)
+
+ROLE
+Senior Platform Engineer adding a geo anchor linkage for portals.
+
+MODE
+SCHEMA-ONLY. Evidence-first. Additive-only. No refactors.
+
+============================================================
+HARD RULES (LOCKED)
+============================================================
+- This step is SCHEMA ONLY — no routes, no UI, no business logic.
+- Do NOT add lat/lng columns to cc_portals.
+- Use existing cc_sr_communities as the geo anchor table (already has latitude/longitude).
+- Do NOT auto-populate anchor_community_id in this step.
+- Do NOT introduce the word “calendar” anywhere in new code/comments.
+- Terminology: “service provider”, “reservation”; “job” banned in service fulfillment context.
+- Additive-only migrations; do not modify existing meaning.
+
+============================================================
+GOAL
+============================================================
+Add cc_portals.anchor_community_id UUID FK → cc_sr_communities(id)
+
+This creates the canonical destination anchor chain:
+cc_n3_runs.zone_id → cc_zones.portal_id → cc_portals.anchor_community_id → cc_sr_communities(lat/lng)
+
+============================================================
+A) AUDIT FIRST (MANDATORY)
+============================================================
+Create or append: proof/v3.5/step7b-schema-proposal.md
+
+A1) Confirm cc_portals exists and current relevant columns
+- psql: \d cc_portals
+
+A2) Confirm cc_sr_communities exists and has latitude/longitude
+- psql: \d cc_sr_communities
+
+A3) Confirm existing RLS posture for cc_portals
+- If cc_portals has RLS: document policies
+- If cc_portals does NOT have RLS: do NOT add RLS in this migration (scope is FK only)
+
+STOP if cc_sr_communities does not exist or lacks geo columns.
+
+============================================================
+B) MIGRATION (server/migrations/176_portal_anchor_community.sql)
+============================================================
+
+-- 1) Add anchor_community_id FK to portals
+ALTER TABLE cc_portals
+ADD COLUMN anchor_community_id UUID
+REFERENCES cc_sr_communities(id);
+
+COMMENT ON COLUMN cc_portals.anchor_community_id IS
+'Geographic anchor for this portal. Links to cc_sr_communities for lat/lng. Used for STEP 7 advisory suggestions (opt-in).';
+
+-- 2) Index for join performance (partial, since nullable)
+CREATE INDEX IF NOT EXISTS idx_cc_portals_anchor_community_id
+ON cc_portals(anchor_community_id)
+WHERE anchor_community_id IS NOT NULL;
+
+NO other changes.
+
+============================================================
+C) VERIFICATION QUERIES (RUN + PASTE RESULTS)
+============================================================
+
+-- C1) Column exists
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema='public'
+AND table_name='cc_portals'
+AND column_name='anchor_community_id';
+
+-- C2) FK constraint exists (list FK constraints on cc_portals)
+SELECT tc.constraint_name
+FROM information_schema.table_constraints tc
+WHERE tc.table_schema='public'
+AND tc.table_name='cc_portals'
+AND tc.constraint_type='FOREIGN KEY';
+
+-- C3) Index exists
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE schemaname='public'
+AND tablename='cc_portals'
+AND indexname='idx_cc_portals_anchor_community_id';
+
+-- C4) Join path compiles (may be nulls until populated)
+SELECT
+  p.id AS portal_id,
+  p.name AS portal_name,
+  p.anchor_community_id,
+  c.name AS anchor_community_name,
+  c.latitude,
+  c.longitude
+FROM cc_portals p
+LEFT JOIN cc_sr_communities c ON p.anchor_community_id = c.id
+ORDER BY p.name
+LIMIT 50;
+
+-- C5) Show available communities with geo
+SELECT id, name, latitude, longitude
+FROM cc_sr_communities
+WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+ORDER BY name
+LIMIT 50;
+
+============================================================
+D) PROOF UPDATE (MANDATORY)
+============================================================
+Update: proof/v3.5/step7b-schema-proposal.md with a new section:
+
+"Migration 176 Applied — Portal Anchor Community FK"
+
+Include:
+- Migration SQL (verbatim)
+- Verification outputs C1–C5
+- Explicit checkboxes:
+
+[ ] anchor_community_id column added to cc_portals
+[ ] FK created to cc_sr_communities(id)
+[ ] Index created (partial)
+[ ] Join query runs successfully
+[ ] No portal lat/lng columns added
+[ ] No auto-population performed
+
+============================================================
+E) DO NOT (NON-NEGOTIABLE)
+============================================================
+- Do NOT create any UI to set anchor_community_id in this step
+- Do NOT add any endpoints
+- Do NOT auto-map portals to communities
+- Do NOT modify cc_zones
+- Do NOT modify cc_sr_communities
+
+END.
