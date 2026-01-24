@@ -1,0 +1,369 @@
+REPLIT PROMPT — V3.5 STEP 10B (UPDATED)
+Effective Visibility Resolver (Runs → Direct + Rolled-Up Visibility)
+
+ROLE: Senior Platform Engineer / Governance-Grade QA
+MODE: Read-only visibility computation. Minimal additive schema ONLY if required. Evidence-first.
+
+NON-NEGOTIABLES (LOCKED)
+1) Identity ≠ Visibility ≠ Execution
+
+Identity (user-facing): cc_portals.name, cc_zones.name, cc_work_areas.title
+
+Visibility (this step): cc_run_portal_publications + cc_visibility_edges
+
+Execution (OUT OF SCOPE): cc_work_areas, cc_properties, surfaces, constraints
+
+2) This step MUST NOT
+
+❌ Auto-publish runs
+
+❌ Change publication behavior
+
+❌ Change pricing / MarketMode
+
+❌ Rename portals/zones
+
+❌ Infer visibility from geo, naming, hierarchy
+
+❌ Touch execution tables
+
+3) Terminology hard rules
+
+✅ service provider (never contractor)
+
+✅ reservation (never booking)
+
+✅ No calendar in new code
+
+✅ “job” only in employment domain (not used here)
+
+GOAL
+
+Create a read-only resolver that returns the effective visibility set for a run:
+
+Direct visibility: active portal publications
+
+Rolled-up visibility: explicit visibility edges (direction-aware)
+
+This is for proof + future UI, not for changing publication.
+
+OUTPUTS (MANDATORY)
+
+Create: proof/v3.5/step10b-effective-visibility-proof.md
+
+SECTION A) AUDIT FIRST (STOP IF ANYTHING IS MISSING)
+
+Run and paste results into the proof doc.
+
+A1) Confirm direct publication source exists
+\d cc_run_portal_publications
+SELECT COUNT(*) AS active_pub_rows
+FROM cc_run_portal_publications
+WHERE unpublished_at IS NULL;
+
+A2) Confirm visibility graph exists
+\d cc_visibility_edges
+
+SELECT direction, COUNT(*)
+FROM cc_visibility_edges
+WHERE archived_at IS NULL
+GROUP BY 1
+ORDER BY 1;
+
+A3) Confirm 10A resolver exists
+SELECT proname
+FROM pg_proc
+WHERE proname = 'resolve_visibility_targets';
+
+A4) Confirm Bamfield edges exist (expect 5)
+SELECT
+  e.source_type, e.direction,
+  z.key AS source_zone_key,
+  p.slug AS target_portal_slug
+FROM cc_visibility_edges e
+LEFT JOIN cc_zones z ON e.source_type='zone' AND e.source_id = z.id
+LEFT JOIN cc_portals p ON e.target_type='portal' AND e.target_id = p.id
+WHERE e.archived_at IS NULL
+ORDER BY source_zone_key;
+
+
+STOP CONDITION: If any of A1–A4 fails, STOP and document. Do not implement.
+
+SECTION B) DEFINE “EFFECTIVE VISIBILITY” (CANON)
+
+For a given run_id:
+
+B1) Direct portals
+
+Active direct portals are:
+
+SELECT portal_id
+FROM cc_run_portal_publications
+WHERE run_id = $1
+  AND unpublished_at IS NULL;
+
+B2) Rolled-up targets (explicit edges only)
+
+Include only edges:
+
+archived_at IS NULL
+
+direction IN ('up','lateral')
+
+Sources:
+
+from each direct portal: source_type='portal' AND source_id IN (direct portals)
+
+optionally from run.zone_id (see B3)
+
+B3) Zone-aware extension (safe, optional)
+
+If and only if cc_n3_runs.zone_id IS NOT NULL, include:
+
+source_type='zone' AND source_id = run.zone_id
+
+No geo. No inference. Only explicit edges.
+
+SECTION C) IMPLEMENTATION
+C0) Migration number verification (MANDATORY)
+
+Before creating any migration:
+
+ls server/migrations/*.sql | tail -5
+
+
+Use the next available number (this prompt uses 177 as an example).
+
+C1) Create SQL function (preferred)
+
+Create migration: server/migrations/177_run_effective_visibility.sql (or next number)
+
+CREATE OR REPLACE FUNCTION resolve_run_effective_visibility(p_run_id uuid)
+RETURNS TABLE (
+  target_type text,
+  target_id uuid,
+  source text,
+  via_source_type text,
+  via_source_id uuid,
+  direction text
+)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH run_row AS (
+    SELECT id, tenant_id, zone_id
+    FROM cc_n3_runs
+    WHERE id = p_run_id
+  ),
+  direct AS (
+    SELECT
+      'portal'::text AS target_type,
+      rp.portal_id AS target_id,
+      'direct'::text AS source,
+      NULL::text AS via_source_type,
+      NULL::uuid AS via_source_id,
+      NULL::text AS direction
+    FROM cc_run_portal_publications rp
+    JOIN run_row r ON r.id = rp.run_id
+    WHERE rp.unpublished_at IS NULL
+  ),
+  rollup_from_portals AS (
+    SELECT
+      e.target_type,
+      e.target_id,
+      'rollup'::text AS source,
+      e.source_type AS via_source_type,
+      e.source_id AS via_source_id,
+      e.direction
+    FROM cc_visibility_edges e
+    WHERE e.archived_at IS NULL
+      AND e.direction IN ('up','lateral')
+      AND e.source_type = 'portal'
+      AND e.source_id IN (
+        SELECT target_id FROM direct WHERE target_type='portal'
+      )
+  ),
+  rollup_from_zone AS (
+    SELECT
+      e.target_type,
+      e.target_id,
+      'rollup'::text AS source,
+      e.source_type AS via_source_type,
+      e.source_id AS via_source_id,
+      e.direction
+    FROM cc_visibility_edges e
+    JOIN run_row r ON true
+    WHERE e.archived_at IS NULL
+      AND e.direction IN ('up','lateral')
+      AND e.source_type = 'zone'
+      AND r.zone_id IS NOT NULL
+      AND e.source_id = r.zone_id
+  )
+  -- NOTE: UNION (not UNION ALL) dedupes identical rows
+  SELECT * FROM direct
+  UNION
+  SELECT * FROM rollup_from_portals
+  UNION
+  SELECT * FROM rollup_from_zone;
+$$;
+
+C2) Add performance index (MANDATORY)
+
+In the same migration (after function), add:
+
+CREATE INDEX IF NOT EXISTS idx_run_publications_active
+ON cc_run_portal_publications(run_id, portal_id)
+WHERE unpublished_at IS NULL;
+
+SECTION D) INTERNAL API (READ-ONLY)
+
+Endpoint: GET /api/internal/visibility/runs/:id/effective
+
+Rules:
+
+Auth required (requireAuth() or internal pattern)
+
+Tenant validation required (MANDATORY)
+
+Endpoint must remain read-only and not used by UI yet
+
+D1) Tenant validation (MANDATORY)
+
+In the handler:
+
+// Verify run belongs to tenant before resolving
+const run = await db.query(
+  'SELECT id, tenant_id FROM cc_n3_runs WHERE id = $1',
+  [runId]
+);
+
+if (!run || run.rows?.length === 0 || run.rows[0].tenant_id !== req.ctx.tenant_id) {
+  return res.status(404).json({ ok: false, error: 'run_not_found' });
+}
+
+D2) Response requirements
+
+Return:
+
+run_id
+
+direct_portals (list with portal id + name)
+
+effective_targets (deduped by (type,id) with direct preferred)
+
+Optionally debug (provenance fields)
+
+Example shape:
+
+{
+  "ok": true,
+  "run_id": "…",
+  "direct_portals": [
+    { "portal_id": "…", "portal_name": "…" }
+  ],
+  "effective_targets": [
+    { "type": "portal", "id": "…", "name": "Bamfield Community Portal", "source": "direct" }
+  ]
+}
+
+
+Hard rule: do NOT surface anchor community names. Identity only.
+
+SECTION E) DEDUP + ORDERING
+
+Dedup rules (API layer):
+
+Dedup by (type,id)
+
+Prefer source='direct' over source='rollup'
+
+Ordering (proof readability):
+
+Direct portals (by portal_name)
+
+Rolled-up targets (by type then name)
+
+SECTION F) TESTING (MANDATORY)
+
+Use TEST AUTH BOOTSTRAP ONLY:
+
+await loginAs(page, 'ellen');
+
+
+Do NOT use UI login.
+
+F1) Pick a run with an active publication row
+SELECT rp.run_id
+FROM cc_run_portal_publications rp
+WHERE rp.unpublished_at IS NULL
+LIMIT 5;
+
+F2) Call endpoint
+
+GET /api/internal/visibility/runs/:id/effective
+
+Verify:
+
+ok=true
+
+direct_portals includes the published portal
+
+If run.zone_id is set and has an edge, rollup results appear (then dedupe keeps direct preferred)
+
+F3) Negative test
+
+Run with no publications returns:
+
+ok=true
+
+direct_portals empty
+
+effective_targets empty
+
+SECTION G) PROOF DOCUMENT
+
+Create: proof/v3.5/step10b-effective-visibility-proof.md
+
+Include:
+
+Audit outputs (Section A)
+
+Migration number check output (Section C0)
+
+Migration SQL (function + index)
+
+Endpoint handler excerpt including tenant validation
+
+Live test results (request + response snippet)
+
+Compliance checklist:
+
+ No auto-publishing
+
+ No geo inference
+
+ Identity unchanged (no renames)
+
+ Explicit edges only
+
+ Read-only resolver works
+
+ Index created
+
+ Tenant validation enforced
+
+ Test auth bootstrap used
+
+DO NOT
+
+Do NOT add UI
+
+Do NOT modify Step 7 behavior
+
+Do NOT add recursion yet
+
+Do NOT infer rollups from geo/naming
+
+Do NOT reference execution tables
+
+END.
