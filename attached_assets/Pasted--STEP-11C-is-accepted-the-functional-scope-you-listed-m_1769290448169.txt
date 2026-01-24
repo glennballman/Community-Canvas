@@ -1,0 +1,114 @@
+✅ STEP 11C is accepted — the functional scope you listed matches the audit plan and the MVP boundary (copy/paste links, public read-only token view, “Publish ≠ Notify” separation).
+
+Now, as QA gatekeeper, there are two things to do immediately:
+
+Certify STEP 11C with proof artifacts (same standard as 11B)
+
+Triage the unrelated 401 tenant-switch auth bug (so it doesn’t poison future testing)
+
+1) STEP 11C Certification Requirements (evidence-first)
+
+Please upload or paste the proof file if it exists (ideally proof/v3.5/step11c-directed-presence-proof.md). If you haven’t generated it yet, here is the minimal evidence checklist you can paste into that file:
+
+A) Backend proof
+
+Example request/response for:
+
+POST /api/provider/runs/:id/stakeholder-invites
+
+GET /api/provider/runs/:id/stakeholder-invites
+
+GET /api/i/:token (show masked email + safe run fields only)
+
+Explicit statement: no writes to cc_run_portal_publications occur in STEP 11C.
+
+B) UI proof
+
+Screenshot/text capture showing:
+
+“Notify stakeholders” button on ProviderRunDetailPage
+
+NotifyStakeholdersModal rule block (“Publish ≠ Notify”)
+
+Copy link action
+
+Public invitation page /i/:token rendering as Read-only
+
+Once I have the proof artifact (or pasted excerpts), I’ll mark STEP 11C: ✅ CERTIFIED COMPLETE the same way we did for 11B.
+
+2) The 401 After Tenant Switch — Triage Plan (separate defect)
+
+You did the right thing flagging it as pre-existing. Let’s isolate it fast.
+
+What it usually is in this architecture
+
+One of these patterns:
+
+Session cookie remains valid, but req.ctx.tenant_id is stale/null after switching tenant
+
+Tenant switch updates client state, but server context middleware still reads old tenant
+
+An endpoint expects tenant in one channel (cookie/session) but it’s now provided in another (header) and is missing
+
+React Query caches a 401 from before switch and replays it
+
+Minimal audit prompt to give Replit (no guessing)
+
+Paste this into Replit:
+
+REPLIT AUDIT PROMPT — Tenant Switch 401 on /api/provider/runs (READ-ONLY)
+
+ROLE: Auth/Context Auditor
+MODE: Evidence-first. Do NOT implement fixes yet.
+
+BUG:
+After switching tenant, GET /api/provider/runs returns 401 when using session auth.
+This existed before STEP 11C.
+
+TASK:
+1) Identify how tenant switching is implemented client-side:
+   - Find the tenant switch UI component
+   - Determine where tenant_id is stored (cookie/localStorage/sessionStorage/react state)
+   - Determine if tenant_id is sent to server via header (e.g., x-tenant-id) or via session/GUC
+
+2) Identify server-side auth + tenant context derivation:
+   - Locate requireAuth middleware
+   - Locate any middleware that sets req.ctx.tenant_id
+   - Identify whether tenant_id is pulled from:
+     - session
+     - JWT
+     - header
+     - db lookup
+   - Report exact logic and where it runs in request pipeline
+
+3) Inspect /api/provider/runs route:
+   - Find handler file and excerpt (max 20 lines) showing how it reads tenantId:
+     const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+   - Confirm if it differs from other provider routes
+
+4) Compare with a provider endpoint that works after tenant switch:
+   - Example: /api/provider/portals or /api/provider/runs/:id/publish
+   - Identify what is different in middleware chain or tenant resolution
+
+COMMANDS:
+rg -n "tenant switch|switchTenant|setTenant|tenantId" client/src
+rg -n "x-tenant|tenant_id|req\\.ctx|set_config\\('app\\.tenant" server
+rg -n "requireAuth" server
+rg -n "router\\.get\\('/runs'" server/routes
+rg -n "ctx\\.tenant_id" server
+
+OUTPUT:
+A) Client tenant switch mechanism (files + brief excerpt)
+B) Server tenant context mechanism (files + brief excerpt)
+C) /api/provider/runs handler excerpt
+D) Hypothesis: why ctx/user tenant differs after switch
+E) Smallest fix recommendation (no code yet)
+
+
+When you paste back Replit’s audit, I’ll give you the smallest surgical fix prompt (likely 1–2 files).
+
+What to do right now
+
+If you already created proof/v3.5/step11c-directed-presence-proof.md, upload it.
+
+Otherwise, run the tenant-switch auth audit prompt above and paste results here.
