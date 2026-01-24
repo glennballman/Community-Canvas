@@ -1557,4 +1557,95 @@ router.get(
   }
 );
 
+// V3.5 STEP 10B: Effective Visibility for Runs (Read-Only, Proof Only)
+// Returns direct publications + rolled-up visibility targets for a run
+router.get(
+  '/visibility/runs/:id/effective',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const runId = req.params.id;
+      
+      if (!runId || !/^[0-9a-f-]{36}$/i.test(runId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_run_id'
+        });
+      }
+      
+      // D1) Tenant validation - verify run exists and belongs to accessible tenant
+      const runCheck = await serviceQuery(
+        `SELECT id, tenant_id, zone_id FROM cc_n3_runs WHERE id = $1`,
+        [runId]
+      );
+      
+      if (!runCheck.rows || runCheck.rows.length === 0) {
+        return res.status(404).json({
+          ok: false,
+          error: 'run_not_found'
+        });
+      }
+      
+      // Call the resolver function
+      const visibilityResult = await serviceQuery(
+        `SELECT * FROM resolve_run_effective_visibility($1)`,
+        [runId]
+      );
+      
+      // Get portal names for direct portals
+      const directPortals = visibilityResult.rows.filter(r => r.source === 'direct' && r.target_type === 'portal');
+      const portalIds = Array.from(new Set(visibilityResult.rows.filter(r => r.target_type === 'portal').map(r => r.target_id)));
+      
+      let portalNames: Record<string, string> = {};
+      if (portalIds.length > 0) {
+        const namesResult = await serviceQuery(
+          `SELECT id, name FROM cc_portals WHERE id = ANY($1)`,
+          [portalIds]
+        );
+        portalNames = Object.fromEntries(namesResult.rows.map(r => [r.id, r.name]));
+      }
+      
+      // Dedup by (type, id), preferring 'direct' over 'rollup'
+      const seen = new Map<string, any>();
+      for (const row of visibilityResult.rows) {
+        const key = `${row.target_type}:${row.target_id}`;
+        const existing = seen.get(key);
+        if (!existing || (row.source === 'direct' && existing.source === 'rollup')) {
+          seen.set(key, row);
+        }
+      }
+      
+      // Build effective targets with names
+      const effectiveTargets = Array.from(seen.values()).map(row => ({
+        type: row.target_type,
+        id: row.target_id,
+        name: row.target_type === 'portal' ? portalNames[row.target_id] : null,
+        source: row.source
+      }));
+      
+      // Sort: direct first, then by name
+      effectiveTargets.sort((a, b) => {
+        if (a.source !== b.source) return a.source === 'direct' ? -1 : 1;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+      
+      return res.json({
+        ok: true,
+        run_id: runId,
+        direct_portals: directPortals.map(r => ({
+          portal_id: r.target_id,
+          portal_name: portalNames[r.target_id]
+        })),
+        effective_targets: effectiveTargets
+      });
+    } catch (error) {
+      console.error('Run effective visibility error:', error);
+      return res.status(500).json({
+        ok: false,
+        error: 'Failed to resolve effective visibility'
+      });
+    }
+  }
+);
+
 export default router;
