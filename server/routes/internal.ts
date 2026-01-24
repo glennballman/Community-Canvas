@@ -1776,9 +1776,9 @@ router.get(
       const limit = Math.min(Math.max(1, parseInt(limitStr as string, 10) || 50), 200);
       const offset = Math.max(0, parseInt(offsetStr as string, 10) || 0);
       
-      // Validate portal belongs to tenant
+      // Validate portal exists and belongs to tenant
       const portalCheck = await serviceQuery(
-        `SELECT id, name FROM cc_portals WHERE id = $1`,
+        `SELECT id, name, owning_tenant_id FROM cc_portals WHERE id = $1`,
         [portalId]
       );
       
@@ -1789,58 +1789,62 @@ router.get(
         });
       }
       
-      const portalName = portalCheck.rows[0].name;
+      const portal = portalCheck.rows[0];
       
-      // Set tenant context for the visibility functions
-      await serviceQuery(`SELECT set_config('app.tenant_id', $1, true)`, [tenant_id]);
-      await serviceQuery(`SELECT set_config('app.service_mode', 'off', true)`);
+      // Validate portal belongs to tenant (or is accessible - for now require match)
+      if (portal.owning_tenant_id && portal.owning_tenant_id !== tenant_id) {
+        return res.status(403).json({
+          ok: false,
+          error: 'portal_tenant_mismatch'
+        });
+      }
       
-      // Get recent runs for this tenant
+      // Set service mode for visibility functions (admin tool pattern)
+      await serviceQuery(`SELECT set_config('app.service_mode', 'on', true)`);
+      
+      // Use efficient single query with lateral join for visibility filtering
+      // This ensures all visible runs are found regardless of sparsity
       const runsResult = await serviceQuery(
-        `SELECT id, title, starts_at, status, zone_id, created_at
-         FROM cc_n3_runs
-         WHERE tenant_id = $1
-         ORDER BY COALESCE(starts_at, created_at) DESC
-         LIMIT $2 OFFSET $3`,
-        [tenant_id, limit + 50, offset]
+        `WITH visible_runs AS (
+          SELECT 
+            r.id as run_id,
+            r.title as run_title,
+            r.starts_at,
+            r.status,
+            r.created_at,
+            v.source as visibility_source,
+            v.via_type,
+            v.via_id,
+            v.depth,
+            v.path_nodes
+          FROM cc_n3_runs r
+          CROSS JOIN LATERAL resolve_run_effective_visibility_recursive(r.id, 6) v
+          WHERE r.tenant_id = $1
+            AND v.target_type = 'portal'
+            AND v.target_id = $2
+        )
+        SELECT * FROM visible_runs
+        ORDER BY COALESCE(starts_at, created_at) DESC
+        LIMIT $3 OFFSET $4`,
+        [tenant_id, portalId, limit, offset]
       );
       
-      // For each run, check if it's visible in this portal and get visibility info
-      const visibleRuns: any[] = [];
-      
-      for (const run of runsResult.rows) {
-        // Set service mode to check visibility
-        await serviceQuery(`SELECT set_config('app.service_mode', 'on', true)`);
-        
-        const visResult = await serviceQuery(
-          `SELECT target_type, target_id, source, via_type, via_id, depth, path_nodes
-           FROM resolve_run_effective_visibility_recursive($1, 6)
-           WHERE target_type = 'portal' AND target_id = $2`,
-          [run.id, portalId]
-        );
-        
-        if (visResult.rows && visResult.rows.length > 0) {
-          const vis = visResult.rows[0];
-          visibleRuns.push({
-            run_id: run.id,
-            run_title: run.title,
-            starts_at: run.starts_at,
-            status: run.status,
-            visibility_source: vis.source,
-            via_type: vis.via_type,
-            via_id: vis.via_id,
-            depth: vis.depth,
-            path: vis.path_nodes
-          });
-          
-          if (visibleRuns.length >= limit) break;
-        }
-      }
+      const visibleRuns = runsResult.rows.map(row => ({
+        run_id: row.run_id,
+        run_title: row.run_title,
+        starts_at: row.starts_at,
+        status: row.status,
+        visibility_source: row.visibility_source,
+        via_type: row.via_type,
+        via_id: row.via_id,
+        depth: row.depth,
+        path: row.path_nodes
+      }));
       
       return res.json({
         ok: true,
         portal_id: portalId,
-        portal_name: portalName,
+        portal_name: portal.name,
         tenant_id,
         limit,
         offset,
