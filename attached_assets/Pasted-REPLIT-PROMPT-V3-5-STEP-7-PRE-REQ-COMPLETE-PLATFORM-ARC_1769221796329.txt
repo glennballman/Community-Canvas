@@ -1,0 +1,317 @@
+REPLIT PROMPT — V3.5 STEP 7 PRE-REQ — COMPLETE PLATFORM ARCHITECTURE AUDIT
+(Micro-Portals + Surface Spine + Weather Dependencies)
+
+ROLE: Senior Platform Engineer.
+MODE: AUDIT ONLY. No code. No assumptions. Evidence-first.
+
+============================================================
+HARD RULES
+============================================================
+- DO NOT write any code
+- DO NOT make assumptions
+- Document EVERYTHING
+- This audit covers: Portals, Communities, Zones, Surfaces, Weather
+
+============================================================
+OUTPUTS
+============================================================
+Create: proof/v3.5/platform-architecture-audit.md
+
+============================================================
+PART 1: MICRO-PORTAL & COMMUNITY ARCHITECTURE
+============================================================
+
+A1) ALL portals with full details:
+```sql
+SELECT id, name, slug, status, owning_tenant_id, default_zone_id, anchor_community_id
+FROM cc_portals ORDER BY name;
+```
+
+A2) ALL communities (cc_sr_communities):
+```sql
+SELECT id, name, latitude, longitude, portal_id
+FROM cc_sr_communities ORDER BY name;
+```
+
+A3) ALL communities (cc_communities if different):
+```sql
+SELECT id, name, latitude, longitude, portal_id
+FROM cc_communities ORDER BY name;
+```
+
+A4) Community hierarchy check:
+```sql
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name IN ('cc_communities', 'cc_sr_communities')
+AND column_name ILIKE '%parent%';
+```
+
+A5) Zones per portal:
+```sql
+SELECT p.name AS portal, z.name AS zone, z.key, z.kind
+FROM cc_zones z
+JOIN cc_portals p ON z.portal_id = p.id
+ORDER BY p.name, z.name;
+```
+
+A6) Bamfield area deep dive:
+```sql
+SELECT 'portal' AS type, name FROM cc_portals WHERE name ILIKE '%bamfield%' OR name ILIKE '%helby%' OR name ILIKE '%anacla%'
+UNION ALL
+SELECT 'community', name FROM cc_sr_communities WHERE name ILIKE '%bamfield%' OR name ILIKE '%helby%' OR name ILIKE '%anacla%' OR name ILIKE '%east%' OR name ILIKE '%west%'
+UNION ALL
+SELECT 'zone', name FROM cc_zones WHERE name ILIKE '%bamfield%' OR name ILIKE '%helby%' OR name ILIKE '%anacla%' OR name ILIKE '%east%' OR name ILIKE '%west%'
+ORDER BY type, name;
+```
+
+============================================================
+PART 2: SURFACE SPINE ARCHITECTURE (CC-01/CC-02)
+============================================================
+
+B1) Find ALL surface-related tables:
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+AND (
+  table_name ILIKE '%surface%'
+  OR table_name ILIKE '%standing%'
+  OR table_name ILIKE '%mobility%'
+  OR table_name ILIKE '%utility%'
+  OR table_name ILIKE '%ramp%'
+  OR table_name ILIKE '%slope%'
+  OR table_name ILIKE '%path%'
+  OR table_name ILIKE '%route%'
+  OR table_name ILIKE '%segment%'
+)
+ORDER BY table_name;
+```
+
+B2) For each surface table found, show schema:
+```sql
+-- Run \d for each table found above
+```
+
+B3) Surface types/kinds:
+```sql
+-- If there's a surface_type or kind column, show distinct values
+SELECT DISTINCT kind FROM cc_surfaces ORDER BY 1;  -- adjust table name
+SELECT DISTINCT surface_type FROM cc_surfaces ORDER BY 1;  -- adjust column name
+```
+
+B4) StandingSurface inventory (parking, staging):
+```sql
+-- Adjust table name based on B1 findings
+SELECT id, name, kind, latitude, longitude
+FROM cc_standing_surfaces  -- or actual table name
+LIMIT 50;
+```
+
+B5) MobilitySurface inventory (roads, water routes):
+```sql
+-- Adjust table name based on B1 findings
+SELECT id, name, kind, surface_type
+FROM cc_mobility_surfaces  -- or actual table name
+LIMIT 50;
+```
+
+B6) UtilitySurface inventory (electricity, water):
+```sql
+-- Adjust table name based on B1 findings
+SELECT id, name, kind, utility_type
+FROM cc_utility_surfaces  -- or actual table name
+LIMIT 50;
+```
+
+B7) Surface linkage to work areas:
+```sql
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'cc_work_areas'
+AND (
+  column_name ILIKE '%surface%'
+  OR column_name ILIKE '%access%'
+  OR column_name ILIKE '%utility%'
+);
+```
+
+B8) Surface linkage to properties:
+```sql
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'cc_properties'
+AND (
+  column_name ILIKE '%surface%'
+  OR column_name ILIKE '%access%'
+  OR column_name ILIKE '%parking%'
+);
+```
+
+============================================================
+PART 3: ROUTE & PATH ARCHITECTURE
+============================================================
+
+C1) Find route/path tables:
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+AND (
+  table_name ILIKE '%route%'
+  OR table_name ILIKE '%path%'
+  OR table_name ILIKE '%leg%'
+  OR table_name ILIKE '%segment%'
+  OR table_name ILIKE '%waypoint%'
+  OR table_name ILIKE '%navigation%'
+)
+ORDER BY table_name;
+```
+
+C2) For each route table, show schema and sample:
+```sql
+-- Run \d and SELECT * LIMIT 10 for each
+```
+
+C3) How do routes connect surfaces?
+```sql
+-- Look for FKs between route tables and surface tables
+SELECT
+  tc.table_name AS from_table,
+  kcu.column_name AS from_col,
+  ccu.table_name AS to_table
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND (
+  tc.table_name ILIKE '%route%'
+  OR tc.table_name ILIKE '%path%'
+  OR tc.table_name ILIKE '%segment%'
+)
+ORDER BY tc.table_name;
+```
+
+============================================================
+PART 4: WEATHER & CONSTRAINTS
+============================================================
+
+D1) Find weather/tide/constraint tables:
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+AND (
+  table_name ILIKE '%weather%'
+  OR table_name ILIKE '%tide%'
+  OR table_name ILIKE '%forecast%'
+  OR table_name ILIKE '%constraint%'
+  OR table_name ILIKE '%window%'
+  OR table_name ILIKE '%schedule%'
+  OR table_name ILIKE '%ferry%'
+)
+ORDER BY table_name;
+```
+
+D2) Weather data structure:
+```sql
+-- Show schema for weather tables found
+```
+
+D3) Tide data structure:
+```sql
+-- Show schema for tide tables found
+```
+
+D4) How weather links to surfaces/routes:
+```sql
+-- Look for weather_id or constraint_id FKs on surface/route tables
+```
+
+============================================================
+PART 5: WORK AREA PRECISION
+============================================================
+
+E1) Full cc_work_areas schema:
+```sql
+\d cc_work_areas
+```
+
+E2) Sample work areas with all fields:
+```sql
+SELECT * FROM cc_work_areas LIMIT 10;
+```
+
+E3) Work area → property → surface chain:
+```sql
+SELECT 
+  wa.id AS work_area_id,
+  wa.title AS work_area,
+  p.id AS property_id,
+  p.lat, p.lon
+  -- add surface columns if they exist
+FROM cc_work_areas wa
+JOIN cc_properties p ON wa.property_id = p.id
+LIMIT 10;
+```
+
+E4) Access requirements on work areas:
+```sql
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'cc_work_areas'
+ORDER BY ordinal_position;
+```
+
+============================================================
+PART 6: EXISTING SUGGESTION/DISCOVERY SYSTEMS
+============================================================
+
+F1) Search for nearby/suggestion code:
+```bash
+rg -n "nearby|suggest|recommend|adjacent|neighbor" server/routes server/services
+```
+
+F2) Search for surface traversal code:
+```bash
+rg -n "traversal|pathfind|route.*surface|surface.*route" server
+```
+
+F3) Search for weather constraint code:
+```bash
+rg -n "weather.*constraint|tide.*window|access.*window" server
+```
+
+============================================================
+PART 7: SUMMARY & QUESTIONS
+============================================================
+
+Based on ALL findings, document:
+
+1. SURFACE TAXONOMY:
+   - What surface types exist?
+   - How are they linked?
+   
+2. TRAVERSAL MODEL:
+   - How does a run define origin → destination?
+   - What surfaces are crossed?
+   
+3. CONSTRAINT MODEL:
+   - How do weather/tides affect access?
+   - Where are time windows calculated?
+
+4. MICRO-PORTAL MODEL:
+   - How do East Bamfield, West Bamfield, Helby Island, Anacla relate?
+   - What defines "nearby" for suggestions?
+
+5. QUESTIONS FOR GLENN:
+   - [List anything unclear]
+
+============================================================
+DO NOT
+============================================================
+- Write any code
+- Make assumptions
+- Skip any section
+
+END.
