@@ -1,0 +1,259 @@
+REPLIT PROMPT — V3.5 STEP 10C
+
+Visibility Edge Management (Admin CRUD + Audit Proof, No UI Yet)
+
+ROLE: Senior Platform Engineer
+MODE: Admin-only management for cc_visibility_edges. Explicit-only. Evidence-first.
+
+HARD RULES (READ FIRST)
+
+IDENTITY ≠ VISIBILITY ≠ EXECUTION (LOCKED)
+
+Identity: portal/zone/work area names (user-facing)
+
+Visibility: cc_visibility_edges, cc_run_portal_publications
+
+Execution: work areas, properties, surfaces, constraints (OUT OF SCOPE)
+
+This step MUST NOT
+
+❌ Auto-publish or change publication behavior
+
+❌ Infer edges from geo or naming
+
+❌ Touch Step 7 publish-suggestions logic
+
+❌ Add UI (API only in 10C)
+
+❌ Rename portals/zones
+
+Terminology
+
+✅ “service provider”, “reservation”
+
+✅ No “booking”, no “calendar”
+
+✅ “job” not used here
+
+GOAL
+
+Add admin-only endpoints to:
+
+List visibility edges
+
+Create a new edge (explicit)
+
+Archive (soft delete) an edge
+
+(Optional) update reason/direction safely
+
+Edges remain explicit and auditable.
+
+OUTPUTS (MANDATORY)
+
+Create: proof/v3.5/step10c-visibility-edge-admin-proof.md
+
+SECTION A) AUDIT FIRST (STOP CONDITIONS)
+
+Run and include in proof:
+
+\d cc_visibility_edges;
+
+SELECT direction, COUNT(*)
+FROM cc_visibility_edges
+WHERE archived_at IS NULL
+GROUP BY 1;
+
+SELECT COUNT(*) AS total_edges
+FROM cc_visibility_edges;
+
+
+STOP if:
+
+cc_visibility_edges missing
+
+RLS disabled
+
+direction constraint missing
+
+SECTION B) ADD INDEXES (PERF / SAFETY)
+
+Create a migration (pick next number via ls server/migrations/*.sql | tail -5):
+
+Migration: server/migrations/###_visibility_edges_indexes.sql
+
+CREATE INDEX IF NOT EXISTS idx_visibility_edges_source
+ON cc_visibility_edges(tenant_id, source_type, source_id)
+WHERE archived_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_visibility_edges_target
+ON cc_visibility_edges(tenant_id, target_type, target_id)
+WHERE archived_at IS NULL;
+
+-- Prevent duplicate active edges (same source→target+direction)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_visibility_edges_active
+ON cc_visibility_edges(tenant_id, source_type, source_id, target_type, target_id, direction)
+WHERE archived_at IS NULL;
+
+
+No other schema changes.
+
+SECTION C) ADMIN API (NO UI)
+
+All routes must:
+
+Require platform admin auth (same pattern as Step 10B internal endpoints)
+
+Enforce tenant isolation (req.ctx.tenant_id)
+
+Never bypass tenant checks even if service mode exists
+
+C1) Routes to add
+
+GET /api/internal/visibility/edges
+Query params (optional):
+
+source_type, source_id, target_type, target_id, direction
+
+include_archived (default false)
+
+POST /api/internal/visibility/edges
+Body:
+
+{
+  "tenant_id": "…",        // REQUIRED (explicit)
+  "source_type": "portal|zone",
+  "source_id": "…",
+  "target_type": "portal|zone",
+  "target_id": "…",
+  "direction": "up|down|lateral",
+  "reason": "text"
+}
+
+
+Rules:
+
+validate enums
+
+reject source_id === target_id
+
+reject duplicates (unique index will also protect; return clean 409)
+
+NO inference / NO auto-generation
+
+PATCH /api/internal/visibility/edges/:id/archive
+Body:
+
+{ "archived": true }
+
+
+Implementation:
+
+set archived_at = now() (idempotent)
+
+return updated edge
+
+(Optional) PATCH /api/internal/visibility/edges/:id
+Allow updating only:
+
+reason
+
+direction (only if it doesn’t violate unique index; otherwise 409)
+
+SECTION D) VALIDATION QUERIES (MANDATORY)
+
+When creating edges, validate that referenced entities exist in-tenant:
+
+If source_type='portal' ensure cc_portals.id exists and belongs to tenant context
+
+If source_type='zone' ensure cc_zones.id exists and belongs to tenant context
+Same for target.
+
+Return clean errors:
+
+invalid_source
+
+invalid_target
+
+duplicate_edge
+
+edge_not_found
+
+SECTION E) TESTING (TEST AUTH BOOTSTRAP ONLY)
+
+Use:
+
+await loginAs(page, 'ellen');
+
+
+(Or your established platform-admin test bootstrap method.)
+
+Test cases:
+
+List edges (expect existing 10A edges)
+
+Create a new lateral edge (zone → zone) using real IDs
+
+Verify appears in list
+
+Verify 409 on duplicate create
+
+Archive that edge
+
+Verify it disappears unless include_archived=true
+
+Confirm 10B resolver unchanged (spot-check one run)
+
+SECTION F) PROOF DOC REQUIREMENTS
+
+proof/v3.5/step10c-visibility-edge-admin-proof.md must include:
+
+Migration number + SQL + verification output
+
+Endpoint definitions (routes + validation rules)
+
+Example request/response for:
+
+list
+
+create
+
+archive
+
+Proof that:
+
+no publishing behavior changed
+
+no geo inference added
+
+identity untouched
+
+Step 10B still works
+
+Checklist:
+
+ Indexes created (source/target + unique active)
+
+ Admin-only endpoints implemented
+
+ Tenant validation enforced
+
+ Duplicate protection returns 409
+
+ Archive is soft-delete only
+
+ Test auth bootstrap used
+
+ No UI added
+
+DO NOT
+
+Do NOT auto-create edges from geo or naming
+
+Do NOT add recursion yet (that’s Step 10D if needed)
+
+Do NOT touch Step 7 publish suggestions
+
+Do NOT touch execution tables
+
+END.
