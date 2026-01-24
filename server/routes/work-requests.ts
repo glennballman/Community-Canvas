@@ -98,16 +98,19 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       [...params, parseInt(limit as string), parseInt(offset as string)]
     );
 
+    // TERMINOLOGY_CANON.md v3: Use only canonical work_request_status values
     const countResult = await tenantReq.tenantQuery!(
       `SELECT 
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE status = 'new') as count_new,
-        COUNT(*) FILTER (WHERE status = 'contacted') as count_contacted,
-        COUNT(*) FILTER (WHERE status = 'quoted') as count_quoted,
-        COUNT(*) FILTER (WHERE status = 'scheduled') as count_scheduled,
+        COUNT(*) FILTER (WHERE status = 'draft') as count_draft,
+        COUNT(*) FILTER (WHERE status = 'sent') as count_sent,
+        COUNT(*) FILTER (WHERE status = 'proposed_change') as count_proposed_change,
+        COUNT(*) FILTER (WHERE status = 'awaiting_commitment') as count_awaiting_commitment,
+        COUNT(*) FILTER (WHERE status = 'unassigned') as count_unassigned,
+        COUNT(*) FILTER (WHERE status = 'accepted') as count_accepted,
+        COUNT(*) FILTER (WHERE status = 'in_progress') as count_in_progress,
         COUNT(*) FILTER (WHERE status = 'completed') as count_completed,
-        COUNT(*) FILTER (WHERE status = 'dropped') as count_dropped,
-        COUNT(*) FILTER (WHERE status = 'spam') as count_spam
+        COUNT(*) FILTER (WHERE status = 'cancelled') as count_cancelled
       FROM cc_work_requests wr
       LEFT JOIN cc_people c ON wr.person_id = c.id`,
       []
@@ -117,13 +120,15 @@ router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) 
       workRequests: result.rows,
       total: parseInt(countResult.rows[0].total, 10),
       counts: {
-        new: parseInt(countResult.rows[0].count_new, 10),
-        contacted: parseInt(countResult.rows[0].count_contacted, 10),
-        quoted: parseInt(countResult.rows[0].count_quoted, 10),
-        scheduled: parseInt(countResult.rows[0].count_scheduled, 10),
+        draft: parseInt(countResult.rows[0].count_draft, 10),
+        sent: parseInt(countResult.rows[0].count_sent, 10),
+        proposed_change: parseInt(countResult.rows[0].count_proposed_change, 10),
+        awaiting_commitment: parseInt(countResult.rows[0].count_awaiting_commitment, 10),
+        unassigned: parseInt(countResult.rows[0].count_unassigned, 10),
+        accepted: parseInt(countResult.rows[0].count_accepted, 10),
+        in_progress: parseInt(countResult.rows[0].count_in_progress, 10),
         completed: parseInt(countResult.rows[0].count_completed, 10),
-        dropped: parseInt(countResult.rows[0].count_dropped, 10),
-        spam: parseInt(countResult.rows[0].count_spam, 10)
+        cancelled: parseInt(countResult.rows[0].count_cancelled, 10)
       }
     });
   } catch (error) {
