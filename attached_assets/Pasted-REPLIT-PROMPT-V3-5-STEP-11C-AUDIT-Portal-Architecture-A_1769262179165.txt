@@ -1,0 +1,281 @@
+REPLIT PROMPT — V3.5 STEP 11C-AUDIT
+Portal Architecture Audit (Read-Only, Evidence-First)
+
+ROLE: Senior Platform Engineer
+MODE: AUDIT ONLY. NO CHANGES. Evidence collection for architectural review.
+
+============================================================
+PURPOSE
+============================================================
+
+Before making any changes to publish suggestions or visibility logic,
+we need to fully understand the current portal infrastructure:
+
+1. Portal types and their meanings
+2. Which portals are community vs business vs online-only
+3. Current relationships between tenants, portals, and zones
+4. What constraints/validation already exist
+
+============================================================
+SECTION A) PORTAL SCHEMA AUDIT
+============================================================
+
+A1) Full portals table structure:
+```sql
+\d cc_portals
+```
+
+A2) Check for portal_type / brand_type column:
+```sql
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name = 'cc_portals'
+  AND column_name IN ('portal_type', 'brand_type', 'type', 'kind', 'category')
+ORDER BY column_name;
+```
+
+A3) If portal_type exists, check the enum or constraint:
+```sql
+-- Check if it's an enum
+SELECT t.typname, e.enumlabel
+FROM pg_type t
+JOIN pg_enum e ON t.oid = e.enumtypid
+WHERE t.typname LIKE '%portal%type%'
+ORDER BY e.enumsortorder;
+
+-- Or check constraints
+SELECT conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid = 'cc_portals'::regclass
+  AND contype = 'c';
+```
+
+A4) List all portals with their types and owners:
+```sql
+SELECT 
+  p.id,
+  p.name,
+  p.slug,
+  p.status,
+  p.owning_tenant_id,
+  t.name AS tenant_name,
+  t.slug AS tenant_slug,
+  -- Include any type columns found
+  p.portal_type,  -- or brand_type, adjust based on A2 results
+  p.primary_audience,
+  p.legal_dba_name
+FROM cc_portals p
+LEFT JOIN cc_tenants t ON t.id = p.owning_tenant_id
+ORDER BY t.name, p.name;
+```
+
+============================================================
+SECTION B) TENANT-PORTAL RELATIONSHIPS
+============================================================
+
+B1) Count portals per tenant:
+```sql
+SELECT 
+  t.id AS tenant_id,
+  t.name AS tenant_name,
+  t.slug AS tenant_slug,
+  COUNT(p.id) AS portal_count,
+  STRING_AGG(p.name, ', ' ORDER BY p.name) AS portal_names
+FROM cc_tenants t
+LEFT JOIN cc_portals p ON p.owning_tenant_id = t.id
+GROUP BY t.id, t.name, t.slug
+ORDER BY portal_count DESC, t.name;
+```
+
+B2) Identify the 1252093 BC LTD structure specifically:
+```sql
+SELECT 
+  t.name AS tenant,
+  p.name AS portal,
+  p.slug,
+  p.portal_type,
+  p.legal_dba_name,
+  p.status
+FROM cc_tenants t
+JOIN cc_portals p ON p.owning_tenant_id = t.id
+WHERE t.name ILIKE '%1252093%' 
+   OR t.slug ILIKE '%1252093%'
+   OR p.slug IN ('enviropaving', 'remote-serve', 'enviro-bright')
+ORDER BY t.name, p.name;
+```
+
+============================================================
+SECTION C) ZONE-PORTAL RELATIONSHIPS
+============================================================
+
+C1) Zones and their parent portals:
+```sql
+SELECT 
+  z.id AS zone_id,
+  z.name AS zone_name,
+  z.key AS zone_key,
+  z.kind AS zone_kind,
+  p.id AS portal_id,
+  p.name AS portal_name,
+  p.slug AS portal_slug,
+  p.portal_type
+FROM cc_zones z
+JOIN cc_portals p ON p.id = z.portal_id
+ORDER BY p.name, z.name;
+```
+
+C2) Which portal owns the Bamfield zones (Anacla, East/West Bamfield, etc.)?
+```sql
+SELECT 
+  p.name AS portal_name,
+  p.slug AS portal_slug,
+  p.portal_type,
+  COUNT(z.id) AS zone_count,
+  STRING_AGG(z.name, ', ' ORDER BY z.name) AS zones
+FROM cc_portals p
+LEFT JOIN cc_zones z ON z.portal_id = p.id
+WHERE p.slug ILIKE '%bamfield%'
+   OR z.name ILIKE '%bamfield%'
+   OR z.name ILIKE '%anacla%'
+GROUP BY p.id, p.name, p.slug, p.portal_type
+ORDER BY p.name;
+```
+
+============================================================
+SECTION D) VISIBILITY EDGES AUDIT
+============================================================
+
+D1) All active visibility edges with portal/zone names:
+```sql
+SELECT 
+  e.id AS edge_id,
+  e.source_type,
+  CASE 
+    WHEN e.source_type = 'zone' THEN z_src.name
+    WHEN e.source_type = 'portal' THEN p_src.name
+  END AS source_name,
+  e.direction,
+  e.target_type,
+  CASE 
+    WHEN e.target_type = 'zone' THEN z_tgt.name
+    WHEN e.target_type = 'portal' THEN p_tgt.name
+  END AS target_name,
+  -- Include portal types
+  p_src.portal_type AS source_portal_type,
+  p_tgt.portal_type AS target_portal_type,
+  e.reason
+FROM cc_visibility_edges e
+LEFT JOIN cc_zones z_src ON e.source_type = 'zone' AND e.source_id = z_src.id
+LEFT JOIN cc_portals p_src ON e.source_type = 'portal' AND e.source_id = p_src.id
+LEFT JOIN cc_zones z_tgt ON e.target_type = 'zone' AND e.target_id = z_tgt.id
+LEFT JOIN cc_portals p_tgt ON e.target_type = 'portal' AND e.target_id = p_tgt.id
+WHERE e.archived_at IS NULL
+ORDER BY e.source_type, source_name;
+```
+
+D2) Are there any edges pointing to non-community portals?
+```sql
+SELECT 
+  e.id,
+  e.source_type,
+  COALESCE(z_src.name, p_src.name) AS source_name,
+  e.target_type,
+  p_tgt.name AS target_portal_name,
+  p_tgt.portal_type AS target_portal_type
+FROM cc_visibility_edges e
+LEFT JOIN cc_zones z_src ON e.source_type = 'zone' AND e.source_id = z_src.id
+LEFT JOIN cc_portals p_src ON e.source_type = 'portal' AND e.source_id = p_src.id
+JOIN cc_portals p_tgt ON e.target_type = 'portal' AND e.target_id = p_tgt.id
+WHERE e.archived_at IS NULL
+  AND p_tgt.portal_type != 'community'  -- Adjust column name if different
+ORDER BY p_tgt.portal_type, p_tgt.name;
+```
+
+============================================================
+SECTION E) GEO ANCHOR AUDIT
+============================================================
+
+E1) Portals with geo anchors:
+```sql
+SELECT 
+  p.name AS portal_name,
+  p.slug,
+  p.portal_type,
+  p.anchor_community_id,
+  c.name AS anchor_community_name,
+  c.latitude,
+  c.longitude
+FROM cc_portals p
+LEFT JOIN cc_sr_communities c ON c.id = p.anchor_community_id
+ORDER BY 
+  CASE WHEN p.anchor_community_id IS NULL THEN 1 ELSE 0 END,
+  p.name;
+```
+
+E2) Which portal types have geo anchors vs which don't need them?
+```sql
+SELECT 
+  p.portal_type,
+  COUNT(*) AS total,
+  COUNT(p.anchor_community_id) AS with_anchor,
+  COUNT(*) - COUNT(p.anchor_community_id) AS without_anchor
+FROM cc_portals p
+GROUP BY p.portal_type
+ORDER BY p.portal_type;
+```
+
+============================================================
+SECTION F) STEP 7 CURRENT BEHAVIOR
+============================================================
+
+F1) Check what portals STEP 7 currently returns as suggestions:
+
+-- Look at the publish-suggestions endpoint code
+```bash
+rg -n "publish-suggestions" server/routes/provider.ts -A 30
+```
+
+F2) Check if there's any portal_type filtering:
+```bash
+rg -n "portal_type|brand_type|community" server/routes/provider.ts
+```
+
+============================================================
+SECTION G) PROOF DOCUMENT
+============================================================
+
+Create: proof/v3.5/step11c-portal-architecture-audit.md
+
+Include all query outputs from Sections A-F with:
+
+1. PORTAL TYPES SUMMARY
+   - What portal_type values exist?
+   - What do they mean?
+   - Which are community vs business vs online-only?
+
+2. THE 12 PORTALS CLASSIFIED
+   | Portal | Type | Tenant | Geo Anchor | Zones | Notes |
+   |--------|------|--------|------------|-------|-------|
+   | ... | ... | ... | ... | ... | ... |
+
+3. VISIBILITY EDGE ANALYSIS
+   - Are all edges targeting community portals?
+   - Any invalid edges to fix?
+
+4. STEP 7 BEHAVIOR ANALYSIS
+   - Does it currently filter by portal_type?
+   - What changes are needed?
+
+5. RECOMMENDATIONS
+   Based on audit findings, list what needs to change (if anything)
+
+============================================================
+DO NOT
+============================================================
+
+- Do NOT make any schema changes
+- Do NOT update any data
+- Do NOT modify any code
+- This is READ-ONLY audit only
+
+END.
