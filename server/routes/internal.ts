@@ -1808,7 +1808,7 @@ router.get(
         `WITH visible_runs AS (
           SELECT 
             r.id as run_id,
-            r.title as run_title,
+            r.name as run_name,
             r.starts_at,
             r.status,
             r.created_at,
@@ -1831,7 +1831,7 @@ router.get(
       
       const visibleRuns = runsResult.rows.map(row => ({
         run_id: row.run_id,
-        run_title: row.run_title,
+        run_name: row.run_name,
         starts_at: row.starts_at,
         status: row.status,
         visibility_source: row.visibility_source,
@@ -2127,6 +2127,269 @@ router.patch(
     } catch (error) {
       console.error('Update visibility edge error:', error);
       return res.status(500).json({ ok: false, error: 'Failed to update edge' });
+    }
+  }
+);
+
+// V3.5 STEP 10F-A: Visibility Explain Endpoint (Read-Only, Admin-Only)
+// Answers: "Why is run R visible in portal P?"
+router.get(
+  '/visibility/runs/:runId/explain/:portalId',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { runId, portalId } = req.params;
+      const { tenant_id } = req.query;
+      
+      // Validate required params
+      if (!tenant_id || typeof tenant_id !== 'string') {
+        return res.status(400).json({
+          ok: false,
+          error: 'missing_tenant_id'
+        });
+      }
+      
+      if (!runId || !/^[0-9a-f-]{36}$/i.test(runId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_run_id'
+        });
+      }
+      
+      if (!portalId || !/^[0-9a-f-]{36}$/i.test(portalId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_portal_id'
+        });
+      }
+      
+      // Validate run belongs to tenant (404 if not found or mismatch - do not leak)
+      const runCheck = await serviceQuery(
+        `SELECT id, name, status FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2`,
+        [runId, tenant_id]
+      );
+      
+      if (!runCheck.rows || runCheck.rows.length === 0) {
+        return res.status(404).json({
+          ok: false,
+          error: 'run_not_found'
+        });
+      }
+      
+      const run = runCheck.rows[0];
+      
+      // Validate portal belongs to tenant (404 if not found or mismatch - do not leak)
+      const portalCheck = await serviceQuery(
+        `SELECT id, name, slug, owning_tenant_id FROM cc_portals WHERE id = $1`,
+        [portalId]
+      );
+      
+      if (!portalCheck.rows || portalCheck.rows.length === 0) {
+        return res.status(404).json({
+          ok: false,
+          error: 'portal_not_found'
+        });
+      }
+      
+      const portal = portalCheck.rows[0];
+      
+      // Tenant validation - 404 if mismatch (do not leak tenant structure)
+      if (portal.owning_tenant_id && portal.owning_tenant_id !== tenant_id) {
+        return res.status(404).json({
+          ok: false,
+          error: 'portal_not_found'
+        });
+      }
+      
+      // Set service mode for visibility functions
+      await serviceQuery(`SELECT set_config('app.service_mode', 'on', true)`);
+      
+      // Get visibility explanation
+      const visResult = await serviceQuery(
+        `SELECT target_type, target_id, source, via_type, via_id, depth, path_nodes
+         FROM resolve_run_effective_visibility_recursive($1, 6)
+         WHERE target_type = 'portal' AND target_id = $2`,
+        [runId, portalId]
+      );
+      
+      if (!visResult.rows || visResult.rows.length === 0) {
+        // Run is not visible in this portal
+        return res.json({
+          ok: true,
+          tenant_id,
+          run: { id: run.id, name: run.title, status: run.status },
+          portal: { id: portal.id, name: portal.name, slug: portal.slug },
+          visible: false,
+          best_path: null
+        });
+      }
+      
+      const vis = visResult.rows[0];
+      
+      return res.json({
+        ok: true,
+        tenant_id,
+        run: { id: run.id, name: run.title, status: run.status },
+        portal: { id: portal.id, name: portal.name, slug: portal.slug },
+        visible: true,
+        best_path: {
+          source: vis.source,
+          via_type: vis.via_type,
+          via_id: vis.via_id,
+          depth: vis.depth,
+          path: vis.path_nodes
+        }
+      });
+    } catch (error) {
+      console.error('Visibility explain error:', error);
+      return res.status(500).json({
+        ok: false,
+        error: 'Failed to explain visibility'
+      });
+    }
+  }
+);
+
+// V3.5 STEP 10F-B: Portal Preview Summary (Read-Only, Admin-Only)
+// Returns runs visible in portal with summary counts
+router.get(
+  '/visibility/portals/:portalId/preview',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { portalId } = req.params;
+      const { tenant_id, limit: limitStr, offset: offsetStr } = req.query;
+      
+      // Validate required params
+      if (!tenant_id || typeof tenant_id !== 'string') {
+        return res.status(400).json({
+          ok: false,
+          error: 'missing_tenant_id'
+        });
+      }
+      
+      if (!portalId || !/^[0-9a-f-]{36}$/i.test(portalId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_portal_id'
+        });
+      }
+      
+      // Parse pagination
+      const limit = Math.min(Math.max(1, parseInt(limitStr as string, 10) || 50), 200);
+      const offset = Math.max(0, parseInt(offsetStr as string, 10) || 0);
+      
+      // Validate portal exists and belongs to tenant
+      const portalCheck = await serviceQuery(
+        `SELECT id, name, slug, owning_tenant_id FROM cc_portals WHERE id = $1`,
+        [portalId]
+      );
+      
+      if (!portalCheck.rows || portalCheck.rows.length === 0) {
+        return res.status(404).json({
+          ok: false,
+          error: 'portal_not_found'
+        });
+      }
+      
+      const portal = portalCheck.rows[0];
+      
+      // Tenant validation - 404 if mismatch (do not leak)
+      if (portal.owning_tenant_id && portal.owning_tenant_id !== tenant_id) {
+        return res.status(404).json({
+          ok: false,
+          error: 'portal_not_found'
+        });
+      }
+      
+      // Set service mode for visibility functions
+      await serviceQuery(`SELECT set_config('app.service_mode', 'on', true)`);
+      
+      // Get summary counts (full scan for counts)
+      const summaryResult = await serviceQuery(
+        `WITH visible_runs AS (
+          SELECT 
+            r.id as run_id,
+            v.source as visibility_source,
+            v.via_type
+          FROM cc_n3_runs r
+          CROSS JOIN LATERAL resolve_run_effective_visibility_recursive(r.id, 6) v
+          WHERE r.tenant_id = $1
+            AND v.target_type = 'portal'
+            AND v.target_id = $2
+        )
+        SELECT 
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE visibility_source = 'direct') as direct_count,
+          COUNT(*) FILTER (WHERE visibility_source = 'rollup') as rollup_count,
+          COUNT(*) FILTER (WHERE visibility_source = 'rollup' AND via_type = 'zone') as rollup_zone_count,
+          COUNT(*) FILTER (WHERE visibility_source = 'rollup' AND via_type = 'portal') as rollup_portal_count
+        FROM visible_runs`,
+        [tenant_id, portalId]
+      );
+      
+      const summary = summaryResult.rows[0] || { total: 0, direct_count: 0, rollup_count: 0, rollup_zone_count: 0, rollup_portal_count: 0 };
+      
+      // Get paginated runs (same as 10E)
+      const runsResult = await serviceQuery(
+        `WITH visible_runs AS (
+          SELECT 
+            r.id as run_id,
+            r.name as run_name,
+            r.starts_at,
+            r.status,
+            r.created_at,
+            v.source as visibility_source,
+            v.via_type,
+            v.via_id,
+            v.depth,
+            v.path_nodes
+          FROM cc_n3_runs r
+          CROSS JOIN LATERAL resolve_run_effective_visibility_recursive(r.id, 6) v
+          WHERE r.tenant_id = $1
+            AND v.target_type = 'portal'
+            AND v.target_id = $2
+        )
+        SELECT * FROM visible_runs
+        ORDER BY COALESCE(starts_at, created_at) DESC
+        LIMIT $3 OFFSET $4`,
+        [tenant_id, portalId, limit, offset]
+      );
+      
+      const runs = runsResult.rows.map(row => ({
+        run_id: row.run_id,
+        run_name: row.run_name,
+        starts_at: row.starts_at,
+        status: row.status,
+        visibility_source: row.visibility_source,
+        via_type: row.via_type,
+        via_id: row.via_id,
+        depth: row.depth,
+        path: row.path_nodes
+      }));
+      
+      return res.json({
+        ok: true,
+        portal: { id: portal.id, name: portal.name, slug: portal.slug },
+        summary: {
+          total: parseInt(summary.total, 10),
+          direct: parseInt(summary.direct_count, 10),
+          rollup: parseInt(summary.rollup_count, 10),
+          rollup_by_via_type: {
+            zone: parseInt(summary.rollup_zone_count, 10),
+            portal: parseInt(summary.rollup_portal_count, 10)
+          }
+        },
+        limit,
+        offset,
+        runs
+      });
+    } catch (error) {
+      console.error('Portal preview error:', error);
+      return res.status(500).json({
+        ok: false,
+        error: 'Failed to generate preview'
+      });
     }
   }
 );

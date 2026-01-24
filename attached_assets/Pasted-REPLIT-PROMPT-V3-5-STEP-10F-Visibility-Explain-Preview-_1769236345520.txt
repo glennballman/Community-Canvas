@@ -1,0 +1,200 @@
+REPLIT PROMPT — V3.5 STEP 10F
+
+Visibility Explain + Preview API (Admin-only, Read-only, Provenance-first)
+
+ROLE: Senior Platform Engineer
+MODE: Admin-only read APIs. No publishing writes. No UI required (optional minimal admin page only if already patterns exist).
+
+============================================================
+NON-NEGOTIABLES
+
+IDENTITY ≠ VISIBILITY ≠ EXECUTION (locked)
+
+No auto-publishing, no modifications to cc_run_portal_publications
+
+No geo inference, no name inference
+
+No references to execution tables (properties, work areas, surfaces, constraints)
+
+Terminology: “service provider”, “reservation”; never “booking”, “calendar”, “contractor”
+
+============================================================
+GOAL
+
+Provide an admin endpoint to answer:
+
+“Why is run R visible in portal P?” (explain)
+
+“If I view portal P, what is the visibility breakdown?” (preview summary)
+
+This is purely interpretability and governance tooling.
+
+============================================================
+STEP 10F-A — EXPLAIN ENDPOINT
+
+Add endpoint:
+
+GET /api/internal/visibility/runs/:runId/explain/:portalId
+
+Auth:
+
+Platform admin required (same pattern as 10B–10E)
+
+Tenant validation:
+
+Verify run belongs to tenant_id (query param required)
+
+Verify portal belongs to same tenant
+
+If mismatch or missing → 404 (do not leak)
+
+Behavior:
+
+Use resolve_run_effective_visibility_recursive(runId, max_depth) and select the row where target_id = portalId
+
+If no row found → return ok:true with visible=false and empty explanation
+
+Response shape (example):
+
+{
+  "ok": true,
+  "tenant_id": "...",
+  "run": { "id": "...", "name": "...", "status": "scheduled" },
+  "portal": { "id": "...", "name": "Bamfield Community Portal", "slug": "bamfield" },
+  "visible": true,
+  "best_path": {
+    "source": "direct|rollup",
+    "via_type": "zone|portal|null",
+    "via_id": "...|null",
+    "depth": 0|1|2,
+    "path": ["zone:anacla", "portal:bamfield", "..."]
+  }
+}
+
+
+Rules:
+
+Identity shown: portal/zone names (and slugs) are allowed
+
+No geo anchor names in UI contexts (admin response can still include IDs; no anchor community names needed)
+
+============================================================
+STEP 10F-B — PORTAL PREVIEW SUMMARY
+
+Add endpoint:
+
+GET /api/internal/visibility/portals/:portalId/preview
+
+Params:
+
+tenant_id (required)
+
+limit default 50 max 200
+
+offset default 0
+
+Behavior:
+
+Reuse the 10E query or function outputs
+
+Return:
+
+runs visible in portal (same as 10E)
+
+plus summary counts:
+
+direct_count
+
+rollup_count
+
+rollup_by_via_type (zone vs portal)
+
+rollup_by_top_via (top 5 via_id targets)
+
+Response example:
+
+{
+  "ok": true,
+  "portal": { "id":"...", "name":"...", "slug":"..." },
+  "summary": {
+    "total": 42,
+    "direct": 30,
+    "rollup": 12,
+    "rollup_by_via_type": { "zone": 12, "portal": 0 }
+  },
+  "runs": [ ...same objects as 10E... ]
+}
+
+============================================================
+STEP 10F-C — COPY TOKENS (if any UI is added)
+
+If you add a minimal admin page (optional), no hardcoded strings.
+Add tokens in the same copy file pattern used in Step 7/8:
+
+admin.visibility.explain.title: "Visibility explanation"
+
+admin.visibility.explain.not_visible: "This run is not visible in this area"
+
+admin.visibility.preview.title: "Visibility preview"
+
+(If no UI, skip tokens.)
+
+============================================================
+STEP 10F-D — TESTING (TEST AUTH BOOTSTRAP ONLY)
+
+Use:
+
+await loginAs(page, 'ellen');
+
+
+Test cases:
+
+Run directly published to Bamfield portal:
+
+explain should return visible=true, source=direct, depth=null/0
+
+Run visible via zone rollup (e.g., Anacla → Bamfield):
+
+explain should return visible=true, source=rollup, via_type=zone, depth>=1
+
+path should show the chain deterministically
+
+Negative case:
+
+explain returns visible=false when portal not in effective visibility set
+
+============================================================
+STEP 10F-E — PROOF
+
+Create:
+proof/v3.5/step10f-visibility-explain-preview-proof.md
+
+Include:
+
+Endpoint definitions (routes)
+
+Example JSON outputs for the 3 tests
+
+Tenant validation proof (mismatch returns 404)
+
+Confirmation:
+
+no writes
+
+no publishing changes
+
+no execution references
+
+Checklist:
+
+ explain works
+
+ preview summary works
+
+ provenance preserved
+
+ deterministic output
+
+ admin-only + tenant-safe
+
+END.
