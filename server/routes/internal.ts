@@ -1655,12 +1655,17 @@ router.get(
   requirePlatformRole('platform_reviewer', 'platform_admin'),
   async (req: Request, res: Response) => {
     try {
-      const { source_type, source_id, target_type, target_id, direction, include_archived } = req.query;
+      const { tenant_id, source_type, source_id, target_type, target_id, direction, include_archived } = req.query;
       
       let conditions: string[] = [];
       let params: any[] = [];
       let paramIdx = 1;
       
+      // Tenant filtering (optional but recommended for tenant-scoped views)
+      if (tenant_id) {
+        conditions.push(`e.tenant_id = $${paramIdx++}`);
+        params.push(tenant_id);
+      }
       if (source_type) {
         conditions.push(`source_type = $${paramIdx++}`);
         params.push(source_type);
@@ -1754,7 +1759,7 @@ router.post(
         return res.status(400).json({ ok: false, error: 'self_reference_not_allowed' });
       }
       
-      // Validate source exists
+      // Validate source exists AND belongs to specified tenant
       const sourceTable = source_type === 'portal' ? 'cc_portals' : 'cc_zones';
       const sourceCheck = await serviceQuery(
         `SELECT id, tenant_id FROM ${sourceTable} WHERE id = $1`,
@@ -1763,8 +1768,11 @@ router.post(
       if (!sourceCheck.rows || sourceCheck.rows.length === 0) {
         return res.status(400).json({ ok: false, error: 'invalid_source' });
       }
+      if (sourceCheck.rows[0].tenant_id !== tenant_id) {
+        return res.status(400).json({ ok: false, error: 'source_tenant_mismatch' });
+      }
       
-      // Validate target exists
+      // Validate target exists AND belongs to specified tenant
       const targetTable = target_type === 'portal' ? 'cc_portals' : 'cc_zones';
       const targetCheck = await serviceQuery(
         `SELECT id, tenant_id FROM ${targetTable} WHERE id = $1`,
@@ -1772,6 +1780,9 @@ router.post(
       );
       if (!targetCheck.rows || targetCheck.rows.length === 0) {
         return res.status(400).json({ ok: false, error: 'invalid_target' });
+      }
+      if (targetCheck.rows[0].tenant_id !== tenant_id) {
+        return res.status(400).json({ ok: false, error: 'target_tenant_mismatch' });
       }
       
       // Insert the edge (unique index will catch duplicates)
