@@ -1,0 +1,184 @@
+REPLIT PROMPT — V3.5 STEP 7 PREP — PLATFORM GEO SOURCE-OF-TRUTH AUDIT (PROOF-GRADE)
+
+ROLE
+Senior Platform Engineer. Evidence-first. No guessing. No schema changes.
+
+HARD RULES
+- Do NOT add tables/columns in this prompt.
+- Do NOT introduce “calendar” in new code.
+- Use “service provider”, “reservation”.
+- “job” banned in service fulfillment context.
+- Output proof docs only.
+
+GOAL
+Produce an authoritative geo inventory proving where lat/lng exists in the platform and
+the concrete join paths for: runs, portals, zones, work requests, communities, assets, locations.
+
+OUTPUTS (MANDATORY)
+1) proof/v3.5/geo-inventory-db.md
+2) proof/v3.5/geo-inventory-code.md
+3) proof/v3.5/geo-linkage-map.md
+
+============================================================
+A) DATABASE GEO INVENTORY (NO ASSUMPTIONS)
+============================================================
+Create proof/v3.5/geo-inventory-db.md with:
+
+A1) Find ALL columns that look like coordinates (lat/lng) across cc_* tables
+Run SQL:
+
+-- 1) Candidate columns by name
+SELECT table_schema, table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND table_name LIKE 'cc_%'
+AND (
+  column_name ILIKE '%lat%'
+  OR column_name ILIKE '%lng%'
+  OR column_name ILIKE '%lon%'
+  OR column_name ILIKE '%longitude%'
+  OR column_name ILIKE '%latitude%'
+)
+ORDER BY table_name, column_name;
+
+-- 2) Candidate columns by numeric precision commonly used for coords
+SELECT table_schema, table_name, column_name, data_type, numeric_precision, numeric_scale
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND table_name LIKE 'cc_%'
+AND data_type IN ('numeric','decimal','double precision','real')
+AND numeric_scale IN (6,7,8)
+ORDER BY table_name, column_name;
+
+A2) Find ALL “location tables” and “community tables”
+Run SQL:
+
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+AND table_name LIKE 'cc_%'
+AND (
+  table_name ILIKE '%location%'
+  OR table_name ILIKE '%community%'
+  OR table_name ILIKE '%place%'
+  OR table_name ILIKE '%geo%'
+)
+ORDER BY 1;
+
+A3) For each geo-bearing table found, print its schema
+For each table identified in A1/A2 (top 30 is fine), run:
+\d <table>
+
+Include excerpts in the proof doc.
+
+A4) Identify foreign keys pointing to geo-bearing tables
+Run SQL:
+
+SELECT
+  tc.table_name AS from_table,
+  kcu.column_name AS from_col,
+  ccu.table_name AS to_table,
+  ccu.column_name AS to_col
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu
+  ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND tc.table_schema = 'public'
+AND (ccu.table_name LIKE 'cc_%')
+ORDER BY to_table, from_table;
+
+Then in the writeup, highlight FK edges where to_table is geo-bearing.
+
+============================================================
+B) CODE GEO INVENTORY (WHERE WE COMPUTE/USE COORDS)
+============================================================
+Create proof/v3.5/geo-inventory-code.md with:
+
+B1) Ripgrep for coordinate usage and haversine/grid-cell logic
+Run:
+rg -n "haversine|gridCell|lat\\b|lng\\b|longitude|latitude|geo|geocode|distance" server client
+
+B2) Ripgrep for canonical “location entity”
+Run:
+rg -n "cc_locations|LocationId|location_id|origin_location_id|departure_location" server
+
+B3) Identify any API endpoints returning lat/lng today
+Search:
+rg -n "latitude|longitude|lat:|lng:" server/routes
+
+Document file paths and payload shapes.
+
+============================================================
+C) LINKAGE MAP (THE PART STEP 7 NEEDS)
+============================================================
+Create proof/v3.5/geo-linkage-map.md with these sections:
+
+C1) RUN ORIGIN CANDIDATES (in priority order)
+We already have:
+- cc_n3_runs.start_address_id → cc_tenant_start_addresses(latitude, longitude)
+Document this exact join.
+
+Also check if any of these exist and document joins if present:
+- run assigned asset(s) → cc_assets(latitude, longitude)
+- “asset last location” canonical path if exists in DB or metadata
+
+For each candidate, specify:
+- join path
+- whether it’s reliable
+- whether it’s optional
+- privacy considerations
+
+C2) RUN DESTINATION / ROUTE CONTEXT CANDIDATES
+Audit where “zone” actually points:
+- cc_n3_runs.zone_id → cc_zones (...)
+But zones may map to something else.
+Find if any of these exist:
+- zones → communities
+- portals → communities
+- portals → assets / hub / primary location
+- portal settings json containing lat/lng
+
+Document the *actual* chain(s) that lead to a concrete lat/lng anchor for a portal/zone.
+If portal settings contain coordinates, document the json key path.
+
+C3) WORK REQUEST LOCATION CANDIDATES
+From cc_work_requests:
+- property_id → (find geo-bearing property table)
+- unit_id → (if any)
+- location_text (freeform, NOT geo)
+- zone_id → (only if zone leads to geo via another chain)
+
+Document the best available join(s) that yield lat/lng today.
+
+C4) “GEO ANCHOR TABLES” (AUTHORITATIVE)
+List the 5–15 tables that are true geo anchors (contain coordinates and represent places):
+Examples likely include: cc_assets, cc_locations, communities, airports, stations, etc.
+DO NOT GUESS—list only what A1 found.
+
+============================================================
+D) FINAL SUMMARY (FOR STEP 7)
+============================================================
+At the end of geo-linkage-map.md include:
+
+D1) Confirmed sources for STEP 7 advisory suggestions:
+- Origin lat/lng source(s)
+- Candidate portal anchors
+- Candidate work request anchors
+
+D2) Gaps (if any) that block high-quality suggestions:
+- If portal/zone has no geo anchor chain, say so explicitly.
+
+D3) Explicit statement:
+“STEP 7 will be advisory + opt-in only and will not require schema changes unless gaps are confirmed.”
+
+============================================================
+E) RETURN TO GLENN
+============================================================
+After docs are created, paste:
+- the final “STEP 7 Confirmed Geo Sources” summary section
+- the top 10 geo anchor tables list
+- the run origin join path
+
+END.
