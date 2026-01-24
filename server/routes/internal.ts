@@ -1648,6 +1648,105 @@ router.get(
   }
 );
 
+// V3.5 STEP 10D: Recursive Visibility Resolver (Multi-hop, Read-Only)
+// Returns all reachable visibility targets with depth, path, and provenance
+router.get(
+  '/visibility/resolve-recursive',
+  requirePlatformRole('platform_reviewer', 'platform_admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { tenant_id, source_type, source_id, max_depth, allow_down } = req.query;
+      
+      // Validate required params
+      if (!tenant_id || typeof tenant_id !== 'string') {
+        return res.status(400).json({
+          ok: false,
+          error: 'missing_tenant_id'
+        });
+      }
+      
+      if (!source_type || !['portal', 'zone'].includes(source_type as string)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_source_type',
+          message: 'source_type must be portal or zone'
+        });
+      }
+      
+      if (!source_id || !/^[0-9a-f-]{36}$/i.test(source_id as string)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'invalid_source_id'
+        });
+      }
+      
+      // Parse optional params
+      const depth = max_depth ? Math.min(Math.max(1, parseInt(max_depth as string, 10) || 6), 10) : 6;
+      const includeDown = allow_down === 'true';
+      
+      // Set tenant context for the function
+      await serviceQuery(`SELECT set_config('app.tenant_id', $1, true)`, [tenant_id]);
+      await serviceQuery(`SELECT set_config('app.service_mode', 'off', true)`);
+      
+      // Call the recursive dedup function
+      const result = await serviceQuery(
+        `SELECT target_type, target_id, depth, path_nodes, path_edge_ids
+         FROM resolve_visibility_targets_recursive($1, $2, $3, $4)
+         ORDER BY depth ASC, target_type ASC`,
+        [source_type, source_id, depth, includeDown]
+      );
+      
+      // Resolve names for portals and zones
+      const portalIds = result.rows.filter(r => r.target_type === 'portal').map(r => r.target_id);
+      const zoneIds = result.rows.filter(r => r.target_type === 'zone').map(r => r.target_id);
+      
+      let portalNames: Record<string, string> = {};
+      let zoneNames: Record<string, string> = {};
+      
+      if (portalIds.length > 0) {
+        const portalsResult = await serviceQuery(
+          `SELECT id, name FROM cc_portals WHERE id = ANY($1)`,
+          [portalIds]
+        );
+        portalNames = Object.fromEntries(portalsResult.rows.map(r => [r.id, r.name]));
+      }
+      
+      if (zoneIds.length > 0) {
+        const zonesResult = await serviceQuery(
+          `SELECT id, name FROM cc_zones WHERE id = ANY($1)`,
+          [zoneIds]
+        );
+        zoneNames = Object.fromEntries(zonesResult.rows.map(r => [r.id, r.name]));
+      }
+      
+      // Build response with names
+      const targets = result.rows.map(row => ({
+        type: row.target_type,
+        id: row.target_id,
+        depth: row.depth,
+        path: row.path_nodes,
+        path_edge_ids: row.path_edge_ids,
+        ...(row.target_type === 'portal' && { portal_name: portalNames[row.target_id] }),
+        ...(row.target_type === 'zone' && { zone_name: zoneNames[row.target_id] })
+      }));
+      
+      return res.json({
+        ok: true,
+        source: { type: source_type, id: source_id },
+        max_depth: depth,
+        allow_down: includeDown,
+        targets
+      });
+    } catch (error) {
+      console.error('Recursive visibility resolve error:', error);
+      return res.status(500).json({
+        ok: false,
+        error: 'Failed to resolve recursive visibility'
+      });
+    }
+  }
+);
+
 // V3.5 STEP 10C: Visibility Edge Management (Admin CRUD)
 // List visibility edges with optional filters
 router.get(
