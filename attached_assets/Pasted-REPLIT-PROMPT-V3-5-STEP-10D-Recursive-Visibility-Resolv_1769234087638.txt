@@ -1,0 +1,687 @@
+REPLIT PROMPT — V3.5 STEP 10D
+
+Recursive Visibility Resolver (Multi-hop) + Cycle Guard + Provenance (Read-only)
+
+ROLE: Senior Platform Engineer
+MODE: Read-only visibility resolution upgrade. No publishing changes. No UI.
+
+HARD RULES (NON-NEGOTIABLE)
+
+IDENTITY ≠ VISIBILITY ≠ EXECUTION (LOCKED)
+
+Identity: portal/zone/work area names (user-facing)
+
+Visibility: cc_visibility_edges, publications, resolver functions
+
+Execution: work areas, properties, surfaces, constraints (OUT OF SCOPE)
+
+This step MUST NOT:
+
+❌ Auto-publish, auto-toggle, or modify publication behavior
+
+❌ Infer edges from geo/naming
+
+❌ Change Step 7/8 publish UI behavior
+
+❌ Rename portals/zones
+
+❌ Touch execution systems
+
+Terminology: comply with v3 canon (no banned terms).
+
+GOAL
+
+Add a recursive resolver that computes all reachable visibility targets from:
+
+a source zone or portal
+
+following explicit edges only
+
+honoring direction IN ('up','lateral') by default (no “down” unless explicitly requested)
+
+Return:
+
+targets (type/id)
+
+hop depth
+
+provenance path (edge IDs or via nodes)
+
+deduped targets with a “best” path chosen deterministically
+
+OUTPUTS (MANDATORY)
+
+Create: proof/v3.5/step10d-recursive-visibility-proof.md
+
+SECTION A) AUDIT FIRST
+
+Run and paste results into proof:
+
+SELECT COUNT(*) AS active_edges
+FROM cc_visibility_edges
+WHERE archived_at IS NULL;
+
+SELECT direction, COUNT(*)
+FROM cc_visibility_edges
+WHERE archived_at IS NULL
+GROUP BY 1
+ORDER BY 1;
+
+-- sanity: ensure unique active index exists
+SELECT indexname
+FROM pg_indexes
+WHERE tablename = 'cc_visibility_edges'
+ORDER BY indexname;
+
+
+STOP if edges table missing or indexes missing.
+
+SECTION B) SQL FUNCTION: Recursive Resolver
+
+Create function:
+
+resolve_visibility_targets_recursive(input_type, input_id, max_depth, allow_down)
+
+Requirements:
+
+STABLE function
+
+default max_depth = 6 (hard cap 10)
+
+default allow_down = false
+
+follow edges where:
+
+archived_at IS NULL
+
+tenant_id matches current tenant GUC
+
+direction filter:
+
+if allow_down=false: only up and lateral
+
+if allow_down=true: include down
+
+Cycle guard: prevent revisiting the same (type,id) node in a path.
+
+Return path for explainability (array of node keys OR edge ids).
+
+Suggested implementation approach: recursive CTE with a visited set.
+
+Signature + return columns:
+
+CREATE OR REPLACE FUNCTION resolve_visibility_targets_recursive(
+  input_type TEXT,
+  input_id UUID,
+  max_depth INT DEFAULT 6,
+  allow_down BOOLEAN DEFAULT false
+)
+RETURNS TABLE (
+  target_type TEXT,
+  target_id UUID,
+  depth INT,
+  path_nodes TEXT[],     -- e.g. ['zone:anacla', 'portal:bamfield', ...] or ['zone:<uuid>', ...]
+  path_edge_ids UUID[]   -- optional but preferred if easy
+)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH RECURSIVE walk AS (
+    -- seed: start node
+    SELECT
+      input_type::text AS cur_type,
+      input_id::uuid   AS cur_id,
+      0                AS depth,
+      ARRAY[ (input_type || ':' || input_id::text) ]::text[] AS visited,
+      ARRAY[ (input_type || ':' || input_id::text) ]::text[] AS path_nodes,
+      ARRAY[]::uuid[]  AS path_edge_ids
+    UNION ALL
+    SELECT
+      e.target_type,
+      e.target_id,
+      w.depth + 1,
+      w.visited || (e.target_type || ':' || e.target_id::text),
+      w.path_nodes || (e.target_type || ':' || e.target_id::text),
+      w.path_edge_ids || e.id
+    FROM walk w
+    JOIN cc_visibility_edges e
+      ON e.tenant_id::text = current_setting('app.tenant_id', true)
+     AND e.source_type = w.cur_type
+     AND e.source_id = w.cur_id
+     AND e.archived_at IS NULL
+     AND (
+       allow_down
+       OR e.direction IN ('up','lateral')
+     )
+    WHERE w.depth < LEAST(max_depth, 10)
+      AND NOT ( (e.target_type || ':' || e.target_id::text) = ANY(w.visited) )
+  )
+  SELECT
+    cur_type AS target_type,
+    cur_id   AS target_id,
+    depth,
+    path_nodes,
+    path_edge_ids
+  FROM walk
+  WHERE depth > 0;
+$$;
+
+
+Notes:
+
+This returns all reachable nodes (including intermediate). That’s okay; we’ll filter to “targets” next.
+
+SECTION C) TARGET FILTERING + DEDUPE POLICY
+
+Create a second function that returns only the targets we care about for visibility:
+
+resolve_visibility_targets_recursive_dedup(input_type, input_id, max_depth, allow_down)
+
+Rules:
+
+Keep only target_type IN ('portal','zone')
+
+Deduplicate by (target_type,target_id)
+
+Deterministic “best path” selection:
+
+smallest depth wins
+
+tie-breaker: lexical order of path_nodes joined string (stable)
+
+Return:
+
+target_type, target_id, depth, path_nodes
+
+SECTION D) INTERNAL API (READ-ONLY)
+
+Add endpoint (platform admin auth required, same as 10B/10C):
+
+GET /api/internal/visibility/resolve-recursive
+
+Query params:
+
+tenant_id (required)
+
+source_type (portal|zone)
+
+source_id (uuid)
+
+max_depth (optional, default 6, max 10)
+
+allow_down (optional, default false)
+
+Behavior:
+
+Set tenant context (or ensure req.ctx.tenant_id is correct for admin tool pattern)
+
+Call the dedup function
+
+Return:
+
+{
+  "ok": true,
+  "source": { "type": "zone", "id": "..." },
+  "max_depth": 6,
+  "allow_down": false,
+  "targets": [
+    { "type": "portal", "id": "...", "depth": 1, "path": ["zone:...","portal:..."] }
+  ]
+}
+
+SECTION E) TESTING (TEST AUTH BOOTSTRAP ONLY)
+
+Use:
+
+await loginAs(page, 'ellen');
+
+
+Test cases:
+
+Resolve from Anacla zone → should include Bamfield portal (depth 1)
+
+Add a second hop edge (using STEP 10C admin endpoints) and verify recursion reaches it
+
+Create an intentional cycle attempt (A→B, B→A) and confirm:
+
+function does NOT loop
+
+both nodes appear at most once
+
+Confirm allow_down=false excludes down edges if any exist
+
+SECTION F) PROOF DOC REQUIREMENTS
+
+proof/v3.5/step10d-recursive-visibility-proof.md must include:
+
+function SQL
+
+sample outputs for at least 2 sources
+
+evidence of cycle guard working
+
+statement confirming:
+
+no publishing behavior changed
+
+no UI changes
+
+no inference added
+
+Checklist:
+
+ Recursive resolver exists (STABLE)
+
+ Depth cap enforced
+
+ Cycle guard enforced
+
+ Dedup policy deterministic
+
+ Admin endpoint returns expected shape
+
+ Test auth bootstrap used
+
+DO NOT
+
+Do NOT change any Step 7/8 UI behavior
+
+Do NOT infer edges from geo/naming
+
+Do NOT add automatic propagation into publications
+
+END.
+
+If you’d rather go growth-first instead of governance-next, the alternative is STEP 11 Market Expansion (bulk portal/community onboarding + stress tests). But given you’ve already built 10A–10C, 10D is the clean “finish the graph spine” step before monetization controls.
+
+continue with 10D
+
+REPLIT PROMPT — V3.5 STEP 10D
+Recursive Visibility (Multi-hop) + Cycle Guard + Deterministic Dedup (Read-only)
+
+ROLE: Senior Platform Engineer
+MODE: Read-only visibility resolution upgrade. No publishing changes. No UI.
+
+============================================================
+HARD RULES (NON-NEGOTIABLE)
+
+IDENTITY ≠ VISIBILITY ≠ EXECUTION (LOCKED)
+
+Identity: cc_portals.name, cc_zones.name, cc_work_areas.title (user-facing)
+
+Visibility: cc_visibility_edges, publications, resolver functions/endpoints
+
+Execution: work areas, properties, surfaces, constraints (OUT OF SCOPE)
+
+MUST NOT:
+
+❌ Auto-publish runs or modify publications
+
+❌ Infer visibility from geo, naming, or adjacency
+
+❌ Rename portals/zones
+
+❌ Touch STEP 7/8 behavior
+
+❌ Reference execution tables/surfaces/constraints
+
+Terminology:
+
+✅ “service provider”, “reservation”
+
+❌ banned terms per canon (and no “calendar” in new code)
+
+============================================================
+GOAL
+
+Add a recursive resolver that computes multi-hop effective visibility targets from a source node (zone/portal), following explicit edges only, with:
+
+Depth limit (default 6, hard cap 10)
+
+Cycle guard (no infinite loops)
+
+Deterministic dedup (shortest path wins, stable tie-break)
+
+Direction filter (default allow only up + lateral; down optional)
+
+Tenant isolation (must respect tenant context / admin scoping pattern)
+
+Outputs:
+
+Targets (type/id)
+
+depth (hop count)
+
+path_nodes (explainability)
+
+path_edge_ids (preferred, if easy)
+
+============================================================
+SECTION A) AUDIT-FIRST (NO CODE YET)
+
+Run and paste results into proof later:
+
+-- Active edges count + direction mix
+SELECT COUNT(*) AS active_edges
+FROM cc_visibility_edges
+WHERE archived_at IS NULL;
+
+SELECT direction, COUNT(*)
+FROM cc_visibility_edges
+WHERE archived_at IS NULL
+GROUP BY 1
+ORDER BY 1;
+
+-- Confirm unique active edge constraint exists (from 10C)
+SELECT conname
+FROM pg_constraint
+WHERE conrelid = 'cc_visibility_edges'::regclass
+ORDER BY conname;
+
+-- Confirm indexes exist (from 10C migration 178)
+SELECT indexname
+FROM pg_indexes
+WHERE tablename = 'cc_visibility_edges'
+ORDER BY indexname;
+
+
+STOP if table/indexes/unique constraint are missing.
+
+============================================================
+SECTION B) SQL FUNCTION 1 — WALK (RAW PATHS)
+
+Create:
+
+resolve_visibility_walk(input_type, input_id, max_depth DEFAULT 6, allow_down DEFAULT false)
+
+Requirements:
+
+LANGUAGE sql
+
+STABLE
+
+Depth capped at 10
+
+Cycle guard via visited set
+
+Tenant scoping must match existing pattern (current_setting / ctx)
+
+CREATE OR REPLACE FUNCTION resolve_visibility_walk(
+  input_type TEXT,
+  input_id UUID,
+  max_depth INT DEFAULT 6,
+  allow_down BOOLEAN DEFAULT false
+)
+RETURNS TABLE (
+  target_type TEXT,
+  target_id UUID,
+  depth INT,
+  path_nodes TEXT[],
+  path_edge_ids UUID[]
+)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH RECURSIVE walk AS (
+    -- Seed node
+    SELECT
+      input_type::text AS cur_type,
+      input_id::uuid   AS cur_id,
+      0                AS depth,
+      ARRAY[(input_type || ':' || input_id::text)]::text[] AS visited,
+      ARRAY[(input_type || ':' || input_id::text)]::text[] AS path_nodes,
+      ARRAY[]::uuid[]  AS path_edge_ids
+    UNION ALL
+    SELECT
+      e.target_type,
+      e.target_id,
+      w.depth + 1,
+      w.visited || (e.target_type || ':' || e.target_id::text),
+      w.path_nodes || (e.target_type || ':' || e.target_id::text),
+      w.path_edge_ids || e.id
+    FROM walk w
+    JOIN cc_visibility_edges e
+      ON e.archived_at IS NULL
+     AND e.source_type = w.cur_type
+     AND e.source_id = w.cur_id
+     AND (
+       allow_down
+       OR e.direction IN ('up','lateral')
+     )
+     AND (
+       -- tenant isolation: must match existing RLS/service-mode pattern
+       e.tenant_id::text = current_setting('app.tenant_id', true)
+       OR current_setting('app.service_mode', true) = 'on'
+     )
+    WHERE w.depth < LEAST(max_depth, 10)
+      AND NOT ((e.target_type || ':' || e.target_id::text) = ANY(w.visited))
+  )
+  SELECT
+    cur_type AS target_type,
+    cur_id   AS target_id,
+    depth,
+    path_nodes,
+    path_edge_ids
+  FROM walk
+  WHERE depth > 0;
+$$;
+
+============================================================
+SECTION C) SQL FUNCTION 2 — DEDUP TARGETS (DETERMINISTIC)
+
+Create:
+
+resolve_visibility_targets_recursive(input_type, input_id, max_depth DEFAULT 6, allow_down DEFAULT false)
+
+Rules:
+
+Only return targets of type portal/zone
+
+Dedup by (target_type, target_id)
+
+Best path selection:
+
+lowest depth
+
+tie-breaker: array_to_string(path_nodes,'>') ascending
+
+CREATE OR REPLACE FUNCTION resolve_visibility_targets_recursive(
+  input_type TEXT,
+  input_id UUID,
+  max_depth INT DEFAULT 6,
+  allow_down BOOLEAN DEFAULT false
+)
+RETURNS TABLE (
+  target_type TEXT,
+  target_id UUID,
+  depth INT,
+  path_nodes TEXT[],
+  path_edge_ids UUID[]
+)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH raw AS (
+    SELECT *
+    FROM resolve_visibility_walk(input_type, input_id, max_depth, allow_down)
+    WHERE target_type IN ('portal','zone')
+  ),
+  ranked AS (
+    SELECT
+      r.*,
+      ROW_NUMBER() OVER (
+        PARTITION BY r.target_type, r.target_id
+        ORDER BY r.depth ASC, array_to_string(r.path_nodes, '>') ASC
+      ) AS rn
+    FROM raw r
+  )
+  SELECT target_type, target_id, depth, path_nodes, path_edge_ids
+  FROM ranked
+  WHERE rn = 1;
+$$;
+
+============================================================
+SECTION D) INTERNAL API (READ-ONLY)
+
+Add endpoint:
+
+GET /api/internal/visibility/resolve-recursive
+
+Auth:
+
+Platform admin auth required (same pattern as STEP 10B/10C)
+
+Query params:
+
+tenant_id (required)
+
+source_type (portal|zone) required
+
+source_id (uuid) required
+
+max_depth (optional, default 6, max 10)
+
+allow_down (optional, default false)
+
+Rules:
+
+Validate tenant_id present
+
+Validate source_type in allowed set
+
+Validate UUID format for source_id
+
+Set tenant context / use existing admin scoping approach (do NOT bypass isolation casually)
+
+Return targets with resolved identity names (identity only), but DO NOT change identity
+
+Response shape:
+
+{
+  "ok": true,
+  "source": { "type": "zone", "id": "..." },
+  "max_depth": 6,
+  "allow_down": false,
+  "targets": [
+    {
+      "type": "portal",
+      "id": "...",
+      "depth": 1,
+      "path": ["zone:...","portal:..."],
+      "portal_name": "Bamfield Community Portal"
+    }
+  ]
+}
+
+
+Notes:
+
+If target_type=zone, include zone_name
+
+If target_type=portal, include portal_name
+
+Names come from existing tables; do not mutate
+
+============================================================
+SECTION E) TESTING (TEST AUTH BOOTSTRAP ONLY)
+
+Use:
+
+await loginAs(page, 'ellen');
+
+
+DO NOT use UI login.
+
+Tests:
+
+Single-hop:
+
+Source = Anacla zone → should return Bamfield portal (depth 1)
+
+Multi-hop:
+
+Using existing STEP 10C admin edge endpoint, create a second edge:
+Bamfield portal → (some other portal) with direction='up' or 'lateral'
+
+Re-run resolver and confirm second-hop appears with depth 2
+
+Cycle guard:
+
+Create a cycle A→B and B→A (both active)
+
+Confirm:
+
+resolver completes
+
+no duplicate target rows
+
+no infinite recursion
+
+depth never exceeds cap
+
+Direction filter:
+
+If any down edges exist, confirm allow_down=false excludes them
+
+allow_down=true includes them
+
+============================================================
+SECTION F) PROOF
+
+Create:
+proof/v3.5/step10d-recursive-visibility-proof.md
+
+Include:
+
+Audit query outputs (Section A)
+
+Both function definitions (B & C)
+
+Example outputs for:
+
+single-hop
+
+multi-hop
+
+cycle guard
+
+direction filter
+
+Endpoint example response
+
+Explicit statement:
+
+No publishing behavior changed
+
+No STEP 7/8 UI changes
+
+No geo inference added
+
+No execution tables referenced
+
+Checklist:
+
+ Depth limit enforced (cap 10)
+
+ Cycle guard works
+
+ Dedup deterministic
+
+ Direction filter works
+
+ Admin endpoint works and is read-only
+
+ Test auth bootstrap used
+
+============================================================
+DO NOT
+
+Do NOT modify publications
+
+Do NOT add inference rules
+
+Do NOT add UI
+
+Do NOT touch execution systems
+
+END.
