@@ -1,0 +1,296 @@
+✅ REPLIT PROMPT — STEP 11B-FIX
+
+Community Publish Eligibility + STEP 7 Discovery
+
+ROLE & MODE
+
+ROLE: Senior Platform Architect + Governance / Visibility Authority + QA Gatekeeper
+MODE: Minimal, surgical patch
+
+❌ No refactors
+
+❌ No schema changes
+
+❌ No behavior changes outside scope
+
+✅ Preserve all existing logic unless explicitly instructed
+
+TERMINOLOGY (LOCKED)
+
+✅ service provider
+
+✅ reservation
+
+❌ booking
+
+❌ contractor
+
+❌ calendar
+
+PRODUCT RULE (LOCKED)
+
+“Visible to you” ≠ “Published by you”
+
+Visibility-preview may show broad rollups via the visibility graph
+
+Publishing must be explicitly gated and eligibility-validated
+
+GOAL
+
+Enable explicit publishing of service runs to:
+
+Tenant-owned active portals (existing behavior)
+
+Active, properly anchored community portals (cross-tenant)
+
+While continuing to block publishing to:
+
+Other tenants’ non-community portals (e.g. business_service portals)
+
+This must:
+
+Preserve tenant isolation
+
+Preserve auditability (cc_run_portal_publications.tenant_id remains the publishing tenant)
+
+Leave visibility-preview behavior unchanged
+
+Introduce no schema changes
+
+TARGET FILE
+
+server/routes/provider.ts
+
+========================================================
+A) PATCH — GET /api/provider/portals (≈ lines 571–591)
+========================================================
+CURRENT BEHAVIOR
+
+Returns only tenant-owned active portals.
+
+REQUIRED BEHAVIOR
+
+Return:
+
+Tenant-owned active portals
+
+Active community portals with valid anchor_community_id
+
+Also return:
+
+portal_type
+
+source label for UI grouping
+
+REPLACE QUERY WITH
+SELECT
+  id,
+  name,
+  slug,
+  status,
+  portal_type,
+  CASE
+    WHEN owning_tenant_id = $1 THEN 'tenant_owned'
+    WHEN portal_type = 'community' THEN 'community'
+    ELSE 'other'
+  END AS source
+FROM cc_portals
+WHERE status = 'active'
+  AND (
+    owning_tenant_id = $1
+    OR (portal_type = 'community' AND anchor_community_id IS NOT NULL)
+  )
+ORDER BY
+  CASE WHEN owning_tenant_id = $1 THEN 0 ELSE 1 END,
+  name ASC;
+
+RESPONSE SHAPE
+res.json({ ok: true, portals: result.rows });
+
+HARD GUARANTEE
+
+This must not include:
+
+Other tenants’ business_service portals
+
+Any non-community cross-tenant portals
+
+========================================================
+B) PATCH — POST /api/provider/runs/:id/publish (≈ lines 593–689)
+========================================================
+DO NOT CHANGE
+
+tenantId retrieval
+
+UUID validation
+
+Run ownership validation
+
+SELECT id, tenant_id FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2
+
+
+marketMode validation
+
+Writes to cc_run_portal_publications
+
+“Unpublish everything not selected” logic
+
+Response shape
+
+CHANGE ONLY: Portal eligibility validation
+CURRENT VALIDATION
+SELECT id
+FROM cc_portals
+WHERE id = ANY($1::uuid[])
+  AND owning_tenant_id = $2
+
+REPLACE WITH
+SELECT id
+FROM cc_portals
+WHERE id = ANY($1::uuid[])
+  AND status = 'active'
+  AND (
+    owning_tenant_id = $2
+    OR (portal_type = 'community' AND anchor_community_id IS NOT NULL)
+  )
+
+FAILURE HANDLING
+
+If returned row count ≠ portalIds.length:
+
+return res.status(400).json({
+  ok: false,
+  error: 'invalid_publish_target'
+});
+
+RESULTING GUARANTEES
+
+✅ Tenant can publish to their own portals
+
+✅ Tenant can publish to community portals
+
+❌ Tenant cannot publish to other tenants’ non-community portals
+
+========================================================
+C) REQUIRED — STEP 7 publish-suggestions (≈ lines 1643–1820)
+========================================================
+PURPOSE
+
+Providers must be able to discover eligible community publish targets in the UI.
+This section is required to make community publishing usable.
+
+PRESERVE EXACTLY
+
+Existing tenant zone query
+
+Origin state logic:
+
+no_address
+
+has_address_no_coords
+
+has_coords
+
+Distance confidence modes
+
+haversineDistance helper
+
+ADD COMMUNITY PORTAL CANDIDATES
+
+Criteria:
+
+portal_type = 'community'
+
+status = 'active'
+
+anchor_community_id IS NOT NULL
+
+Exclude already-published portals using:
+
+AND NOT (p.id = ANY($X::uuid[]))
+
+MERGE RULES
+
+Merge tenant-zone suggestions + community portal suggestions
+
+Deduplicate by portal_id
+
+Prefer tenant_zone over community_portal on collision
+
+RESPONSE CHANGES
+
+Each suggestion must include:
+
+suggestion_source: 'tenant_zone' | 'community_portal'
+
+
+For community portal suggestions:
+
+zone_id = null
+
+zone_name = null
+
+zone_key = null
+
+SORT FALLBACK FIX
+
+Replace:
+
+a.zone_name.localeCompare(b.zone_name)
+
+
+With:
+
+const aName = a.zone_name ?? a.portal_name;
+const bName = b.zone_name ?? b.portal_name;
+return aName.localeCompare(bName);
+
+========================================================
+D) SQL SAFETY REQUIREMENT (MANDATORY)
+========================================================
+
+When excluding arrays, always use:
+
+NOT (id = ANY($X::uuid[]))
+
+
+Do not use:
+
+!= ALL(...)
+
+========================================================
+E) PROOF DOCUMENTATION (REQUIRED)
+========================================================
+
+Create or update:
+
+proof/v3.5/step11b-publish-eligibility-proof.md
+
+
+Must include:
+
+GET /api/provider/portals
+
+Shows tenant_owned and community entries
+
+Includes portal_type and source
+
+Demonstrates absence of cross-tenant non-community portals
+
+POST /api/provider/runs/:id/publish
+
+Successful publish to a community portal
+
+Failed publish (400 invalid_publish_target) to another tenant’s business portal
+
+DONE WHEN
+
+Community portals appear in provider portal list
+
+Publishing to community portals succeeds
+
+Publishing to other tenants’ non-community portals fails
+
+STEP 7 suggestions include community portals
+
+Proof doc exists under proof/v3.5/

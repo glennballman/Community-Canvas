@@ -568,6 +568,7 @@ router.get('/runs/:id', requireAuth, async (req: AuthRequest, res: Response) => 
   }
 });
 
+// STEP 11B-FIX: Include tenant-owned AND community portals with valid anchors
 router.get('/portals', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
@@ -577,10 +578,26 @@ router.get('/portals', requireAuth, async (req: AuthRequest, res: Response) => {
     }
 
     const result = await pool.query(`
-      SELECT id, name, slug, status
+      SELECT
+        id,
+        name,
+        slug,
+        status,
+        portal_type,
+        CASE
+          WHEN owning_tenant_id = $1 THEN 'tenant_owned'
+          WHEN portal_type = 'community' THEN 'community'
+          ELSE 'other'
+        END AS source
       FROM cc_portals
-      WHERE owning_tenant_id = $1 AND status = 'active'
-      ORDER BY name ASC
+      WHERE status = 'active'
+        AND (
+          owning_tenant_id = $1
+          OR (portal_type = 'community' AND anchor_community_id IS NOT NULL)
+        )
+      ORDER BY
+        CASE WHEN owning_tenant_id = $1 THEN 0 ELSE 1 END,
+        name ASC
     `, [tenantId]);
 
     res.json({ ok: true, portals: result.rows });
@@ -638,12 +655,20 @@ router.post('/runs/:id/publish', requireAuth, async (req: AuthRequest, res: Resp
       return res.status(404).json({ ok: false, error: 'Run not found' });
     }
 
+    // STEP 11B-FIX: Allow publishing to tenant-owned OR community portals with valid anchors
     const portalsResult = await pool.query(`
-      SELECT id FROM cc_portals WHERE id = ANY($1::uuid[]) AND owning_tenant_id = $2
+      SELECT id
+      FROM cc_portals
+      WHERE id = ANY($1::uuid[])
+        AND status = 'active'
+        AND (
+          owning_tenant_id = $2
+          OR (portal_type = 'community' AND anchor_community_id IS NOT NULL)
+        )
     `, [portalIds, tenantId]);
 
     if (portalsResult.rows.length !== portalIds.length) {
-      return res.status(400).json({ ok: false, error: 'One or more portals not found or not accessible' });
+      return res.status(400).json({ ok: false, error: 'invalid_publish_target' });
     }
 
     await pool.query(`
@@ -1702,9 +1727,9 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
 
     const publishedPortalIds = publishedResult.rows.map(r => r.portal_id);
 
-    // 4) Query candidate zones (zones-first)
-    // Exclude portals already published
-    let candidatesQuery = `
+    // 4) Query candidate zones (zones-first) - tenant-owned portals
+    // STEP 11B-FIX: Exclude already published using NOT (id = ANY(...))
+    let tenantZonesQuery = `
       SELECT
         z.id as zone_id,
         z.name as zone_name,
@@ -1723,30 +1748,59 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
         AND p.status = 'active'
     `;
 
-    const params: any[] = [tenantId];
+    const tenantZonesParams: any[] = [tenantId];
 
     if (publishedPortalIds.length > 0) {
-      candidatesQuery += ` AND p.id != ALL($2::uuid[])`;
-      params.push(publishedPortalIds);
+      tenantZonesQuery += ` AND NOT (p.id = ANY($2::uuid[]))`;
+      tenantZonesParams.push(publishedPortalIds);
     }
 
-    const candidatesResult = await pool.query(candidatesQuery, params);
+    const tenantZonesResult = await pool.query(tenantZonesQuery, tenantZonesParams);
+
+    // STEP 11B-FIX: Query community portals (cross-tenant)
+    let communityPortalsQuery = `
+      SELECT
+        p.id as portal_id,
+        p.name as portal_name,
+        p.slug as portal_slug,
+        p.anchor_community_id,
+        c.latitude as anchor_lat,
+        c.longitude as anchor_lng
+      FROM cc_portals p
+      LEFT JOIN cc_sr_communities c ON c.id = p.anchor_community_id
+      WHERE p.portal_type = 'community'
+        AND p.status = 'active'
+        AND p.anchor_community_id IS NOT NULL
+        AND p.owning_tenant_id != $1
+    `;
+
+    const communityParams: any[] = [tenantId];
+
+    if (publishedPortalIds.length > 0) {
+      communityPortalsQuery += ` AND NOT (p.id = ANY($2::uuid[]))`;
+      communityParams.push(publishedPortalIds);
+    }
+
+    const communityPortalsResult = await pool.query(communityPortalsQuery, communityParams);
 
     // 5) Compute distance and confidence for each candidate
     // V3.5 STEP 8: Added 'no_origin_coords' confidence mode
+    // STEP 11B-FIX: Added suggestion_source field
     interface Suggestion {
-      zone_id: string;
-      zone_name: string;
-      zone_key: string;
+      zone_id: string | null;
+      zone_name: string | null;
+      zone_key: string | null;
       portal_id: string;
       portal_name: string;
       portal_slug: string;
       distance_meters: number | null;
       distance_label: string | null;
       distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords';
+      suggestion_source: 'tenant_zone' | 'community_portal';
     }
 
-    const suggestions: Suggestion[] = candidatesResult.rows.map(row => {
+    // Helper to compute distance fields
+    const computeDistance = (row: any): { distance_meters: number | null; distance_label: string | null; distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords' } => {
       let distance_meters: number | null = null;
       let distance_label: string | null = null;
       let distance_confidence: 'ok' | 'unknown' | 'no_origin' | 'no_origin_coords' = 'no_origin';
@@ -1766,6 +1820,12 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
         distance_confidence = 'ok';
       }
 
+      return { distance_meters, distance_label, distance_confidence };
+    };
+
+    // Map tenant zone suggestions
+    const tenantZoneSuggestions: Suggestion[] = tenantZonesResult.rows.map(row => {
+      const dist = computeDistance(row);
       return {
         zone_id: row.zone_id,
         zone_name: row.zone_name,
@@ -1773,13 +1833,52 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
         portal_id: row.portal_id,
         portal_name: row.portal_name,
         portal_slug: row.portal_slug,
-        distance_meters,
-        distance_label,
-        distance_confidence
+        distance_meters: dist.distance_meters,
+        distance_label: dist.distance_label,
+        distance_confidence: dist.distance_confidence,
+        suggestion_source: 'tenant_zone' as const
       };
     });
 
+    // Map community portal suggestions
+    const communityPortalSuggestions: Suggestion[] = communityPortalsResult.rows.map(row => {
+      const dist = computeDistance(row);
+      return {
+        zone_id: null,
+        zone_name: null,
+        zone_key: null,
+        portal_id: row.portal_id,
+        portal_name: row.portal_name,
+        portal_slug: row.portal_slug,
+        distance_meters: dist.distance_meters,
+        distance_label: dist.distance_label,
+        distance_confidence: dist.distance_confidence,
+        suggestion_source: 'community_portal' as const
+      };
+    });
+
+    // STEP 11B-FIX: Merge and deduplicate (prefer tenant_zone over community_portal)
+    const seenPortalIds = new Set<string>();
+    const suggestions: Suggestion[] = [];
+
+    // Add tenant zone suggestions first (they take priority)
+    for (const s of tenantZoneSuggestions) {
+      if (!seenPortalIds.has(s.portal_id)) {
+        seenPortalIds.add(s.portal_id);
+        suggestions.push(s);
+      }
+    }
+
+    // Add community portal suggestions if not already present
+    for (const s of communityPortalSuggestions) {
+      if (!seenPortalIds.has(s.portal_id)) {
+        seenPortalIds.add(s.portal_id);
+        suggestions.push(s);
+      }
+    }
+
     // 6) Sort: ok by distance ascending, then unknown/no_origin/no_origin_coords alphabetically
+    // STEP 11B-FIX: Fixed sort fallback for null zone_name
     suggestions.sort((a, b) => {
       // Priority: ok < unknown < no_origin_coords < no_origin
       const confidenceOrder: Record<string, number> = { ok: 0, unknown: 1, no_origin_coords: 2, no_origin: 3 };
@@ -1795,8 +1894,10 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
         return (a.distance_meters || 0) - (b.distance_meters || 0);
       }
 
-      // Alphabetical by zone_name
-      return a.zone_name.localeCompare(b.zone_name);
+      // STEP 11B-FIX: Alphabetical by zone_name OR portal_name (fallback for community portals)
+      const aName = a.zone_name ?? a.portal_name;
+      const bName = b.zone_name ?? b.portal_name;
+      return aName.localeCompare(bName);
     });
 
     // 7) Apply limit
