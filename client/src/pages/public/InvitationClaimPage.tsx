@@ -1,17 +1,21 @@
 /**
  * STEP 11C: Public Invitation Claim Page
+ * STEP 11C.1: Invitation Claim Flow
  * 
  * Read-only view for stakeholders to see service run context.
  * Token-based access, no authentication required.
+ * Claim button allows linking invitation to user account.
  */
 
+import { useState } from 'react';
 import { useParams } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Eye, AlertCircle, ExternalLink, Hourglass, Timer } from 'lucide-react';
+import { Loader2, Eye, AlertCircle, ExternalLink, Hourglass, Timer, UserCheck, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import ClaimInvitationModal from '@/components/public/ClaimInvitationModal';
 
 interface InvitationResponse {
   ok: boolean;
@@ -41,7 +45,7 @@ function getStatusBadge(status: string) {
     case 'viewed':
       return <Badge variant="secondary" data-testid="badge-status-viewed"><Eye className="w-3 h-3 mr-1" />Viewed</Badge>;
     case 'claimed':
-      return <Badge variant="default" data-testid="badge-status-claimed">Claimed</Badge>;
+      return <Badge variant="default" data-testid="badge-status-claimed"><CheckCircle className="w-3 h-3 mr-1" />Claimed</Badge>;
     default:
       return <Badge variant="outline" data-testid="badge-status-default">{status}</Badge>;
   }
@@ -49,8 +53,10 @@ function getStatusBadge(status: string) {
 
 export default function InvitationClaimPage() {
   const { token } = useParams<{ token: string }>();
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useQuery<InvitationResponse>({
+  const { data, isLoading, error, refetch } = useQuery<InvitationResponse>({
     queryKey: ['/api/i', token],
     queryFn: async () => {
       const res = await fetch(`/api/i/${token}`);
@@ -59,6 +65,11 @@ export default function InvitationClaimPage() {
     enabled: !!token,
     retry: false,
   });
+
+  const handleClaimed = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['/api/i', token] });
+  };
 
   if (isLoading) {
     return (
@@ -177,8 +188,42 @@ export default function InvitationClaimPage() {
               </div>
             </div>
           )}
+
+          {/* Claim invitation button - shown when not yet claimed */}
+          {invitation && invitation.status !== 'claimed' && (
+            <div className="border-t pt-4">
+              <Button 
+                onClick={() => setClaimModalOpen(true)}
+                className="w-full"
+                data-testid="button-claim-invitation"
+              >
+                <UserCheck className="w-4 h-4 mr-2" />
+                Claim invitation
+              </Button>
+            </div>
+          )}
+
+          {/* Claimed confirmation */}
+          {invitation && invitation.status === 'claimed' && (
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-md" data-testid="claimed-confirmation">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>Invitation claimed. You have private ops access.</span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Claim Modal */}
+      {token && (
+        <ClaimInvitationModal
+          open={claimModalOpen}
+          onOpenChange={setClaimModalOpen}
+          token={token}
+          onClaimed={handleClaimed}
+        />
+      )}
     </div>
   );
 }

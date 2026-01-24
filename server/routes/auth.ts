@@ -31,7 +31,8 @@ function checkRateLimit(key: string): boolean {
 
 // Helper: Create session in cc_auth_sessions
 // Uses distinct hashes: session token hash (random) for tracking, refresh token hash for rotation
-async function createSession(userId: string, refreshToken: string, req: Request): Promise<string> {
+// Exported for reuse in claim flows
+export async function createSession(userId: string, refreshToken: string, req: Request): Promise<string> {
     // Generate unique session identifier (not the refresh token)
     const sessionId = crypto.randomUUID();
     const sessionTokenHash = crypto.createHash('sha256').update(sessionId).digest('hex');
@@ -117,6 +118,143 @@ async function validateAndRotateRefresh(refreshToken: string, req: Request): Pro
             isPlatformAdmin: session.is_platform_admin
         },
         newTokens
+    };
+}
+
+// ============================================================
+// SHARED AUTH HELPERS (for reuse in claim flows)
+// ============================================================
+
+export interface AuthResult {
+    ok: boolean;
+    error?: string;
+    user?: {
+        id: string;
+        email: string;
+        displayName: string;
+        isPlatformAdmin: boolean;
+    };
+    accessToken?: string;
+    refreshToken?: string;
+}
+
+/**
+ * Authenticate user by email/password
+ * Reusable helper for login flows
+ * @param req - Optional Request for session creation (aligns with main auth flow)
+ */
+export async function authenticateUser(email: string, password: string, req?: Request): Promise<AuthResult> {
+    const emailLower = email.toLowerCase().trim();
+
+    const result = await serviceQuery(`
+        SELECT id, email, password_hash, given_name, family_name, display_name, status, is_platform_admin
+        FROM cc_users WHERE email = $1
+    `, [emailLower]);
+
+    if (result.rows.length === 0) {
+        return { ok: false, error: 'error.auth.invalid_credentials' };
+    }
+
+    const user = result.rows[0];
+
+    if (user.status !== 'active') {
+        return { ok: false, error: 'error.auth.account_suspended' };
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+        return { ok: false, error: 'error.auth.invalid_credentials' };
+    }
+
+    // Update login stats
+    await serviceQuery(`
+        UPDATE cc_users 
+        SET last_login_at = NOW(), login_count = COALESCE(login_count, 0) + 1
+        WHERE id = $1
+    `, [user.id]);
+
+    const userType = user.is_platform_admin ? 'admin' : 'user';
+    const { accessToken, refreshToken } = generateTokens(user.id, user.email, userType);
+
+    // Create session for refresh token rotation (matches main auth flow)
+    if (req) {
+        await createSession(user.id, refreshToken, req);
+    }
+
+    return {
+        ok: true,
+        user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.display_name || user.email.split('@')[0],
+            isPlatformAdmin: user.is_platform_admin || false
+        },
+        accessToken,
+        refreshToken
+    };
+}
+
+/**
+ * Register new user
+ * Reusable helper for registration flows
+ * @param req - Optional Request for session creation (aligns with main auth flow)
+ */
+export async function registerUser(
+    email: string, 
+    password: string, 
+    displayName?: string,
+    req?: Request
+): Promise<AuthResult> {
+    const emailLower = email.toLowerCase().trim();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailLower)) {
+        return { ok: false, error: 'error.auth.invalid_email' };
+    }
+
+    if (password.length < 8) {
+        return { ok: false, error: 'error.auth.password_too_short' };
+    }
+
+    // Check if email exists
+    const existing = await serviceQuery(
+        'SELECT id FROM cc_users WHERE email = $1',
+        [emailLower]
+    );
+
+    if (existing.rows.length > 0) {
+        return { ok: false, error: 'error.auth.email_in_use' };
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const finalDisplayName = displayName?.trim() || emailLower.split('@')[0];
+
+    const result = await serviceQuery(`
+        INSERT INTO cc_users (
+            email, password_hash, display_name, status
+        ) VALUES ($1, $2, $3, 'active')
+        RETURNING id, email, display_name, is_platform_admin
+    `, [emailLower, passwordHash, finalDisplayName]);
+
+    const user = result.rows[0];
+    const userType = user.is_platform_admin ? 'admin' : 'user';
+    const { accessToken, refreshToken } = generateTokens(user.id, user.email, userType);
+
+    // Create session for refresh token rotation (matches main auth flow)
+    if (req) {
+        await createSession(user.id, refreshToken, req);
+    }
+
+    return {
+        ok: true,
+        user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.display_name,
+            isPlatformAdmin: user.is_platform_admin || false
+        },
+        accessToken,
+        refreshToken
     };
 }
 

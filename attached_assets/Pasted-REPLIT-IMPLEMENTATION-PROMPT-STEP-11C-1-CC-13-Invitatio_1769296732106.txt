@@ -1,0 +1,243 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C.1 (CC-13) Invitation Claim Flow (Sign in OR Create Account)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive implementation. No refactors. No schema changes.
+EVIDENCE-FIRST: create proof doc under proof/v3.5/.
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ “booking”
+- ❌ “contractor”
+- ❌ “calendar”
+Use “claim invitation”, “stakeholder”, “private ops access”, “read-only”.
+
+GOAL
+Upgrade the existing public invitation flow:
+- The public page `/i/:token` remains read-only by default.
+- Add a “Claim invitation” action so the invitee can:
+  A) Sign in (existing account), then claim
+  B) Create account, then claim
+- Claim updates cc_invitations:
+  status='claimed', claimed_at=now(), claimed_by_individual_id set, claimed_by_tenant_id set if determinable, claimed_by_party_id if your model supports it.
+- Enforce email matching: claim must be performed by the SAME email as invitee_email (case-insensitive).
+- No new tables. Do not change existing auth architecture.
+
+AS-BUILT PRIMITIVES (DO NOT REBUILD)
+- cc_invitations already has: claimed_at, claimed_by_individual_id, claimed_by_tenant_id, claimed_by_party_id, status enum includes 'claimed', invitee_email, invitee_role, metadata. (Audit confirmed)
+- Existing auth endpoints:
+  POST /api/auth/register
+  POST /api/auth/login
+  (and/or foundation login used by frontend)
+- Existing InvitationClaimPage at /i/:token already loads GET /api/i/:token.
+
+FILES TO MODIFY / ADD
+Backend:
+1) server/routes/public-invitations.ts (or wherever GET /api/i/:token lives) — add POST /api/i/:token/claim
+
+Frontend:
+2) client/src/pages/public/InvitationClaimPage.tsx — add claim UI
+3) client/src/components/public/ClaimInvitationModal.tsx (new) OR inline modal component under public/
+4) client/src/copy/* (where public/provide tokens live; follow existing pattern, likely entryPointCopy.ts)
+
+========================================================
+A) BACKEND — POST /api/i/:token/claim
+========================================================
+Add route:
+POST /api/i/:token/claim
+
+Purpose:
+- Claim an invitation token and link it to an internal user/individual identity.
+
+Request body:
+{
+  mode: 'signin' | 'register',
+  email: string,
+  password: string,
+  display_name?: string
+}
+
+Validation:
+- token format: hex string
+- email required; normalize to lowercase
+- password required for both modes (for simplicity and to avoid magic-link scope)
+- mode must be signin|register
+
+Flow:
+1) Load invitation by token:
+   SELECT *
+   FROM cc_invitations
+   WHERE claim_token = $1
+     AND context_type = 'service_run'
+     AND (claim_token_expires_at IS NULL OR claim_token_expires_at > now())
+     AND archived_at IS NULL (if column exists)
+   If not found: 404 { ok:false, error:'error.invite.invalid_or_expired' }
+
+2) If invitation.status = 'claimed':
+   return 200 { ok:true, status:'claimed' } (idempotent; do NOT overwrite claim fields)
+
+3) Enforce email match:
+   - Compare lower(invitation.invitee_email) to lower(req.body.email)
+   - If mismatch: 400 { ok:false, error:'error.invite.email_mismatch' }
+   (Do not allow claiming an invite intended for a different email.)
+
+4) Authenticate or register:
+   - mode='signin': authenticate email/password using the SAME internal function used by POST /api/auth/login (reuse code, do not duplicate insecurely).
+     - On failure: 401 { ok:false, error:'error.auth.invalid_credentials' }
+   - mode='register': create a user using SAME internal function used by POST /api/auth/register.
+     - Must enforce existing uniqueness rules (lowercased email).
+     - On conflict: 409 { ok:false, error:'error.auth.email_in_use' }
+     - On success: user is now authenticated (issue session/JWT same as register endpoint does).
+
+IMPORTANT:
+- Do NOT invent a new auth system.
+- Prefer factoring a small shared helper function inside auth route module if it already exists; otherwise call into existing service used by auth routes.
+
+5) Resolve individual_id / party_id:
+   - If your system has cc_individuals, ensure you can map user.email -> individual.id.
+   - Use existing patterns:
+     - If login/register already creates/links an individual, use that.
+     - Otherwise, lookup:
+       SELECT id FROM cc_individuals WHERE lower(email)=lower($1) LIMIT 1
+     - If no individual exists and your system expects one, create minimal individual record (ONLY if your auth flow already does this; do not guess).
+   - Set claimed_by_individual_id to the resolved individual id.
+
+6) Update cc_invitations:
+   UPDATE cc_invitations
+   SET status='claimed',
+       claimed_at=now(),
+       claimed_by_individual_id=$2,
+       claimed_by_tenant_id=COALESCE(claimed_by_tenant_id, $3),
+       claimed_by_party_id=COALESCE(claimed_by_party_id, $4),
+       updated_at=now()
+   WHERE id=$1
+     AND status <> 'claimed';
+
+For claimed_by_tenant_id / party_id:
+- If you can infer a “home tenant” from session.current_tenant_id or user default tenant, set it.
+- If not determinable, set NULL and rely on claimed_by_individual_id.
+
+Return:
+{
+  ok: true,
+  status: 'claimed',
+  invitation_id,
+  claimed_at,
+  claimed_by: { individual_id }
+}
+
+Security:
+- Keep response minimal.
+- Do not leak tenant ids to public if not needed.
+
+========================================================
+B) FRONTEND — InvitationClaimPage: Add “Claim invitation”
+========================================================
+In client/src/pages/public/InvitationClaimPage.tsx:
+
+Current:
+- loads GET /api/i/:token and renders read-only run context.
+
+Add:
+1) If invitation.status !== 'claimed':
+   show a primary button: resolve('public.invite.claim.cta') => "Claim invitation"
+
+2) Clicking opens ClaimInvitationModal (new component):
+   - Two tabs or segmented control:
+     - “I have an account” (signin)
+     - “Create account” (register)
+   - Fields:
+     - email (pre-filled from masked email? NO; the API response masks email; so prefill nothing.
+       Instead show helper: "Use the same email this invitation was sent to."
+     - password
+     - display name (register only)
+   - Submit calls POST `/api/i/${token}/claim` with:
+     { mode, email, password, display_name }
+
+3) On success:
+   - close modal
+   - refetch GET /api/i/:token
+   - show a “Claimed” badge + copy text:
+     resolve('public.invite.claimed') => "Invitation claimed"
+
+4) If server returns:
+   - error.invite.email_mismatch: show friendly error:
+     "This invitation can only be claimed by the email it was sent to."
+   - error.auth.invalid_credentials: show "Invalid email or password."
+   - error.auth.email_in_use (register): suggest using “I have an account”
+   - error.invite.invalid_or_expired: show expired state
+
+Do not use forbidden terminology.
+
+Routing:
+- keep Wouter routing as-is.
+
+========================================================
+C) FRONTEND — ClaimInvitationModal component
+========================================================
+Create:
+client/src/components/public/ClaimInvitationModal.tsx
+
+Use existing stack:
+- shadcn/ui Dialog
+- Tailwind
+- React Query v5 for mutation OR use apiRequest directly like other modals
+
+Props:
+- open, onOpenChange
+- token (string)
+- onClaimed() callback to refetch page data
+
+Modal copy:
+- Title: resolve('public.invite.claim.title') => "Claim invitation"
+- Rule/help text: resolve('public.invite.claim.help') =>
+  "Claiming links this invitation to your account for private ops access. Publishing is separate."
+
+Buttons:
+- Primary: resolve('public.invite.claim.submit') => "Claim"
+- Secondary: resolve('common.cancel') if exists, else add token
+
+========================================================
+D) COPY TOKENS
+========================================================
+Add tokens (follow existing pattern in your copy system; audit shows entryPointCopy.ts is used in some areas):
+
+Public claim:
+public.invite.claim.cta = "Claim invitation"
+public.invite.claim.title = "Claim invitation"
+public.invite.claim.help = "Claiming links this invitation to your account for private ops access. Publishing is separate."
+public.invite.claim.mode.signin = "I have an account"
+public.invite.claim.mode.register = "Create account"
+public.invite.claim.email.label = "Email"
+public.invite.claim.email.help = "Use the same email this invitation was sent to."
+public.invite.claim.password.label = "Password"
+public.invite.claim.display_name.label = "Display name"
+public.invite.claim.submit = "Claim"
+public.invite.claimed = "Invitation claimed"
+
+Errors:
+public.invite.error.email_mismatch = "This invitation can only be claimed by the email it was sent to."
+public.invite.error.invalid_credentials = "Invalid email or password."
+public.invite.error.email_in_use = "An account already exists for this email. Try signing in."
+public.invite.error.invalid_or_expired = "This invitation link is invalid or expired."
+
+========================================================
+E) PROOF DOC (REQUIRED)
+========================================================
+Create:
+proof/v3.5/step11c1-invitation-claim-proof.md
+
+Include:
+1) Example GET /api/i/:token response before claim (status viewed/sent)
+2) Example POST /api/i/:token/claim request + response (status claimed)
+3) Example GET /api/i/:token after claim (shows claimed)
+4) UI capture (text or screenshot):
+   - Claim invitation button
+   - Modal with signin/register modes
+   - Claimed state
+5) Confirm no schema changes.
+
+DONE WHEN
+- InvitationClaimPage shows “Claim invitation” when not claimed
+- Claim succeeds via signin or register and updates cc_invitations to claimed
+- Claim enforces email match
+- Proof doc exists under proof/v3.5/
