@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useTenant } from '../../contexts/TenantContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { Search, AlertTriangle, ExternalLink } from 'lucide-react';
 
 // ============================================================================

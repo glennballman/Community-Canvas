@@ -32,7 +32,6 @@ import { DebugPanel } from './components/dev/DebugPanel';
 
 // Layouts
 import { TenantAppLayout } from './layouts/TenantAppLayout';
-import { PlatformAdminLayout } from './layouts/PlatformAdminLayout';
 import { PublicPortalLayout } from './layouts/PublicPortalLayout';
 import { PlatformLayout } from './layouts/PlatformLayout';
 import { FounderLayout } from './layouts/FounderLayout';
@@ -176,6 +175,9 @@ import TenantDetailPage from './pages/app/platform/TenantDetailPage';
 import TenantPortalsPage from './pages/app/platform/TenantPortalsPage';
 import TenantUsersPage from './pages/app/platform/TenantUsersPage';
 import AnalyticsPage from './pages/app/platform/AnalyticsPage';
+import UsersManagement from './pages/app/platform/UsersManagement';
+import { ImpersonationConsole } from './pages/app/platform/ImpersonationConsole';
+import AdminInfrastructure from './pages/AdminInfrastructure';
 import CommandConsoleRoadsPage from './pages/app/platform/command-console/CommandConsoleRoadsPage';
 import CommandConsoleFerriesPage from './pages/app/platform/command-console/CommandConsoleFerriesPage';
 import CommandConsoleWeatherPage from './pages/app/platform/command-console/CommandConsoleWeatherPage';
@@ -249,25 +251,6 @@ import PortalQaPickerPage from './pages/app/admin/PortalQaPickerPage';
 import PortalZonesPage from './pages/app/admin/PortalZonesPage';
 import TenantsPageApp from './pages/app/admin/TenantsPage';
 
-// Pages - Admin
-import { ImpersonationConsole } from './pages/admin/ImpersonationConsole';
-import CivOSDashboard from './pages/admin/CivOSDashboard';
-import TenantsManagement from './pages/admin/TenantsManagement';
-import UsersManagement from './pages/admin/UsersManagement';
-import AdminInfrastructure from './pages/AdminInfrastructure';
-import AdminChambers from './pages/AdminChambers';
-import AdminNAICS from './pages/AdminNAICS';
-import Accommodations from './pages/Accommodations';
-import DataImport from './pages/admin/DataImport';
-import AdminSettings from './pages/AdminSettings';
-import AdminLogs from './pages/AdminLogs';
-import CommunitiesPage from './pages/admin/CommunitiesPage';
-import SeedCommunitiesPage from './pages/admin/SeedCommunitiesPage';
-import PortalConfigPage from './pages/admin/PortalConfigPage';
-import AIQueuePage from './pages/admin/AIQueuePage';
-import FlaggedContentPage from './pages/admin/FlaggedContentPage';
-import AdminInventory from './pages/admin/AdminInventory';
-import ArticlesPage from './pages/admin/ArticlesPage';
 
 // Pages - Public
 import PresentationViewer from './pages/public/PresentationViewer';
@@ -638,43 +621,6 @@ export default function App() {
                 <Route path="settings/negotiation-policies" element={<NegotiationPolicySettingsPage />} />
                 <Route path="settings/negotiation-audit" element={<NegotiationAuditPage />} />
                 <Route path="settings/proof-verification" element={<ProofVerificationPage />} />
-              </Route>
-
-              {/* ========================================== */}
-              {/* PLATFORM ADMIN - /admin/*                 */}
-              {/* ========================================== */}
-              <Route path="/admin" element={<PlatformAdminLayout />}>
-                <Route index element={<CivOSDashboard />} />
-                
-                {/* Tenants & Users */}
-                <Route path="tenants" element={<TenantsManagement />} />
-                <Route path="users" element={<UsersManagement />} />
-                <Route path="impersonation" element={<ImpersonationConsole />} />
-                
-                {/* Data Management */}
-                <Route path="data/infrastructure" element={<AdminInfrastructure />} />
-                <Route path="data/chambers" element={<AdminChambers />} />
-                <Route path="data/naics" element={<AdminNAICS />} />
-                <Route path="data/accommodations" element={<Accommodations />} />
-                <Route path="assets" element={<AdminInventory />} />
-                <Route path="inventory" element={<Navigate to="/admin/assets" replace />} />
-                <Route path="system-explorer" element={<SystemExplorerPage />} />
-                <Route path="articles" element={<ArticlesPage />} />
-                <Route path="presentations" element={<Navigate to="/admin/articles" replace />} />
-                <Route path="data/import-export" element={<DataImport />} />
-                
-                {/* Communities */}
-                <Route path="communities" element={<CommunitiesPage />} />
-                <Route path="communities/seed" element={<SeedCommunitiesPage />} />
-                <Route path="communities/portals" element={<PortalConfigPage />} />
-                
-                {/* Moderation */}
-                <Route path="moderation/ai-queue" element={<AIQueuePage />} />
-                <Route path="moderation/flagged" element={<FlaggedContentPage />} />
-                
-                {/* System */}
-                <Route path="settings" element={<AdminSettings />} />
-                <Route path="logs" element={<AdminLogs />} />
               </Route>
 
               {/* ========================================== */}
