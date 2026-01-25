@@ -1,0 +1,64 @@
+REPLIT PROMPT — STEP 11C Phase 2C-13.3: Redirect Loop Hardening (Platform ↔ Tenant) + Loading Stability
+
+ROLE: Frontend architect + QA gatekeeper
+MODE: Fix redirect thrash. Evidence-first. Add regression tests.
+
+SYMPTOMS
+- Clicking /app/platform/all-tenants while impersonating causes rapid multi-load / repeated remounts.
+- User ends in indefinite “Loading…” state.
+
+LIKELY CAUSE
+- PlatformLayout guard redirects during render or during unstable auth refresh, causing repeated navigations.
+- Query cache clearing + refreshSession triggers re-mount loops.
+
+GOALS
+1) While impersonating, ANY /app/platform/* route must redirect to /app EXACTLY ONCE, without thrash.
+2) Guards must not fire until auth/session is READY.
+3) Loading state must be stable: if session is loading, show a small inline “Loading session…” (not full blank and not infinite).
+4) Eliminate any queryClient.clear() calls from layout/guard code paths.
+
+IMPLEMENTATION
+
+A) Add explicit auth readiness flag
+In AuthContext:
+- state: { ready: boolean, user, impersonation, ... }
+- ready=false until refreshSession() resolves successfully (or resolves to unauth)
+- ready must be true before guards apply
+
+B) Rewrite PlatformLayout guard as effect + latch
+In PlatformLayout:
+- if !auth.ready: return layout shell with spinner (no navigation)
+- if auth.impersonation.active:
+    useEffect(() => { if (!redirectedRef.current) { redirectedRef.current=true; navigate('/app', { replace: true }); } }, [auth.ready, auth.impersonation.active])
+    return null (or a tiny “Redirecting…”)
+- IMPORTANT: do NOT call refreshSession() or queryClient.clear() inside PlatformLayout.
+
+C) Ensure “start impersonation” / “stop impersonation” handlers are the ONLY place that:
+- call refreshSession()
+- clear/invalidate query cache (once)
+- navigate (once)
+
+D) Prevent tenant layout from redirecting back to platform
+Verify tenant shell has NO logic that auto-navigates to platform routes based on is_platform_admin.
+
+E) Add a debug counter (dev only)
+Optionally add console.debug in dev for:
+- “PlatformLayout redirect fired”
+- “AuthContext ready=true”
+This helps confirm one-shot behavior.
+
+TESTS
+Add UI tests verifying:
+1) With impersonation active, visiting /app/platform/all-tenants triggers exactly one navigate() to /app.
+2) Guard does not navigate when auth.ready=false.
+3) No repeated navigation calls (spy on navigate).
+
+PROOF DOC
+Create proof/v3.5/step11c-phase2c13_3-redirect-loop-hardening-proof.md
+Include:
+- before/after reproduction steps
+- test results
+- explanation of latch + ready gating
+
+DELIVERABLE
+Commit + proof doc + tests passing.

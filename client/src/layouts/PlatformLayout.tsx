@@ -6,7 +6,7 @@
  * Does NOT show tenant-requiring sections.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -25,47 +25,50 @@ export function PlatformLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, initialized } = useTenant();
-  const { impersonation, hasTenantMemberships } = useAuth();
+  const { impersonation, hasTenantMemberships, ready: authReady } = useAuth();
   const { toast } = useToast();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  
+  // Latch to prevent multiple redirects
+  const hasRedirectedRef = useRef(false);
 
   const sections = getPlatformNavSections({ hasTenantMemberships });
   
+  // Impersonation redirect guard with latch
   useEffect(() => {
-    if (impersonation.active) {
+    // Only fire when auth is fully ready AND impersonation is active AND we haven't redirected yet
+    if (authReady && impersonation.active && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[PlatformLayout] Redirect fired: impersonation active, navigating to /app');
+      }
       toast({
         title: 'Impersonation Active',
         description: 'End impersonation to access platform admin.',
         variant: 'destructive',
       });
-      navigate('/app');
+      navigate('/app', { replace: true });
     }
-  }, [impersonation.active, navigate, toast]);
-
-  if (loading || !initialized) {
+  }, [authReady, impersonation.active, navigate, toast]);
+  
+  // If impersonation is active and we're redirecting, show minimal UI
+  if (impersonation.active) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: '#060b15',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid rgba(59, 130, 246, 0.3)',
-            borderTopColor: '#3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px',
-          }} />
-          <p style={{ color: '#9ca3af' }}>Loading...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Redirecting...</p>
+      </div>
+    );
+  }
+
+  // Wait for both tenant context and auth to be ready
+  if (loading || !initialized || !authReady) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Loading session...</p>
         </div>
       </div>
     );

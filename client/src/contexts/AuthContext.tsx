@@ -41,6 +41,7 @@ interface AuthContextType {
     ccTenants: CCTenant[];
     token: string | null;
     loading: boolean;
+    ready: boolean; // True when auth state is fully resolved (not during initial load)
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
     refreshSession: () => Promise<boolean>;
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [ccTenants, setCCTenants] = useState<CCTenant[]>([]);
     const [token, setToken] = useState<string | null>(localStorage.getItem('cc_token'));
     const [loading, setLoading] = useState(true);
+    const [ready, setReady] = useState(false); // True once initial auth check completes
     const [impersonation, setImpersonation] = useState<ImpersonationState>(defaultImpersonation);
 
     const refreshSession = useCallback(async (): Promise<boolean> => {
@@ -129,6 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
             }
             setLoading(false);
+            setReady(true); // Auth state is now fully resolved
+            if (process.env.NODE_ENV === 'development') {
+                console.debug('[AuthContext] ready=true');
+            }
         }
         checkAuth();
     }, [refreshSession]);
@@ -209,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ccTenants,
             token,
             loading,
+            ready,
             login,
             logout,
             refreshSession,
