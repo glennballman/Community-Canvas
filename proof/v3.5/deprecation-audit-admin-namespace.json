@@ -1,0 +1,310 @@
+{
+  "audit_date": "2026-01-25",
+  "auditor": "Replit Agent",
+  "mode": "read_only",
+  "summary": {
+    "admin_ui_route": {
+      "path": "/admin",
+      "status": "deprecated",
+      "server_response": "410 Gone",
+      "verdict": "safe_to_remove_client_code"
+    },
+    "app_admin_routes": {
+      "path": "/app/admin/*",
+      "status": "active_v3.5",
+      "purpose": "tenant_administration",
+      "verdict": "not_deprecated"
+    },
+    "api_admin_routes": {
+      "path": "/api/admin/*",
+      "status": "active_v3.5",
+      "purpose": "platform_admin_apis",
+      "verdict": "required_for_v3.5"
+    },
+    "app_platform_routes": {
+      "path": "/app/platform/*",
+      "status": "active_v3.5",
+      "purpose": "platform_admin_ui",
+      "verdict": "current_platform_admin"
+    }
+  },
+  "server_mounts": {
+    "api_admin": [
+      {
+        "line": 534,
+        "mount": "/api/admin/impersonation",
+        "file": "admin-impersonation.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      },
+      {
+        "line": 537,
+        "mount": "/api/admin/tenants",
+        "file": "admin-tenants.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      },
+      {
+        "line": 540,
+        "mount": "/api/admin/communities",
+        "file": "admin-communities.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      },
+      {
+        "line": 543,
+        "mount": "/api/admin/moderation",
+        "file": "admin-moderation.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      },
+      {
+        "line": 546,
+        "mount": "/api/admin/inventory",
+        "file": "admin-inventory.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      },
+      {
+        "line": 549,
+        "mount": "/api/admin/scm",
+        "file": "admin-scm.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      },
+      {
+        "line": 555,
+        "mount": "/api/admin/system-explorer",
+        "file": "system-explorer.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      },
+      {
+        "line": 558,
+        "mount": "/api/admin/qa",
+        "file": "qa.ts",
+        "guard": "requirePlatformAdmin",
+        "status": "active"
+      }
+    ],
+    "api_admin_inline": [
+      {
+        "line": 640,
+        "route": "GET /api/admin/presentations",
+        "purpose": "redirect"
+      },
+      {
+        "line": 641,
+        "route": "GET /api/admin/cc_articles",
+        "purpose": "article_listings"
+      },
+      {
+        "line": 1512,
+        "route": "GET /api/admin/chamber-audit",
+        "purpose": "chamber_data"
+      },
+      {
+        "line": 1634,
+        "route": "GET /api/admin/chamber-progress",
+        "purpose": "chamber_data"
+      },
+      {
+        "line": 1698,
+        "route": "GET /api/admin/chamber-progress/summary",
+        "purpose": "chamber_data"
+      },
+      {
+        "line": 1709,
+        "route": "GET /api/admin/chamber-overrides",
+        "purpose": "chamber_data"
+      },
+      {
+        "line": 1719,
+        "route": "PUT /api/admin/chamber-overrides/:id",
+        "purpose": "chamber_data"
+      }
+    ],
+    "deprecated_ui": {
+      "line": 192,
+      "route": "/admin",
+      "handler": "410 Gone"
+    }
+  },
+  "client_routes": {
+    "deprecated_admin": {
+      "path": "/admin",
+      "app_tsx_line": 646,
+      "layout": "PlatformAdminLayout",
+      "status": "dead_code",
+      "reason": "server_returns_410"
+    },
+    "active_app_admin": [
+      {"path": "/app/admin", "component": "AdminHomePage", "line": 510},
+      {"path": "/app/admin/roles", "component": "AdminRolesPage", "line": 523},
+      {"path": "/app/admin/settings", "component": "AdminSettingsPage", "line": 524},
+      {"path": "/app/admin/folios", "component": "FoliosListPage", "line": 525},
+      {"path": "/app/admin/usage", "component": "UsageSummaryPage", "line": 527},
+      {"path": "/app/admin/certifications", "component": "CertificationsPage", "line": 528},
+      {"path": "/app/admin/portals", "component": "PortalsPage", "line": 529},
+      {"path": "/app/admin/tenants", "component": "TenantsPageApp", "line": 534}
+    ],
+    "active_app_platform": [
+      {"path": "/app/platform", "purpose": "platform_home"},
+      {"path": "/app/platform/tenants", "purpose": "tenant_management"},
+      {"path": "/app/platform/analytics", "purpose": "analytics"},
+      {"path": "/app/platform/system-explorer", "purpose": "debug_tools"},
+      {"path": "/app/platform/users", "purpose": "user_management"},
+      {"path": "/app/platform/settings", "purpose": "platform_settings"}
+    ]
+  },
+  "reference_graph": {
+    "runtime_dependencies": [
+      {
+        "file": "client/src/contexts/TenantContext.tsx",
+        "line": 291,
+        "endpoint": "/api/admin/impersonation/start",
+        "classification": "runtime_dependency"
+      },
+      {
+        "file": "client/src/contexts/TenantContext.tsx",
+        "line": 323,
+        "endpoint": "/api/admin/impersonation/stop",
+        "classification": "runtime_dependency"
+      },
+      {
+        "file": "client/src/pages/AdminChambers.tsx",
+        "line": 566,
+        "endpoint": "/api/admin/chamber-progress",
+        "classification": "runtime_dependency"
+      },
+      {
+        "file": "client/src/pages/app/SystemExplorerPage.tsx",
+        "line": 156,
+        "endpoint": "/api/admin/system-explorer/overview",
+        "classification": "runtime_dependency"
+      },
+      {
+        "file": "client/src/pages/app/SystemExplorerPage.tsx",
+        "line": 165,
+        "endpoint": "/api/admin/system-explorer/evidence/status",
+        "classification": "runtime_dependency"
+      },
+      {
+        "file": "client/src/lib/api/admin/useLatestP2OperatorCert.ts",
+        "line": 66,
+        "endpoint": "/api/admin/scm/latest-p2-operator-cert",
+        "classification": "runtime_dependency"
+      }
+    ],
+    "test_only": [
+      {
+        "file": "scripts/qa-smoke-test.ts",
+        "line": 92,
+        "endpoint": "/api/admin/system-explorer/evidence/verify",
+        "classification": "test_only"
+      },
+      {
+        "file": "scripts/qa-smoke-test.ts",
+        "line": 276,
+        "endpoint": "/api/admin/system-explorer/table/snapshots",
+        "classification": "test_only"
+      },
+      {
+        "file": "scripts/qa-smoke-test.ts",
+        "line": 399,
+        "endpoint": "/api/admin/system-explorer/overview",
+        "classification": "test_only"
+      }
+    ],
+    "legacy_pages": [
+      {"file": "client/src/pages/admin/AdminInventory.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/AIQueuePage.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/ArticlesPage.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/CivOSDashboard.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/CommunitiesPage.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/DataImport.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/FlaggedContentPage.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/ImpersonationConsole.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/PortalConfigPage.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/SeedCommunitiesPage.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/TenantsManagement.tsx", "classification": "legacy_dead_code"},
+      {"file": "client/src/pages/admin/UsersManagement.tsx", "classification": "legacy_dead_code"}
+    ]
+  },
+  "conclusions": {
+    "admin_ui_route": {
+      "verdict": "deprecated",
+      "action": "safe_to_remove_client_code",
+      "rationale": "Server already returns 410 Gone"
+    },
+    "api_admin_endpoints": {
+      "verdict": "required",
+      "action": "keep_for_v3.5",
+      "rationale": "Actively used by platform features",
+      "future_recommendation": "Consider renaming to /api/platform/* for consistency"
+    },
+    "app_admin_routes": {
+      "verdict": "not_deprecated",
+      "action": "keep",
+      "rationale": "These are tenant admin routes, not platform admin"
+    },
+    "app_platform_routes": {
+      "verdict": "active",
+      "action": "current_platform_admin",
+      "rationale": "V3.5 canonical platform admin surface"
+    }
+  },
+  "recommended_strategy": {
+    "phase_1": {
+      "name": "Clean Dead Client Code",
+      "timing": "safe_now",
+      "actions": [
+        "Remove client/src/pages/admin/* directory",
+        "Remove /admin route tree from App.tsx",
+        "Remove PlatformAdminLayout.tsx"
+      ]
+    },
+    "phase_2": {
+      "name": "API Namespace Migration",
+      "timing": "future",
+      "actions": [
+        "Create /api/platform/* routes",
+        "Add deprecation warnings to /api/admin/*",
+        "Update client callers",
+        "Redirect /api/admin/* to /api/platform/*"
+      ]
+    }
+  },
+  "dead_code_files": [
+    "client/src/pages/admin/AdminInventory.tsx",
+    "client/src/pages/admin/AIQueuePage.tsx",
+    "client/src/pages/admin/ArticlesPage.tsx",
+    "client/src/pages/admin/CivOSDashboard.tsx",
+    "client/src/pages/admin/CommunitiesPage.tsx",
+    "client/src/pages/admin/DataImport.tsx",
+    "client/src/pages/admin/FlaggedContentPage.tsx",
+    "client/src/pages/admin/ImpersonationConsole.tsx",
+    "client/src/pages/admin/PortalConfigPage.tsx",
+    "client/src/pages/admin/SeedCommunitiesPage.tsx",
+    "client/src/pages/admin/TenantsManagement.tsx",
+    "client/src/pages/admin/UsersManagement.tsx",
+    "client/src/layouts/PlatformAdminLayout.tsx",
+    "client/src/pages/AdminLayout.tsx",
+    "client/src/pages/AdminHome.tsx",
+    "client/src/pages/AdminChambers.tsx"
+  ],
+  "active_code_files": [
+    "server/routes/admin-impersonation.ts",
+    "server/routes/admin-tenants.ts",
+    "server/routes/admin-communities.ts",
+    "server/routes/admin-moderation.ts",
+    "server/routes/admin-inventory.ts",
+    "server/routes/admin-scm.ts",
+    "server/routes/admin-feature-flags.ts",
+    "server/routes/admin-portals.ts",
+    "server/routes/system-explorer.ts",
+    "client/src/pages/app/admin/*",
+    "client/src/pages/app/platform/*",
+    "client/src/lib/api/admin/useLatestP2OperatorCert.ts"
+  ]
+}
