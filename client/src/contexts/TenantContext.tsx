@@ -7,7 +7,7 @@
  * - Currently selected tenant
  * - Impersonation state
  * 
- * DO NOT MODIFY THIS FILE.
+ * Phase 2C-15B: Uses canonical ImpersonationState from types/session.ts
  */
 
 import React, { 
@@ -19,6 +19,12 @@ import React, {
   useRef,
   ReactNode 
 } from 'react';
+
+import { 
+  ImpersonationState, 
+  defaultImpersonation, 
+  parseImpersonationResponse 
+} from '@/types/session';
 
 // ============================================================================
 // TYPES
@@ -40,15 +46,8 @@ export interface TenantMembership {
   is_primary: boolean;
 }
 
-export interface ImpersonationState {
-  is_impersonating: boolean;
-  tenant_id?: string;
-  tenant_name?: string;
-  tenant_type?: string;
-  tenant_role?: string;
-  portal_slug?: string;
-  expires_at?: string;
-}
+// Re-export canonical type for consumers
+export type { ImpersonationState } from '@/types/session';
 
 interface TenantContextValue {
   // User
@@ -146,9 +145,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [memberships, setMemberships] = useState<TenantMembership[]>([]);
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
-  const [impersonation, setImpersonation] = useState<ImpersonationState>({ 
-    is_impersonating: false 
-  });
+  const [impersonation, setImpersonation] = useState<ImpersonationState>(defaultImpersonation);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
@@ -163,7 +160,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
         setUser(null);
         setMemberships([]);
         setCurrentTenantId(null);
-        setImpersonation({ is_impersonating: false });
+        setImpersonation(defaultImpersonation);
         setLoading(false);
         setInitialized(true);
         return;
@@ -182,7 +179,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
           setUser(null);
           setMemberships([]);
           setCurrentTenantId(null);
-          setImpersonation({ is_impersonating: false });
+          setImpersonation(defaultImpersonation);
         }
         return;
       }
@@ -193,21 +190,31 @@ export function TenantProvider({ children }: TenantProviderProps) {
       setMemberships(data.memberships || []);
       setCurrentTenantId(data.current_tenant_id || null);
       
-      // Handle impersonation state
-      if (data.is_impersonating && data.impersonated_tenant) {
+      // Phase 2C-15B: Use canonical impersonation state
+      // Parse impersonation from data.impersonation object (new format) or legacy fields
+      if (data.impersonation) {
+        // New format: impersonation object with canonical shape
+        const parsedImpersonation = parseImpersonationResponse(data.impersonation);
+        setImpersonation(parsedImpersonation);
+        
+        // Only set currentTenantId from impersonation if tenant is explicitly set
+        if (parsedImpersonation.active && parsedImpersonation.tenant_id) {
+          setCurrentTenantId(parsedImpersonation.tenant_id);
+        }
+      } else if (data.is_impersonating && data.impersonated_tenant) {
+        // Legacy format fallback
         setImpersonation({
-          is_impersonating: true,
+          active: true,
+          target_user: null,
           tenant_id: data.impersonated_tenant.id,
           tenant_name: data.impersonated_tenant.name,
-          tenant_type: data.impersonated_tenant.type,
-          tenant_role: data.impersonated_tenant.role,
-          portal_slug: data.impersonated_tenant.portal_slug,
-          expires_at: data.impersonation_expires_at,
+          tenant_slug: data.impersonated_tenant.slug || null,
+          role: data.impersonated_tenant.role || null,
+          expires_at: data.impersonation_expires_at || null,
         });
-        // When impersonating, current tenant is the impersonated tenant
         setCurrentTenantId(data.impersonated_tenant.id);
       } else {
-        setImpersonation({ is_impersonating: false });
+        setImpersonation(defaultImpersonation);
       }
     } catch (error) {
       console.error('Failed to fetch context:', error);
@@ -254,7 +261,14 @@ export function TenantProvider({ children }: TenantProviderProps) {
   const switchTenant = useCallback(async (tenantId: string) => {
     try {
       const token = localStorage.getItem('cc_token');
-      const response = await fetch('/api/me/switch-tenant', {
+      
+      // Phase 2C-15B: Use appropriate endpoint based on impersonation state
+      // During impersonation, use set-tenant endpoint to update impersonation context
+      const endpoint = impersonation.active 
+        ? '/api/admin/impersonation/set-tenant'
+        : '/api/me/switch-tenant';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -273,7 +287,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       console.error('Failed to switch tenant:', error);
       throw error;
     }
-  }, []);
+  }, [impersonation.active]);
 
   const clearTenant = useCallback(() => {
     setCurrentTenantId(null);

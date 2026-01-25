@@ -1,0 +1,184 @@
+REPLIT PROMPT — STEP 11C Phase 2C-15B: Impersonation Consistency + UserShell + Logout Fix (No Guessing)
+
+Paste this to Replit exactly:
+
+ROLE
+
+Senior platform engineer. Implement minimal, deterministic fixes based strictly on Phase 2C-15A audit.
+
+NON-NEGOTIABLES
+
+No auto tenant selection. Impersonation start sets only acting user.
+
+No forced redirect to /app/select-tenant. Selecting a tenant is a user action, not a router mandate.
+
+One canonical impersonation state shape shared by AuthContext and TenantContext.
+
+Keep all changes additive/minimal. No broad refactors.
+
+A) Fix ISSUE-1: /api/me/context must be impersonation-aware
+Goal
+
+When impersonation is active, /api/me/context must return:
+
+user: impersonated user identity
+
+memberships: impersonated user memberships (from cc_tenant_users)
+
+role: role must reflect the selected tenant context if present, otherwise null
+
+When impersonation is NOT active, return the real user and real memberships.
+
+Implementation
+
+Identify where impersonation state is stored server-side (session fields).
+
+Implement a helper:
+
+getEffectiveUserId(req) → returns impersonated user id if active else real user id
+
+Update /api/me/context to load memberships using effective_user_id (NOT real user id).
+
+Ensure the response includes:
+
+{
+  ok: true,
+  user: { id, email, display_name, is_platform_admin, ... },
+  impersonation: { active, target_user, tenant_id, role, expires_at },
+  memberships: Array<{ tenant_id, tenant_slug, tenant_name, role, title }>,
+  tenant_context: tenant_id | null
+}
+
+
+IMPORTANT: Do not change DB. Just change membership lookup.
+
+Tests (add/adjust)
+
+When not impersonating: memberships belong to real user
+
+When impersonating: memberships belong to impersonated user
+
+When impersonating and tenant_context is null: memberships still returned; role null
+
+B) Fix ISSUE-4: Remove duplicate impersonation shapes (AuthContext vs TenantContext)
+Goal
+
+There must be one canonical front-end session shape.
+
+Implementation
+
+Define a single TS type in one place (e.g. client/src/types/session.ts):
+
+export type ImpersonationState = {
+  active: boolean;
+  target_user: { id: string; email: string; display_name?: string } | null;
+  tenant_id: string | null;
+  role: string | null;
+  expires_at: string | null;
+};
+
+
+Update AuthContext to be the canonical source of impersonation state.
+
+TenantContext must derive from AuthContext/session response and must NOT maintain its own alternate fields (is_impersonating, etc.). Remove/stop using them.
+
+Tests
+
+Unit test that session parsing maps correctly (no undefined fields)
+
+UI test: banner renders consistently from AuthContext
+
+C) Fix ISSUE-2: Implement UserShell (but keep it minimal)
+Goal
+
+When there is no tenant context, the app must still render a valid shell:
+
+Shows the impersonation banner if impersonating
+
+Shows a “Choose a Place” panel listing memberships
+
+Does NOT force /app/select-tenant
+
+Implementation (minimal)
+
+Create client/src/layouts/UserShellLayout.tsx that:
+
+Uses the standard left nav but with user-only items
+
+Shows a main panel:
+
+If memberships.length === 0: “No places yet”
+
+Else: list memberships with an “Enter” button that sets tenant context (existing endpoint)
+
+Routing changes:
+
+Update AppRouterSwitch decision tree:
+
+Remove: if impersonation.active && !tenant → redirect /app/select-tenant
+
+Replace with:
+
+If no tenant_context: render UserShellLayout (at /app and /app/home)
+
+Keep /app/select-tenant as an optional page ONLY if the platform UI links to it, but it must not be a forced redirect.
+
+If you keep it, make it simply reuse the same “Choose a Place” component.
+
+Critical UX behaviors
+
+Impersonating Mathew with no tenant selected:
+
+Lands on /app (UserShell)
+
+Shows “Impersonating Mathew” banner
+
+Shows memberships list: Woods End Landing, Woods End Marina
+
+User chooses where to enter
+
+Tests
+
+UI test: impersonation active + tenant null renders UserShell (not select-tenant)
+
+UI test: membership list renders and “Enter” calls set-tenant endpoint
+
+D) Fix ISSUE-3: Logout must be reliable everywhere
+Goal
+
+No more navigation to /api/logout (doesn’t exist). All logouts must go through AuthContext.logout() which calls the server endpoint and clears client state.
+
+Implementation
+
+Replace any window.location.href = '/api/logout' occurrences with await logout(); navigate('/');
+
+Ensure AuthContext.logout calls:
+
+POST /api/foundation/auth/logout
+
+clears local storage/session state
+
+invalidates query caches safely
+
+Tests
+
+UI test: logout button calls correct endpoint and ends session
+
+API test: logout endpoint returns ok
+
+E) Output proof
+
+Create:
+
+proof/v3.5/step11c-phase2c15b-impersonation-consistency-usershell-logout-proof.md
+Include:
+
+exact routing decision tree before/after
+
+/api/me/context before/after sample payloads for (normal, impersonating)
+
+confirmation that no forced /app/select-tenant redirect remains
+
+Run the full test suite.
+
+STOP.

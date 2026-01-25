@@ -38,7 +38,7 @@ export function PlatformLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, initialized } = useTenant();
-  const { impersonation, hasTenantMemberships, ready: authReady, navMode } = useAuth();
+  const { impersonation, hasTenantMemberships, ready: authReady, navMode, logout } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -76,8 +76,10 @@ export function PlatformLayout(): React.ReactElement {
     return <></>;
   }
 
-  const handleLogout = () => {
-    window.location.href = '/api/logout';
+  const handleLogout = async () => {
+    // Phase 2C-15B: Use AuthContext.logout() for reliable logout
+    await logout();
+    navigate('/');
   };
 
   const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';

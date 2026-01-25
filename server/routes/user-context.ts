@@ -15,10 +15,22 @@ const router = express.Router();
  */
 router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?.userId;
+    const realUserId = req.user?.userId;
     const session = (req as any).session;
     
-    // Get user
+    // Check for active impersonation
+    const impersonation = session?.impersonation;
+    const isImpersonating = impersonation?.impersonated_user_id && 
+      impersonation?.expires_at && 
+      new Date(impersonation.expires_at) > new Date();
+    
+    // PHASE 2C-15B FIX: Use effective user ID for memberships
+    // When impersonating, return impersonated user's identity and memberships
+    const effectiveUserId = isImpersonating 
+      ? impersonation.impersonated_user_id 
+      : realUserId;
+    
+    // Get effective user info
     const userResult = await serviceQuery(`
       SELECT 
         id,
@@ -27,7 +39,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         is_platform_admin
       FROM cc_users
       WHERE id = $1
-    `, [userId]);
+    `, [effectiveUserId]);
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -35,52 +47,55 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
     
     const user = userResult.rows[0];
     
-    // Get memberships with tenant info
+    // Get memberships for EFFECTIVE user (impersonated if active, real otherwise)
     const membershipsResult = await serviceQuery(`
       SELECT 
         tu.tenant_id,
         t.name as tenant_name,
         t.slug as tenant_slug,
         t.tenant_type,
-        tu.role
+        tu.role,
+        tu.title
       FROM cc_tenant_users tu
       JOIN cc_tenants t ON t.id = tu.tenant_id
       WHERE tu.user_id = $1
         AND t.status = 'active'
         AND tu.status = 'active'
       ORDER BY t.tenant_type, t.name ASC
-    `, [userId]);
+    `, [effectiveUserId]);
     
     const memberships = membershipsResult.rows;
     
-    // Check for impersonation
-    const impersonation = session?.impersonation;
-    let impersonatedTenant = null;
+    // Determine current tenant context
     let currentTenantId = session?.current_tenant_id || null;
+    let impersonatedTenant = null;
     
-    if (impersonation?.tenant_id && impersonation?.expires_at) {
-      // Check if impersonation is still valid
-      if (new Date(impersonation.expires_at) > new Date()) {
-        // Get impersonated tenant info with portal slug
-        const tenantResult = await serviceQuery(`
-          SELECT t.id, t.name, t.tenant_type, t.slug, p.slug as portal_slug
-          FROM cc_tenants t
-          LEFT JOIN LATERAL (
-            SELECT slug FROM cc_portals 
-            WHERE owning_tenant_id = t.id AND status = 'active'
-            ORDER BY created_at LIMIT 1
-          ) p ON true
-          WHERE t.id = $1
-        `, [impersonation.tenant_id]);
-        
-        if (tenantResult.rows.length > 0) {
-          impersonatedTenant = tenantResult.rows[0];
-          currentTenantId = impersonation.tenant_id;
-        }
-      } else {
-        // Impersonation expired, clear it
-        delete session.impersonation;
+    if (isImpersonating && impersonation.tenant_id) {
+      currentTenantId = impersonation.tenant_id;
+      
+      // Get impersonated tenant info with portal slug
+      const tenantResult = await serviceQuery(`
+        SELECT t.id, t.name, t.tenant_type, t.slug, p.slug as portal_slug
+        FROM cc_tenants t
+        LEFT JOIN LATERAL (
+          SELECT slug FROM cc_portals 
+          WHERE owning_tenant_id = t.id AND status = 'active'
+          ORDER BY created_at LIMIT 1
+        ) p ON true
+        WHERE t.id = $1
+      `, [impersonation.tenant_id]);
+      
+      if (tenantResult.rows.length > 0) {
+        impersonatedTenant = tenantResult.rows[0];
       }
+    } else if (isImpersonating && !impersonation.tenant_id) {
+      // Impersonating but no tenant selected yet
+      currentTenantId = null;
+    }
+    
+    // Clear expired impersonation
+    if (impersonation && impersonation.expires_at && new Date(impersonation.expires_at) <= new Date()) {
+      delete session.impersonation;
     }
     
     // Get current circle from session
@@ -114,7 +129,31 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
       }
     }
     
+    // Build canonical impersonation response
+    const impersonationResponse = isImpersonating ? {
+      active: true,
+      target_user: {
+        id: impersonation.impersonated_user_id,
+        email: impersonation.impersonated_user_email,
+        display_name: impersonation.impersonated_user_name,
+      },
+      tenant_id: impersonation.tenant_id || null,
+      tenant_name: impersonation.tenant_name || null,
+      tenant_slug: impersonatedTenant?.slug || null,
+      role: impersonation.tenant_role || null,
+      expires_at: impersonation.expires_at,
+    } : {
+      active: false,
+      target_user: null,
+      tenant_id: null,
+      tenant_name: null,
+      tenant_slug: null,
+      role: null,
+      expires_at: null,
+    };
+    
     res.json({
+      ok: true,
       user: {
         id: user.id,
         email: user.email,
@@ -127,6 +166,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         tenant_slug: m.tenant_slug,
         tenant_type: m.tenant_type,
         role: m.role,
+        title: m.title || null,
         is_primary: false,
       })),
       current_tenant_id: currentTenantId,
@@ -142,13 +182,15 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         name: currentCircle.name,
         slug: currentCircle.slug,
       } : null,
-      is_impersonating: !!impersonatedTenant,
+      impersonation: impersonationResponse,
+      // Legacy fields for backward compatibility
+      is_impersonating: isImpersonating,
       impersonated_tenant: impersonatedTenant ? {
         id: impersonatedTenant.id,
         name: impersonatedTenant.name,
         type: impersonatedTenant.tenant_type,
         portal_slug: impersonatedTenant.portal_slug || null,
-        role: impersonation?.tenant_role || 'tenant_admin',
+        role: impersonation?.tenant_role || null,
       } : null,
       impersonation_expires_at: impersonation?.expires_at || null,
     });

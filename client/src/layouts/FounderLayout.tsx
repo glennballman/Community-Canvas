@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
+import { useAuth } from '../contexts/AuthContext';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getFounderNavSections, FounderNavSection, FounderNavItem } from '../lib/routes/founderNav';
 
@@ -23,6 +24,7 @@ export function FounderLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, initialized } = useTenant();
+  const { logout } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -61,8 +63,10 @@ export function FounderLayout(): React.ReactElement {
     return <></>;
   }
 
-  const handleLogout = () => {
-    window.location.href = '/api/logout';
+  const handleLogout = async () => {
+    // Phase 2C-15B: Use AuthContext.logout() for reliable logout
+    await logout();
+    navigate('/');
   };
 
   const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';

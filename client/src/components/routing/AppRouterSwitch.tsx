@@ -6,15 +6,21 @@
  * 
  * This component is the SINGLE source of truth for:
  * - Impersonation redirect from /app/platform/* to /app
- * - Choosing between PlatformLayout vs TenantAppLayout
+ * - Choosing between PlatformLayout vs TenantAppLayout vs UserShellLayout
  * 
  * RULE: TenantLayout must NEVER redirect to /app/platform automatically.
  * RULE: PlatformLayout must NOT contain impersonation redirect logic.
+ * 
+ * Phase 2C-15B: REMOVED forced redirect to /app/select-tenant
+ * - Tenant selection is a USER ACTION, not a router mandate
+ * - When impersonating with no tenant, UserShellLayout shows "Choose a Place" panel
  */
 
 import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
+import { UserShellLayout } from '@/layouts/UserShellLayout';
 
 // Throttle helper to prevent console spam
 const throttleTimestamps: Record<string, number> = {};
@@ -31,6 +37,7 @@ export function AppRouterSwitch() {
   const navigate = useNavigate();
   const location = useLocation();
   const { impersonation, ready: authReady, navMode, hasTenantMemberships } = useAuth();
+  const { currentTenant } = useTenant();
   
   // Latch to ensure one-shot redirect
   const hasRedirectedRef = useRef(false);
@@ -45,49 +52,37 @@ export function AppRouterSwitch() {
     throttledLog(
       'AppRouterSwitch-guard',
       '[AppRouterSwitch] Guard eval:',
-      { pathname: location.pathname, authReady, impersonationActive: impersonation.active, navMode }
+      { pathname: location.pathname, authReady, impersonationActive: impersonation.active, navMode, hasTenant: !!currentTenant }
     );
-  }, [location.pathname, authReady, impersonation.active, navMode]);
+  }, [location.pathname, authReady, impersonation.active, navMode, currentTenant]);
 
   // --------------------------------------------------------------------------
-  // CENTRALIZED IMPERSONATION REDIRECT (Phase 2C-13.5)
+  // CENTRALIZED IMPERSONATION REDIRECT (Phase 2C-15B)
   // 
   // INVARIANT: Impersonation has TWO independent dimensions:
   //   1) acting_user (impersonated user identity)
   //   2) tenant_context (selected tenant for operations)
   // 
-  // Cases:
-  // A) If impersonation.active AND tenant is NULL AND NOT on /app/select-tenant:
-  //    - Redirect to /app/select-tenant
-  // B) If impersonation.active AND pathname starts with /app/platform:
-  //    - Redirect to /app (or /app/select-tenant if no tenant)
+  // REMOVED: Forced redirect to /app/select-tenant
+  //   - UserShellLayout now handles tenant-less state gracefully
+  //   - User sees "Choose a Place" panel, not a forced redirect
+  // 
+  // KEPT: Platform path redirect when impersonating with tenant
+  //   - If impersonating with tenant on /app/platform/*, redirect to /app
   // --------------------------------------------------------------------------
   useEffect(() => {
     if (!authReady) return;
     
     const isPlatformPath = location.pathname.startsWith('/app/platform');
-    const isSelectTenantPath = location.pathname === '/app/select-tenant';
     const hasTenant = !!impersonation.tenant;
     
-    // Case A: Impersonating with no tenant selected - need to pick one
-    if (impersonation.active && !hasTenant && !isSelectTenantPath && !hasRedirectedRef.current) {
-      hasRedirectedRef.current = true;
-      throttledLog(
-        'AppRouterSwitch-redirect',
-        '[AppRouterSwitch] Redirect fired:',
-        { from: location.pathname, to: '/app/select-tenant', reason: 'impersonation active but no tenant selected' }
-      );
-      navigate('/app/select-tenant', { replace: true });
-      return;
-    }
-    
-    // Case B: Impersonating with tenant on platform path - redirect to tenant app
+    // Impersonating with tenant on platform path - redirect to tenant app
     if (impersonation.active && hasTenant && isPlatformPath && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
       throttledLog(
         'AppRouterSwitch-redirect',
         '[AppRouterSwitch] Redirect fired:',
-        { from: location.pathname, to: '/app', reason: 'impersonation active on platform path' }
+        { from: location.pathname, to: '/app', reason: 'impersonation active with tenant on platform path' }
       );
       navigate('/app', { replace: true });
     }
@@ -103,6 +98,32 @@ export function AppRouterSwitch() {
         </div>
       </div>
     );
+  }
+
+  // Phase 2C-15B: Routes that should NOT show UserShellLayout even during impersonation
+  // These routes are accessible during impersonation without tenant
+  const isPlatformPath = location.pathname.startsWith('/app/platform');
+  const isFounderPath = location.pathname.startsWith('/app/founder');
+  const isSelectTenantPath = location.pathname.startsWith('/app/select-tenant');
+  const isPlacesPath = location.pathname === '/app/places';
+  
+  // Phase 2C-15B: Show UserShellLayout when impersonating without tenant
+  // ONLY for /app/* routes that are not platform/founder/select-tenant paths
+  const shouldShowUserShell = 
+    impersonation.active && 
+    !currentTenant &&
+    !isPlatformPath &&
+    !isFounderPath &&
+    !isSelectTenantPath &&
+    !isPlacesPath;
+  
+  if (shouldShowUserShell) {
+    throttledLog(
+      'AppRouterSwitch-usershell',
+      '[AppRouterSwitch] Rendering UserShellLayout:',
+      { pathname: location.pathname, reason: 'impersonation active without tenant' }
+    );
+    return <UserShellLayout />;
   }
 
   // Render children (Outlet will be used by parent Routes)
