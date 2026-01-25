@@ -114,6 +114,7 @@ import publicJobsRouter from "./routes/public-jobs";
 import negotiationPolicyRouter from "./routes/negotiation-policy";
 import negotiationAuditRouter from "./routes/negotiation-audit";
 import negotiationProofExportRouter from "./routes/negotiation-proof-export";
+import exportKeyHealthRouter from "./routes/export-key-health";
 import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
 import embedsRouter from "./routes/embeds";
@@ -573,6 +574,10 @@ export async function registerRoutes(
 
   // Phase 2C-10 Run Proof Export (Deterministic Audit Pack)
   app.use('/api/app/runs', negotiationProofExportRouter);
+  
+  // Phase 2C-11/2C-12 Export verification and key health
+  app.use('/api/app', negotiationProofExportRouter);
+  app.use('/api/app', exportKeyHealthRouter);
 
   // N3 Service Run Monitor + Replan Engine (Patent CC-01)
   app.use('/api/n3', n3Router);

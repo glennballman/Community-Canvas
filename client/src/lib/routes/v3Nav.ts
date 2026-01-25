@@ -197,6 +197,7 @@ export const V3_NAV: NavSection[] = [
       { icon: Settings, label: 'Settings', href: '/app/admin/settings', testId: 'nav-settings', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: Handshake, label: 'Negotiation Policies', href: '/app/settings/negotiation-policies', testId: 'nav-negotiation-policies', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: FileSearch, label: 'Negotiation Audit', href: '/app/settings/negotiation-audit', testId: 'nav-negotiation-audit', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
+      { icon: ShieldCheck, label: 'Proof Verification', href: '/app/settings/proof-verification', testId: 'nav-proof-verification', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: Wallet, label: 'Folios', href: '/app/admin/folios', testId: 'nav-folios', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: BarChart3, label: 'Usage', href: '/app/admin/usage', testId: 'nav-usage', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: ShieldCheck, label: 'Certifications', href: '/app/admin/certifications', testId: 'nav-certifications', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
