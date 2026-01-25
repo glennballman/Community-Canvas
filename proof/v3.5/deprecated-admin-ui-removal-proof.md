@@ -193,8 +193,35 @@ The relocated files required import path corrections:
 
 ---
 
+## Additional Cleanup (2026-01-25 Phase 2)
+
+### Nav Components Cleaned
+
+| File | Change |
+|------|--------|
+| client/src/components/MainNav.tsx | Removed System Admin section with /admin/* paths |
+| client/src/components/MobileNav.tsx | Emptied adminItems array (was linking to /admin) |
+
+**MainNav.tsx Changes:**
+- Removed nav section: "System Admin" with 4 deprecated paths
+- Cleaned unused imports: Settings, Download, Database, LayoutDashboard
+
+**MobileNav.tsx Changes:**
+- Changed adminItems from conditional /admin link to empty array
+
+### Remaining Intentional /admin Reference
+
+| File | Line | Purpose |
+|------|------|---------|
+| client/src/App.tsx | 16 | DEV warning when accessing deprecated /admin path |
+
+This console warning is intentionally kept to guide developers away from the deprecated route.
+
+---
+
 ## Related Documentation
 
 - `proof/v3.5/deprecation-audit-admin-namespace.md` - Full deprecation audit
 - `proof/v3.5/deprecation-audit-admin-namespace.json` - Machine-readable audit
 - `proof/v3.5/platform-tenant-guard-audit.md` - Guard security audit
+- `proof/v3.5/platform-guards-entities-apify-proof.md` - Guard security fixes

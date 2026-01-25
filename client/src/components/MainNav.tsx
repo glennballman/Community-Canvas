@@ -1,8 +1,7 @@
 import { Link, useLocation } from 'wouter';
 import { 
   Shield, Radio, Globe, Truck, Building2, Home, Search, MapPin, 
-  Calendar, Store, Settings, Download, Database, FileText, Book,
-  LayoutDashboard, Map, Users, Car
+  Calendar, Store, FileText, Book, Map, Users, Car
 } from 'lucide-react';
 
 interface NavItem {
@@ -46,16 +45,6 @@ const navSections: NavSection[] = [
       { path: '/staging/map', label: 'Map View', icon: MapPin, description: 'Visual property search' },
       { path: '/staging/reservations', label: 'My Reservations', icon: Calendar, description: 'Upcoming stays' },
       { path: '/staging/chamber', label: 'Local Services', icon: Store, description: 'Chamber of Commerce' },
-    ]
-  },
-  {
-    title: 'System Admin',
-    color: 'purple',
-    items: [
-      { path: '/admin', label: 'Admin Console', icon: LayoutDashboard, description: 'System overview' },
-      { path: '/admin/import', label: 'Data Import', icon: Download, description: 'Import properties & data' },
-      { path: '/admin/sources', label: 'Data Sources', icon: Database, description: 'Manage feeds' },
-      { path: '/admin/settings', label: 'Settings', icon: Settings, description: 'System configuration' },
     ]
   },
 ];

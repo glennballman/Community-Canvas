@@ -26,9 +26,7 @@ export default function MobileNav() {
         { path: '/host/dashboard', label: 'Host Dashboard', icon: Home },
     ] : [];
 
-    const adminItems = user?.userType === 'admin' ? [
-        { path: '/admin', label: 'Admin Console', icon: Settings },
-    ] : [];
+    const adminItems: { path: string; label: string; icon: typeof Settings }[] = [];
 
     const isActive = (path: string) => location === path;
 
