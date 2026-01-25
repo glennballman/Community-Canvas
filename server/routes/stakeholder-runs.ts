@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { JWT_SECRET } from '../middleware/auth';
+import { loadNegotiationPolicy, validatePolicyEnforcement } from '../lib/negotiation-policy';
 
 const router = Router();
 
@@ -679,7 +680,6 @@ router.get('/:runId/resolutions', requireAuth, async (req: AuthRequest, res: Res
 // Deterministic negotiation primitive for service run schedule changes
 // ============================================================
 
-const TURN_CAP = 3; // Maximum number of proposed/countered turns
 const VALID_PROPOSAL_EVENT_TYPES = ['proposed', 'countered', 'accepted', 'declined'] as const;
 
 /**
@@ -708,6 +708,19 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
       });
     }
 
+    // Get run tenant_id for policy lookup
+    const runCheckResult = await pool.query(
+      `SELECT tenant_id FROM cc_n3_runs WHERE id = $1`,
+      [runId]
+    );
+    if (runCheckResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+    const runTenantId = runCheckResult.rows[0].tenant_id;
+
+    // Load negotiation policy
+    const policy = await loadNegotiationPolicy(runTenantId, 'schedule');
+
     // Fetch all events for this run
     const eventsResult = await pool.query(
       `SELECT 
@@ -728,18 +741,26 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
     const turnsUsed = events.filter((e: any) => 
       e.event_type === 'proposed' || e.event_type === 'countered'
     ).length;
-    const turnsRemaining = Math.max(0, TURN_CAP - turnsUsed);
+    const turnsRemaining = Math.max(0, policy.maxTurns - turnsUsed);
     
     const latestEvent = events[0] || null;
-    const isClosed = latestEvent && 
-      (latestEvent.event_type === 'accepted' || latestEvent.event_type === 'declined');
+    const isClosed = latestEvent && (
+      (latestEvent.event_type === 'accepted' && policy.closeOnAccept) ||
+      (latestEvent.event_type === 'declined' && policy.closeOnDecline)
+    );
 
     res.json({
       ok: true,
-      turn_cap: TURN_CAP,
+      turn_cap: policy.maxTurns,
       turns_used: turnsUsed,
       turns_remaining: turnsRemaining,
       is_closed: isClosed,
+      policy: {
+        allow_counter: policy.allowCounter,
+        provider_can_initiate: policy.providerCanInitiate,
+        stakeholder_can_initiate: policy.stakeholderCanInitiate,
+        allow_proposal_context: policy.allowProposalContext
+      },
       latest: latestEvent ? {
         id: latestEvent.id,
         event_type: latestEvent.event_type,
@@ -854,6 +875,9 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
     const runTenantId = runResult.rows[0].tenant_id;
     const runName = runResult.rows[0].name || 'Service Run';
 
+    // Load negotiation policy
+    const policy = await loadNegotiationPolicy(runTenantId, 'schedule');
+
     // Check existing events for turn cap and closed state
     const existingResult = await pool.query(
       `SELECT event_type, created_at
@@ -864,28 +888,41 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
     );
     const existingEvents = existingResult.rows;
 
-    // Check if negotiation is closed
+    // Derive current negotiation state
     const latestEvent = existingEvents[0];
-    if (latestEvent && (latestEvent.event_type === 'accepted' || latestEvent.event_type === 'declined')) {
+    const isClosed = latestEvent && (
+      (latestEvent.event_type === 'accepted' && policy.closeOnAccept) ||
+      (latestEvent.event_type === 'declined' && policy.closeOnDecline)
+    );
+    const turnsUsed = existingEvents.filter((e: any) => 
+      e.event_type === 'proposed' || e.event_type === 'countered'
+    ).length;
+
+    // Validate against policy
+    const validation = validatePolicyEnforcement(
+      policy,
+      actorRole as 'tenant' | 'stakeholder',
+      event_type as 'proposed' | 'countered' | 'accepted' | 'declined',
+      turnsUsed,
+      isClosed
+    );
+
+    if (!validation.valid) {
       return res.status(409).json({ 
         ok: false, 
-        error: 'error.negotiation_closed',
-        message: 'This negotiation is already closed'
+        error: validation.error,
+        message: validation.error === 'error.negotiation.turn_limit_reached' 
+          ? `Maximum of ${policy.maxTurns} change proposals reached`
+          : validation.error === 'error.negotiation.closed'
+          ? 'This negotiation is already closed'
+          : validation.error === 'error.negotiation.counter_not_allowed'
+          ? 'Counter proposals are not allowed for this negotiation'
+          : validation.error === 'error.negotiation.provider_cannot_initiate'
+          ? 'Provider cannot initiate this type of negotiation'
+          : validation.error === 'error.negotiation.stakeholder_cannot_initiate'
+          ? 'Stakeholder cannot initiate this type of negotiation'
+          : 'Policy validation failed'
       });
-    }
-
-    // Check turn cap for proposed/countered
-    if (event_type === 'proposed' || event_type === 'countered') {
-      const turnsUsed = existingEvents.filter((e: any) => 
-        e.event_type === 'proposed' || e.event_type === 'countered'
-      ).length;
-      if (turnsUsed >= TURN_CAP) {
-        return res.status(409).json({ 
-          ok: false, 
-          error: 'error.turn_cap_reached',
-          message: `Maximum of ${TURN_CAP} change proposals reached`
-        });
-      }
     }
 
     // Insert the event

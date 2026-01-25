@@ -8878,3 +8878,64 @@ export const insertScheduleProposalSchema = createInsertSchema(ccServiceRunSched
 });
 export type ScheduleProposal = typeof ccServiceRunScheduleProposals.$inferSelect;
 export type InsertScheduleProposal = z.infer<typeof insertScheduleProposalSchema>;
+
+// ============================================================
+// NEGOTIATION POLICY TABLES - STEP 11C Phase 2C-3.0
+// ============================================================
+
+export const ccPlatformNegotiationPolicy = pgTable("cc_platform_negotiation_policy", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  negotiationType: text("negotiation_type").notNull(), // 'schedule' | 'scope' | 'pricing'
+  maxTurns: integer("max_turns").notNull(),
+  allowCounter: boolean("allow_counter").notNull().default(true),
+  closeOnAccept: boolean("close_on_accept").notNull().default(true),
+  closeOnDecline: boolean("close_on_decline").notNull().default(true),
+  providerCanInitiate: boolean("provider_can_initiate").notNull().default(true),
+  stakeholderCanInitiate: boolean("stakeholder_can_initiate").notNull().default(true),
+  allowProposalContext: boolean("allow_proposal_context").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ccTenantNegotiationPolicy = pgTable("cc_tenant_negotiation_policy", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  negotiationType: text("negotiation_type").notNull(), // 'schedule' | 'scope' | 'pricing'
+  maxTurns: integer("max_turns"),
+  allowCounter: boolean("allow_counter"),
+  closeOnAccept: boolean("close_on_accept"),
+  closeOnDecline: boolean("close_on_decline"),
+  providerCanInitiate: boolean("provider_can_initiate"),
+  stakeholderCanInitiate: boolean("stakeholder_can_initiate"),
+  allowProposalContext: boolean("allow_proposal_context"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_tenant_neg_policy_tenant").on(table.tenantId),
+  typeIdx: index("idx_tenant_neg_policy_type").on(table.negotiationType),
+}));
+
+export const insertPlatformNegotiationPolicySchema = createInsertSchema(ccPlatformNegotiationPolicy).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+export const insertTenantNegotiationPolicySchema = createInsertSchema(ccTenantNegotiationPolicy).omit({
+  id: true, createdAt: true, updatedAt: true
+});
+
+export type PlatformNegotiationPolicy = typeof ccPlatformNegotiationPolicy.$inferSelect;
+export type TenantNegotiationPolicy = typeof ccTenantNegotiationPolicy.$inferSelect;
+export type InsertPlatformNegotiationPolicy = z.infer<typeof insertPlatformNegotiationPolicySchema>;
+export type InsertTenantNegotiationPolicy = z.infer<typeof insertTenantNegotiationPolicySchema>;
+
+export type NegotiationType = 'schedule' | 'scope' | 'pricing';
+
+export interface ResolvedNegotiationPolicy {
+  negotiationType: NegotiationType;
+  maxTurns: number;
+  allowCounter: boolean;
+  closeOnAccept: boolean;
+  closeOnDecline: boolean;
+  providerCanInitiate: boolean;
+  stakeholderCanInitiate: boolean;
+  allowProposalContext: boolean;
+}
