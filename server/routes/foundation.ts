@@ -171,6 +171,21 @@ router.post('/auth/login', async (req: Request, res: Response) => {
     }
 });
 
+router.post('/auth/logout', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        console.log(`[AUTH] User ${req.user!.userId} logged out`);
+        
+        res.json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+
+    } catch (error: any) {
+        console.error('Logout error:', error);
+        res.status(500).json({ success: false, error: 'Logout failed' });
+    }
+});
+
 router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const userResult = await serviceQuery(`

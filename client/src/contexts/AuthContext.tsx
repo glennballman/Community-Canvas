@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedToken = localStorage.getItem('cc_token');
         if (storedToken) {
             try {
-                await fetch('/api/auth/logout', {
+                await fetch('/api/foundation/auth/logout', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${storedToken}`,

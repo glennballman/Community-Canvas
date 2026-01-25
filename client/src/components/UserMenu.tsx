@@ -63,13 +63,6 @@ export default function UserMenu() {
         ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
         : user.email;
 
-    const userTypeLabels: Record<string, string> = {
-        guest: 'Traveler',
-        crew_manager: 'Crew Manager',
-        host: 'Property Host',
-        admin: 'Administrator'
-    };
-
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -86,7 +79,9 @@ export default function UserMenu() {
                     <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none" data-testid="text-user-name">{displayName}</p>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
-                        <p className="text-xs text-muted-foreground">{userTypeLabels[user.userType] || user.userType}</p>
+                        {user.isPlatformAdmin && (
+                            <p className="text-xs text-primary font-medium">Platform Admin</p>
+                        )}
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
