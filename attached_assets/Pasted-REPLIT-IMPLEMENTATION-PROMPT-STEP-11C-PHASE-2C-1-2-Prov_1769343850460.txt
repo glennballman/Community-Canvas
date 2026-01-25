@@ -1,0 +1,166 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2C-1.2
+Provider “Reply to Stakeholder” CTA (Prefill NotifyStakeholdersModal)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive change. No schema changes. No refactors.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+From the tenant-side “Stakeholder responses” panel (ProviderRunDetailPage),
+add a “Reply” action that opens the existing NotifyStakeholdersModal with:
+
+1) recipient prefilled (stakeholder email if present)
+2) optional message prefilled with a response-aware template
+3) role preselected (best-effort) without guessing new role types
+
+We must:
+- reuse existing NotifyStakeholdersModal
+- avoid building a new messaging system
+- keep everything tenant-scoped
+- preserve “Publishing ≠ Notify” rule copy already in notify modal
+
+AUDIT-CONFIRMED CONTEXT
+- Provider run detail page: client/src/pages/app/provider/ProviderRunDetailPage.tsx
+- NotifyStakeholdersModal already integrated on this page (lines ~519-545)
+- Responses endpoint returns stakeholder_name + stakeholder_email for tenant owners
+
+TARGET FILES
+- client/src/pages/app/provider/ProviderRunDetailPage.tsx
+- client/src/components/provider/NotifyStakeholdersModal.tsx (only if it needs new props)
+- copy tokens: client/src/copy/entryPointCopy.ts (or appropriate file)
+
+========================================================
+A) ADD PREFILL CAPABILITY TO NotifyStakeholdersModal (REQUIRED)
+========================================================
+
+In client/src/components/provider/NotifyStakeholdersModal.tsx:
+
+1) Add OPTIONAL props (do not break existing call sites):
+type PrefillInvitee = { email: string; name?: string | null };
+
+interface NotifyStakeholdersModalProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  runId: string;
+  // NEW (optional)
+  prefillInvitees?: PrefillInvitee[];      // default: undefined
+  prefillMessage?: string;                // default: undefined
+}
+
+2) On modal open (when open becomes true), if prefillInvitees exists:
+- switch UI into bulk mode OR single mode depending on current UX:
+  - If modal has a single-email input mode: populate that first row
+  - If modal has a bulk textarea: insert emails line-separated
+Prefer the simplest path that matches current component:
+- If it already supports an invitees array state, set that state.
+
+3) Prefill message:
+- If modal has a “message” textarea per invitee:
+  - apply prefillMessage as default message for first invitee only
+  - OR set a “defaultMessage” used for all invitees (whichever exists today)
+Do NOT redesign the modal. Add the minimal wiring.
+
+4) Ensure prefill is “one-shot”:
+- After initial setState, do not reapply on subsequent re-renders while open
+(use a ref guard like didApplyPrefillRef).
+
+========================================================
+B) ADD “REPLY” CTA ON EACH RESPONSE ROW (REQUIRED)
+========================================================
+
+In ProviderRunDetailPage.tsx where responses are rendered:
+
+For each response row:
+- If stakeholder_email exists: show a small Button “Reply”
+- If stakeholder_email missing: hide Reply button
+
+On click:
+- set state:
+  - notifyOpen = true
+  - notifyPrefillInvitees = [{ email: stakeholder_email, name: stakeholder_name }]
+  - notifyPrefillMessage = template below (copy-token driven where possible)
+
+Template rules:
+- Must not contain forbidden terms.
+- Should refer to “service run”.
+- Should include response type context.
+
+Suggested template (generated in UI, with tokens for labels):
+If response_type === 'confirm':
+  "Thanks for confirming. If anything changes, reply here."
+If 'request_change':
+  "I saw your request to change the schedule. What timing works best?"
+If 'question':
+  "Thanks for your question. Here’s a quick reply:"
+
+If run name is available, optionally include:
+`Service run: ${run.name}`
+
+Do NOT include internal IDs.
+
+========================================================
+C) WIRE PREFILL PROPS INTO EXISTING MODAL USAGE (REQUIRED)
+========================================================
+
+ProviderRunDetailPage already renders:
+<NotifyStakeholdersModal open={notifyOpen} onOpenChange={setNotifyOpen} runId={id} />
+
+Update to:
+<NotifyStakeholdersModal
+  open={notifyOpen}
+  onOpenChange={(v) => {
+    setNotifyOpen(v);
+    if (!v) {
+      // clear prefill when closing to avoid stale state
+      setNotifyPrefillInvitees(undefined);
+      setNotifyPrefillMessage(undefined);
+    }
+  }}
+  runId={id}
+  prefillInvitees={notifyPrefillInvitees}
+  prefillMessage={notifyPrefillMessage}
+/>
+
+Add state near other modal state:
+const [notifyPrefillInvitees, setNotifyPrefillInvitees] = useState<PrefillInvitee[]|undefined>();
+const [notifyPrefillMessage, setNotifyPrefillMessage] = useState<string|undefined>();
+
+========================================================
+D) COPY TOKENS (REQUIRED)
+========================================================
+
+Add tokens:
+
+provider.run.responses.reply = "Reply"
+provider.run.responses.reply.prefill.confirm = "Thanks for confirming. If anything changes, reply here."
+provider.run.responses.reply.prefill.request_change = "I saw your request to change the schedule. What timing works best?"
+provider.run.responses.reply.prefill.question = "Thanks for your question. Here’s a quick reply:"
+
+If run name is appended in code, keep it outside tokens (string concat is fine).
+
+========================================================
+E) PROOF DOC (REQUIRED)
+========================================================
+
+Create:
+proof/v3.5/step11c-phase2c12-reply-prefill-proof.md
+
+Include:
+1) New props added to NotifyStakeholdersModal (non-breaking)
+2) ProviderRunDetailPage “Reply” button code excerpt
+3) Demonstration cases:
+   - Reply appears when stakeholder_email exists
+   - Clicking Reply opens modal with prefilled email
+   - Prefilled message matches response_type
+   - Closing modal clears prefill state
+4) Terminology compliance check
+
+DONE WHEN
+- Provider can click “Reply” on a response row
+- NotifyStakeholdersModal opens with recipient + message prefilled
+- No schema changes
+- Proof doc exists under proof/v3.5/

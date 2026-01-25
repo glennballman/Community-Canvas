@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams, useLocation } from 'wouter';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, Truck, 
-  MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus, Edit2
+  MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus, Edit2, Reply
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ import type { ActionKind } from '@/policy/marketModePolicy';
 import { PublishRunModal } from '@/components/provider/PublishRunModal';
 import { AddRequestsModal } from '@/components/provider/AddRequestsModal';
 import { StartAddressPickerModal } from '@/components/provider/StartAddressPickerModal';
-import { NotifyStakeholdersModal } from '@/components/provider/NotifyStakeholdersModal';
+import { NotifyStakeholdersModal, type PrefillInvitee } from '@/components/provider/NotifyStakeholdersModal';
 import { apiRequest } from '@/lib/queryClient';
 
 function getButtonVariant(kind: ActionKind): 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' {
@@ -228,6 +228,8 @@ export default function ProviderRunDetailPage() {
   const [addRequestsModalOpen, setAddRequestsModalOpen] = useState(false);
   const [startAddressModalOpen, setStartAddressModalOpen] = useState(false);
   const [notifyModalOpen, setNotifyModalOpen] = useState(false);
+  const [notifyPrefillInvitees, setNotifyPrefillInvitees] = useState<PrefillInvitee[] | undefined>();
+  const [notifyPrefillMessage, setNotifyPrefillMessage] = useState<string | undefined>();
 
   const { data, isLoading, error } = useQuery<{ 
     ok: boolean; 
@@ -540,6 +542,21 @@ export default function ProviderRunDetailPage() {
                         ? 'secondary' 
                         : 'outline';
                     
+                    const handleReply = () => {
+                      if (!resp.stakeholder_email) return;
+                      const prefillMsg = resp.response_type === 'confirm'
+                        ? resolve('provider.run.responses.reply.prefill.confirm')
+                        : resp.response_type === 'request_change'
+                          ? resolve('provider.run.responses.reply.prefill.request_change')
+                          : resolve('provider.run.responses.reply.prefill.question');
+                      setNotifyPrefillInvitees([{ 
+                        email: resp.stakeholder_email, 
+                        name: resp.stakeholder_name 
+                      }]);
+                      setNotifyPrefillMessage(prefillMsg);
+                      setNotifyModalOpen(true);
+                    };
+                    
                     return (
                       <div key={resp.id} className="p-3 rounded-md bg-muted/50 space-y-2" data-testid={`response-item-${resp.id}`}>
                         <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -549,11 +566,24 @@ export default function ProviderRunDetailPage() {
                               {badgeLabel}
                             </Badge>
                           </div>
-                          <span className="text-xs text-muted-foreground" data-testid="text-response-time">
-                            {new Date(resp.responded_at).toLocaleDateString('en-CA', {
-                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                            })}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground" data-testid="text-response-time">
+                              {new Date(resp.responded_at).toLocaleDateString('en-CA', {
+                                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </span>
+                            {resp.stakeholder_email && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={handleReply}
+                                data-testid={`button-reply-${resp.id}`}
+                              >
+                                <Reply className="w-3 h-3 mr-1" />
+                                {resolve('provider.run.responses.reply')}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         {resp.message && (
                           <p className="text-sm text-muted-foreground" data-testid="text-response-message">
@@ -642,9 +672,17 @@ export default function ProviderRunDetailPage() {
 
       <NotifyStakeholdersModal
         open={notifyModalOpen}
-        onOpenChange={setNotifyModalOpen}
+        onOpenChange={(v) => {
+          setNotifyModalOpen(v);
+          if (!v) {
+            setNotifyPrefillInvitees(undefined);
+            setNotifyPrefillMessage(undefined);
+          }
+        }}
         runId={id || ''}
         runName={run.title}
+        prefillInvitees={notifyPrefillInvitees}
+        prefillMessage={notifyPrefillMessage}
       />
     </div>
   );

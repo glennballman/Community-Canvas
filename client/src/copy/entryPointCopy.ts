@@ -310,6 +310,12 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'provider.run.responses.badge.request_change': 'Request change',
     'provider.run.responses.badge.question': 'Question',
     'provider.run.responses.identity.fallback': 'Stakeholder',
+    
+    // STEP 11C Phase 2C-1.2: Reply to Stakeholder
+    'provider.run.responses.reply': 'Reply',
+    'provider.run.responses.reply.prefill.confirm': 'Thanks for confirming. If anything changes, reply here.',
+    'provider.run.responses.reply.prefill.request_change': 'I saw your request to change the schedule. What timing works best?',
+    'provider.run.responses.reply.prefill.question': 'Thanks for your question. Here\'s a quick reply:',
   },
 
   lodging: {

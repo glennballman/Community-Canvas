@@ -62,11 +62,15 @@ interface CreateResponse {
   limit?: number;
 }
 
+export type PrefillInvitee = { email: string; name?: string | null };
+
 interface NotifyStakeholdersModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   runId: string;
   runName?: string;
+  prefillInvitees?: PrefillInvitee[];
+  prefillMessage?: string;
 }
 
 type BulkRowStatus = 'ready' | 'invalid' | 'duplicate_in_input' | 'already_invited' | 'submitted' | 'created' | 'skipped' | 'rate_limited' | 'error';
@@ -134,16 +138,18 @@ function getBulkRowBadge(status: BulkRowStatus, resolve: (key: string) => string
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BATCH_SIZE = 50;
 
-export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: NotifyStakeholdersModalProps) {
+export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName, prefillInvitees, prefillMessage }: NotifyStakeholdersModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { resolve } = useCopy({ entryPoint: 'service' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const didApplyPrefillRef = useRef(false);
 
   // Single invite state (existing)
   const [emails, setEmails] = useState('');
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
+
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [createdInvitations, setCreatedInvitations] = useState<Invitation[]>([]);
   
@@ -160,6 +166,28 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [showBulkSection, setShowBulkSection] = useState(false);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
+
+  // Apply prefill when modal opens (one-shot)
+  useEffect(() => {
+    if (open && !didApplyPrefillRef.current) {
+      if (prefillInvitees && prefillInvitees.length > 0) {
+        const firstInvitee = prefillInvitees[0];
+        setEmails(prefillInvitees.map(inv => inv.email).join('\n'));
+        if (firstInvitee.name) {
+          setName(firstInvitee.name);
+        }
+        // Force single-invite mode when prefilling a reply
+        setShowBulkSection(false);
+      }
+      if (prefillMessage) {
+        setMessage(prefillMessage);
+      }
+      didApplyPrefillRef.current = true;
+    }
+    if (!open) {
+      didApplyPrefillRef.current = false;
+    }
+  }, [open, prefillInvitees, prefillMessage]);
 
   const { data: existingInvitations, isLoading: loadingExisting, refetch } = useQuery<ListResponse>({
     queryKey: ['/api/provider/runs', runId, 'stakeholder-invites'],
