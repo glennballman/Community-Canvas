@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { serviceQuery, withServiceTransaction } from "../db/tenantDb";
-import { requireAuth, requireRole } from "../middleware/guards";
+import { requireAuth, requirePlatformAdmin } from "../middleware/guards";
 import { proposeLinksForExternalRecord, createEntityFromRecord, acceptLink, rejectLink, runResolutionBatch } from "../services/entityResolution";
 
 const router = Router();
@@ -18,9 +18,9 @@ const router = Router();
 
 const uuidSchema = z.string().uuid();
 
-// GET /api/cc_entities/datasets - List all datasets (ADMIN ONLY)
+// GET /api/cc_entities/datasets - List all datasets (PLATFORM ADMIN ONLY)
 // SERVICE MODE: cc_apify_datasets is platform configuration, not tenant-scoped
-router.get("/datasets", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+router.get("/datasets", requireAuth, requirePlatformAdmin, async (_req: Request, res: Response) => {
   try {
     const result = await serviceQuery(`
       SELECT 
@@ -37,9 +37,9 @@ router.get("/datasets", requireAuth, requireRole('admin'), async (_req: Request,
   }
 });
 
-// POST /api/cc_entities/datasets - Create/update dataset (ADMIN ONLY)
+// POST /api/cc_entities/datasets - Create/update dataset (PLATFORM ADMIN ONLY)
 // SERVICE MODE: Platform configuration mutation
-router.post("/datasets", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/datasets", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const schema = z.object({
       name: z.string().min(1),
@@ -76,7 +76,7 @@ router.post("/datasets", requireAuth, requireRole('admin'), async (req: Request,
 
 // GET /api/cc_entities/records - List external records (ADMIN ONLY)
 // SERVICE MODE: cc_external_records is platform-scraped data for admin curation
-router.get("/records", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.get("/records", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
     const offset = parseInt(req.query.offset as string) || 0;
@@ -183,7 +183,7 @@ router.get("/entities", requireAuth, async (req: Request, res: Response) => {
 
 // POST /api/cc_entities/cc_entities - Create entity (ADMIN ONLY)
 // SERVICE MODE: Entity creation is admin operation
-router.post("/entities", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/entities", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const schema = z.object({
       entity_type: z.string(),
@@ -232,7 +232,7 @@ router.post("/entities", requireAuth, requireRole('admin'), async (req: Request,
 });
 
 // POST /api/cc_entities/cc_entities/from-record/:recordId - Create entity from record (ADMIN ONLY)
-router.post("/cc_entities/from-record/:recordId", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/cc_entities/from-record/:recordId", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const recordId = uuidSchema.parse(req.params.recordId);
     const entityType = (req.body.entity_type as string) || "other";
@@ -251,7 +251,7 @@ router.post("/cc_entities/from-record/:recordId", requireAuth, requireRole('admi
 
 // GET /api/cc_entities/links/queue - Get resolution queue (ADMIN ONLY)
 // SERVICE MODE: Admin curation view
-router.get("/links/queue", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+router.get("/links/queue", requireAuth, requirePlatformAdmin, async (_req: Request, res: Response) => {
   try {
     const result = await serviceQuery(`
       SELECT * FROM v_entity_resolution_queue LIMIT 100
@@ -264,7 +264,7 @@ router.get("/links/queue", requireAuth, requireRole('admin'), async (_req: Reque
 });
 
 // POST /api/cc_entities/links/:linkId/accept - Accept link (ADMIN ONLY)
-router.post("/links/:linkId/accept", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/links/:linkId/accept", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const linkId = uuidSchema.parse(req.params.linkId);
     const userEmail = (req as any).user?.email || (req as any).ctx?.email;
@@ -282,7 +282,7 @@ router.post("/links/:linkId/accept", requireAuth, requireRole('admin'), async (r
 });
 
 // POST /api/cc_entities/links/:linkId/reject - Reject link (ADMIN ONLY)
-router.post("/links/:linkId/reject", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/links/:linkId/reject", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const linkId = uuidSchema.parse(req.params.linkId);
     const userEmail = (req as any).user?.email || (req as any).ctx?.email;
@@ -300,7 +300,7 @@ router.post("/links/:linkId/reject", requireAuth, requireRole('admin'), async (r
 });
 
 // POST /api/cc_entities/resolution/run-batch - Run resolution batch (ADMIN ONLY)
-router.post("/resolution/run-batch", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+router.post("/resolution/run-batch", requireAuth, requirePlatformAdmin, async (_req: Request, res: Response) => {
   try {
     const result = await runResolutionBatch(100);
     res.json({ success: true, ...result });
@@ -311,7 +311,7 @@ router.post("/resolution/run-batch", requireAuth, requireRole('admin'), async (_
 });
 
 // POST /api/cc_entities/records/:recordId/propose-links - Propose links (ADMIN ONLY)
-router.post("/records/:recordId/propose-links", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/records/:recordId/propose-links", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const recordId = uuidSchema.parse(req.params.recordId);
     const linksCreated = await proposeLinksForExternalRecord(recordId);
@@ -388,7 +388,7 @@ router.post("/claims", requireAuth, async (req: Request, res: Response) => {
 
 // GET /api/cc_entities/claims/pending - Get pending claims (ADMIN ONLY)
 // SERVICE MODE: Admin review queue
-router.get("/claims/pending", requireAuth, requireRole('admin'), async (_req: Request, res: Response) => {
+router.get("/claims/pending", requireAuth, requirePlatformAdmin, async (_req: Request, res: Response) => {
   try {
     const result = await serviceQuery(`
       SELECT 
@@ -408,7 +408,7 @@ router.get("/claims/pending", requireAuth, requireRole('admin'), async (_req: Re
 });
 
 // POST /api/cc_entities/claims/:claimId/approve - Approve claim (ADMIN ONLY)
-router.post("/claims/:claimId/approve", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/claims/:claimId/approve", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const claimId = uuidSchema.parse(req.params.claimId);
 
@@ -452,7 +452,7 @@ router.post("/claims/:claimId/approve", requireAuth, requireRole('admin'), async
 });
 
 // POST /api/cc_entities/claims/:claimId/reject - Reject claim (ADMIN ONLY)
-router.post("/claims/:claimId/reject", requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+router.post("/claims/:claimId/reject", requireAuth, requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const claimId = uuidSchema.parse(req.params.claimId);
     const reason = (req.body.reason as string) || null;

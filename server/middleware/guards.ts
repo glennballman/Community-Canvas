@@ -195,7 +195,30 @@ export const requireTenantOrPortal: RequestHandler = (req: Request, res: Respons
   next();
 };
 
+// Valid tenant role strings - enforced at route registration time
+// Note: 'admin' alone is NOT valid - use 'tenant_admin' for tenant admins
+// or requirePlatformAdmin for platform administrators
+const VALID_TENANT_ROLES = new Set([
+  'tenant_owner',
+  'tenant_admin', 
+  'operator',
+  'staff',
+  'member',
+  // DB stores 'owner' for tenant_owner, allow for backwards compatibility
+  'owner'
+]);
+
 export function requireRole(...requiredRoles: string[]): RequestHandler {
+  // FAIL FAST: Validate roles at registration time, not request time
+  const invalidRoles = requiredRoles.filter(role => !VALID_TENANT_ROLES.has(role));
+  if (invalidRoles.length > 0) {
+    throw new Error(
+      `INVALID_ROLE_GUARD: Invalid role(s) passed to requireRole(): ${invalidRoles.join(', ')}. ` +
+      `Valid roles are: ${Array.from(VALID_TENANT_ROLES).join(', ')}. ` +
+      `For platform admin access, use requirePlatformAdmin instead.`
+    );
+  }
+
   return (req: Request, res: Response, next: NextFunction) => {
     const tenantReq = req as TenantRequest;
     if (!tenantReq.ctx?.individual_id) {
@@ -220,6 +243,9 @@ export function requireRole(...requiredRoles: string[]): RequestHandler {
     next();
   };
 }
+
+// Export for testing
+export { VALID_TENANT_ROLES };
 
 export function requireScope(...requiredScopes: string[]): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {

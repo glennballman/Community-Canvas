@@ -8,13 +8,13 @@
 
 import { Router, Request, Response } from 'express';
 import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
-import { requireAuth, requireRole } from '../middleware/guards';
+import { requireAuth, requirePlatformAdmin } from '../middleware/guards';
 import { syncFromApify, syncFromFile, getDatasetStatus, getEntityStats, getUnresolvedRecords, getRentalListings } from '../services/apifySync';
 
 const router = Router();
 
-// All Apify routes require admin authentication
-const adminGuard = [requireAuth, requireRole('admin')];
+// All Apify routes require platform admin authentication
+const adminGuard = [requireAuth, requirePlatformAdmin];
 
 // GET /api/apify/datasets - List all datasets with sync status
 // SERVICE MODE: cc_apify_datasets is platform-level configuration data
