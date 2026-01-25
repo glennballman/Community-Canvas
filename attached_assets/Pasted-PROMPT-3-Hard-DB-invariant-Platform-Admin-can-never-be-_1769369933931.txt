@@ -1,0 +1,112 @@
+PROMPT 3 — Hard DB invariant: Platform Admin can never be in cc_tenant_users
+
+This is the permanent solution to your original “Glenn confusion” problem.
+
+REPLIT PROMPT — V3.5 DB INVARIANT P0: platform admins cannot be inserted into cc_tenant_users (hard guarantee)
+
+ROLE: DBA + Security Engineer
+MODE: Additive migration. Enforce at DB layer.
+
+INVARIANT P0 (LOCKED)
+If cc_users.is_platform_admin = true, then there MUST NOT exist any row in cc_tenant_users for that user_id.
+
+WHY TRIGGERS
+Postgres CHECK constraints cannot reference another table, so enforce via triggers.
+
+MIGRATION
+Create next migration:
+server/migrations/XXX_platform_admin_no_tenant_users.sql
+
+SQL
+
+1) Block INSERT/UPDATE into cc_tenant_users for platform admins
+```sql
+create or replace function cc_guard_no_platform_admin_tenant_membership()
+returns trigger
+language plpgsql
+as $$
+begin
+  if exists (
+    select 1
+    from cc_users u
+    where u.id = new.user_id
+      and coalesce(u.is_platform_admin,false) = true
+  ) then
+    raise exception 'PLATFORM_ADMIN_CANNOT_HAVE_TENANT_MEMBERSHIP'
+      using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_cc_tenant_users_no_platform_admin on cc_tenant_users;
+
+create trigger trg_cc_tenant_users_no_platform_admin
+before insert or update of user_id on cc_tenant_users
+for each row
+execute function cc_guard_no_platform_admin_tenant_membership();
+
+
+Auto-clean if a user becomes platform admin (backstop)
+
+create or replace function cc_enforce_platform_admin_zero_tenants()
+returns trigger
+language plpgsql
+as $$
+begin
+  if coalesce(new.is_platform_admin,false) = true
+     and coalesce(old.is_platform_admin,false) = false then
+    delete from cc_tenant_users where user_id = new.id;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_cc_users_platform_admin_cleanup on cc_users;
+
+create trigger trg_cc_users_platform_admin_cleanup
+after update of is_platform_admin on cc_users
+for each row
+execute function cc_enforce_platform_admin_zero_tenants();
+
+
+One-time cleanup for existing garbage
+
+delete from cc_tenant_users tu
+using cc_users u
+where tu.user_id = u.id
+  and coalesce(u.is_platform_admin,false) = true;
+
+
+TESTS (REQUIRED)
+Add server test:
+server/tests/platform-admin-invariant.test.ts
+
+Cases:
+
+platform admin insert into cc_tenant_users fails with PLATFORM_ADMIN_CANNOT_HAVE_TENANT_MEMBERSHIP
+
+non-platform user with membership -> flip is_platform_admin true -> membership deleted
+
+query: count(platform admins in cc_tenant_users) == 0
+
+PROOF DOC
+Create:
+proof/v3.5/platform-admin-no-tenant-users-invariant-proof.md
+Include:
+
+migration number and SQL
+
+verification query outputs
+
+test summary
+
+DELIVERABLE
+
+commit
+
+proof doc
+
+tests output
