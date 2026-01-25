@@ -48,7 +48,7 @@ ON cc_service_run_response_resolutions (
 -- RLS
 ALTER TABLE cc_service_run_response_resolutions ENABLE ROW LEVEL SECURITY;
 
--- SELECT: Tenant owners + stakeholders who resolved (or are linked)
+-- SELECT: Tenant owners + stakeholders who own the response being resolved
 DROP POLICY IF EXISTS resolution_select ON cc_service_run_response_resolutions;
 CREATE POLICY resolution_select
 ON cc_service_run_response_resolutions
@@ -56,6 +56,11 @@ FOR SELECT
 USING (
   run_tenant_id = current_tenant_id()
   OR resolver_individual_id = current_individual_id()
+  OR EXISTS (
+    SELECT 1 FROM cc_service_run_stakeholder_responses sr
+    WHERE sr.id = cc_service_run_response_resolutions.response_id
+      AND sr.stakeholder_individual_id = current_individual_id()
+  )
 );
 
 -- INSERT: Tenant owners only (not in service mode)

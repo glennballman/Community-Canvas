@@ -72,6 +72,20 @@ interface ResponsesListResponse {
   responses: StakeholderResponseItem[];
 }
 
+interface ResolutionItem {
+  id: string;
+  response_id: string;
+  resolution_type: 'acknowledged' | 'accepted' | 'declined' | 'proposed_change';
+  message: string | null;
+  resolved_at: string;
+  resolver_name: string | null;
+}
+
+interface ResolutionsListResponse {
+  ok: boolean;
+  resolutions: ResolutionItem[];
+}
+
 const stakeholderResponseFormSchema = z.object({
   response_type: z.enum(['confirm', 'request_change', 'question'], {
     required_error: 'Please select a response type',
@@ -150,6 +164,11 @@ export default function RunStakeholderViewPage() {
     enabled: !!id && !!data?.ok,
   });
 
+  const { data: resolutionsData } = useQuery<ResolutionsListResponse>({
+    queryKey: ['/api/runs', id, 'resolutions'],
+    enabled: !!id && !!data?.ok,
+  });
+
   const submitMutation = useMutation({
     mutationFn: async (body: StakeholderResponseFormData) => {
       return apiRequest('POST', `/api/runs/${id}/respond`, {
@@ -198,7 +217,28 @@ export default function RunStakeholderViewPage() {
 
   const { run, access } = data;
   const responses = responsesData?.responses || [];
+  const resolutions = resolutionsData?.resolutions || [];
   const latestResponse = access.latest_response;
+
+  // Helper to get resolutions for a specific response
+  const getResolutionsForResponse = (responseId: string) => 
+    resolutions.filter(r => r.response_id === responseId);
+
+  // Get resolution badge info
+  const getResolutionBadgeInfo = (type: string) => {
+    switch (type) {
+      case 'accepted':
+        return { className: 'bg-green-500/20 text-green-600', label: resolve('stakeholder_resolution.accepted') || 'Accepted' };
+      case 'acknowledged':
+        return { className: 'bg-blue-500/20 text-blue-600', label: resolve('stakeholder_resolution.acknowledged') || 'Acknowledged' };
+      case 'declined':
+        return { className: 'bg-red-500/20 text-red-600', label: resolve('stakeholder_resolution.declined') || 'Declined' };
+      case 'proposed_change':
+        return { className: 'bg-orange-500/20 text-orange-600', label: resolve('stakeholder_resolution.proposed_change') || 'Change proposed' };
+      default:
+        return { className: '', label: type };
+    }
+  };
 
   return (
     <div className="container max-w-4xl mx-auto py-6 px-4" data-testid="stakeholder-run-view">
@@ -253,25 +293,47 @@ export default function RunStakeholderViewPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {latestResponse && (
-            <div className="p-3 rounded-md bg-muted/50 border mb-4" data-testid="current-response">
-              <p className="text-xs text-muted-foreground mb-1">
-                {resolve('stakeholder.response.current') || 'Your current response'}
-              </p>
-              <div className="flex items-center gap-2">
-                {getResponseTypeIcon(latestResponse.response_type)}
-                <span className="font-medium text-sm">
-                  {getResponseTypeLabel(latestResponse.response_type, resolve)}
-                </span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  {new Date(latestResponse.responded_at).toLocaleString()}
-                </span>
+          {latestResponse && (() => {
+            const responseResolutions = getResolutionsForResponse(latestResponse.id);
+            const latestResolution = responseResolutions.length > 0 ? responseResolutions[0] : null;
+            return (
+              <div className="p-3 rounded-md bg-muted/50 border mb-4" data-testid="current-response">
+                <p className="text-xs text-muted-foreground mb-1">
+                  {resolve('stakeholder.response.current') || 'Your current response'}
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {getResponseTypeIcon(latestResponse.response_type)}
+                  <span className="font-medium text-sm">
+                    {getResponseTypeLabel(latestResponse.response_type, resolve)}
+                  </span>
+                  {latestResolution && (
+                    <Badge className={`text-xs ${getResolutionBadgeInfo(latestResolution.resolution_type).className}`} data-testid="badge-resolution">
+                      {getResolutionBadgeInfo(latestResolution.resolution_type).label}
+                    </Badge>
+                  )}
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {new Date(latestResponse.responded_at).toLocaleString()}
+                  </span>
+                </div>
+                {latestResponse.message && (
+                  <p className="text-sm text-muted-foreground mt-2 pl-6">{latestResponse.message}</p>
+                )}
+                {latestResolution && (
+                  <div className="mt-3 pt-3 border-t border-muted" data-testid="resolution-info">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {resolve('stakeholder_resolution.resolved_at') || 'Resolved'} {' '}
+                      {new Date(latestResolution.resolved_at).toLocaleString()}
+                    </p>
+                    {latestResolution.message && (
+                      <p className="text-sm text-muted-foreground pl-2 border-l-2 border-muted" data-testid="text-resolution-message">
+                        {latestResolution.message}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
-              {latestResponse.message && (
-                <p className="text-sm text-muted-foreground mt-2 pl-6">{latestResponse.message}</p>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
