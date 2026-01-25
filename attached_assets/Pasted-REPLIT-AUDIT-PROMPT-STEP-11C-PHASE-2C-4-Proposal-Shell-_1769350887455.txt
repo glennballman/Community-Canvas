@@ -1,0 +1,87 @@
+REPLIT AUDIT PROMPT — STEP 11C PHASE 2C-4
+Proposal Shell Inventory + Attachment Contract Discovery
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+Inventory the existing “proposal shell” system (DIY → Hybrid → Fully outsourced columns, line items, labour/materials/logistics rows, on-site tools/materials availability).
+We need exact as-built identifiers so we can attach it to negotiation events via reference (not merge systems).
+
+OUTPUT REQUIREMENTS
+Produce a markdown report:
+proof/v3.5/step11c-phase2c4-proposal-shell-audit.md
+
+Include:
+
+A) DATABASE INVENTORY
+1) List all tables that appear to belong to proposal shell.
+   - Search in Drizzle schema (shared/schema.ts) AND query actual DB for cc_% tables with keywords:
+     proposal, option, diy, scope, line_item, materials, tools, logistics, transport, bid, quote, compare, shell
+2) For each candidate table:
+   - columns (name, type, nullability)
+   - primary key
+   - foreign keys
+   - any unique constraints
+   - any RLS policies (if present)
+3) Identify the “root entity” table and its ID column name:
+   - e.g. proposal_id, shell_id, comparison_id, etc.
+
+B) ROUTES / SERVICES INVENTORY
+1) Search server/routes for:
+   - “proposal”
+   - “shell”
+   - “diy”
+   - “line item”
+   - “materials”
+   - “tools”
+   - “logistics”
+2) For each relevant endpoint:
+   - method + path
+   - request body schema
+   - response schema
+   - auth model (tenant / public / stakeholder)
+3) Identify if there’s an existing “attach to run” or “link to work area” pattern.
+
+C) UI INVENTORY
+1) Search client/src for components/pages containing:
+   - “proposal”
+   - “DIY”
+   - “outsource”
+   - “materials”
+   - “tools”
+   - “logistics”
+   - “compare”
+2) For each match:
+   - file path
+   - route (if any)
+   - what entity ID it loads (proposal_id? work_request_id? run_id?)
+   - screenshots not required, but include component names and key props.
+
+D) CONTRACT DISCOVERY
+Based on A/B/C, answer:
+1) What is the canonical ID we should reference from negotiations?
+   - (proposal_shell_id, proposal_id, comparison_id, etc.)
+2) Is the proposal shell already linked to any other entities (work request, reservation, job, run, work area)?
+3) Can a proposal shell be shared cross-tenant today? If yes, how? If no, note constraints.
+
+E) RECOMMENDATION FOR 2C-4 ATTACHMENT (NO IMPLEMENTATION)
+Propose the thinnest possible “attachment contract”:
+- which table should store the reference (likely cc_service_run_schedule_proposals metadata or a dedicated link table)
+- whether the reference belongs on:
+  (1) schedule proposal events, (2) response resolutions, or (3) run itself
+- include rationale for auditability and future monetization
+
+HARD RULE
+Do not add new tables or columns in this audit.
+Do not implement any code changes.
+Only report evidence and conclusions.
+
+DELIVERABLE
+Write the report to:
+proof/v3.5/step11c-phase2c4-proposal-shell-audit.md
