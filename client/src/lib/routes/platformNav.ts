@@ -32,6 +32,7 @@ export interface PlatformNavItem {
   label: string;
   href: string;
   testId: string;
+  requiresTenantMemberships?: boolean;
 }
 
 export interface PlatformNavSection {
@@ -47,7 +48,7 @@ export const PLATFORM_NAV: PlatformNavSection[] = [
   {
     title: 'Personal',
     items: [
-      { icon: Map, label: 'Your Places', href: '/app/places', testId: 'nav-places-picker' },
+      { icon: Map, label: 'Your Places', href: '/app/places', testId: 'nav-places-picker', requiresTenantMemberships: true },
     ],
   },
   {
@@ -77,6 +78,24 @@ export const PLATFORM_NAV: PlatformNavSection[] = [
   },
 ];
 
-export function getPlatformNavSections(): PlatformNavSection[] {
-  return PLATFORM_NAV;
+export interface PlatformNavFilterContext {
+  hasTenantMemberships: boolean;
+}
+
+export function getPlatformNavSections(ctx?: PlatformNavFilterContext): PlatformNavSection[] {
+  if (!ctx) {
+    return PLATFORM_NAV;
+  }
+  
+  return PLATFORM_NAV
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        if (item.requiresTenantMemberships && !ctx.hasTenantMemberships) {
+          return false;
+        }
+        return true;
+      }),
+    }))
+    .filter(section => section.items.length > 0);
 }

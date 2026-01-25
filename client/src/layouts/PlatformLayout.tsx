@@ -6,7 +6,7 @@
  * Does NOT show tenant-requiring sections.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -16,18 +16,33 @@ import {
   Shield,
 } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
+import { useAuth } from '../contexts/AuthContext';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getPlatformNavSections, PlatformNavSection, PlatformNavItem } from '../lib/routes/platformNav';
+import { useToast } from '@/hooks/use-toast';
 
 export function PlatformLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, initialized } = useTenant();
+  const { impersonation, hasTenantMemberships } = useAuth();
+  const { toast } = useToast();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const sections = getPlatformNavSections();
+  const sections = getPlatformNavSections({ hasTenantMemberships });
+  
+  useEffect(() => {
+    if (impersonation.active) {
+      toast({
+        title: 'Impersonation Active',
+        description: 'End impersonation to access platform admin.',
+        variant: 'destructive',
+      });
+      navigate('/app');
+    }
+  }, [impersonation.active, navigate, toast]);
 
   if (loading || !initialized) {
     return (

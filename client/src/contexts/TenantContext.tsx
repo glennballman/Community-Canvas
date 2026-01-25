@@ -45,6 +45,7 @@ export interface ImpersonationState {
   tenant_id?: string;
   tenant_name?: string;
   tenant_type?: string;
+  tenant_role?: string;
   portal_slug?: string;
   expires_at?: string;
 }
@@ -199,6 +200,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
           tenant_id: data.impersonated_tenant.id,
           tenant_name: data.impersonated_tenant.name,
           tenant_type: data.impersonated_tenant.type,
+          tenant_role: data.impersonated_tenant.role,
           portal_slug: data.impersonated_tenant.portal_slug,
           expires_at: data.impersonation_expires_at,
         });
@@ -359,7 +361,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
         tenant_name: impersonation.tenant_name || 'Unknown Tenant',
         tenant_slug: '', // Not critical for queries
         tenant_type: (impersonation.tenant_type as TenantMembership['tenant_type']) || 'business',
-        role: 'admin', // Impersonation grants admin-level access
+        role: impersonation.tenant_role || 'tenant_admin', // Use impersonated user's actual role
         is_primary: false,
       };
     }

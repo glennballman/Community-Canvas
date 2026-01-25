@@ -34,6 +34,8 @@ interface ImpersonationState {
     expires_at: string | null;
 }
 
+export type NavMode = 'platform_only' | 'tenant' | 'impersonating';
+
 interface AuthContextType {
     user: User | null;
     ccTenants: CCTenant[];
@@ -45,6 +47,8 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isPlatformAdmin: boolean;
     impersonation: ImpersonationState;
+    navMode: NavMode;
+    hasTenantMemberships: boolean;
 }
 
 const defaultImpersonation: ImpersonationState = {
@@ -190,6 +194,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.clear();
     }
 
+    const hasTenantMemberships = ccTenants.length > 0;
+    const isImpersonating = impersonation.active;
+    
+    const navMode: NavMode = (() => {
+        if (isImpersonating) return 'impersonating';
+        if (user?.isPlatformAdmin && !hasTenantMemberships) return 'platform_only';
+        return 'tenant';
+    })();
+
     return (
         <AuthContext.Provider value={{
             user,
@@ -201,7 +214,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             refreshSession,
             isAuthenticated: !!token && !!user,
             isPlatformAdmin: user?.isPlatformAdmin || false,
-            impersonation
+            impersonation,
+            navMode,
+            hasTenantMemberships,
         }}>
             {children}
         </AuthContext.Provider>

@@ -148,6 +148,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         name: impersonatedTenant.name,
         type: impersonatedTenant.tenant_type,
         portal_slug: impersonatedTenant.portal_slug || null,
+        role: impersonation?.tenant_role || 'tenant_admin',
       } : null,
       impersonation_expires_at: impersonation?.expires_at || null,
     });

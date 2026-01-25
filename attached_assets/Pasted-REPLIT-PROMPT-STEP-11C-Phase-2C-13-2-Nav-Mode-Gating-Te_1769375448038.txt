@@ -1,0 +1,63 @@
+REPLIT PROMPT — STEP 11C Phase 2C-13.2: Nav Mode Gating + Tenant Shell During Impersonation
+
+ROLE: UI Architect + Auth/Context engineer
+MODE: Make impersonation intuitive. No guessing.
+
+PROBLEMS
+1) Platform admin sees “Your Places” even with zero tenant memberships (confusing).
+2) While impersonating a tenant user, UI still shows platform nav (because user remains on /app/platform route & platform shell).
+
+GOALS
+A) Platform-only users (is_platform_admin=true AND 0 tenant memberships AND not impersonating) must not see tenant nav like “Your Places”.
+B) When impersonation is active, the primary app shell must render the impersonated user’s nav, not platform nav.
+C) Starting impersonation must redirect to tenant landing route automatically.
+D) Optional: if user tries to visit /app/platform/* while impersonating, redirect to /app with a toast: “End impersonation to access platform.”
+
+IMPLEMENTATION
+
+1) Compute a single “navMode”
+In Auth/Session context derive:
+- hasTenantMemberships: boolean (from session.memberships length > 0)
+- isImpersonating: boolean (from whoami.impersonation.active)
+- navMode:
+   if isImpersonating => 'tenant'
+   else if user.is_platform_admin && !hasTenantMemberships => 'platform_only'
+   else => 'tenant' (regular users)
+
+2) LEFT NAV RENDERING
+- If navMode === 'platform_only':
+   - Render ONLY platform sections (/app/platform/*)
+   - Hide “Personal / Your Places”
+- If navMode === 'tenant':
+   - Render tenant shell nav (Personal + tenant admin + operator etc)
+   - Platform section should be hidden or minimized while impersonating
+
+3) ROUTE GUARDS / REDIRECTS
+- On successful impersonation start:
+   - navigate('/app') (tenant home) after refreshSession()
+- While impersonating:
+   - visiting any /app/platform/* route should redirect to /app
+     (unless you explicitly want platform access while impersonating; default is redirect)
+- On stop impersonation:
+   - navigate('/app/platform/impersonation')
+
+4) TENANT NAV VISIBILITY DURING IMPERSONATION
+- Ensure tenant nav uses impersonated user’s role/tenant_id from session context (already refreshed)
+- If role is tenant_admin, include /app/admin/* nav items
+- Ensure the top bar tenant selector reflects the impersonated tenant
+
+5) TESTS
+Add UI tests:
+- platform_only user => “Your Places” not visible
+- start impersonation => redirects to /app and tenant nav visible
+- while impersonating => /app/platform/* redirects to /app
+
+6) PROOF DOC
+Create: proof/v3.5/step11c-phase2c13_2-nav-mode-gating-proof.md
+Include:
+- navMode rules
+- screenshots (optional)
+- test list + pass
+
+DELIVERABLE
+Commit + proof doc + tests.
