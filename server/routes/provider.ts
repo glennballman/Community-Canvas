@@ -2597,4 +2597,50 @@ router.post('/runs/:runId/stakeholder-invites/:inviteId/resend', requireAuth, as
   }
 });
 
+/**
+ * POST /api/provider/identity/email-lookup
+ * Batch email existence check for bulk invite flow
+ * STEP 11C Phase 2B-1: Returns cc_individuals matches for provided emails
+ */
+router.post('/identity/email-lookup', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { emails } = req.body;
+
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ ok: false, error: 'error.identity.emails_required' });
+    }
+
+    if (emails.length > 500) {
+      return res.status(400).json({ ok: false, error: 'error.identity.too_many_emails', limit: 500 });
+    }
+
+    const normalizedEmails = emails
+      .filter((e: any) => typeof e === 'string')
+      .map((e: string) => e.trim().toLowerCase())
+      .filter((e: string) => e.length > 0);
+
+    if (normalizedEmails.length === 0) {
+      return res.json({ ok: true, matches: [] });
+    }
+
+    const result = await pool.query(
+      `SELECT id, display_name, lower(email) as email
+       FROM cc_individuals
+       WHERE lower(email) = ANY($1::text[])`,
+      [normalizedEmails]
+    );
+
+    const matches = result.rows.map(row => ({
+      email: row.email,
+      individual_id: row.id,
+      display_name: row.display_name || null
+    }));
+
+    res.json({ ok: true, matches });
+  } catch (error: any) {
+    console.error('Email lookup error:', error);
+    res.status(500).json({ ok: false, error: 'error.identity.lookup_failed' });
+  }
+});
+
 export default router;

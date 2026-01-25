@@ -1,12 +1,13 @@
 /**
  * STEP 11C: Notify Stakeholders Modal
  * STEP 11C Phase 2A: Enhanced with resend/revoke actions
+ * STEP 11C Phase 2B-1: Bulk ingest via CSV/paste + preview + dedupe
  * 
  * Modal for creating private stakeholder invitations for a service run.
  * Distinct from portal publishing - this is private ops notifications.
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,9 +22,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
+import Papa from 'papaparse';
 import { 
   Loader2, Info, Mail, Copy, Check, Send, Eye, AlertCircle, 
-  Link as LinkIcon, RefreshCw, XCircle, MailX
+  Link as LinkIcon, RefreshCw, XCircle, MailX, Upload, Trash2, Users
 } from 'lucide-react';
 import { Hourglass } from 'lucide-react';
 
@@ -67,6 +69,24 @@ interface NotifyStakeholdersModalProps {
   runName?: string;
 }
 
+type BulkRowStatus = 'ready' | 'invalid' | 'duplicate_in_input' | 'already_invited' | 'submitted' | 'created' | 'skipped' | 'rate_limited' | 'error';
+
+interface BulkRow {
+  row_id: string;
+  email_raw: string;
+  email: string | null;
+  name?: string | null;
+  message?: string | null;
+  issues: string[];
+  status: BulkRowStatus;
+  existing_individual?: { id: string; display_name?: string };
+}
+
+interface EmailLookupResponse {
+  ok: boolean;
+  matches: Array<{ email: string; individual_id: string; display_name?: string }>;
+}
+
 function getStatusBadge(status: string) {
   switch (status) {
     case 'pending':
@@ -86,20 +106,60 @@ function getStatusBadge(status: string) {
   }
 }
 
+function getBulkRowBadge(status: BulkRowStatus, resolve: (key: string) => string) {
+  switch (status) {
+    case 'ready':
+      return <Badge variant="secondary" className="bg-green-600/20 text-green-600 border-green-600/30" data-testid="badge-bulk-ready">{resolve('provider.notify.bulk.badge.ready')}</Badge>;
+    case 'invalid':
+      return <Badge variant="destructive" data-testid="badge-bulk-invalid">{resolve('provider.notify.bulk.badge.invalid')}</Badge>;
+    case 'duplicate_in_input':
+      return <Badge variant="outline" className="border-yellow-500/50 text-yellow-600" data-testid="badge-bulk-duplicate">{resolve('provider.notify.bulk.badge.duplicate')}</Badge>;
+    case 'already_invited':
+      return <Badge variant="outline" className="border-blue-500/50 text-blue-500" data-testid="badge-bulk-already">{resolve('provider.notify.bulk.badge.already_invited')}</Badge>;
+    case 'created':
+      return <Badge variant="default" data-testid="badge-bulk-created">{resolve('provider.notify.bulk.badge.created')}</Badge>;
+    case 'rate_limited':
+      return <Badge variant="destructive" data-testid="badge-bulk-rate">{resolve('provider.notify.bulk.badge.rate_limited')}</Badge>;
+    case 'submitted':
+      return <Badge variant="secondary" data-testid="badge-bulk-submitted"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Submitting</Badge>;
+    case 'skipped':
+      return <Badge variant="outline" data-testid="badge-bulk-skipped">Skipped</Badge>;
+    case 'error':
+      return <Badge variant="destructive" data-testid="badge-bulk-error">Error</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const BATCH_SIZE = 50;
+
 export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: NotifyStakeholdersModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { resolve } = useCopy({ entryPoint: 'service' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Single invite state (existing)
   const [emails, setEmails] = useState('');
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [createdInvitations, setCreatedInvitations] = useState<Invitation[]>([]);
   
+  // Revoke dialog state
   const [revokeDialogOpen, setRevokeDialogOpen] = useState<string | null>(null);
   const [revokeReason, setRevokeReason] = useState('');
   const [revokeSilent, setRevokeSilent] = useState(true);
+
+  // Bulk invite state (new)
+  const [bulkMode, setBulkMode] = useState<'paste' | 'csv'>('paste');
+  const [bulkText, setBulkText] = useState('');
+  const [bulkRows, setBulkRows] = useState<BulkRow[]>([]);
+  const [bulkSharedMessage, setBulkSharedMessage] = useState('');
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [showBulkSection, setShowBulkSection] = useState(false);
+  const [csvParseError, setCsvParseError] = useState<string | null>(null);
 
   const { data: existingInvitations, isLoading: loadingExisting, refetch } = useQuery<ListResponse>({
     queryKey: ['/api/provider/runs', runId, 'stakeholder-invites'],
@@ -113,6 +173,31 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
     enabled: open,
   });
 
+  // Build set of already-invited emails (excluding revoked/expired)
+  const alreadyInvitedEmails = new Set<string>(
+    (existingInvitations?.invitations || [])
+      .filter(inv => !['revoked', 'expired'].includes(inv.status))
+      .map(inv => inv.invitee_email.toLowerCase().trim())
+  );
+
+  // Re-evaluate bulk rows when existingInvitations loads (fixes timing gap)
+  useEffect(() => {
+    if (bulkRows.length === 0 || !existingInvitations) return;
+    
+    setBulkRows(prev => prev.map(row => {
+      // Only update rows that are still ready or were ready before
+      if (row.status === 'ready' && row.email && alreadyInvitedEmails.has(row.email)) {
+        return {
+          ...row,
+          status: 'already_invited' as BulkRowStatus,
+          issues: [...row.issues.filter(i => i !== 'Already invited to this run'), 'Already invited to this run'],
+        };
+      }
+      return row;
+    }));
+  }, [existingInvitations]);
+
+  // Single invite mutation (existing)
   const createMutation = useMutation<CreateResponse, Error, void>({
     mutationFn: async (): Promise<CreateResponse> => {
       const emailList = emails
@@ -260,6 +345,11 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
     setCreatedInvitations([]);
     setRevokeDialogOpen(null);
     setRevokeReason('');
+    setBulkRows([]);
+    setBulkText('');
+    setBulkSharedMessage('');
+    setCsvParseError(null);
+    setShowBulkSection(false);
     onOpenChange(false);
   };
 
@@ -273,6 +363,272 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
     .split(/[,\n]/)
     .map(e => e.trim())
     .filter(e => e.length > 0).length;
+
+  // Parse bulk text input
+  const parseBulkText = () => {
+    setCsvParseError(null);
+    const lines = bulkText
+      .split(/[,\n]/)
+      .map(e => e.trim())
+      .filter(e => e.length > 0);
+
+    const seen = new Set<string>();
+    const rows: BulkRow[] = lines.map((line, idx) => {
+      const email = line.toLowerCase().trim();
+      const issues: string[] = [];
+      let status: BulkRowStatus = 'ready';
+
+      if (!EMAIL_REGEX.test(email)) {
+        issues.push('Invalid email format');
+        status = 'invalid';
+      } else if (seen.has(email)) {
+        issues.push('Duplicate in input');
+        status = 'duplicate_in_input';
+      } else if (alreadyInvitedEmails.has(email)) {
+        issues.push('Already invited to this run');
+        status = 'already_invited';
+      }
+      
+      if (status === 'ready') {
+        seen.add(email);
+      }
+
+      return {
+        row_id: `paste-${idx}`,
+        email_raw: line,
+        email: EMAIL_REGEX.test(email) ? email : null,
+        issues,
+        status,
+      };
+    });
+
+    setBulkRows(rows);
+    lookupEmails(rows.filter(r => r.email).map(r => r.email!));
+  };
+
+  // Parse CSV file
+  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCsvParseError(null);
+    
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors.length > 0) {
+          setCsvParseError(resolve('provider.notify.bulk.error.csv_parse'));
+          setBulkRows([]);
+          return;
+        }
+
+        const emailKey = findHeaderKey(results.meta.fields || [], ['email', 'Email', 'E-mail', 'e-mail', 'EMAIL']);
+        const nameKey = findHeaderKey(results.meta.fields || [], ['name', 'Name', 'full_name', 'Full Name', 'NAME']);
+        const messageKey = findHeaderKey(results.meta.fields || [], ['message', 'Message', 'note', 'Note', 'MESSAGE']);
+
+        const seen = new Set<string>();
+        const rows: BulkRow[] = results.data.map((row, idx) => {
+          let emailRaw = emailKey ? (row[emailKey] || '').trim() : '';
+          // Fallback: if no email header, use first column value
+          if (!emailRaw && !emailKey) {
+            const firstCol = Object.keys(row)[0];
+            emailRaw = firstCol ? (row[firstCol] || '').trim() : '';
+          }
+          
+          const email = emailRaw.toLowerCase().trim();
+          const rowName = nameKey ? (row[nameKey] || '').trim() : null;
+          const rowMessage = messageKey ? (row[messageKey] || '').trim() : null;
+          
+          const issues: string[] = [];
+          let status: BulkRowStatus = 'ready';
+
+          if (!emailRaw || !EMAIL_REGEX.test(email)) {
+            issues.push('Invalid email format');
+            status = 'invalid';
+          } else if (seen.has(email)) {
+            issues.push('Duplicate in input');
+            status = 'duplicate_in_input';
+          } else if (alreadyInvitedEmails.has(email)) {
+            issues.push('Already invited to this run');
+            status = 'already_invited';
+          }
+          
+          if (status === 'ready') {
+            seen.add(email);
+          }
+
+          return {
+            row_id: `csv-${idx}`,
+            email_raw: emailRaw,
+            email: EMAIL_REGEX.test(email) ? email : null,
+            name: rowName,
+            message: rowMessage,
+            issues,
+            status,
+          };
+        });
+
+        setBulkRows(rows);
+        lookupEmails(rows.filter(r => r.email).map(r => r.email!));
+      },
+      error: () => {
+        setCsvParseError(resolve('provider.notify.bulk.error.csv_parse'));
+        setBulkRows([]);
+      }
+    });
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const findHeaderKey = (headers: string[], aliases: string[]): string | null => {
+    for (const alias of aliases) {
+      if (headers.includes(alias)) return alias;
+    }
+    return null;
+  };
+
+  // Look up emails against cc_individuals
+  const lookupEmails = async (emails: string[]) => {
+    if (emails.length === 0) return;
+
+    try {
+      const res = await fetch('/api/provider/identity/email-lookup', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails }),
+      });
+      const data: EmailLookupResponse = await res.json();
+
+      if (data.ok && data.matches) {
+        const matchMap = new Map(data.matches.map(m => [m.email, m]));
+        
+        setBulkRows(prev => prev.map(row => {
+          if (row.email && matchMap.has(row.email)) {
+            const match = matchMap.get(row.email)!;
+            return {
+              ...row,
+              existing_individual: {
+                id: match.individual_id,
+                display_name: match.display_name,
+              },
+            };
+          }
+          return row;
+        }));
+      }
+    } catch (err) {
+      console.error('Email lookup failed:', err);
+    }
+  };
+
+  // Remove a row from bulk preview
+  const removeBulkRow = (rowId: string) => {
+    setBulkRows(prev => prev.filter(r => r.row_id !== rowId));
+  };
+
+  // Submit bulk invitations in batches
+  const submitBulkInvitations = async () => {
+    const readyRows = bulkRows.filter(r => r.status === 'ready');
+    if (readyRows.length === 0) return;
+
+    setBulkSubmitting(true);
+    
+    // Mark all ready rows as submitted
+    setBulkRows(prev => prev.map(r => 
+      r.status === 'ready' ? { ...r, status: 'submitted' as BulkRowStatus } : r
+    ));
+
+    // Chunk into batches
+    const batches: BulkRow[][] = [];
+    for (let i = 0; i < readyRows.length; i += BATCH_SIZE) {
+      batches.push(readyRows.slice(i, i + BATCH_SIZE));
+    }
+
+    let totalCreated = 0;
+    let rateLimited = false;
+
+    for (const batch of batches) {
+      if (rateLimited) {
+        // Mark remaining as rate limited
+        setBulkRows(prev => prev.map(r => 
+          batch.some(br => br.row_id === r.row_id) ? { ...r, status: 'rate_limited' as BulkRowStatus } : r
+        ));
+        continue;
+      }
+
+      const invitees = batch.map(r => ({
+        email: r.email!,
+        name: r.name || undefined,
+        message: r.message || bulkSharedMessage.trim() || undefined,
+      }));
+
+      try {
+        const res = await fetch(`/api/provider/runs/${runId}/stakeholder-invites`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invitees }),
+        });
+        
+        const data: CreateResponse = await res.json();
+
+        if (res.status === 429) {
+          rateLimited = true;
+          setBulkRows(prev => prev.map(r => 
+            batch.some(br => br.row_id === r.row_id) ? { ...r, status: 'rate_limited' as BulkRowStatus, issues: [...r.issues, data.error || 'Rate limited'] } : r
+          ));
+          toast({
+            title: 'Limit Reached',
+            description: resolve('provider.notify.bulk.error.rate_limited'),
+            variant: 'destructive',
+          });
+          continue;
+        }
+
+        if (data.ok && data.invitations) {
+          const createdEmails = new Set(data.invitations.map(inv => inv.invitee_email.toLowerCase()));
+          totalCreated += data.invitations.length;
+
+          setBulkRows(prev => prev.map(r => {
+            if (batch.some(br => br.row_id === r.row_id)) {
+              if (r.email && createdEmails.has(r.email)) {
+                return { ...r, status: 'created' as BulkRowStatus };
+              } else {
+                return { ...r, status: 'skipped' as BulkRowStatus };
+              }
+            }
+            return r;
+          }));
+        } else {
+          setBulkRows(prev => prev.map(r => 
+            batch.some(br => br.row_id === r.row_id) ? { ...r, status: 'error' as BulkRowStatus, issues: [...r.issues, data.error || 'Unknown error'] } : r
+          ));
+        }
+      } catch (err: any) {
+        setBulkRows(prev => prev.map(r => 
+          batch.some(br => br.row_id === r.row_id) ? { ...r, status: 'error' as BulkRowStatus, issues: [...r.issues, err.message || 'Request failed'] } : r
+        ));
+      }
+    }
+
+    setBulkSubmitting(false);
+    refetch();
+
+    if (totalCreated > 0) {
+      toast({
+        title: resolve('provider.notify.created.title'),
+        description: `${totalCreated} invitation(s) created`,
+      });
+    }
+  };
+
+  const readyCount = bulkRows.filter(r => r.status === 'ready').length;
+  const createdCount = bulkRows.filter(r => r.status === 'created').length;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -298,6 +654,201 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
         </Alert>
 
         <div className="space-y-6">
+          {/* Toggle for bulk section */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowBulkSection(!showBulkSection)}
+            className="w-full justify-start gap-2"
+            data-testid="button-toggle-bulk"
+          >
+            <Users className="w-4 h-4" />
+            {resolve('provider.notify.bulk.title')}
+            {showBulkSection ? ' (hide)' : ''}
+          </Button>
+
+          {/* Bulk ingest section */}
+          {showBulkSection && (
+            <div className="space-y-4 p-4 border rounded-md" data-testid="section-bulk-ingest">
+              <div className="flex gap-2">
+                <Button
+                  variant={bulkMode === 'paste' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBulkMode('paste')}
+                  data-testid="button-mode-paste"
+                >
+                  {resolve('provider.notify.bulk.mode.paste')}
+                </Button>
+                <Button
+                  variant={bulkMode === 'csv' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setBulkMode('csv')}
+                  data-testid="button-mode-csv"
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  {resolve('provider.notify.bulk.mode.csv')}
+                </Button>
+              </div>
+
+              {bulkMode === 'paste' && (
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder={resolve('provider.notify.bulk.paste.placeholder')}
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                    rows={4}
+                    data-testid="input-bulk-paste"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={parseBulkText}
+                    disabled={!bulkText.trim()}
+                    data-testid="button-parse-paste"
+                  >
+                    Preview
+                  </Button>
+                </div>
+              )}
+
+              {bulkMode === 'csv' && (
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    ref={fileInputRef}
+                    onChange={handleCsvUpload}
+                    className="hidden"
+                    data-testid="input-csv-file"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    data-testid="button-choose-csv"
+                  >
+                    <Upload className="w-4 h-4 mr-1" />
+                    {resolve('provider.notify.bulk.csv.button')}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Accepts headers: email, name, message (or first column as email)
+                  </p>
+                  {csvParseError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="w-4 h-4" />
+                      <AlertDescription>{csvParseError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+
+              {/* Shared message for bulk */}
+              {bulkRows.length > 0 && (
+                <div>
+                  <Label htmlFor="bulk-message">Shared message (optional)</Label>
+                  <Textarea
+                    id="bulk-message"
+                    placeholder="Optional message for all invitations"
+                    value={bulkSharedMessage}
+                    onChange={(e) => setBulkSharedMessage(e.target.value)}
+                    rows={2}
+                    className="mt-1"
+                    data-testid="input-bulk-message"
+                  />
+                </div>
+              )}
+
+              {/* Preview table */}
+              {bulkRows.length > 0 && (
+                <div className="space-y-2" data-testid="section-bulk-preview">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">
+                      {resolve('provider.notify.bulk.preview.title')} ({bulkRows.length} rows, {readyCount} ready)
+                    </h4>
+                    <Button
+                      size="sm"
+                      onClick={submitBulkInvitations}
+                      disabled={readyCount === 0 || bulkSubmitting}
+                      data-testid="button-bulk-submit"
+                    >
+                      {bulkSubmitting ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4 mr-1" />
+                      )}
+                      {resolve('provider.notify.bulk.submit')} ({readyCount})
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{resolve('provider.notify.bulk.preview.help')}</p>
+
+                  <div className="max-h-60 overflow-y-auto border rounded">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 sticky top-0">
+                        <tr>
+                          <th className="text-left p-2">Email</th>
+                          <th className="text-left p-2">Name</th>
+                          <th className="text-left p-2">Platform</th>
+                          <th className="text-left p-2">Status</th>
+                          <th className="p-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkRows.map((row) => (
+                          <tr key={row.row_id} className="border-t" data-testid={`bulk-row-${row.row_id}`}>
+                            <td className="p-2 truncate max-w-[150px]" title={row.email_raw}>
+                              {row.email_raw}
+                            </td>
+                            <td className="p-2 truncate max-w-[100px]">{row.name || '-'}</td>
+                            <td className="p-2">
+                              {row.existing_individual && (
+                                <Badge variant="outline" className="text-xs border-green-500/50 text-green-600" data-testid="badge-on-platform">
+                                  {resolve('provider.notify.bulk.badge.on_platform')}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              <div className="flex flex-col gap-1">
+                                {getBulkRowBadge(row.status, resolve)}
+                                {row.issues.length > 0 && (
+                                  <span className="text-xs text-muted-foreground">{row.issues[0]}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-2">
+                              {['ready', 'invalid', 'duplicate_in_input'].includes(row.status) && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6"
+                                  onClick={() => removeBulkRow(row.row_id)}
+                                  title={resolve('provider.notify.bulk.remove')}
+                                  data-testid={`button-remove-${row.row_id}`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {createdCount > 0 && (
+                    <Alert className="border-green-500/50 bg-green-500/10">
+                      <Check className="w-4 h-4 text-green-600" />
+                      <AlertDescription>
+                        {createdCount} invitation(s) created successfully
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <Separator />
+
+          {/* Single invite section (existing) */}
           <div className="space-y-4">
             <div>
               <Label htmlFor="emails">{resolve('provider.notify.invitees.label')}</Label>
