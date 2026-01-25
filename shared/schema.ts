@@ -5712,6 +5712,7 @@ export const ccPlatformInvitePolicy = pgTable("cc_platform_invite_policy", {
   individualHourlyCap: integer("individual_hourly_cap").notNull().default(200),
   perRequestCap: integer("per_request_cap").notNull().default(50),
   emailSendPerMinute: integer("email_send_per_minute").notNull().default(60),
+  skipEmailIfOnPlatform: boolean("skip_email_if_on_platform").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
@@ -5736,6 +5737,7 @@ export const ccTenantInvitePolicy = pgTable("cc_tenant_invite_policy", {
   individualHourlyCap: integer("individual_hourly_cap"),
   perRequestCap: integer("per_request_cap"),
   emailSendPerMinute: integer("email_send_per_minute"),
+  skipEmailIfOnPlatform: boolean("skip_email_if_on_platform"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({

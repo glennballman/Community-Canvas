@@ -1,0 +1,216 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2B-2 (CC-13)
+Already-on-Platform Fast Path (In-App Notify + Optional Email Skip)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive changes. No refactors. Additive migrations allowed (no live data).
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+When a stakeholder email is already on-platform (matches cc_individuals.email), deliver an in-app notification to that individual (recipient_individual_id) and optionally skip sending email, controlled by policy.
+
+This improves virality + conversion:
+- On-platform invitees get notified inside the product immediately.
+- Off-platform invitees still get email invitations as before.
+
+AUDIT-TRUE CONSTRAINTS
+- cc_users and cc_individuals are linked only by email match (no FK).
+- recipient_individual_id references cc_individuals.id.
+- Current invite creation only notifies the INVITER, not the invitee.
+- sent_via is a text field, so adding values like 'in_app'/'both' is safe.
+- Claim flow does NOT grant authenticated run access; therefore invitee notifications must link to /i/:token.
+
+FILES
+Backend:
+- server/routes/provider.ts (invite creation)
+- server/services/messagingRoutingService.ts (if you reuse helper patterns)
+- shared/schema.ts (policy table updates)
+Migration:
+- next additive migration file
+Proof:
+- proof/v3.5/step11c-phase2b2-on-platform-fast-path-proof.md
+
+========================================================
+A) DB MIGRATION — Add policy control for skipping email (REQUIRED)
+========================================================
+Create a new additive migration that adds:
+
+1) Column to platform default policy:
+ALTER TABLE cc_platform_invite_policy
+ADD COLUMN skip_email_if_on_platform boolean NOT NULL DEFAULT false;
+
+2) Column to tenant override policy:
+ALTER TABLE cc_tenant_invite_policy
+ADD COLUMN skip_email_if_on_platform boolean NULL;
+
+Semantics:
+- Platform default is false.
+- Tenant override NULL inherits platform default.
+- Effective policy uses COALESCE(tenant_override, platform_default).
+
+Update updated_at triggers/behavior if you have it.
+
+Update shared/schema.ts (Drizzle) for both tables to include skip_email_if_on_platform.
+
+========================================================
+B) BACKEND — Effective policy loader must include new field (REQUIRED)
+========================================================
+In server/routes/provider.ts you already have:
+async function loadEffectivePolicy(tenantId): EffectivePolicy
+
+Extend it to return:
+skipEmailIfOnPlatform: boolean
+
+Computed as:
+COALESCE(tenant.skip_email_if_on_platform, platform.skip_email_if_on_platform)
+
+Do NOT change existing fields/caps behavior.
+
+========================================================
+C) BACKEND — On-platform detection + invitee in-app notification (REQUIRED)
+========================================================
+Target endpoint:
+POST /api/provider/runs/:id/stakeholder-invites
+(Existing bulk-capable flow)
+
+Implementation requirements:
+
+1) Normalize invitee emails:
+emailLower = email.trim().toLowerCase()
+
+2) Batch lookup individuals ONCE per request:
+SELECT id, lower(email) AS email, full_name
+FROM cc_individuals
+WHERE lower(email) = ANY($1::text[])
+
+Build a map: emailLower -> { individual_id, display_name/full_name }
+
+3) For each created invitation:
+- Determine inviteeIndividualId from the map using invitee_email normalized
+- Always create inviter notification (existing behavior) — do not remove.
+- If inviteeIndividualId exists:
+  A) Create an in-app notification to the INVITEE (recipient_individual_id = inviteeIndividualId)
+     - category: 'invitation'
+     - context_type: 'invitation' (or 'service_run' if you already standardize; keep consistent)
+     - context_id: invitation.id (preferred) OR runId (if you standardize on run)
+     - action_url: `/i/${token}`  (MUST be this to avoid missing run access)
+     - short_body: “New invitation”
+     - body: `You’ve been invited to view "${runName}".`
+     (No forbidden terms)
+
+  B) Decide email delivery:
+     - If policy.skipEmailIfOnPlatform === true:
+         - Do NOT call sendEmail for this invite
+         - Update invitation sent_via = 'in_app'
+         - Set sent_at = now() (still counts as sent)
+     - Else:
+         - Keep existing email behavior (EMAIL_ENABLED gating + throttle)
+         - Also keep in-app notification to invitee (so on-platform gets both)
+         - If email succeeds: sent_via = 'both'
+         - If email skipped/failed: sent_via = 'in_app' (since in-app was delivered)
+
+4) For off-platform invitees (no individual match):
+- Preserve existing behavior EXACTLY:
+  - email if enabled/throttle OK
+  - fallback to link
+  - sent_via = 'email' or 'link'
+
+5) Response enhancement:
+Extend each invitation entry in the response to include:
+delivery_channel: 'email' | 'in_app' | 'both' | 'link'
+Rules:
+- on-platform + skipEmailIfOnPlatform => 'in_app'
+- on-platform + email delivered => 'both'
+- on-platform + email skipped => 'in_app'
+- off-platform + email delivered => 'email'
+- off-platform + email skipped/disabled => 'link'
+
+Also include:
+on_platform: boolean
+invitee_individual_id?: uuid
+
+(These fields are for UI badges and debugging; safe.)
+
+========================================================
+D) FRONTEND — NotifyStakeholdersModal: “On platform” delivery badges (REQUIRED)
+========================================================
+Update client/src/components/provider/NotifyStakeholdersModal.tsx:
+
+1) In invitation list rows, show:
+- existing “On platform” badge if invitee_individual_id exists OR on_platform is true
+- show delivery badge based on delivery_channel:
+  - In-app
+  - Email
+  - Both
+  - Link
+
+2) In bulk preview rows (Phase 2B-1):
+If you already mark “On platform” from email lookup, also display an expected delivery hint:
+- If policy skipEmailIfOnPlatform true => “In-app”
+- Else => “Both” (or “Email + In-app”)
+
+If UI does not currently fetch policy, do NOT guess. Minimal approach:
+- Only show delivery badges after submission using response fields.
+
+3) Copy tokens:
+Add tokens (provider.notify.delivery.*):
+provider.notify.delivery.in_app = "In-app"
+provider.notify.delivery.email = "Email"
+provider.notify.delivery.both = "In-app + Email"
+provider.notify.delivery.link = "Link"
+
+No forbidden terms.
+
+========================================================
+E) NOTIFICATIONS — Use existing insertion patterns (REQUIRED)
+========================================================
+Do NOT invent a new system.
+Follow the existing cc_notifications insertion pattern used elsewhere.
+If there is a helper (enqueue_notification/createNotification), reuse it.
+If not, insert directly into cc_notifications with channels ['in_app'].
+
+Make sure:
+- recipient_individual_id = inviteeIndividualId
+- recipient_tenant_id nullable unless your pattern requires it
+- category='invitation'
+- action_url points to /i/:token
+
+========================================================
+F) PROOF DOC (REQUIRED)
+========================================================
+Create:
+proof/v3.5/step11c-phase2b2-on-platform-fast-path-proof.md
+
+Must include evidence for 3 scenarios:
+
+1) Invitee ON platform, skip_email_if_on_platform = true
+- Invitation created
+- In-app notification to invitee exists (show row in cc_notifications)
+- No email send attempt (log or counter)
+- sent_via='in_app'
+- delivery_channel='in_app'
+
+2) Invitee ON platform, skip_email_if_on_platform = false (default)
+- Invitation created
+- In-app notification to invitee exists
+- Email attempted (if enabled) and delivery_channel becomes 'both' if sent
+- sent_via='both' when email delivered
+
+3) Invitee OFF platform
+- Invitation created
+- No invitee in-app notification
+- Email delivered or link fallback unchanged
+
+Include:
+- the migration diff summary
+- policy effective resolution showing new field
+- a sample API response showing delivery_channel/on_platform fields
+
+DONE WHEN
+- On-platform invitees get in-app notifications pointing to /i/:token
+- Policy can skip email for on-platform invitees
+- Off-platform behavior unchanged
+- UI displays delivery badges from response
+- Proof doc exists under proof/v3.5/
