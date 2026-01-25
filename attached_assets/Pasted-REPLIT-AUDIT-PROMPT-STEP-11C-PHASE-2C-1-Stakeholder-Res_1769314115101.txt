@@ -1,0 +1,123 @@
+REPLIT AUDIT PROMPT — STEP 11C PHASE 2C-1
+Stakeholder Responses (Confirm / Request Change / Ask Question) — Audit First
+
+ROLE: Senior Platform Architect + QA Gatekeeper (READ-ONLY AUDIT)
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+Inventory exact as-built primitives to implement Stakeholder Responses on:
+- /app/runs/:id/view (stakeholder view)
+Backed by:
+- durable, auditable response records
+- notifications to the run-owning tenant/service provider
+WITHOUT introducing messaging threads unless already appropriate.
+
+We need to confirm:
+1) Where stakeholder run view page lives and what data it loads
+2) Existing append-only / “activity log” table patterns (if any)
+3) How notifications should be created for the run owning tenant (recipient target IDs)
+4) Whether we already have a “notes/comments” pattern we should reuse
+5) Which auth context IDs are reliably available (individual_id, tenant_id) for RLS
+
+------------------------------------------------------------
+A) STAKEHOLDER VIEW PAGE INVENTORY
+------------------------------------------------------------
+1) Locate stakeholder page + route:
+- client/src/pages/app/runs/RunStakeholderViewPage.tsx
+Confirm:
+- What endpoint it calls (expected: GET /api/runs/:id/view)
+- What run fields are rendered
+- Where to add a “Responses” card section in the layout
+
+2) Identify any existing components usable for:
+- radio buttons / segmented controls
+- textarea + submit
+- activity timeline
+Search:
+rg -n "Timeline|Activity|Event|History|audit|log" client/src
+
+------------------------------------------------------------
+B) BACKEND STAKEHOLDER VIEW ENDPOINT INVENTORY
+------------------------------------------------------------
+1) Locate:
+GET /api/runs/:id/view
+Confirm:
+- file path
+- auth middleware used
+- how it authorizes stakeholder access (cc_service_run_stakeholders)
+- what it returns (fields + envelope)
+
+------------------------------------------------------------
+C) EXISTING “RESPONSE / RSVP / STATUS UPDATE” PATTERNS
+------------------------------------------------------------
+Search for patterns that resemble “respond to something”:
+rg -n "confirm|available|rsvp|accept|decline|request change|reschedule|response" server client/src shared
+
+Report any existing tables like:
+- *_responses
+- *_events
+- *_activity
+- *_status_history
+
+If any exist, list:
+- table name
+- key columns
+- routes using it
+
+------------------------------------------------------------
+D) NOTIFICATION TARGETING RULES (CRITICAL)
+------------------------------------------------------------
+We need to notify the run owning tenant/service provider when a stakeholder responds.
+
+1) Locate notification creation helpers:
+rg -n "createNotification|enqueue_notification|cc_notification_templates|cc_notifications" server
+
+2) Determine:
+- Do we notify a tenant admin? a specific user? a circle?
+- For runs, where is “owner individual” / “run manager” tracked (if anywhere)?
+Search:
+rg -n "run_owner|owner_individual|manager|assigned_to|created_by" server shared
+
+3) If no owner is stored:
+- confirm existing pattern used elsewhere to notify “all portal staff/admins” or “tenant admins”
+Find reference implementations and list file paths.
+
+------------------------------------------------------------
+E) DATA MODEL PROPOSAL FEASIBILITY CHECK (NO IMPLEMENTATION)
+------------------------------------------------------------
+We likely need an append-only table:
+cc_service_run_stakeholder_responses (or similar)
+
+Before proposing, confirm:
+- naming conventions for cc_* tables in this domain
+- whether response should be per run + individual (latest state) AND also append-only log
+
+We must decide between:
+Option 1: Append-only events table + derived “latest state”
+Option 2: Single table with upsert (loses audit fidelity)
+Your audit should recommend which matches your existing ledger/audit philosophy.
+
+------------------------------------------------------------
+F) OUTPUT REQUIRED
+------------------------------------------------------------
+Return:
+
+1) Exact files/lines for stakeholder view page and GET /api/runs/:id/view endpoint
+2) Existing patterns we should reuse for:
+- append-only records
+- notifications
+- UI cards/forms
+3) Recommendation: Option 1 vs Option 2 (append-only vs upsert), grounded in existing code patterns
+4) Proposed minimal API surface (names only, no code):
+- POST /api/runs/:id/respond
+- GET /api/runs/:id/responses (or embedded in /view)
+5) Proof doc plan for Phase 2C-1
+
+IMPORTANT:
+- Do NOT implement anything.
+- Paste the full audit report back into ChatGPT.
