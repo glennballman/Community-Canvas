@@ -1,5 +1,6 @@
 /**
  * STEP 11C: Notify Stakeholders Modal
+ * STEP 11C Phase 2A: Enhanced with resend/revoke actions
  * 
  * Modal for creating private stakeholder invitations for a service run.
  * Distinct from portal publishing - this is private ops notifications.
@@ -16,10 +17,15 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
-import { Loader2, Info, Mail, Copy, Check, Send, Eye, Clock, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { 
+  Loader2, Info, Mail, Copy, Check, Send, Eye, AlertCircle, 
+  Link as LinkIcon, RefreshCw, XCircle, MailX
+} from 'lucide-react';
+import { Hourglass } from 'lucide-react';
 
 interface Invitation {
   id: string;
@@ -27,10 +33,13 @@ interface Invitation {
   invitee_name: string | null;
   status: string;
   sent_at?: string;
+  sent_via?: string;
   viewed_at?: string;
   claimed_at?: string;
   claim_token_expires_at?: string;
   claim_url?: string;
+  revoked_at?: string;
+  revocation_reason?: string;
 }
 
 interface ListResponse {
@@ -43,7 +52,12 @@ interface CreateResponse {
   ok: boolean;
   run_id: string;
   invitations: Invitation[];
+  emails_sent?: number;
+  emails_skipped?: number;
+  email_enabled?: boolean;
   error?: string;
+  scope?: string;
+  limit?: number;
 }
 
 interface NotifyStakeholdersModalProps {
@@ -55,6 +69,8 @@ interface NotifyStakeholdersModalProps {
 
 function getStatusBadge(status: string) {
   switch (status) {
+    case 'pending':
+      return <Badge variant="secondary" data-testid="badge-status-pending"><Hourglass className="w-3 h-3 mr-1" />Pending</Badge>;
     case 'sent':
       return <Badge variant="secondary" data-testid="badge-status-sent"><Send className="w-3 h-3 mr-1" />Sent</Badge>;
     case 'viewed':
@@ -62,9 +78,9 @@ function getStatusBadge(status: string) {
     case 'claimed':
       return <Badge variant="default" data-testid="badge-status-claimed"><Check className="w-3 h-3 mr-1" />Claimed</Badge>;
     case 'expired':
-      return <Badge variant="destructive" data-testid="badge-status-expired"><Clock className="w-3 h-3 mr-1" />Expired</Badge>;
+      return <Badge variant="destructive" data-testid="badge-status-expired"><Hourglass className="w-3 h-3 mr-1" />Expired</Badge>;
     case 'revoked':
-      return <Badge variant="destructive" data-testid="badge-status-revoked"><AlertCircle className="w-3 h-3 mr-1" />Revoked</Badge>;
+      return <Badge variant="destructive" data-testid="badge-status-revoked"><XCircle className="w-3 h-3 mr-1" />Revoked</Badge>;
     default:
       return <Badge variant="outline" data-testid="badge-status-default">{status}</Badge>;
   }
@@ -80,8 +96,12 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
   const [message, setMessage] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [createdInvitations, setCreatedInvitations] = useState<Invitation[]>([]);
+  
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState<string | null>(null);
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revokeSilent, setRevokeSilent] = useState(true);
 
-  const { data: existingInvitations, isLoading: loadingExisting } = useQuery<ListResponse>({
+  const { data: existingInvitations, isLoading: loadingExisting, refetch } = useQuery<ListResponse>({
     queryKey: ['/api/provider/runs', runId, 'stakeholder-invites'],
     queryFn: async () => {
       const res = await fetch(`/api/provider/runs/${runId}/stakeholder-invites`, {
@@ -119,15 +139,34 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
         setEmails('');
         setName('');
         setMessage('');
-        queryClient.invalidateQueries({ queryKey: ['/api/provider/runs', runId, 'stakeholder-invites'] });
+        refetch();
+        
+        let desc = `${data.invitations.length} invitation(s) created`;
+        if (data.email_enabled && data.emails_sent !== undefined) {
+          desc += `, ${data.emails_sent} email(s) sent`;
+          if (data.emails_skipped && data.emails_skipped > 0) {
+            desc += `, ${data.emails_skipped} skipped`;
+          }
+        } else if (!data.email_enabled) {
+          desc += ' (email delivery unavailable - copy links instead)';
+        }
+        
         toast({
           title: resolve('provider.notify.created.title'),
-          description: `${data.invitations.length} invitation(s) created`,
+          description: desc,
         });
       } else {
+        let errorDesc = data.error || 'Failed to create invitations';
+        if (data.scope === 'per_request') {
+          errorDesc = `Too many invitees. Maximum ${data.limit} per request.`;
+        } else if (data.scope === 'tenant_daily') {
+          errorDesc = `Daily invitation limit reached (${data.limit})`;
+        } else if (data.scope === 'individual_hourly') {
+          errorDesc = `Hourly invitation limit reached (${data.limit})`;
+        }
         toast({
-          title: 'Error',
-          description: data.error || 'Failed to create invitations',
+          title: 'Limit Reached',
+          description: errorDesc,
           variant: 'destructive',
         });
       }
@@ -141,12 +180,76 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
     },
   });
 
+  const resendMutation = useMutation({
+    mutationFn: async (inviteId: string) => {
+      const res = await apiRequest('POST', `/api/provider/runs/${runId}/stakeholder-invites/${inviteId}/resend`, {});
+      return res as { ok: boolean; claim_url?: string; email_delivered?: boolean; error?: string };
+    },
+    onSuccess: (data, inviteId) => {
+      if (data.ok) {
+        refetch();
+        toast({
+          title: 'Invitation Resent',
+          description: data.email_delivered ? 'Email sent successfully' : 'Link refreshed (copy to share)',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to resend invitation',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to resend invitation',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: async ({ inviteId, reason, silent }: { inviteId: string; reason?: string; silent?: boolean }) => {
+      const res = await apiRequest('POST', `/api/provider/runs/${runId}/stakeholder-invites/${inviteId}/revoke`, {
+        reason: reason || undefined,
+        silent,
+      });
+      return res as { ok: boolean; error?: string };
+    },
+    onSuccess: (data) => {
+      if (data.ok) {
+        refetch();
+        setRevokeDialogOpen(null);
+        setRevokeReason('');
+        setRevokeSilent(true);
+        toast({
+          title: 'Invitation Revoked',
+          description: 'The invitation has been cancelled',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to revoke invitation',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to revoke invitation',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const copyToClipboard = async (url: string) => {
     const fullUrl = `${window.location.origin}${url}`;
     try {
       await navigator.clipboard.writeText(fullUrl);
       setCopiedUrl(url);
-      toast({ title: resolve('provider.notify.copied') });
+      toast({ title: 'Link copied to clipboard' });
       setTimeout(() => setCopiedUrl(null), 2000);
     } catch {
       toast({ title: 'Failed to copy', variant: 'destructive' });
@@ -155,8 +258,16 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
 
   const handleClose = () => {
     setCreatedInvitations([]);
+    setRevokeDialogOpen(null);
+    setRevokeReason('');
     onOpenChange(false);
   };
+
+  const canResend = (inv: Invitation) => 
+    ['sent', 'viewed', 'expired'].includes(inv.status);
+  
+  const canRevoke = (inv: Invitation) => 
+    ['pending', 'sent', 'viewed'].includes(inv.status);
 
   const emailCount = emails
     .split(/[,\n]/)
@@ -260,6 +371,12 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
                         {inv.invitee_name && (
                           <p className="text-xs text-muted-foreground">{inv.invitee_name}</p>
                         )}
+                        {(inv as any).email_delivered === false && (
+                          <p className="text-xs text-yellow-600 flex items-center gap-1 mt-1">
+                            <MailX className="w-3 h-3" />
+                            Email unavailable - copy link instead
+                          </p>
+                        )}
                       </div>
                       {inv.claim_url && (
                         <Button
@@ -273,7 +390,7 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
                           ) : (
                             <Copy className="w-4 h-4 mr-1" />
                           )}
-                          {copiedUrl === inv.claim_url ? resolve('provider.notify.copied') : resolve('provider.notify.copy')}
+                          {copiedUrl === inv.claim_url ? 'Copied' : 'Copy Link'}
                         </Button>
                       )}
                     </CardContent>
@@ -295,24 +412,146 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
                 ) : (
                   <div className="space-y-2">
                     {existingInvitations.invitations.map((inv) => (
-                      <div
-                        key={inv.id}
-                        className="flex items-center justify-between p-3 rounded-md bg-muted/50"
-                        data-testid={`invitation-item-${inv.id}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{inv.invitee_email}</p>
-                          {inv.invitee_name && (
-                            <p className="text-xs text-muted-foreground">{inv.invitee_name}</p>
+                      <Card key={inv.id} data-testid={`invitation-item-${inv.id}`}>
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{inv.invitee_email}</p>
+                              {inv.invitee_name && (
+                                <p className="text-xs text-muted-foreground">{inv.invitee_name}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                {getStatusBadge(inv.status)}
+                                {inv.sent_via && (
+                                  <span className="text-xs text-muted-foreground">
+                                    via {inv.sent_via}
+                                  </span>
+                                )}
+                              </div>
+                              {inv.viewed_at && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Viewed: {new Date(inv.viewed_at).toLocaleDateString()}
+                                </p>
+                              )}
+                              {inv.claimed_at && (
+                                <p className="text-xs text-green-600 mt-1">
+                                  Claimed: {new Date(inv.claimed_at).toLocaleDateString()}
+                                </p>
+                              )}
+                              {inv.revoked_at && inv.revocation_reason && (
+                                <p className="text-xs text-destructive mt-1">
+                                  Reason: {inv.revocation_reason}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {inv.claim_url && inv.status !== 'revoked' && inv.status !== 'claimed' && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => copyToClipboard(inv.claim_url!)}
+                                  title="Copy invitation link"
+                                  data-testid={`button-copy-${inv.id}`}
+                                >
+                                  {copiedUrl === inv.claim_url ? (
+                                    <Check className="w-4 h-4" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              )}
+                              
+                              {canResend(inv) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => resendMutation.mutate(inv.id)}
+                                  disabled={resendMutation.isPending}
+                                  title="Refresh link and resend"
+                                  data-testid={`button-resend-${inv.id}`}
+                                >
+                                  <RefreshCw className={`w-4 h-4 ${resendMutation.isPending ? 'animate-spin' : ''}`} />
+                                </Button>
+                              )}
+                              
+                              {canRevoke(inv) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setRevokeDialogOpen(inv.id)}
+                                  title="Revoke invitation"
+                                  data-testid={`button-revoke-${inv.id}`}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {revokeDialogOpen === inv.id && (
+                            <div className="mt-3 pt-3 border-t space-y-3" data-testid="revoke-dialog">
+                              <p className="text-sm text-muted-foreground">
+                                Are you sure you want to revoke this invitation?
+                              </p>
+                              <div>
+                                <Label htmlFor={`revoke-reason-${inv.id}`}>Reason (optional)</Label>
+                                <Input
+                                  id={`revoke-reason-${inv.id}`}
+                                  placeholder="Optional reason for revoking"
+                                  value={revokeReason}
+                                  onChange={(e) => setRevokeReason(e.target.value)}
+                                  className="mt-1"
+                                  data-testid="input-revoke-reason"
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`revoke-silent-${inv.id}`}
+                                  checked={revokeSilent}
+                                  onCheckedChange={(checked) => setRevokeSilent(!!checked)}
+                                  data-testid="checkbox-revoke-silent"
+                                />
+                                <Label htmlFor={`revoke-silent-${inv.id}`} className="text-sm">
+                                  Silent revocation (don't notify invitee)
+                                </Label>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => revokeMutation.mutate({
+                                    inviteId: inv.id,
+                                    reason: revokeReason,
+                                    silent: revokeSilent,
+                                  })}
+                                  disabled={revokeMutation.isPending}
+                                  data-testid="button-confirm-revoke"
+                                >
+                                  {revokeMutation.isPending ? (
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                  )}
+                                  Revoke
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setRevokeDialogOpen(null);
+                                    setRevokeReason('');
+                                  }}
+                                  data-testid="button-cancel-revoke"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
                           )}
-                          {inv.viewed_at && (
-                            <p className="text-xs text-muted-foreground">
-                              Viewed: {new Date(inv.viewed_at).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
-                        {getStatusBadge(inv.status)}
-                      </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 )}

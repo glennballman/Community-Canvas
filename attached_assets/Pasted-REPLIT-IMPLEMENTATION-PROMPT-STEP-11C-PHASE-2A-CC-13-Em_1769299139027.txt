@@ -1,0 +1,244 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2A (CC-13)
+Email Delivery + In-App Notifications + Revoke/Resend + Configurable Invite Limits (Schema Now)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Additive, production-grade. No refactors. Additive migrations allowed (we have no live data).
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ “booking”
+- ❌ “contractor”
+- ❌ “calendar”
+
+CONTEXT (AUDIT-TRUE)
+- NO email plumbing exists today.
+- In-app notifications system exists (cc_notifications + templates + Notifications UI).
+- cc_invitations supports revoked/resent and statuses: pending/sent/viewed/claimed/expired/revoked.
+- Rate limiting exists in scattered places but NOT invitation-specific.
+
+GOAL
+Deliver true virality: stakeholders not on-platform receive EMAIL invitations with claim links, while existing users get in-app notifications.
+Make invitation limits configurable:
+- platform-wide defaults
+- per-tenant overrides
+(no hard-coded caps)
+
+============================================================
+A) DATABASE — Additive schema for invite limit policies (REQUIRED)
+============================================================
+
+Create a NEW migration (next number in sequence) that adds:
+
+1) Table: cc_platform_invite_policy (singleton row)
+Columns:
+- id uuid primary key default gen_random_uuid()
+- policy_key text NOT NULL UNIQUE DEFAULT 'default'  (or enforce singleton by unique)
+- tenant_daily_cap integer NOT NULL DEFAULT 500
+- individual_hourly_cap integer NOT NULL DEFAULT 200
+- per_request_cap integer NOT NULL DEFAULT 50
+- email_send_per_minute integer NOT NULL DEFAULT 60
+- created_at timestamptz NOT NULL DEFAULT now()
+- updated_at timestamptz NOT NULL DEFAULT now()
+
+Seed exactly one row:
+policy_key='default' with the defaults above.
+
+2) Table: cc_tenant_invite_policy (per-tenant override)
+Columns:
+- tenant_id uuid PRIMARY KEY references cc_tenants(id) ON DELETE CASCADE
+- tenant_daily_cap integer NULL
+- individual_hourly_cap integer NULL
+- per_request_cap integer NULL
+- email_send_per_minute integer NULL
+- created_at timestamptz NOT NULL DEFAULT now()
+- updated_at timestamptz NOT NULL DEFAULT now()
+
+Semantics:
+- NULL = inherit from platform default.
+
+RLS / Tenant isolation:
+- Apply the same tenant isolation pattern used elsewhere for tenant-scoped tables.
+- cc_tenant_invite_policy should be readable/writable only by the current tenant (and service_mode).
+- cc_platform_invite_policy should be readable by platform admins/service_mode only (or read-only if that’s your pattern).
+DO NOT GUESS THE POLICY IMPLEMENTATION:
+- Search existing migrations for how RLS is enabled + policies are declared.
+- Copy the established pattern.
+
+Also update shared/schema.ts (Drizzle) to include BOTH tables so the codebase stays coherent.
+
+============================================================
+B) EMAIL — Add minimal SMTP mailer (REQUIRED)
+============================================================
+
+Create:
+server/services/emailService.ts
+
+Use nodemailer with SMTP transport. Read env:
+- EMAIL_ENABLED ('true' to send; otherwise no-op)
+- EMAIL_FROM
+- SMTP_HOST
+- SMTP_PORT
+- SMTP_USER
+- SMTP_PASS
+
+Export:
+sendEmail({ to, subject, html, text, metadata? }): Promise<{ sent?: boolean, skipped?: boolean, messageId?: string }>
+
+If EMAIL_ENABLED !== 'true':
+- console.warn('[email disabled]', { to, subject })
+- return { skipped: true }
+
+Add minimal error handling:
+- catch + log
+- do not crash request; return { sent:false } and keep invitation created
+
+============================================================
+C) EMAIL TEMPLATES — Phase 2A invitation templates (REQUIRED)
+============================================================
+
+Create:
+server/services/emailTemplates/invitationTemplates.ts
+
+Functions:
+- invitationCreated({ runName, inviterName, claimUrl })
+- invitationResent({ runName, inviterName, claimUrl })
+- invitationRevoked({ runName, inviterName })
+- invitationClaimedToInviter({ runName, inviteeMaskedEmail })
+
+Return { subject, html, text }
+
+No forbidden terms.
+
+Claim URL format:
+- `${PUBLIC_BASE_URL}/i/${token}`
+Read PUBLIC_BASE_URL from env. If missing, fallback to relative `/i/${token}` in email body but warn in logs.
+
+============================================================
+D) BACKEND — Policy-aware rate limits + email/in-app events (REQUIRED)
+============================================================
+
+Update server/routes/provider.ts where POST /api/provider/runs/:id/stakeholder-invites exists:
+
+1) Load effective invite policy:
+- platform defaults from cc_platform_invite_policy where policy_key='default'
+- tenant overrides from cc_tenant_invite_policy where tenant_id = current tenant
+EffectivePolicy = coalesce(tenant_override, platform_default)
+
+Enforce:
+- per_request_cap: max invitees per request
+- tenant_daily_cap: max invites created per UTC day for that tenant
+- individual_hourly_cap: max invites created per hour for that individual
+- email_send_per_minute: used as a soft throttle (see below)
+
+IMPORTANT:
+- Limits are not hard-coded anywhere.
+- If policy tables are missing (should not happen after migration), fail safe with 400 policy_missing.
+
+2) Implement counters (Phase 2A):
+Because we want minimal infra, use in-memory counters LIKE auth.ts pattern, but keyed and parameterized by EffectivePolicy.
+Keys:
+- tenant daily: `${tenantId}:${YYYY-MM-DD}`
+- individual hourly: `${individualId}:${YYYY-MM-DDTHH}`
+
+On exceed:
+429 { ok:false, error:'error.invite.rate_limited', scope:'tenant_daily'|'individual_hourly'|'per_request' }
+
+3) On successful creation:
+- Set cc_invitations.sent_at=now(), sent_via='email' IF email send succeeded
+- If email send is skipped/failed, still return claim link and set sent_via='link' (and keep sent_at set)
+
+4) In-app notifications:
+Using existing notification insertion patterns, create notifications to inviter:
+- On invite created: summarize count + run name
+- On invite viewed: (public GET transition) notify inviter
+- On invite claimed: notify inviter
+- On invite revoked: notify inviter
+- On invite resent: notify inviter
+
+No websocket required.
+
+============================================================
+E) BACKEND — Public invitation view (GET /api/i/:token) update (REQUIRED)
+============================================================
+
+Where GET /api/i/:token transitions sent → viewed:
+- insert inviter notification: “Invitation viewed”
+- do NOT send email on view (avoid spam)
+
+Also ensure revoked invitations are invalid:
+- if status='revoked' return 404 invalid_or_expired
+
+============================================================
+F) BACKEND — Provider revoke/resend endpoints (REQUIRED)
+============================================================
+
+Add:
+POST /api/provider/runs/:runId/stakeholder-invites/:inviteId/revoke
+Body: { reason?: string, silent?: boolean }
+
+Behavior:
+- validate run owned by tenant
+- validate invite belongs to run and inviter_tenant_id matches current tenant
+- set status='revoked', revoked_at, revoked_by_user_id, revocation_reason, is_silent_revocation
+- notify inviter (in-app)
+- if silent=false: send email to invitee using invitationRevoked template (best effort)
+
+Add:
+POST /api/provider/runs/:runId/stakeholder-invites/:inviteId/resend
+Behavior:
+- reject if revoked
+- if expired or token expired: regenerate claim_token + extend expires
+- set status='sent', sent_at=now()
+- send email invitationResent template (best effort)
+- notify inviter (in-app)
+- return claim_url
+
+Soft throttle for email:
+- If EffectivePolicy.email_send_per_minute is exceeded within a minute bucket (in-memory),
+  still create invites but mark delivery as skipped and return claim links.
+  (This prevents SMTP spikes while preserving virality via copy/paste fallback.)
+
+============================================================
+G) FRONTEND — NotifyStakeholdersModal enhancements (REQUIRED)
+============================================================
+
+Update client/src/components/provider/NotifyStakeholdersModal.tsx:
+- show status badges
+- actions per invite row:
+  - Copy link
+  - Refresh link (calls resend endpoint)
+  - Revoke (calls revoke endpoint; includes reason + silent checkbox)
+- show delivery note:
+  - If backend indicates email skipped, show: “Email delivery unavailable; copy link instead.”
+No forbidden terms.
+
+Copy tokens:
+Add provider.notify.invites.actions.copy / resend / revoke + revoke dialog tokens + rate limit error token.
+
+============================================================
+H) PROOF DOC (REQUIRED)
+============================================================
+
+Create:
+proof/v3.5/step11c-phase2a-email-and-policy-proof.md
+
+Must include:
+1) Migration summary + table schemas for both policy tables + seed row evidence
+2) Example effective policy resolution (platform + override) with sample query output
+3) Invite create flow:
+   - EMAIL_ENABLED=false: shows { skipped:true } and claim links returned
+   - EMAIL_ENABLED=true (or test SMTP): shows sent evidence (log ok)
+4) Rate limit proof using overridden policy:
+   - demonstrate per_request_cap works
+   - demonstrate tenant_daily_cap/hours using lowered caps for test
+5) Revoke:
+   - status revoked + public link invalid + optional email when silent=false
+6) Resend:
+   - refreshed token + email attempt + claim_url returned
+7) In-app notifications inserted for created/viewed/claimed/revoked/resent
+
+DONE WHEN
+- Email module exists and is called from invite flows
+- Limits come from DB policy tables (platform default + tenant override)
+- Revoke/resend endpoints exist and UI calls them
+- Proof doc exists under proof/v3.5/

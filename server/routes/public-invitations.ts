@@ -1,6 +1,7 @@
 /**
  * STEP 11C: Public Invitation Routes
  * STEP 11C.1: Invitation Claim Flow
+ * STEP 11C Phase 2A: Revoked handling + inviter notifications on view/claim
  * 
  * Public endpoint for viewing invitation context (read-only).
  * No authentication required - token-based access.
@@ -12,6 +13,36 @@ import { pool } from '../db';
 import { authenticateUser, registerUser } from './auth';
 
 const router = Router();
+
+async function createInviteNotification(
+  recipientIndividualId: string,
+  category: string,
+  body: string,
+  shortBody: string,
+  contextType: string,
+  contextId: string,
+  actionUrl: string
+): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO cc_notifications (
+        recipient_individual_id,
+        category,
+        priority,
+        channels,
+        context_type,
+        context_id,
+        body,
+        short_body,
+        action_url,
+        status
+      ) VALUES ($1, $2, 'normal', ARRAY['in_app'], $3, $4, $5, $6, $7, 'pending')`,
+      [recipientIndividualId, category, contextType, contextId, body, shortBody, actionUrl]
+    );
+  } catch (error) {
+    console.error('[PublicInvitation] Failed to create notification:', error);
+  }
+}
 
 function maskEmail(email: string): string {
   if (!email || !email.includes('@')) return '***';
@@ -25,6 +56,7 @@ function maskEmail(email: string): string {
 /**
  * GET /api/i/:token
  * Public read-only view of service run context for invited stakeholders
+ * STEP 11C Phase 2A: Handles revoked status + notifies inviter on first view
  */
 router.get('/:token', async (req: Request, res: Response) => {
   try {
@@ -45,6 +77,24 @@ router.get('/:token', async (req: Request, res: Response) => {
       });
     }
 
+    const checkResult = await pool.query(
+      `SELECT id, status, revoked_at, revocation_reason, context_name
+       FROM cc_invitations WHERE claim_token = $1`,
+      [token]
+    );
+
+    if (checkResult.rows.length > 0 && checkResult.rows[0].status === 'revoked') {
+      const revokedInvite = checkResult.rows[0];
+      return res.json({ 
+        ok: true, 
+        status: 'revoked',
+        context_name: revokedInvite.context_name,
+        revoked_at: revokedInvite.revoked_at,
+        revocation_reason: revokedInvite.revocation_reason,
+        message: 'This invitation has been revoked'
+      });
+    }
+
     const inviteResult = await pool.query(
       `SELECT 
         id,
@@ -53,6 +103,7 @@ router.get('/:token', async (req: Request, res: Response) => {
         context_name,
         invitee_email,
         invitee_name,
+        inviter_individual_id,
         status,
         claim_token_expires_at,
         message,
@@ -73,8 +124,9 @@ router.get('/:token', async (req: Request, res: Response) => {
     }
 
     const invitation = inviteResult.rows[0];
+    const isFirstView = invitation.status === 'sent';
 
-    if (invitation.status === 'sent') {
+    if (isFirstView) {
       await pool.query(
         `UPDATE cc_invitations 
          SET status = 'viewed', viewed_at = now(), updated_at = now() 
@@ -83,6 +135,21 @@ router.get('/:token', async (req: Request, res: Response) => {
       );
       invitation.status = 'viewed';
       invitation.viewed_at = new Date();
+
+      if (invitation.inviter_individual_id) {
+        const runName = invitation.context_name || 'Service Run';
+        const maskedEmail = maskEmail(invitation.invitee_email);
+        
+        await createInviteNotification(
+          invitation.inviter_individual_id,
+          'invitation',
+          `Your invitation to "${runName}" was viewed by ${maskedEmail}`,
+          'Invitation viewed',
+          'invitation',
+          invitation.id,
+          `/app/provider/runs/${invitation.context_id}`
+        );
+      }
     }
 
     const runResult = await pool.query(
@@ -176,10 +243,14 @@ router.post('/:token/claim', async (req: Request, res: Response) => {
         status,
         claim_token_expires_at,
         claimed_by_individual_id,
-        inviter_tenant_id
+        inviter_tenant_id,
+        inviter_individual_id,
+        context_id,
+        context_name
       FROM cc_invitations
       WHERE claim_token = $1
         AND context_type = 'service_run'
+        AND status <> 'revoked'
         AND (claim_token_expires_at IS NULL OR claim_token_expires_at > now())`,
       [token]
     );
@@ -255,6 +326,21 @@ router.post('/:token/claim', async (req: Request, res: Response) => {
          AND status <> 'claimed'`,
       [invitation.id, individualId, claimedByTenantId]
     );
+
+    if (invitation.inviter_individual_id) {
+      const runName = invitation.context_name || 'Service Run';
+      const maskedEmail = maskEmail(invitation.invitee_email);
+      
+      await createInviteNotification(
+        invitation.inviter_individual_id,
+        'invitation',
+        `Your invitation to "${runName}" was claimed by ${maskedEmail}`,
+        'Invitation claimed',
+        'invitation',
+        invitation.id,
+        `/app/provider/runs/${invitation.context_id}`
+      );
+    }
 
     res.json({
       ok: true,

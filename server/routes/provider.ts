@@ -11,6 +11,141 @@ import { randomBytes } from 'crypto';
 import { pool } from '../db';
 import type { TenantRequest } from '../middleware/tenantContext';
 import { JWT_SECRET } from '../middleware/auth';
+import { sendEmail, isEmailEnabled } from '../services/emailService';
+import {
+  invitationCreated,
+  invitationResent,
+  invitationRevoked,
+  getClaimUrl,
+} from '../services/emailTemplates/invitationTemplates';
+
+// ============================================================
+// STEP 11C Phase 2A: In-memory rate limit tracking
+// ============================================================
+
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+const tenantDailyLimits = new Map<string, RateLimitEntry>();
+const individualHourlyLimits = new Map<string, RateLimitEntry>();
+const emailMinuteLimits = new Map<string, RateLimitEntry>();
+
+function getUTCDay(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getUTCHour(): string {
+  const d = new Date();
+  return `${d.toISOString().split('T')[0]}T${d.getUTCHours().toString().padStart(2, '0')}`;
+}
+
+function getUTCMinute(): string {
+  const d = new Date();
+  return `${d.toISOString().split(':')[0]}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+}
+
+function checkAndIncrementLimit(
+  map: Map<string, RateLimitEntry>,
+  key: string,
+  limit: number,
+  resetPeriodMs: number,
+  incrementBy: number = 1
+): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const entry = map.get(key);
+  
+  if (!entry || now >= entry.resetAt) {
+    map.set(key, { count: incrementBy, resetAt: now + resetPeriodMs });
+    return { allowed: true, remaining: limit - incrementBy };
+  }
+  
+  if (entry.count + incrementBy > limit) {
+    return { allowed: false, remaining: limit - entry.count };
+  }
+  
+  entry.count += incrementBy;
+  return { allowed: true, remaining: limit - entry.count };
+}
+
+interface EffectivePolicy {
+  tenantDailyCap: number;
+  individualHourlyCap: number;
+  perRequestCap: number;
+  emailSendPerMinute: number;
+}
+
+async function loadEffectivePolicy(tenantId: string): Promise<EffectivePolicy | null> {
+  try {
+    const platformResult = await pool.query(
+      `SELECT tenant_daily_cap, individual_hourly_cap, per_request_cap, email_send_per_minute
+       FROM cc_platform_invite_policy WHERE policy_key = 'default'`
+    );
+    
+    if (platformResult.rows.length === 0) {
+      console.error('[InvitePolicy] Platform policy not found');
+      return null;
+    }
+    
+    const platform = platformResult.rows[0];
+    
+    const tenantResult = await pool.query(
+      `SELECT tenant_daily_cap, individual_hourly_cap, per_request_cap, email_send_per_minute
+       FROM cc_tenant_invite_policy WHERE tenant_id = $1`,
+      [tenantId]
+    );
+    
+    const tenantOverride = tenantResult.rows[0] || {};
+    
+    return {
+      tenantDailyCap: tenantOverride.tenant_daily_cap ?? platform.tenant_daily_cap,
+      individualHourlyCap: tenantOverride.individual_hourly_cap ?? platform.individual_hourly_cap,
+      perRequestCap: tenantOverride.per_request_cap ?? platform.per_request_cap,
+      emailSendPerMinute: tenantOverride.email_send_per_minute ?? platform.email_send_per_minute,
+    };
+  } catch (error) {
+    console.error('[InvitePolicy] Failed to load policy:', error);
+    return null;
+  }
+}
+
+async function createInviteNotification(
+  recipientIndividualId: string,
+  category: string,
+  body: string,
+  shortBody: string,
+  contextType: string,
+  contextId: string,
+  actionUrl: string
+): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO cc_notifications (
+        recipient_individual_id,
+        category,
+        priority,
+        channels,
+        context_type,
+        context_id,
+        body,
+        short_body,
+        action_url,
+        status
+      ) VALUES ($1, $2, 'normal', ARRAY['in_app'], $3, $4, $5, $6, $7, 'pending')`,
+      [recipientIndividualId, category, contextType, contextId, body, shortBody, actionUrl]
+    );
+  } catch (error) {
+    console.error('[InviteNotification] Failed to create notification:', error);
+  }
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  const maskedLocal = local.length > 2 ? local[0] + '***' + local.slice(-1) : '***';
+  return `${maskedLocal}@${domain}`;
+}
 
 const router = Router();
 
@@ -1945,6 +2080,7 @@ router.get('/runs/:id/publish-suggestions', requireAuth, async (req: AuthRequest
 /**
  * POST /api/provider/runs/:id/stakeholder-invites
  * Create stakeholder invitations for a run (private ops notifications)
+ * STEP 11C Phase 2A: Includes policy-aware rate limits and email delivery
  */
 router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -1962,8 +2098,62 @@ router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthReques
 
     const { invitees } = req.body;
 
-    if (!Array.isArray(invitees) || invitees.length === 0 || invitees.length > 50) {
+    if (!Array.isArray(invitees) || invitees.length === 0) {
       return res.status(400).json({ ok: false, error: 'error.notify.invitees_required' });
+    }
+
+    const policy = await loadEffectivePolicy(tenantId);
+    if (!policy) {
+      return res.status(400).json({ ok: false, error: 'error.invite.policy_missing' });
+    }
+
+    if (invitees.length > policy.perRequestCap) {
+      return res.status(429).json({
+        ok: false,
+        error: 'error.invite.rate_limited',
+        scope: 'per_request',
+        limit: policy.perRequestCap,
+        requested: invitees.length
+      });
+    }
+
+    const tenantDayKey = `${tenantId}:${getUTCDay()}`;
+    const tenantCheck = checkAndIncrementLimit(
+      tenantDailyLimits,
+      tenantDayKey,
+      policy.tenantDailyCap,
+      24 * 60 * 60 * 1000,
+      invitees.length
+    );
+
+    if (!tenantCheck.allowed) {
+      return res.status(429).json({
+        ok: false,
+        error: 'error.invite.rate_limited',
+        scope: 'tenant_daily',
+        limit: policy.tenantDailyCap,
+        remaining: tenantCheck.remaining
+      });
+    }
+
+    const individualHourKey = `${userId}:${getUTCHour()}`;
+    const individualCheck = checkAndIncrementLimit(
+      individualHourlyLimits,
+      individualHourKey,
+      policy.individualHourlyCap,
+      60 * 60 * 1000,
+      invitees.length
+    );
+
+    if (!individualCheck.allowed) {
+      tenantDailyLimits.get(tenantDayKey)!.count -= invitees.length;
+      return res.status(429).json({
+        ok: false,
+        error: 'error.invite.rate_limited',
+        scope: 'individual_hourly',
+        limit: policy.individualHourlyCap,
+        remaining: individualCheck.remaining
+      });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1989,11 +2179,23 @@ router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthReques
     }
 
     const run = runResult.rows[0];
+    const runName = run.name || 'Service Run';
+
+    const inviterResult = await pool.query(
+      `SELECT display_name, email FROM cc_individuals WHERE id = $1`,
+      [userId]
+    );
+    const inviterName = inviterResult.rows[0]?.display_name || inviterResult.rows[0]?.email || 'Service Provider';
 
     const createdInvitations: any[] = [];
+    let emailsSent = 0;
+    let emailsSkipped = 0;
+
+    const emailMinuteKey = `${tenantId}:${getUTCMinute()}`;
 
     for (const inv of invitees) {
       const claimToken = randomBytes(16).toString('hex');
+      const claimUrl = getClaimUrl(claimToken);
 
       const insertResult = await pool.query(
         `INSERT INTO cc_invitations (
@@ -2009,38 +2211,93 @@ router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthReques
           claim_token_expires_at,
           status,
           sent_at,
+          sent_via,
           message,
           metadata
-        ) VALUES ($1, $2, 'service_run', $3, $4, $5, $6, 'crew', $7, now() + interval '30 days', 'sent', now(), $8, $9)
+        ) VALUES ($1, $2, 'service_run', $3, $4, $5, $6, 'crew', $7, now() + interval '30 days', 'sent', now(), $8, $9, $10)
         RETURNING id, invitee_email, invitee_name, status, claim_token, claim_token_expires_at`,
         [
           tenantId,
           userId,
           runId,
-          run.name || 'Service Run',
+          runName,
           inv.email,
           inv.name || null,
           claimToken,
+          'link',
           inv.message || null,
-          JSON.stringify({ kind: 'stakeholder_invite', created_from: 'provider_run', version: 1 })
+          JSON.stringify({ kind: 'stakeholder_invite', created_from: 'provider_run', version: 2 })
         ]
       );
 
       const created = insertResult.rows[0];
+      let emailDelivered = false;
+
+      const emailCheck = checkAndIncrementLimit(
+        emailMinuteLimits,
+        emailMinuteKey,
+        policy.emailSendPerMinute,
+        60 * 1000
+      );
+
+      if (emailCheck.allowed && isEmailEnabled()) {
+        const template = invitationCreated({
+          runName,
+          inviterName,
+          claimUrl,
+          token: claimToken
+        });
+
+        const emailResult = await sendEmail({
+          to: inv.email,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          metadata: { invitationId: created.id, runId }
+        });
+
+        if (emailResult.sent) {
+          emailDelivered = true;
+          emailsSent++;
+          await pool.query(
+            `UPDATE cc_invitations SET sent_via = 'email' WHERE id = $1`,
+            [created.id]
+          );
+        } else {
+          emailsSkipped++;
+        }
+      } else {
+        emailsSkipped++;
+      }
+
       createdInvitations.push({
         id: created.id,
         invitee_email: created.invitee_email,
         invitee_name: created.invitee_name,
         status: created.status,
         claim_token_expires_at: created.claim_token_expires_at,
-        claim_url: `/i/${created.claim_token}`
+        claim_url: `/i/${created.claim_token}`,
+        email_delivered: emailDelivered
       });
     }
+
+    await createInviteNotification(
+      userId,
+      'invitation',
+      `You created ${createdInvitations.length} invitation(s) for "${runName}"`,
+      `${createdInvitations.length} invite(s) created`,
+      'service_run',
+      runId,
+      `/app/provider/runs/${runId}`
+    );
 
     res.json({
       ok: true,
       run_id: runId,
-      invitations: createdInvitations
+      invitations: createdInvitations,
+      emails_sent: emailsSent,
+      emails_skipped: emailsSkipped,
+      email_enabled: isEmailEnabled()
     });
   } catch (error: any) {
     console.error('Create stakeholder invites error:', error);
@@ -2081,9 +2338,13 @@ router.get('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthRequest
         invitee_name,
         status,
         sent_at,
+        sent_via,
         viewed_at,
         claimed_at,
-        claim_token_expires_at
+        claim_token,
+        claim_token_expires_at,
+        revoked_at,
+        revocation_reason
       FROM cc_invitations
       WHERE context_type = 'service_run'
         AND context_id = $1
@@ -2101,14 +2362,238 @@ router.get('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthRequest
         invitee_name: row.invitee_name,
         status: row.status,
         sent_at: row.sent_at,
+        sent_via: row.sent_via,
         viewed_at: row.viewed_at,
         claimed_at: row.claimed_at,
-        claim_token_expires_at: row.claim_token_expires_at
+        claim_url: `/i/${row.claim_token}`,
+        claim_token_expires_at: row.claim_token_expires_at,
+        revoked_at: row.revoked_at,
+        revocation_reason: row.revocation_reason
       }))
     });
   } catch (error: any) {
     console.error('List stakeholder invites error:', error);
     res.status(500).json({ ok: false, error: 'error.notify.list_failed' });
+  }
+});
+
+/**
+ * POST /api/provider/runs/:runId/stakeholder-invites/:inviteId/revoke
+ * Revoke a stakeholder invitation
+ * STEP 11C Phase 2A
+ */
+router.post('/runs/:runId/stakeholder-invites/:inviteId/revoke', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { runId, inviteId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!isValidUUID(runId) || !isValidUUID(inviteId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'error.auth.no_tenant' });
+    }
+
+    const { reason, silent } = req.body;
+    const isSilent = silent !== false;
+
+    const runResult = await pool.query(
+      `SELECT id, name FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2`,
+      [runId, tenantId]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    const runName = runResult.rows[0].name || 'Service Run';
+
+    const inviteResult = await pool.query(
+      `SELECT id, invitee_email, status, inviter_individual_id
+       FROM cc_invitations
+       WHERE id = $1 AND context_id = $2 AND inviter_tenant_id = $3`,
+      [inviteId, runId, tenantId]
+    );
+
+    if (inviteResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.invite.not_found' });
+    }
+
+    const invite = inviteResult.rows[0];
+
+    if (invite.status === 'revoked') {
+      return res.status(400).json({ ok: false, error: 'error.invite.already_revoked' });
+    }
+
+    await pool.query(
+      `UPDATE cc_invitations
+       SET status = 'revoked',
+           revoked_at = now(),
+           revoked_by_user_id = $1,
+           revocation_reason = $2,
+           is_silent_revocation = $3,
+           updated_at = now()
+       WHERE id = $4`,
+      [userId, reason || null, isSilent, inviteId]
+    );
+
+    await createInviteNotification(
+      invite.inviter_individual_id,
+      'invitation',
+      `Invitation for "${runName}" was revoked`,
+      'Invitation revoked',
+      'invitation',
+      inviteId,
+      `/app/provider/runs/${runId}`
+    );
+
+    if (!isSilent && invite.invitee_email && isEmailEnabled()) {
+      const inviterResult = await pool.query(
+        `SELECT display_name, email FROM cc_individuals WHERE id = $1`,
+        [userId]
+      );
+      const inviterName = inviterResult.rows[0]?.display_name || inviterResult.rows[0]?.email || 'Service Provider';
+
+      const template = invitationRevoked({ runName, inviterName });
+      await sendEmail({
+        to: invite.invitee_email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+        metadata: { invitationId: inviteId, runId, action: 'revoke' }
+      });
+    }
+
+    res.json({ 
+      ok: true, 
+      message: 'Invitation revoked',
+      revoked_at: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('Revoke stakeholder invite error:', error);
+    res.status(500).json({ ok: false, error: 'error.invite.revoke_failed' });
+  }
+});
+
+/**
+ * POST /api/provider/runs/:runId/stakeholder-invites/:inviteId/resend
+ * Resend a stakeholder invitation (refresh token if expired)
+ * STEP 11C Phase 2A
+ */
+router.post('/runs/:runId/stakeholder-invites/:inviteId/resend', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { runId, inviteId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!isValidUUID(runId) || !isValidUUID(inviteId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({ ok: false, error: 'error.auth.no_tenant' });
+    }
+
+    const runResult = await pool.query(
+      `SELECT id, name FROM cc_n3_runs WHERE id = $1 AND tenant_id = $2`,
+      [runId, tenantId]
+    );
+
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    const runName = runResult.rows[0].name || 'Service Run';
+
+    const inviteResult = await pool.query(
+      `SELECT id, invitee_email, invitee_name, status, claim_token, claim_token_expires_at, inviter_individual_id
+       FROM cc_invitations
+       WHERE id = $1 AND context_id = $2 AND inviter_tenant_id = $3`,
+      [inviteId, runId, tenantId]
+    );
+
+    if (inviteResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.invite.not_found' });
+    }
+
+    const invite = inviteResult.rows[0];
+
+    if (invite.status === 'revoked') {
+      return res.status(400).json({ ok: false, error: 'error.invite.is_revoked' });
+    }
+
+    if (invite.status === 'claimed') {
+      return res.status(400).json({ ok: false, error: 'error.invite.already_claimed' });
+    }
+
+    const tokenExpired = new Date(invite.claim_token_expires_at) < new Date();
+    let claimToken = invite.claim_token;
+
+    if (tokenExpired || invite.status === 'expired') {
+      claimToken = randomBytes(16).toString('hex');
+    }
+
+    await pool.query(
+      `UPDATE cc_invitations
+       SET status = 'sent',
+           sent_at = now(),
+           sent_via = 'link',
+           claim_token = $1,
+           claim_token_expires_at = now() + interval '30 days',
+           updated_at = now()
+       WHERE id = $2`,
+      [claimToken, inviteId]
+    );
+
+    const claimUrl = getClaimUrl(claimToken);
+    let emailDelivered = false;
+
+    if (invite.invitee_email && isEmailEnabled()) {
+      const inviterResult = await pool.query(
+        `SELECT display_name, email FROM cc_individuals WHERE id = $1`,
+        [userId]
+      );
+      const inviterName = inviterResult.rows[0]?.display_name || inviterResult.rows[0]?.email || 'Service Provider';
+
+      const template = invitationResent({ runName, inviterName, claimUrl, token: claimToken });
+      const emailResult = await sendEmail({
+        to: invite.invitee_email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+        metadata: { invitationId: inviteId, runId, action: 'resend' }
+      });
+
+      if (emailResult.sent) {
+        emailDelivered = true;
+        await pool.query(
+          `UPDATE cc_invitations SET sent_via = 'email' WHERE id = $1`,
+          [inviteId]
+        );
+      }
+    }
+
+    await createInviteNotification(
+      invite.inviter_individual_id,
+      'invitation',
+      `Invitation reminder sent for "${runName}"`,
+      'Invitation resent',
+      'invitation',
+      inviteId,
+      `/app/provider/runs/${runId}`
+    );
+
+    res.json({
+      ok: true,
+      message: 'Invitation resent',
+      claim_url: `/i/${claimToken}`,
+      email_delivered: emailDelivered
+    });
+  } catch (error: any) {
+    console.error('Resend stakeholder invite error:', error);
+    res.status(500).json({ ok: false, error: 'error.invite.resend_failed' });
   }
 });
 

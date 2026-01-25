@@ -5702,6 +5702,54 @@ export type NotificationDigest = typeof ccNotificationDigests.$inferSelect;
 export type InsertNotificationDigest = z.infer<typeof insertNotificationDigestSchema>;
 
 // ============================================================================
+// PLATFORM INVITE POLICY (Bundle 107.5 - STEP 11C Phase 2A)
+// ============================================================================
+
+export const ccPlatformInvitePolicy = pgTable("cc_platform_invite_policy", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  policyKey: text("policy_key").notNull().unique().default("default"),
+  tenantDailyCap: integer("tenant_daily_cap").notNull().default(500),
+  individualHourlyCap: integer("individual_hourly_cap").notNull().default(200),
+  perRequestCap: integer("per_request_cap").notNull().default(50),
+  emailSendPerMinute: integer("email_send_per_minute").notNull().default(60),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  policyKeyIdx: index("idx_cc_platform_invite_policy_key").on(table.policyKey),
+}));
+
+export const insertPlatformInvitePolicySchema = createInsertSchema(ccPlatformInvitePolicy).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type PlatformInvitePolicy = typeof ccPlatformInvitePolicy.$inferSelect;
+export type InsertPlatformInvitePolicy = z.infer<typeof insertPlatformInvitePolicySchema>;
+
+// ============================================================================
+// TENANT INVITE POLICY (Bundle 107.5 - STEP 11C Phase 2A)
+// ============================================================================
+
+export const ccTenantInvitePolicy = pgTable("cc_tenant_invite_policy", {
+  tenantId: uuid("tenant_id").primaryKey(),
+  tenantDailyCap: integer("tenant_daily_cap"),
+  individualHourlyCap: integer("individual_hourly_cap"),
+  perRequestCap: integer("per_request_cap"),
+  emailSendPerMinute: integer("email_send_per_minute"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  tenantIdx: index("idx_cc_tenant_invite_policy_tenant").on(table.tenantId),
+}));
+
+export const insertTenantInvitePolicySchema = createInsertSchema(ccTenantInvitePolicy).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+export type TenantInvitePolicy = typeof ccTenantInvitePolicy.$inferSelect;
+export type InsertTenantInvitePolicy = z.infer<typeof insertTenantInvitePolicySchema>;
+
+// ============================================================================
 // ACTIVITY FEED ENUMS (Bundle 109)
 // ============================================================================
 
