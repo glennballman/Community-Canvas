@@ -38,6 +38,7 @@ import { useCopy } from '@/copy/useCopy';
 import { useToast } from '@/hooks/use-toast';
 import { useMarketActions } from '@/policy/useMarketActions';
 import { ProposalContextInline } from '@/components/ProposalContextInline';
+import { PolicyTraceSummary } from '@/components/PolicyTraceSummary';
 import type { ActionKind } from '@/policy/marketModePolicy';
 import { PublishRunModal } from '@/components/provider/PublishRunModal';
 import { AddRequestsModal } from '@/components/provider/AddRequestsModal';
@@ -148,6 +149,16 @@ interface ScheduleProposalsPolicy {
   allow_proposal_context: boolean;
 }
 
+interface PolicyTrace {
+  negotiation_type: string;
+  effective_source: 'platform' | 'tenant_override';
+  platform_policy_id: string | null;
+  tenant_policy_id: string | null;
+  effective_policy_id: string;
+  effective_policy_updated_at: string;
+  effective_policy_hash: string;
+}
+
 interface ScheduleProposalsData {
   ok: boolean;
   turn_cap: number;
@@ -157,6 +168,7 @@ interface ScheduleProposalsData {
   is_closed: boolean;
   latest: ScheduleProposalEvent | null;
   events: ScheduleProposalEvent[];
+  policy_trace?: PolicyTrace;
 }
 
 function maskEmail(email: string): string {
@@ -1017,6 +1029,16 @@ export default function ProviderRunDetailPage() {
                 allow={proposalsData?.policy?.allow_proposal_context ?? false}
                 proposalContext={proposalsData.latest.proposal_context}
                 density="compact"
+              />
+            </div>
+          )}
+          
+          {/* Policy Trace Summary (Phase 2C-9) */}
+          {proposalsData?.policy_trace && (
+            <div className="mb-4">
+              <PolicyTraceSummary 
+                trace={proposalsData.policy_trace} 
+                compact 
               />
             </div>
           )}

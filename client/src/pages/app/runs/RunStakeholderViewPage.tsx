@@ -35,6 +35,7 @@ import {
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
 import { ProposalContextInline } from '@/components/ProposalContextInline';
+import { PolicyTraceSummary } from '@/components/PolicyTraceSummary';
 
 interface StakeholderRunView {
   id: string;
@@ -126,6 +127,16 @@ interface ScheduleProposalsPolicy {
   allow_proposal_context: boolean;
 }
 
+interface PolicyTrace {
+  negotiation_type: string;
+  effective_source: 'platform' | 'tenant_override';
+  platform_policy_id: string | null;
+  tenant_policy_id: string | null;
+  effective_policy_id: string;
+  effective_policy_updated_at: string;
+  effective_policy_hash: string;
+}
+
 interface ScheduleProposalsData {
   ok: boolean;
   turn_cap: number;
@@ -135,6 +146,7 @@ interface ScheduleProposalsData {
   is_closed: boolean;
   latest: ScheduleProposalEvent | null;
   events: ScheduleProposalEvent[];
+  policy_trace?: PolicyTrace;
 }
 
 const stakeholderResponseFormSchema = z.object({
@@ -718,6 +730,14 @@ export default function RunStakeholderViewPage() {
               allow={proposalsData.policy.allow_proposal_context}
               proposalContext={proposalsData.latest.proposal_context}
             />
+
+            {/* Policy Trace Summary (Phase 2C-9) */}
+            {proposalsData.policy_trace && (
+              <PolicyTraceSummary 
+                trace={proposalsData.policy_trace} 
+                compact 
+              />
+            )}
 
             <div className="flex flex-wrap gap-2">
               <Button

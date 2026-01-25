@@ -1,0 +1,288 @@
+REPLIT PROMPT — V3.5 — STEP 11C — Phase 2C-9 Policy Trace Viewer + Run Audit Panel (UI + API + RLS + Tests)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first, ship-correct-now. Schema/model changes allowed if they improve correctness/certifiability.
+TERMINOLOGY LOCKED:
+✅ service provider
+✅ reservation
+❌ contractor
+❌ booking
+❌ calendar
+
+PHASE 2C-9 OBJECTIVE
+Make the Phase 2C-8 audit trail operationally usable by adding:
+1) A read-only Policy Trace Summary panel in the run negotiation UI (provider + stakeholder views where relevant)
+2) A Settings “Negotiation Audit” panel for tenant admins/owners to browse audit events with filters
+3) RLS-safe API endpoints to query cc_negotiation_policy_audit_events
+4) Tests proving RLS isolation + filter correctness + UI render + “no sensitive leakage” constraints
+5) Proof doc: proof/v3.5/step11c-phase2c9-policy-trace-viewer-audit-panel-proof.md
+
+CONTEXT (AS BUILT)
+- Policy trace exists in schedule proposals endpoint response as policy_trace:
+  - negotiation_type, effective_source, platform_policy_id, tenant_policy_id
+  - effective_policy_id, effective_policy_updated_at, effective_policy_hash
+- Audit events table exists:
+  - cc_negotiation_policy_audit_events (migration 190)
+  - request_fingerprint = runId:actorType:policyHash (UNIQUE)
+  - RLS enabled
+
+DELIVERABLES
+A) API routes:
+   - GET /api/app/negotiation-audit (list, filter, paginate)
+   - GET /api/app/runs/:id/negotiation-audit (events for a run)
+B) UI:
+   - PolicyTraceSummary component (read-only)
+   - ProviderRunDetailPage shows policy trace summary in negotiation section
+   - RunStakeholderViewPage shows policy trace summary in negotiation section (if schedule proposals visible)
+   - Settings page: /app/settings/negotiation-audit (new) OR add tab within existing negotiation policy settings
+C) Copy tokens for UI (settings.negotiation_audit.* and policy.negotiation_audit.* as appropriate)
+D) Tests:
+   - API + DB RLS isolation tests
+   - UI render tests
+E) Proof doc with screenshots/paths + PASS evidence
+
+========================================================
+STEP 0 — AUDIT NAV + ROUTING TARGETS (NO GUESSING)
+========================================================
+Use existing navigation wiring docs and code to determine:
+- where settings routes are registered
+- whether there is already a settings subnav pattern (tabs vs separate pages)
+- how tenant roles are checked (requireTenant + requireRole('tenant_owner','tenant_admin'))
+
+Decide ONE UI placement:
+Option A (Preferred): New page /app/settings/negotiation-audit
+Option B: Add “Audit” tab inside existing /app/settings/negotiation-policies
+
+Pick the one matching existing settings IA. Document the choice in proof doc.
+
+========================================================
+STEP 1 — API: Audit Query Endpoints (RLS SAFE)
+========================================================
+Create new route file if needed:
+- server/routes/negotiation-audit.ts
+
+Add endpoints (API envelope: { ok, ... }):
+
+1) GET /api/app/negotiation-audit
+Auth:
+- requireTenant
+- requireRole('tenant_owner','tenant_admin')
+
+Query params:
+- negotiation_type (default "schedule"; optional)
+- run_id (optional)
+- actor_type (optional)  // "provider" | "stakeholder" | etc.
+- effective_source (optional) // platform | tenant_override
+- policy_hash (optional) // exact match
+- date_from, date_to (optional ISO)
+- limit (default 50, max 200)
+- cursor (optional for pagination) OR offset (prefer cursor if existing pattern)
+
+Return:
+{
+  ok: true,
+  items: [{
+    id,
+    created_at,
+    portal_id,
+    run_id,
+    actor_type,
+    actor_tenant_membership_id, // include ONLY if already stored; ok to return UUID
+    negotiation_type,
+    effective_source,
+    effective_policy_id,
+    effective_policy_updated_at,
+    effective_policy_hash,
+    request_fingerprint
+  }],
+  next_cursor?: string
+}
+
+Sensitive leakage constraints:
+- Do NOT return tenant_id (implicit in session)
+- Do NOT return raw policy bodies
+- Only return trace fields already exposed as policy_trace
+
+2) GET /api/app/runs/:id/negotiation-audit
+Auth:
+- Provider/stakeholder access rules should be conservative:
+  - EITHER: tenant_admin/owner only (simpler, safest)
+  - OR: allow service provider/stakeholder roles only if you already have a proven run access check
+Default: tenant_admin/owner only unless existing run access utility is already used in Step 11C.
+Document your choice.
+
+Return:
+{ ok: true, run_id, items: [...] } sorted by created_at desc
+
+Query implementation notes:
+- Ensure RLS is enforced at DB layer; still include tenant filters defensively (portal_id/tenant_id from session if available)
+- Add indexes if query needs it (schema changes allowed):
+  - (portal_id, created_at desc)
+  - (run_id, created_at desc)
+  - (effective_policy_hash)
+Only add if necessary; keep migration additive.
+
+========================================================
+STEP 2 — UI Component: PolicyTraceSummary (Read-only)
+========================================================
+Create:
+- client/src/components/PolicyTraceSummary.tsx
+
+Props:
+- trace: policy_trace | null
+- compact?: boolean
+- title?: string (optional)
+Behavior:
+- If no trace: render null (or small “Policy trace unavailable” only if UX calls for it)
+- Render fields in a tidy card:
+  - Effective source (badge: Platform / Tenant override)
+  - Effective policy updated at (relative + exact on hover if pattern exists)
+  - Policy hash (masked display, with Copy button)
+  - Effective policy ID (masked display, with Copy behind disclosure similar to 2C-5)
+  - If tenant_policy_id present, show “Tenant policy” (masked)
+  - If platform_policy_id present, show “Platform policy” (masked)
+No leakage rule:
+- Use same masking pattern for IDs/hashes by default
+- Provide “Copy” actions; do not display raw IDs by default if you treat them as sensitive
+  (IDs are UUIDs; hashes are not UUIDs but still should be copyable without clutter)
+
+Copy strings:
+- policy.negotiation_audit.trace.title
+- policy.negotiation_audit.trace.effective_source
+- policy.negotiation_audit.trace.updated_at
+- policy.negotiation_audit.trace.policy_hash
+- policy.negotiation_audit.trace.effective_policy_id
+- policy.negotiation_audit.trace.tenant_policy_id
+- policy.negotiation_audit.trace.platform_policy_id
+- policy.negotiation_audit.action.copy
+- policy.negotiation_audit.action.copied
+- policy.negotiation_audit.action.show_ids / hide_ids (if using disclosure)
+
+========================================================
+STEP 3 — Wire Into Run Pages
+========================================================
+A) Provider
+File:
+- client/src/pages/app/provider/ProviderRunDetailPage.tsx
+Find schedule proposals / negotiation section where proposalsData is loaded.
+Add:
+<PolicyTraceSummary trace={proposalsData.policy_trace} compact />
+
+B) Stakeholder
+File:
+- client/src/pages/app/runs/RunStakeholderViewPage.tsx
+Where schedule proposals are shown:
+Add:
+<PolicyTraceSummary trace={proposalsData.policy_trace} compact />
+
+Ensure gating:
+- Only show if proposalsData.policy_trace exists
+
+========================================================
+STEP 4 — Settings UI: Negotiation Audit Panel
+========================================================
+Create page (if Option A):
+- client/src/pages/app/settings/NegotiationAuditPage.tsx
+Route:
+- /app/settings/negotiation-audit
+
+UI features:
+- Filters row (no heavy UI):
+  - negotiation_type (default schedule; maybe hidden if only schedule exists)
+  - actor_type dropdown (All / provider / stakeholder / tenant_admin)
+  - effective_source dropdown (All / platform / tenant_override)
+  - run_id search input (exact match)
+  - policy_hash search input (exact match)
+  - date range (optional if existing date picker; otherwise last 7/30 preset)
+- Results table:
+  Columns:
+   - created_at
+   - run_id (clickable -> open run if route exists, else copy)
+   - actor_type
+   - effective_source
+   - effective_policy_updated_at
+   - policy_hash (masked + copy)
+- Pagination (load more) using cursor or offset
+- Empty state copy
+
+If Option B (tab):
+- Integrate the same content into existing NegotiationPolicySettingsPage tabs.
+
+Access control:
+- Only tenant_owner/tenant_admin can access (front-end route guard + backend enforcement)
+
+Copy tokens:
+- settings.negotiation_audit.title
+- settings.negotiation_audit.filters.*
+- settings.negotiation_audit.table.*
+- settings.negotiation_audit.empty.*
+- settings.negotiation_audit.load_more
+
+========================================================
+STEP 5 — Tests (MANDATORY)
+========================================================
+A) API tests
+Add:
+- server/routes/__tests__/negotiationAudit.test.ts
+
+Test cases:
+1) RLS isolation:
+   - Create Tenant A + Tenant B
+   - Insert audit events for both
+   - As Tenant A admin: GET /api/app/negotiation-audit returns ONLY Tenant A events
+2) Filters:
+   - actor_type filter works
+   - effective_source filter works
+   - run_id filter works
+   - policy_hash filter works
+3) Pagination:
+   - limit respected
+   - cursor/offset returns next page without duplicates
+
+B) UI tests
+Add:
+- client/src/components/__tests__/PolicyTraceSummary.test.tsx
+Cases:
+1) Renders nothing when trace null
+2) Renders masked hash/id by default (no raw UUID in DOM)
+3) Copy button copies full value (mock clipboard)
+4) Optional disclosure gating if implemented
+
+If you have a page test harness:
+- render NegotiationAuditPage with mocked API and verify filter calls + table render.
+
+C) DB/index tests (optional)
+If you add indexes or a migration, ensure migration applied and table exists.
+
+========================================================
+STEP 6 — Proof Doc (MANDATORY)
+========================================================
+Create:
+proof/v3.5/step11c-phase2c9-policy-trace-viewer-audit-panel-proof.md
+
+Include:
+A) Files changed list
+B) API endpoints + sample responses (redact where appropriate)
+C) UI screenshots/descriptions:
+   - provider run page shows policy trace summary
+   - stakeholder run page shows policy trace summary
+   - settings audit panel with filters + results
+D) RLS proof:
+   - show test output or SQL proof that Tenant A cannot see Tenant B
+E) Test summary counts and commands
+
+========================================================
+ACCEPTANCE CRITERIA (MUST PASS)
+========================================================
+1) Tenant admins/owners can view audit events with filters
+2) RLS isolation proven via tests
+3) PolicyTraceSummary shows policy trace without clutter and without raw IDs by default
+4) Copy actions work
+5) Tests pass
+6) Proof doc exists with evidence
+
+OUTPUT REQUIRED FROM REPLIT
+- Summary of changes + routes created
+- Where the settings page was added (route/nav)
+- Test command output summary
+- Proof doc path and contents (or key excerpts)
