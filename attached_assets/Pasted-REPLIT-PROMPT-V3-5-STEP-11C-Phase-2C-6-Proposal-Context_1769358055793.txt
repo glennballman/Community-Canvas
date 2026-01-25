@@ -1,0 +1,218 @@
+REPLIT PROMPT — V3.5 — STEP 11C — Phase 2C-6 Proposal Context Source Hardening (Server + Optional DB Constraint)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first, additive-only, ship-correct-now. Schema changes allowed if they improve correctness/certifiability.
+TERMINOLOGY LOCKED:
+✅ service provider
+✅ reservation
+❌ contractor
+❌ booking
+❌ calendar
+
+PHASE 2C-6 OBJECTIVE
+Harden proposal_context at the SOURCE so:
+1) Invalid/malformed proposal_context can never be persisted (or is sanitized to safe form)
+2) Endpoints never return invalid proposal_context even if legacy rows exist
+3) Policy gating is enforced server-side: allow_proposal_context=false => proposal_context is stripped from responses and writes
+4) (Optional, recommended) Add a DB CHECK constraint on the JSONB shape to prevent future corruption at rest
+
+SCOPE
+Applies to schedule negotiation proposal events and any endpoint that returns:
+- latest proposal object containing proposal_context
+- history/events arrays where each event includes proposal_context derived from metadata
+
+CONFIRMED SHAPE (nested)
+proposal_context is stored under event.metadata.proposal_context and returned as nested object:
+{
+  quote_draft_id: "uuid",
+  estimate_id: "uuid",
+  bid_id: "uuid",
+  trip_id: "uuid",
+  selected_scope_option: "hybrid" | ...
+}
+
+DELIVERABLES
+A) Server-side sanitize/validate utility for proposal_context
+B) Integration on ALL write paths that create/update schedule negotiation events metadata
+C) Integration on ALL read/response shaping paths (provider + stakeholder) to sanitize and policy-strip
+D) Optional DB constraint + safe migration pattern (NOT VALID + VALIDATE)
+E) Proof doc: proof/v3.5/step11c-phase2c6-proposal-context-source-hardening-proof.md
+
+========================================================
+STEP 0 — AUDIT: Locate the Events Table and Metadata Column (NO GUESSING)
+========================================================
+1) Identify the table that stores schedule negotiation events and contains JSONB metadata.
+   - Search Drizzle schema for columns named `metadata` or `event_metadata` or `payload`
+   - Search server code for inserts into negotiation events (schedule proposals)
+   - Run SQL in Replit (Neon) to list candidate tables:
+     - Find tables with a jsonb column named metadata:
+       SELECT table_schema, table_name, column_name
+       FROM information_schema.columns
+       WHERE data_type='jsonb' AND column_name ILIKE '%meta%';
+
+2) Confirm the exact table + jsonb column used for schedule negotiation events.
+   - Capture: table name, primary key, column name, and any existing constraints
+   - Record in proof doc section “A) Storage Target”
+
+DO NOT proceed with DB constraint until the table/column is confirmed.
+
+========================================================
+STEP 1 — Add a Shared Sanitizer/Validator Utility (Server)
+========================================================
+Create:
+- server/lib/proposalContext.ts  (or server/utils/proposalContext.ts — pick the established convention)
+
+Implement:
+- UUID_REGEX (same pattern as UI):
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+Functions:
+1) isValidUUID(value: unknown): value is string
+   - return typeof value === 'string' && UUID_REGEX.test(value)
+
+2) sanitizeProposalContext(input: unknown, opts?: { allowSelectedScopeOption?: boolean }): Sanitized | null
+   - If input is not a plain object => return null
+   - Allow only keys:
+     - quote_draft_id, estimate_id, bid_id, trip_id, selected_scope_option
+   - For UUID keys: keep ONLY if isValidUUID(value); else drop
+   - For selected_scope_option:
+     - keep ONLY if typeof string, trimmed, length <= 32
+     - optionally restrict to allowlist if you already have one (if not, keep “bounded string” rule for now)
+   - If no allowed keys remain after filtering => return null
+   - Return sanitized object (only allowed keys)
+
+3) extractAndSanitizeProposalContext(metadata: unknown): Sanitized | null
+   - If metadata not object => null
+   - const raw = (metadata as any).proposal_context
+   - return sanitizeProposalContext(raw)
+
+4) applyProposalContextPolicyGate(sanitized: Sanitized | null, allow: boolean): Sanitized | null
+   - if !allow => null
+   - else return sanitized
+
+========================================================
+STEP 2 — Write-Path Integration (Source of Truth)
+========================================================
+Find ALL code paths that create schedule negotiation events (proposal, counter, accept, decline, resolve, etc.)
+Typical locations:
+- server/routes/stakeholder-runs.ts
+- provider runs route file (whatever serves /api/runs/:id/schedule-proposals and creates events)
+- any service layer used by both
+
+For every place that builds event metadata:
+- before insert, do:
+  const sanitized = sanitizeProposalContext(incomingProposalContext)
+  const allow = effectivePolicy.allowProposalContext (resolved for this run)
+  const gated = applyProposalContextPolicyGate(sanitized, allow)
+  metadata.proposal_context = gated ?? undefined (or delete key)
+
+Hard rules:
+- If allow_proposal_context=false => DO NOT persist proposal_context at all (strip on write)
+- If allow_proposal_context=true but proposal_context invalid => persist nothing (strip)
+- Never persist unknown keys under proposal_context
+
+Add an inline comment: “Phase 2C-6: server-side proposal_context sanitize + policy gate”
+
+========================================================
+STEP 3 — Read/Response Integration (Never Serve Invalid)
+========================================================
+Update every endpoint that returns schedule proposal data to:
+- sanitize proposal_context derived from metadata
+- apply policy gating before returning
+
+You already have stakeholder mapping logic like:
+proposal_context: e.metadata?.proposal_context ?? null
+
+Replace with:
+const sanitized = extractAndSanitizeProposalContext(e.metadata)
+proposal_context: applyProposalContextPolicyGate(sanitized, policy.allowProposalContext)
+
+Do this consistently for:
+- latest proposal
+- each history/event entry
+- any other surfaced projection
+
+If policy is missing in some handler:
+- Resolve effective negotiation policy using the existing resolver (platform + tenant override)
+- Include allow_proposal_context in the policy object returned
+- Ensure provider and stakeholder endpoints BOTH return policy.allow_proposal_context and both enforce gating
+
+========================================================
+STEP 4 — Legacy Data Safety (Optional but Recommended)
+========================================================
+Add a one-time “repair” script OR a migration step (safe, idempotent) that:
+- scans existing negotiation events where metadata has proposal_context
+- replaces proposal_context with sanitized version or removes it if invalid/empty
+- records counts: rows scanned, rows changed, keys dropped
+
+Preferred approach:
+- A server-side admin-only maintenance script under scripts/ or server/tasks/
+- Run manually once in Replit and paste output into proof doc
+
+========================================================
+STEP 5 — Optional DB CHECK Constraint (Recommended if table is stable)
+========================================================
+Once Step 0 confirms the storage table + jsonb column:
+Add an additive migration that enforces proposal_context shape at rest.
+
+Constraint requirements:
+- proposal_context either absent/null OR is an object containing only approved keys
+- each UUID field if present matches UUID regex (case-insensitive)
+- selected_scope_option if present is a string with length <= 32
+
+Implementation notes (Postgres):
+- Use a CHECK constraint on jsonb:
+  - jsonb_typeof(metadata->'proposal_context') = 'object'
+  - ensure no extra keys: (metadata->'proposal_context') ?| array[...] only AND keyset subset check
+  - regex check: (metadata->'proposal_context'->>'quote_draft_id') ~* '^[0-9a-f]{8}-...$'
+- Add constraint as NOT VALID first, then VALIDATE in the same migration if safe,
+  or provide two-step migration if the table is large.
+
+If legacy data may violate the constraint:
+- run Step 4 repair BEFORE validating the constraint
+- add constraint NOT VALID, run repair, then VALIDATE
+
+Record:
+- migration number
+- constraint name
+- whether VALIDATED
+in the proof doc.
+
+========================================================
+STEP 6 — Proof Doc (Required)
+========================================================
+Create:
+proof/v3.5/step11c-phase2c6-proposal-context-source-hardening-proof.md
+
+Must include:
+A) Storage Target (table + jsonb column + event types impacted)
+B) Files changed list
+C) Write-path proof:
+   - show where sanitize + policy gate happens before insert
+D) Read-path proof:
+   - show sanitize + policy gate happens before response shaping
+E) Negative tests (must show results):
+   1) allow_proposal_context=false and metadata contains proposal_context => response returns null proposal_context everywhere
+   2) allow_proposal_context=true and metadata contains invalid UUIDs => invalid fields omitted, empty object becomes null
+   3) unknown keys under proposal_context are dropped
+F) If DB constraint added:
+   - migration details
+   - validation status
+   - confirmation that repaired legacy rows allow validation
+
+========================================================
+ACCEPTANCE CRITERIA (MUST PASS)
+========================================================
+1) Server never persists proposal_context when allow_proposal_context=false
+2) Server never persists invalid UUID fields; unknown keys are dropped
+3) Server never returns invalid proposal_context; responses are sanitized and gated
+4) Provider and stakeholder endpoints both return policy.allow_proposal_context and enforce it
+5) Proof doc exists with audit details and negative tests
+6) (If constraint added) constraint is in place and validated, or clearly marked NOT VALID with repair plan completed
+
+OUTPUT REQUIRED FROM REPLIT
+- Summary of changes
+- List of all write paths updated
+- List of all endpoints updated
+- Proof doc path and contents (or key excerpts)
+- If migration added: migration file name/number and constraint name

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { JWT_SECRET } from '../middleware/auth';
 import { loadNegotiationPolicy, validatePolicyEnforcement } from '../lib/negotiation-policy';
+import { sanitizeAndGateProposalContextForWrite, sanitizeAndGateProposalContextForRead } from '../lib/proposalContext';
 
 const router = Router();
 
@@ -735,10 +736,10 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
        LIMIT 50`,
       [runId]
     );
-    // Map events to include proposal_context from metadata
+    // Phase 2C-6: Sanitize and policy-gate proposal_context on read path
     const events = eventsResult.rows.map((e: any) => ({
       ...e,
-      proposal_context: e.metadata?.proposal_context ?? null,
+      proposal_context: sanitizeAndGateProposalContextForRead(e.metadata, policy.allowProposalContext),
       metadata: undefined // Don't expose full metadata
     }));
 
@@ -846,65 +847,9 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
       }
     }
 
-    // Validate proposal_context if provided (Phase 2C-4)
-    const ALLOWED_CONTEXT_KEYS = ['quote_draft_id', 'estimate_id', 'bid_id', 'trip_id', 'selected_scope_option'];
-    const UUID_CONTEXT_KEYS = ['quote_draft_id', 'estimate_id', 'bid_id', 'trip_id'];
-    let validatedProposalContext: Record<string, string> | null = null;
-    
-    if (proposal_context && typeof proposal_context === 'object') {
-      const contextKeys = Object.keys(proposal_context);
-      const unknownKeys = contextKeys.filter(k => !ALLOWED_CONTEXT_KEYS.includes(k));
-      
-      if (unknownKeys.length > 0) {
-        return res.status(400).json({
-          ok: false,
-          error: 'error.request.invalid_proposal_context',
-          message: `Unknown proposal_context keys: ${unknownKeys.join(', ')}`
-        });
-      }
-      
-      // Validate UUID fields
-      for (const key of UUID_CONTEXT_KEYS) {
-        if (proposal_context[key]) {
-          if (typeof proposal_context[key] !== 'string' || !isValidUUID(proposal_context[key])) {
-            return res.status(400).json({
-              ok: false,
-              error: 'error.request.invalid_proposal_context',
-              message: `${key} must be a valid UUID`
-            });
-          }
-        }
-      }
-      
-      // Validate selected_scope_option length
-      if (proposal_context.selected_scope_option) {
-        if (typeof proposal_context.selected_scope_option !== 'string') {
-          return res.status(400).json({
-            ok: false,
-            error: 'error.request.invalid_proposal_context',
-            message: 'selected_scope_option must be a string'
-          });
-        }
-        if (proposal_context.selected_scope_option.length > 64) {
-          return res.status(400).json({
-            ok: false,
-            error: 'error.request.invalid_proposal_context',
-            message: 'selected_scope_option must be 64 characters or less'
-          });
-        }
-      }
-      
-      // Build validated context (only non-empty values)
-      validatedProposalContext = {};
-      for (const key of ALLOWED_CONTEXT_KEYS) {
-        if (proposal_context[key]) {
-          validatedProposalContext[key] = proposal_context[key];
-        }
-      }
-      if (Object.keys(validatedProposalContext).length === 0) {
-        validatedProposalContext = null;
-      }
-    }
+    // Phase 2C-6: Server-side proposal_context sanitize (deferred policy gate until after policy load)
+    // Sanitizes input: drops invalid UUIDs, unknown keys, and enforces length limits
+    // Policy gating applied after policy is loaded below
 
     // Resolve access context
     const ctx = await resolveAccessContext(userId, tenantId, runId);
@@ -991,19 +936,15 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
       });
     }
 
-    // Check proposal_context policy (Phase 2C-4)
-    if (validatedProposalContext && !policy.allowProposalContext) {
-      return res.status(403).json({
-        ok: false,
-        error: 'error.negotiation.proposal_context_not_allowed',
-        message: 'Proposal context attachments are not allowed for this tenant'
-      });
-    }
+    // Phase 2C-6: Sanitize and policy-gate proposal_context on write path
+    // This replaces the Phase 2C-4 validation with server-side sanitization
+    // Invalid UUIDs are silently dropped, unknown keys stripped, policy enforced
+    const gatedProposalContext = sanitizeAndGateProposalContextForWrite(proposal_context, policy.allowProposalContext);
 
-    // Build metadata object
+    // Build metadata object (only include proposal_context if it passed sanitization + policy gate)
     const metadata: Record<string, any> = {};
-    if (validatedProposalContext) {
-      metadata.proposal_context = validatedProposalContext;
+    if (gatedProposalContext) {
+      metadata.proposal_context = gatedProposalContext;
     }
 
     // Insert the event
@@ -1103,6 +1044,7 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
       console.error('Failed to create schedule proposal notification:', notifyErr);
     }
 
+    // Phase 2C-6: Sanitize response proposal_context as well
     res.json({
       ok: true,
       event: {
@@ -1111,7 +1053,7 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
         proposed_start: newEvent.proposed_start,
         proposed_end: newEvent.proposed_end,
         note: newEvent.note,
-        proposal_context: newEvent.metadata?.proposal_context ?? null,
+        proposal_context: sanitizeAndGateProposalContextForRead(newEvent.metadata, policy.allowProposalContext),
         created_at: newEvent.created_at,
         actor_role: actorRole
       }
