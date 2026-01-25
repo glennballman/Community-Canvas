@@ -23,7 +23,7 @@ interface AuthContextType {
     token: string | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<boolean>;
-    logout: () => void;
+    logout: () => Promise<void>;
     isAuthenticated: boolean;
     isPlatformAdmin: boolean;
 }
@@ -99,11 +99,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    function logout() {
+    async function logout() {
+        // Call server to invalidate session
+        const storedToken = localStorage.getItem('cc_token');
+        if (storedToken) {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${storedToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                });
+            } catch (err) {
+                console.error('Server logout failed:', err);
+            }
+        }
+        
+        // Clear local state
         localStorage.removeItem('cc_token');
         setToken(null);
         setUser(null);
         setCCTenants([]);
+        
+        // Navigate to login/home
+        window.location.href = '/';
     }
 
     return (

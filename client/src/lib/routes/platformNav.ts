@@ -23,6 +23,7 @@ import {
   FileText,
   MapPin,
   Play,
+  UserCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -54,6 +55,7 @@ export const PLATFORM_NAV: PlatformNavSection[] = [
     items: [
       { icon: Building2, label: 'All Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants' },
       { icon: Users, label: 'All Users', href: '/app/platform/users', testId: 'nav-platform-users' },
+      { icon: UserCheck, label: 'Impersonation', href: '/app/platform/impersonation', testId: 'nav-platform-impersonation' },
       { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics' },
       { icon: Search, label: 'System Explorer', href: '/app/platform/system-explorer', testId: 'nav-system-explorer' },
       { icon: Database, label: 'Data Management', href: '/app/platform/data-management', testId: 'nav-data-mgmt' },

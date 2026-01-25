@@ -1,363 +1,423 @@
 /**
  * IMPERSONATION CONSOLE
  * 
- * Platform admin page to start/stop impersonation sessions.
+ * Platform admin page to start/stop user impersonation sessions.
  * 
  * CRITICAL REQUIREMENTS:
- * 1. Starting impersonation MUST redirect to /app/dashboard
- * 2. Stopping impersonation MUST redirect to /admin/impersonation
- * 3. Show security notice
- * 
- * DO NOT MODIFY THIS FILE.
+ * 1. Search users by email/name
+ * 2. Start impersonation for a specific user (with tenant selection if multiple)
+ * 3. Stop impersonation returns to this console
+ * 4. Show security notice and audit log warning
  */
 
-import React, { useState, useEffect } from 'react';
-import { useTenant } from '@/contexts/TenantContext';
-import { Search, AlertTriangle, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'wouter';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  Search, 
+  AlertTriangle, 
+  UserCheck, 
+  LogOut, 
+  Shield, 
+  User,
+  Building2,
+  Clock,
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
-  type: string;
-  status: string;
-  portal_slug?: string | null;
+interface UserMembership {
+  tenant_id: string;
+  tenant_name: string;
+  tenant_slug: string;
+  role: string;
+  title?: string;
 }
 
-// ============================================================================
-// TYPE ICONS
-// ============================================================================
+interface SearchUser {
+  id: string;
+  email: string;
+  displayName: string;
+  givenName: string | null;
+  familyName: string | null;
+  isPlatformAdmin: boolean;
+  status: string;
+  lastLoginAt: string | null;
+  memberships: UserMembership[];
+}
 
-const TYPE_ICONS: Record<string, string> = {
-  community: '🏔️',
-  government: '🏛️',
-  business: '🏢',
-  individual: '👤',
-  platform: '⚡',
-};
-
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
+interface ImpersonationStatus {
+  ok: boolean;
+  is_impersonating: boolean;
+  impersonated_user_id?: string;
+  impersonated_user_email?: string;
+  impersonated_user_name?: string;
+  tenant_id?: string;
+  tenant_name?: string;
+  tenant_role?: string;
+  expires_at?: string;
+}
 
 export function ImpersonationConsole(): React.ReactElement {
-  const { impersonation, startImpersonation, stopImpersonation } = useTenant();
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, navigate] = useLocation();
+  const [users, setUsers] = useState<SearchUser[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [status, setStatus] = useState<ImpersonationStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
   const [starting, setStarting] = useState<string | null>(null);
   const [stopping, setStopping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
+  const [showTenantPicker, setShowTenantPicker] = useState(false);
 
-  // --------------------------------------------------------------------------
-  // Fetch tenants
-  // --------------------------------------------------------------------------
-
-  useEffect(() => {
-    fetchTenants();
+  const getAuthHeaders = useCallback(() => {
+    const token = localStorage.getItem('cc_token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
   }, []);
 
-  async function fetchTenants() {
+  const fetchStatus = useCallback(async () => {
     try {
-      const token = localStorage.getItem('cc_token');
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      console.log('[ImpersonationConsole] Fetching tenants with token:', token ? 'present' : 'missing');
-      const response = await fetch('/api/admin/tenants', { 
+      const response = await fetch('/api/admin/impersonation/status', {
         credentials: 'include',
-        headers,
+        headers: getAuthHeaders(),
       });
-      console.log('[ImpersonationConsole] Response status:', response.status);
       const data = await response.json();
-      console.log('[ImpersonationConsole] Response data:', data);
-      if (response.ok) {
-        setTenants(data.tenants || []);
-      } else {
-        console.error('[ImpersonationConsole] API error:', data);
+      if (data.ok !== false) {
+        setStatus(data);
       }
-    } catch (error) {
-      console.error('Failed to fetch tenants:', error);
+    } catch (err) {
+      console.error('Failed to fetch impersonation status:', err);
+    } finally {
+      setStatusLoading(false);
+    }
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  const searchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setUsers([]);
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`/api/admin/impersonation/users?query=${encodeURIComponent(query)}&limit=20`, {
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+      const data = await response.json();
+      
+      if (data.ok) {
+        setUsers(data.users || []);
+      } else {
+        setError(data.error || 'Failed to search users');
+        setUsers([]);
+      }
+    } catch (err) {
+      console.error('Failed to search users:', err);
+      setError('Failed to search users');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [getAuthHeaders]);
 
-  // --------------------------------------------------------------------------
-  // Handlers
-  // --------------------------------------------------------------------------
-
-  async function handleImpersonate(tenantId: string) {
-    if (starting) return;
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      if (searchTerm.length >= 2) {
+        searchUsers(searchTerm);
+      } else {
+        setUsers([]);
+      }
+    }, 300);
     
-    setStarting(tenantId);
+    return () => clearTimeout(debounce);
+  }, [searchTerm, searchUsers]);
+
+  async function handleStartImpersonation(userId: string, tenantId?: string) {
+    setStarting(userId);
+    setError(null);
+    
     try {
-      // This will redirect to /app/dashboard
-      await startImpersonation(tenantId, 'Admin support');
-    } catch (error) {
-      console.error('Failed to start impersonation:', error);
+      const response = await fetch('/api/admin/impersonation/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          user_id: userId,
+          tenant_id: tenantId,
+          reason: 'Platform admin support',
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.ok) {
+        await fetchStatus();
+        navigate('/app');
+      } else if (data.memberships) {
+        const user = users.find(u => u.id === userId);
+        if (user) {
+          setSelectedUser({ ...user, memberships: data.memberships });
+          setShowTenantPicker(true);
+        }
+      } else {
+        setError(data.error || 'Failed to start impersonation');
+      }
+    } catch (err) {
+      console.error('Failed to start impersonation:', err);
+      setError('Failed to start impersonation');
+    } finally {
       setStarting(null);
     }
   }
 
-  async function handleStop() {
-    if (stopping) return;
-    
+  async function handleStopImpersonation() {
     setStopping(true);
+    setError(null);
+    
     try {
-      // This will redirect to /admin/impersonation
-      await stopImpersonation();
-    } catch (error) {
-      console.error('Failed to stop impersonation:', error);
+      const response = await fetch('/api/admin/impersonation/stop', {
+        method: 'POST',
+        credentials: 'include',
+        headers: getAuthHeaders(),
+      });
+      
+      const data = await response.json();
+      
+      if (data.ok) {
+        await fetchStatus();
+      } else {
+        setError(data.error || 'Failed to stop impersonation');
+      }
+    } catch (err) {
+      console.error('Failed to stop impersonation:', err);
+      setError('Failed to stop impersonation');
+    } finally {
       setStopping(false);
     }
   }
 
-  // --------------------------------------------------------------------------
-  // Filter tenants
-  // --------------------------------------------------------------------------
-
-  const filteredTenants = tenants.filter(t =>
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // --------------------------------------------------------------------------
-  // Render
-  // --------------------------------------------------------------------------
+  function handleSelectTenant(tenantId: string) {
+    if (selectedUser) {
+      setShowTenantPicker(false);
+      handleStartImpersonation(selectedUser.id, tenantId);
+    }
+  }
 
   return (
-    <div style={{ padding: '32px' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        
-        {/* Header */}
-        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>
-          Impersonation Console
-        </h1>
-        <p style={{ color: '#9ca3af', marginBottom: '32px' }}>
-          Temporarily access tenant accounts for support and debugging
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold mb-2">User Impersonation</h1>
+        <p className="text-muted-foreground">
+          Temporarily access user accounts for support and debugging
         </p>
+      </div>
 
-        {/* Active Impersonation Warning */}
-        {impersonation.is_impersonating && (
-          <div style={{
-            backgroundColor: 'rgba(245, 158, 11, 0.2)',
-            border: '1px solid rgba(245, 158, 11, 0.5)',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '24px',
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <AlertTriangle size={24} style={{ color: '#f59e0b' }} />
-                <div>
-                  <h3 style={{ fontWeight: 600, color: '#fcd34d', marginBottom: '4px' }}>
-                    Active Impersonation Session
-                  </h3>
-                  <p style={{ fontSize: '14px', color: '#fcd34d', opacity: 0.8 }}>
-                    Currently impersonating: <strong>{impersonation.tenant_name}</strong>
+      {status?.is_impersonating && (
+        <Alert className="border-amber-500 bg-amber-500/10">
+          <AlertTriangle className="h-5 w-5 text-amber-500" />
+          <AlertTitle className="text-amber-400">Active Impersonation Session</AlertTitle>
+          <AlertDescription className="mt-2">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-amber-300/80">
+                  Currently impersonating: <strong>{status.impersonated_user_name}</strong> ({status.impersonated_user_email})
+                </p>
+                {status.tenant_name && (
+                  <p className="text-amber-300/60 text-sm">
+                    Tenant: {status.tenant_name} ({status.tenant_role})
                   </p>
-                </div>
+                )}
+                {status.expires_at && (
+                  <p className="text-amber-300/60 text-sm flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Expires: {new Date(status.expires_at).toLocaleTimeString()}
+                  </p>
+                )}
               </div>
-              <button
-                onClick={handleStop}
+              <Button
+                onClick={handleStopImpersonation}
                 disabled={stopping}
-                style={{
-                  backgroundColor: '#f59e0b',
-                  color: '#451a03',
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  cursor: stopping ? 'not-allowed' : 'pointer',
-                  opacity: stopping ? 0.7 : 1,
-                }}
+                variant="outline"
+                className="border-amber-500 text-amber-400 hover:bg-amber-500/20"
+                data-testid="button-stop-impersonation"
               >
+                <LogOut className="h-4 w-4 mr-2" />
                 {stopping ? 'Stopping...' : 'Stop Impersonation'}
-              </button>
+              </Button>
             </div>
-          </div>
-        )}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {/* Security Notice */}
-        <div style={{
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '24px',
-        }}>
-          <h3 style={{ fontWeight: 600, marginBottom: '12px' }}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
             Security Notice
-          </h3>
-          <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '12px' }}>
-            All impersonation sessions are logged with full audit trail including:
-          </p>
-          <ul style={{ 
-            fontSize: '14px', 
-            color: '#9ca3af',
-            marginLeft: '20px',
-            listStyleType: 'disc',
-          }}>
-            <li style={{ marginBottom: '4px' }}>Admin identity and IP address</li>
-            <li style={{ marginBottom: '4px' }}>Target tenant and individual</li>
-            <li style={{ marginBottom: '4px' }}>Session start/stop times</li>
+          </CardTitle>
+          <CardDescription>
+            All impersonation sessions are logged with full audit trail
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+            <li>Admin identity and IP address</li>
+            <li>Target user and tenant</li>
+            <li>Session start/stop times</li>
             <li>All actions performed during impersonation</li>
           </ul>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Search */}
-        <div style={{
-          position: 'relative',
-          marginBottom: '24px',
-        }}>
-          <Search 
-            size={18} 
-            style={{
-              position: 'absolute',
-              left: '14px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#6b7280',
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search tenants by name, slug, or type..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              padding: '12px 16px 12px 44px',
-              color: 'white',
-              fontSize: '14px',
-              outline: 'none',
-            }}
-          />
-        </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-        {/* Tenant List */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              border: '4px solid rgba(168, 85, 247, 0.3)',
-              borderTopColor: '#a855f7',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto',
-            }} />
-            <style>{`
-              @keyframes spin {
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Search Users
+          </CardTitle>
+          <CardDescription>
+            Search by email or name to find a user to impersonate
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search by email or name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              data-testid="input-user-search"
+            />
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {filteredTenants.map((tenant) => (
-              <div
-                key={tenant.id}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  padding: '16px 20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '20px' }}>
-                    {TYPE_ICONS[tenant.type] || '📁'}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{tenant.name}</div>
-                    <div style={{ fontSize: '13px', color: '#6b7280' }}>
-                      {tenant.slug} • {tenant.type}
+
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          )}
+
+          {!loading && users.length > 0 && (
+            <div className="space-y-2">
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover-elevate"
+                  data-testid={`user-row-${user.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        {user.displayName}
+                        {user.isPlatformAdmin && (
+                          <Badge variant="secondary" className="text-xs">
+                            Platform Admin
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
+                      {user.memberships && user.memberships.length > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Building2 className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {user.memberships.length} tenant{user.memberships.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {tenant.portal_slug && (
-                    <a
-                      href={`/p/${tenant.portal_slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="View public site"
-                      data-testid={`link-view-site-${tenant.slug}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '6px',
-                        backgroundColor: 'rgba(255,255,255,0.1)',
-                        color: '#9ca3af',
-                        transition: 'background-color 0.15s, color 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                        e.currentTarget.style.color = 'white';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                        e.currentTarget.style.color = '#9ca3af';
-                      }}
-                    >
-                      <ExternalLink size={18} />
-                    </a>
-                  )}
-                  <button
-                    onClick={() => handleImpersonate(tenant.id)}
-                    disabled={starting === tenant.id || impersonation.is_impersonating}
-                    style={{
-                      backgroundColor: '#7c3aed',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: starting === tenant.id || impersonation.is_impersonating 
-                        ? 'not-allowed' 
-                        : 'pointer',
-                      opacity: starting === tenant.id || impersonation.is_impersonating ? 0.5 : 1,
-                    }}
+                  <Button
+                    onClick={() => handleStartImpersonation(user.id)}
+                    disabled={starting === user.id || (status?.is_impersonating ?? false)}
+                    size="sm"
+                    data-testid={`button-impersonate-${user.id}`}
                   >
-                    {starting === tenant.id ? 'Starting...' : 'Impersonate'}
-                  </button>
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    {starting === user.id ? 'Starting...' : 'Impersonate'}
+                  </Button>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
 
-            {filteredTenants.length === 0 && (
-              <div style={{
-                textAlign: 'center',
-                padding: '48px 0',
-                color: '#9ca3af',
-              }}>
-                No tenants found matching "{searchTerm}"
-              </div>
-            )}
+          {!loading && searchTerm.length >= 2 && users.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No users found matching "{searchTerm}"
+            </div>
+          )}
+
+          {!loading && searchTerm.length < 2 && (
+            <div className="text-center py-8 text-muted-foreground">
+              Enter at least 2 characters to search
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showTenantPicker} onOpenChange={setShowTenantPicker}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Tenant Context</DialogTitle>
+            <DialogDescription>
+              {selectedUser?.displayName} has multiple tenant memberships. Select which tenant context to use.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            {selectedUser?.memberships?.map((m) => (
+              <Button
+                key={m.tenant_id}
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleSelectTenant(m.tenant_id)}
+                data-testid={`button-select-tenant-${m.tenant_slug}`}
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                <span className="flex-1 text-left">{m.tenant_name}</span>
+                <Badge variant="secondary" className="ml-2">{m.role}</Badge>
+              </Button>
+            ))}
           </div>
-        )}
-      </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowTenantPicker(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
