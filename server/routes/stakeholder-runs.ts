@@ -166,6 +166,22 @@ router.get('/:id/view', requireAuth, async (req: AuthRequest, res: Response) => 
 
     const run = runResult.rows[0];
 
+    // Fetch latest response by this stakeholder (if stakeholder access)
+    let latestResponse = null;
+    if (individualId) {
+      const respResult = await pool.query(
+        `SELECT id, response_type, message, responded_at
+         FROM cc_service_run_stakeholder_responses
+         WHERE run_id = $1 AND stakeholder_individual_id = $2
+         ORDER BY responded_at DESC
+         LIMIT 1`,
+        [runId, individualId]
+      );
+      if (respResult.rows.length > 0) {
+        latestResponse = respResult.rows[0];
+      }
+    }
+
     // Build stakeholder-safe response
     const response = {
       ok: true,
@@ -185,7 +201,8 @@ router.get('/:id/view', requireAuth, async (req: AuthRequest, res: Response) => 
       access: {
         type: hasStakeholderAccess ? 'stakeholder' : 'tenant_owner',
         stakeholder_role: stakeholderRole,
-        granted_at: grantedAt
+        granted_at: grantedAt,
+        latest_response: latestResponse
       }
     };
 
@@ -193,6 +210,264 @@ router.get('/:id/view', requireAuth, async (req: AuthRequest, res: Response) => 
   } catch (error: any) {
     console.error('Stakeholder run view error:', error);
     res.status(500).json({ ok: false, error: 'error.run.view_failed' });
+  }
+});
+
+/**
+ * Reusable helper to resolve individualId and check run access
+ */
+async function resolveAccessContext(
+  userId: string,
+  tenantId: string | null | undefined,
+  runId: string
+): Promise<{
+  individualId: string | null;
+  hasStakeholderAccess: boolean;
+  isTenantOwner: boolean;
+  runTenantId: string | null;
+  runName: string | null;
+}> {
+  let individualId: string | null = null;
+  const userResult = await pool.query(
+    `SELECT i.id FROM cc_users u JOIN cc_individuals i ON lower(u.email) = lower(i.email) WHERE u.id = $1`,
+    [userId]
+  );
+  if (userResult.rows.length > 0) {
+    individualId = userResult.rows[0].id;
+  }
+
+  let hasStakeholderAccess = false;
+  if (individualId) {
+    const stakeResult = await pool.query(
+      `SELECT 1 FROM cc_service_run_stakeholders
+       WHERE run_id = $1 AND stakeholder_individual_id = $2 AND status = 'active'`,
+      [runId, individualId]
+    );
+    hasStakeholderAccess = stakeResult.rows.length > 0;
+  }
+
+  let isTenantOwner = false;
+  let runTenantId: string | null = null;
+  let runName: string | null = null;
+
+  const runResult = await pool.query(
+    `SELECT tenant_id, name FROM cc_n3_runs WHERE id = $1`,
+    [runId]
+  );
+  if (runResult.rows.length > 0) {
+    runTenantId = runResult.rows[0].tenant_id;
+    runName = runResult.rows[0].name;
+    if (tenantId && runTenantId === tenantId) {
+      isTenantOwner = true;
+    }
+  }
+
+  return { individualId, hasStakeholderAccess, isTenantOwner, runTenantId, runName };
+}
+
+const VALID_RESPONSE_TYPES = ['confirm', 'request_change', 'question'] as const;
+
+/**
+ * POST /api/runs/:id/respond
+ * Submit a stakeholder response (confirm / request_change / question)
+ * STEP 11C Phase 2C-1
+ */
+router.post('/:id/respond', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: runId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!runId || !isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    // Validate request body
+    const { response_type, message } = req.body;
+    if (!response_type || !VALID_RESPONSE_TYPES.includes(response_type)) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'error.response.invalid_type',
+        message: 'response_type must be one of: confirm, request_change, question'
+      });
+    }
+
+    const trimmedMessage = message?.trim()?.slice(0, 2000) || null;
+
+    // Resolve access context
+    const ctx = await resolveAccessContext(userId, tenantId, runId);
+
+    if (!ctx.individualId) {
+      return res.status(403).json({ ok: false, error: 'error.auth.no_individual' });
+    }
+
+    if (!ctx.hasStakeholderAccess && !ctx.isTenantOwner) {
+      return res.status(403).json({ 
+        ok: false, 
+        error: 'error.run.access_denied',
+        message: 'You do not have access to this run'
+      });
+    }
+
+    if (!ctx.runTenantId) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+
+    // Idempotency check: same response within 60 seconds
+    const latestResult = await pool.query(
+      `SELECT id, response_type, message, responded_at
+       FROM cc_service_run_stakeholder_responses
+       WHERE run_id = $1 AND stakeholder_individual_id = $2
+       ORDER BY responded_at DESC
+       LIMIT 1`,
+      [runId, ctx.individualId]
+    );
+
+    if (latestResult.rows.length > 0) {
+      const latest = latestResult.rows[0];
+      const latestMsg = latest.message || '';
+      const newMsg = trimmedMessage || '';
+      const latestAt = new Date(latest.responded_at).getTime();
+      const now = Date.now();
+      const withinWindow = (now - latestAt) < 60000;
+
+      if (latest.response_type === response_type && latestMsg === newMsg && withinWindow) {
+        return res.json({
+          ok: true,
+          response: {
+            id: latest.id,
+            run_id: runId,
+            stakeholder_individual_id: ctx.individualId,
+            response_type: latest.response_type,
+            message: latest.message,
+            responded_at: latest.responded_at
+          },
+          idempotent: true
+        });
+      }
+    }
+
+    // Insert new response
+    const insertResult = await pool.query(
+      `INSERT INTO cc_service_run_stakeholder_responses 
+        (run_id, run_tenant_id, stakeholder_individual_id, response_type, message)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, response_type, message, responded_at`,
+      [runId, ctx.runTenantId, ctx.individualId, response_type, trimmedMessage]
+    );
+
+    const newResponse = insertResult.rows[0];
+
+    // Notify run-owning tenant
+    const runDisplayName = ctx.runName || 'Service Run';
+    try {
+      await pool.query(
+        `INSERT INTO cc_notifications (
+          recipient_tenant_id,
+          category,
+          priority,
+          channels,
+          context_type,
+          context_id,
+          body,
+          short_body,
+          action_url,
+          status
+        ) VALUES ($1, 'alert', 'normal', ARRAY['in_app'], 'service_run', $2, $3, $4, $5, 'pending')`,
+        [
+          ctx.runTenantId,
+          runId,
+          `A stakeholder responded on "${runDisplayName}".`,
+          'New stakeholder response',
+          `/app/provider/runs/${runId}`
+        ]
+      );
+    } catch (notifyErr) {
+      console.error('Failed to create notification:', notifyErr);
+    }
+
+    res.json({
+      ok: true,
+      response: {
+        id: newResponse.id,
+        run_id: runId,
+        stakeholder_individual_id: ctx.individualId,
+        response_type: newResponse.response_type,
+        message: newResponse.message,
+        responded_at: newResponse.responded_at
+      }
+    });
+  } catch (error: any) {
+    console.error('Stakeholder respond error:', error);
+    res.status(500).json({ ok: false, error: 'error.response.failed' });
+  }
+});
+
+/**
+ * GET /api/runs/:id/responses
+ * List stakeholder responses for a run
+ * STEP 11C Phase 2C-1
+ * 
+ * Stakeholders see only their own responses (RLS enforced)
+ * Tenant owners see all responses (tenant_select policy)
+ */
+router.get('/:id/responses', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: runId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!runId || !isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    // Resolve access context
+    const ctx = await resolveAccessContext(userId, tenantId, runId);
+
+    if (!ctx.hasStakeholderAccess && !ctx.isTenantOwner) {
+      return res.status(403).json({ 
+        ok: false, 
+        error: 'error.run.access_denied',
+        message: 'You do not have access to this run'
+      });
+    }
+
+    // For stakeholders, they only see their own responses (via RLS)
+    // For tenant owners, they see all responses for the run
+    let responses;
+    if (ctx.isTenantOwner) {
+      // Tenant owner: see all responses
+      const result = await pool.query(
+        `SELECT 
+          r.id, r.response_type, r.message, r.responded_at,
+          r.stakeholder_individual_id,
+          i.name as stakeholder_name,
+          i.email as stakeholder_email
+         FROM cc_service_run_stakeholder_responses r
+         LEFT JOIN cc_individuals i ON r.stakeholder_individual_id = i.id
+         WHERE r.run_id = $1
+         ORDER BY r.responded_at DESC
+         LIMIT 50`,
+        [runId]
+      );
+      responses = result.rows;
+    } else {
+      // Stakeholder: only their own
+      const result = await pool.query(
+        `SELECT id, response_type, message, responded_at, stakeholder_individual_id
+         FROM cc_service_run_stakeholder_responses
+         WHERE run_id = $1 AND stakeholder_individual_id = $2
+         ORDER BY responded_at DESC
+         LIMIT 50`,
+        [runId, ctx.individualId]
+      );
+      responses = result.rows;
+    }
+
+    res.json({ ok: true, responses });
+  } catch (error: any) {
+    console.error('Stakeholder responses list error:', error);
+    res.status(500).json({ ok: false, error: 'error.responses.list_failed' });
   }
 });
 

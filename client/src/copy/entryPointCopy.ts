@@ -728,6 +728,20 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'error.start_address.not_found': 'Address not found',
     'error.start_address.label_exists': 'An address with this name already exists',
     'error.start_address.archived': 'This address has been archived',
+    
+    // V3.5 STEP 11C Phase 2C-1: Stakeholder Response tokens
+    'stakeholder.response.title': 'Your Response',
+    'stakeholder.response.help': 'Send a response to the service provider.',
+    'stakeholder.response.type.label': 'Response type',
+    'stakeholder.response.type.confirm': 'Confirm',
+    'stakeholder.response.type.request_change': 'Request change',
+    'stakeholder.response.type.question': 'Ask a question',
+    'stakeholder.response.message.label': 'Message (optional)',
+    'stakeholder.response.message.placeholder': 'Add details for the service provider…',
+    'stakeholder.response.submit': 'Send Response',
+    'stakeholder.response.history.title': 'Previous Responses',
+    'stakeholder.response.success': 'Response sent.',
+    'stakeholder.response.current': 'Your current response',
   },
 
   activity: {
