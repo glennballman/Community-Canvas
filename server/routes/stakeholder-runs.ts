@@ -471,4 +471,207 @@ router.get('/:id/responses', requireAuth, async (req: AuthRequest, res: Response
   }
 });
 
+/**
+ * POST /api/runs/:runId/responses/:responseId/resolve
+ * Create a resolution for a stakeholder response
+ * STEP 11C Phase 2C-2
+ * 
+ * Auth: requireAuth
+ * Authorization: Tenant owner only
+ */
+router.post('/:runId/responses/:responseId/resolve', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { runId, responseId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!runId || !isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+    if (!responseId || !isValidUUID(responseId)) {
+      return res.status(400).json({ ok: false, error: 'error.response.invalid_id' });
+    }
+
+    const { resolution_type, message } = req.body;
+
+    const validResolutionTypes = ['acknowledged', 'accepted', 'declined', 'proposed_change'];
+    if (!resolution_type || !validResolutionTypes.includes(resolution_type)) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'error.resolution.invalid_type',
+        message: `resolution_type must be one of: ${validResolutionTypes.join(', ')}`
+      });
+    }
+
+    // Resolve individual_id from user_id
+    const userResult = await pool.query(
+      `SELECT i.id FROM cc_users u JOIN cc_individuals i ON lower(u.email) = lower(i.email) WHERE u.id = $1`,
+      [userId]
+    );
+    if (userResult.rows.length === 0) {
+      return res.status(403).json({ ok: false, error: 'error.user.no_individual' });
+    }
+    const resolverIndividualId = userResult.rows[0].id;
+
+    // Verify tenant owns the run
+    const runCheck = await pool.query(
+      `SELECT id, tenant_id, name FROM cc_n3_runs WHERE id = $1`,
+      [runId]
+    );
+    if (runCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+    const run = runCheck.rows[0];
+    if (!tenantId || run.tenant_id !== tenantId) {
+      return res.status(403).json({ ok: false, error: 'error.run.access_denied' });
+    }
+
+    // Verify response exists and belongs to run
+    const responseCheck = await pool.query(
+      `SELECT id, stakeholder_individual_id FROM cc_service_run_stakeholder_responses WHERE id = $1 AND run_id = $2`,
+      [responseId, runId]
+    );
+    if (responseCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.response.not_found' });
+    }
+    const response = responseCheck.rows[0];
+
+    // Insert resolution (append-only)
+    const trimmedMessage = message?.trim() || null;
+    const insertResult = await pool.query(
+      `INSERT INTO cc_service_run_response_resolutions 
+        (response_id, run_id, run_tenant_id, resolver_individual_id, resolution_type, message)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, resolution_type, message, resolved_at`,
+      [responseId, runId, tenantId, resolverIndividualId, resolution_type, trimmedMessage]
+    );
+
+    const newResolution = insertResult.rows[0];
+
+    // Notify stakeholder
+    const runDisplayName = run.name || 'Service Run';
+    try {
+      await pool.query(
+        `INSERT INTO cc_notifications (
+          recipient_individual_id,
+          category,
+          priority,
+          channels,
+          context_type,
+          context_id,
+          body,
+          short_body,
+          action_url,
+          status
+        ) VALUES ($1, 'invitation', 'normal', ARRAY['in_app'], 'service_run', $2, $3, $4, $5, 'pending')`,
+        [
+          response.stakeholder_individual_id,
+          runId,
+          `Your response to "${runDisplayName}" has been ${resolution_type.replace('_', ' ')}.`,
+          `Response ${resolution_type.replace('_', ' ')}`,
+          `/app/runs/${runId}/view`
+        ]
+      );
+    } catch (notifyErr) {
+      console.error('Failed to create resolution notification:', notifyErr);
+    }
+
+    res.json({
+      ok: true,
+      resolution: {
+        id: newResolution.id,
+        response_id: responseId,
+        run_id: runId,
+        resolver_individual_id: resolverIndividualId,
+        resolution_type: newResolution.resolution_type,
+        message: newResolution.message,
+        resolved_at: newResolution.resolved_at
+      }
+    });
+  } catch (error: any) {
+    console.error('Resolution create error:', error);
+    // Handle unique constraint violation (idempotency)
+    if (error.code === '23505') {
+      return res.status(409).json({ 
+        ok: false, 
+        error: 'error.resolution.duplicate',
+        message: 'A similar resolution was just created. Please wait before trying again.'
+      });
+    }
+    res.status(500).json({ ok: false, error: 'error.resolution.failed' });
+  }
+});
+
+/**
+ * GET /api/runs/:runId/resolutions
+ * List resolution history for a run
+ * STEP 11C Phase 2C-2
+ * 
+ * Tenant: all resolutions
+ * Stakeholder: only resolutions related to their responses
+ */
+router.get('/:runId/resolutions', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { runId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!runId || !isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    // Resolve access context
+    const ctx = await resolveAccessContext(userId, tenantId, runId);
+
+    if (!ctx.hasStakeholderAccess && !ctx.isTenantOwner) {
+      return res.status(403).json({ 
+        ok: false, 
+        error: 'error.run.access_denied',
+        message: 'You do not have access to this run'
+      });
+    }
+
+    let resolutions;
+    if (ctx.isTenantOwner) {
+      // Tenant owner: see all resolutions
+      const result = await pool.query(
+        `SELECT 
+          rr.id, rr.response_id, rr.resolution_type, rr.message, rr.resolved_at,
+          rr.resolver_individual_id,
+          i.name as resolver_name,
+          resp.response_type as original_response_type
+         FROM cc_service_run_response_resolutions rr
+         LEFT JOIN cc_individuals i ON rr.resolver_individual_id = i.id
+         LEFT JOIN cc_service_run_stakeholder_responses resp ON rr.response_id = resp.id
+         WHERE rr.run_id = $1
+         ORDER BY rr.resolved_at DESC
+         LIMIT 50`,
+        [runId]
+      );
+      resolutions = result.rows;
+    } else {
+      // Stakeholder: only resolutions for their own responses
+      const result = await pool.query(
+        `SELECT 
+          rr.id, rr.response_id, rr.resolution_type, rr.message, rr.resolved_at,
+          i.name as resolver_name,
+          resp.response_type as original_response_type
+         FROM cc_service_run_response_resolutions rr
+         LEFT JOIN cc_individuals i ON rr.resolver_individual_id = i.id
+         LEFT JOIN cc_service_run_stakeholder_responses resp ON rr.response_id = resp.id
+         WHERE rr.run_id = $1 AND resp.stakeholder_individual_id = $2
+         ORDER BY rr.resolved_at DESC
+         LIMIT 50`,
+        [runId, ctx.individualId]
+      );
+      resolutions = result.rows;
+    }
+
+    res.json({ ok: true, resolutions });
+  } catch (error: any) {
+    console.error('Resolutions list error:', error);
+    res.status(500).json({ ok: false, error: 'error.resolutions.list_failed' });
+  }
+});
+
 export default router;

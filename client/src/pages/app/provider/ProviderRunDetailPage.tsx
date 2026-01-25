@@ -3,11 +3,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams, useLocation } from 'wouter';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, Truck, 
-  MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus, Edit2, Reply
+  MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus, Edit2, Reply,
+  Check, X, AlertTriangle, MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { useCopy } from '@/copy/useCopy';
 import { useToast } from '@/hooks/use-toast';
@@ -82,6 +91,15 @@ interface StakeholderResponse {
   stakeholder_individual_id: string;
   stakeholder_name: string | null;
   stakeholder_email: string | null;
+}
+
+interface Resolution {
+  id: string;
+  response_id: string;
+  resolution_type: 'acknowledged' | 'accepted' | 'declined' | 'proposed_change';
+  message: string | null;
+  resolved_at: string;
+  resolver_name: string | null;
 }
 
 function maskEmail(email: string): string {
@@ -266,6 +284,46 @@ export default function ProviderRunDetailPage() {
     enabled: !!id
   });
 
+  const { data: resolutionsData } = useQuery<{
+    ok: boolean;
+    resolutions: Resolution[];
+  }>({
+    queryKey: ['/api/runs', id, 'resolutions'],
+    queryFn: async () => {
+      const res = await fetch(`/api/runs/${id}/resolutions`);
+      if (!res.ok) return { ok: false, resolutions: [] };
+      return res.json();
+    },
+    enabled: !!id
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: async ({ responseId, resolutionType, message }: { 
+      responseId: string; 
+      resolutionType: string; 
+      message?: string 
+    }) => {
+      const res = await fetch(`/api/runs/${id}/responses/${responseId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ resolution_type: resolutionType, message })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to resolve');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/runs', id, 'resolutions'] });
+      toast({ title: 'Response resolved', description: 'The stakeholder has been notified.' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  });
+
   if (isLoading) {
     return (
       <div className="flex-1 p-4">
@@ -299,6 +357,11 @@ export default function ProviderRunDetailPage() {
   const attachedRequests = data.attached_requests || [];
   const publications = data.publications || [];
   const responses = responsesData?.responses || [];
+  const resolutions = resolutionsData?.resolutions || [];
+  
+  // Helper to get resolutions for a specific response
+  const getResolutionsForResponse = (responseId: string) => 
+    resolutions.filter(r => r.response_id === responseId);
   
   const heldRequests = attachedRequests.filter(a => a.status === 'HELD');
   const committedRequests = attachedRequests.filter(a => a.status === 'COMMITTED');
@@ -557,6 +620,24 @@ export default function ProviderRunDetailPage() {
                       setNotifyModalOpen(true);
                     };
                     
+                    const responseResolutions = getResolutionsForResponse(resp.id);
+                    const latestResolution = responseResolutions.length > 0 ? responseResolutions[0] : null;
+                    
+                    const getResolutionBadge = (type: string) => {
+                      switch (type) {
+                        case 'accepted':
+                          return { variant: 'default' as const, className: 'bg-green-500/20 text-green-400', label: resolve('stakeholder_resolution.accepted') };
+                        case 'acknowledged':
+                          return { variant: 'secondary' as const, className: 'bg-blue-500/20 text-blue-400', label: resolve('stakeholder_resolution.acknowledged') };
+                        case 'declined':
+                          return { variant: 'destructive' as const, className: 'bg-red-500/20 text-red-400', label: resolve('stakeholder_resolution.declined') };
+                        case 'proposed_change':
+                          return { variant: 'outline' as const, className: 'bg-orange-500/20 text-orange-400', label: resolve('stakeholder_resolution.proposed_change') };
+                        default:
+                          return { variant: 'secondary' as const, className: '', label: type };
+                      }
+                    };
+                    
                     return (
                       <div key={resp.id} className="p-3 rounded-md bg-muted/50 space-y-2" data-testid={`response-item-${resp.id}`}>
                         <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -565,6 +646,11 @@ export default function ProviderRunDetailPage() {
                             <Badge variant={badgeVariant as 'default' | 'secondary' | 'outline'} className="text-xs" data-testid="badge-response-type">
                               {badgeLabel}
                             </Badge>
+                            {latestResolution && (
+                              <Badge className={`text-xs ${getResolutionBadge(latestResolution.resolution_type).className}`} data-testid="badge-resolution">
+                                {getResolutionBadge(latestResolution.resolution_type).label}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground" data-testid="text-response-time">
@@ -583,12 +669,63 @@ export default function ProviderRunDetailPage() {
                                 {resolve('provider.run.responses.reply')}
                               </Button>
                             )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  disabled={resolveMutation.isPending}
+                                  data-testid={`button-resolve-${resp.id}`}
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>{resolve('stakeholder_resolution.resolve_cta')}</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => resolveMutation.mutate({ responseId: resp.id, resolutionType: 'accepted' })}
+                                  data-testid={`menu-resolve-accept-${resp.id}`}
+                                >
+                                  <Check className="w-4 h-4 mr-2 text-green-500" />
+                                  {resolve('stakeholder_resolution.accepted')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => resolveMutation.mutate({ responseId: resp.id, resolutionType: 'acknowledged' })}
+                                  data-testid={`menu-resolve-acknowledge-${resp.id}`}
+                                >
+                                  <MessageSquare className="w-4 h-4 mr-2 text-blue-500" />
+                                  {resolve('stakeholder_resolution.acknowledged')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => resolveMutation.mutate({ responseId: resp.id, resolutionType: 'declined' })}
+                                  data-testid={`menu-resolve-decline-${resp.id}`}
+                                >
+                                  <X className="w-4 h-4 mr-2 text-red-500" />
+                                  {resolve('stakeholder_resolution.declined')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => resolveMutation.mutate({ responseId: resp.id, resolutionType: 'proposed_change' })}
+                                  data-testid={`menu-resolve-propose-change-${resp.id}`}
+                                >
+                                  <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
+                                  {resolve('stakeholder_resolution.proposed_change')}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                         {resp.message && (
                           <p className="text-sm text-muted-foreground" data-testid="text-response-message">
                             {resp.message}
                           </p>
+                        )}
+                        {latestResolution && latestResolution.message && (
+                          <div className="text-xs text-muted-foreground mt-1 border-l-2 border-muted pl-2" data-testid="text-resolution-message">
+                            <span className="font-medium">{resolve('stakeholder_resolution.resolved_by')}: </span>
+                            {latestResolution.resolver_name || 'Provider'}
+                            {' — '}{latestResolution.message}
+                          </div>
                         )}
                       </div>
                     );

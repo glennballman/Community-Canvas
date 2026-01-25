@@ -316,6 +316,16 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'provider.run.responses.reply.prefill.confirm': 'Thanks for confirming. If anything changes, reply here.',
     'provider.run.responses.reply.prefill.request_change': 'I saw your request to change the schedule. What timing works best?',
     'provider.run.responses.reply.prefill.question': 'Thanks for your question. Here\'s a quick reply:',
+    
+    // STEP 11C Phase 2C-2: Resolution Types
+    'stakeholder_resolution.acknowledged': 'Acknowledged',
+    'stakeholder_resolution.accepted': 'Accepted',
+    'stakeholder_resolution.declined': 'Declined',
+    'stakeholder_resolution.proposed_change': 'Change proposed',
+    'stakeholder_resolution.resolve_cta': 'Resolve',
+    'stakeholder_resolution.message_label': 'Optional message',
+    'stakeholder_resolution.resolved_at': 'Resolved',
+    'stakeholder_resolution.resolved_by': 'Resolved by',
   },
 
   lodging: {
