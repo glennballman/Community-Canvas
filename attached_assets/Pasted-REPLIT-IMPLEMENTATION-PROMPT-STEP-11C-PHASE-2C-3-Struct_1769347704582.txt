@@ -1,0 +1,318 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2C-3
+Structured Change Proposal (Deterministic Negotiation Primitive)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Additive only. No refactors. No breaking changes.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+Turn “Propose change” (provider resolution_type) and “Request change” (stakeholder response_type)
+into a structured, bounded negotiation with:
+- explicit proposed time windows
+- accept / counter / decline actions
+- hard cap on turns (default 3)
+- append-only audit trail
+- latest state derived from events
+
+We are NOT building chat. We are building a deterministic proposal ledger.
+
+SCOPE
+A) New append-only table for schedule proposals/counters
+B) Two endpoints:
+   - POST /api/runs/:runId/schedule-proposals
+   - GET  /api/runs/:runId/schedule-proposals
+C) Wire into UI:
+   - ProviderRunDetailPage: when resolving as “Propose change”, allow structured proposal
+   - RunStakeholderViewPage: if a proposal exists, allow Accept / Counter / Decline
+D) Notifications:
+   - notify other party when new proposal/counter/decision created
+E) Proof doc
+
+NON-GOALS
+- No rewriting service run scheduling fields
+- No automatic schedule mutation
+- No calendar UI
+- No multi-party group negotiation
+- No email templates overhaul
+
+============================================================
+A) DATABASE — NEW TABLE (REQUIRED)
+============================================================
+
+Create table: cc_service_run_schedule_proposals
+
+Design: append-only events with derived “latest”
+Event types: 'proposed' | 'countered' | 'accepted' | 'declined'
+
+Schema:
+
+CREATE TABLE cc_service_run_schedule_proposals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  run_id uuid NOT NULL REFERENCES cc_n3_runs(id) ON DELETE CASCADE,
+  run_tenant_id uuid NOT NULL REFERENCES cc_tenants(id),
+
+  -- who initiated this event
+  actor_individual_id uuid NOT NULL REFERENCES cc_individuals(id),
+  actor_role text NOT NULL CHECK (actor_role IN ('tenant', 'stakeholder')),
+
+  -- optional linkage to the triggering response/resolution
+  response_id uuid NULL REFERENCES cc_service_run_stakeholder_responses(id) ON DELETE SET NULL,
+  resolution_id uuid NULL REFERENCES cc_service_run_response_resolutions(id) ON DELETE SET NULL,
+
+  event_type text NOT NULL CHECK (event_type IN ('proposed','countered','accepted','declined')),
+
+  -- proposal window (required for proposed/countered, null for accepted/declined)
+  proposed_start timestamptz NULL,
+  proposed_end timestamptz NULL,
+
+  note text NULL,
+
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+Indexes:
+
+CREATE INDEX idx_sr_schedprop_run_created
+  ON cc_service_run_schedule_proposals(run_id, created_at DESC);
+
+CREATE INDEX idx_sr_schedprop_run_event
+  ON cc_service_run_schedule_proposals(run_id, event_type);
+
+Constraint: proposed window integrity when provided:
+
+ALTER TABLE cc_service_run_schedule_proposals
+  ADD CONSTRAINT chk_sr_schedprop_window
+  CHECK (
+    (event_type IN ('proposed','countered') AND proposed_start IS NOT NULL AND proposed_end IS NOT NULL AND proposed_end > proposed_start)
+    OR (event_type IN ('accepted','declined') AND proposed_start IS NULL AND proposed_end IS NULL)
+  );
+
+============================================================
+B) RLS (REQUIRED)
+============================================================
+
+ALTER TABLE cc_service_run_schedule_proposals ENABLE ROW LEVEL SECURITY;
+
+SELECT policy:
+- tenant owners can see all events for their run
+- stakeholders can see events for runs they have stakeholder access to (cc_service_run_stakeholders)
+
+Implement using existing helpers:
+- current_tenant_id()
+- current_individual_id()
+- is_service_mode()
+
+Policies:
+
+1) Tenant select:
+
+CREATE POLICY sr_schedprop_select_tenant
+ON cc_service_run_schedule_proposals
+FOR SELECT
+USING (run_tenant_id = current_tenant_id());
+
+2) Stakeholder select:
+
+CREATE POLICY sr_schedprop_select_stakeholder
+ON cc_service_run_schedule_proposals
+FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1
+    FROM cc_service_run_stakeholders s
+    WHERE s.run_id = cc_service_run_schedule_proposals.run_id
+      AND s.stakeholder_individual_id = current_individual_id()
+      AND s.revoked_at IS NULL
+      AND s.status = 'active'
+  )
+);
+
+3) Insert policy (tenant or stakeholder):
+
+CREATE POLICY sr_schedprop_insert_actor
+ON cc_service_run_schedule_proposals
+FOR INSERT
+WITH CHECK (
+  -- must match the run tenant
+  run_tenant_id IS NOT NULL
+  AND (
+    (actor_role = 'tenant' AND run_tenant_id = current_tenant_id())
+    OR
+    (actor_role = 'stakeholder' AND EXISTS (
+      SELECT 1 FROM cc_service_run_stakeholders s
+      WHERE s.run_id = cc_service_run_schedule_proposals.run_id
+        AND s.stakeholder_individual_id = current_individual_id()
+        AND s.revoked_at IS NULL
+        AND s.status = 'active'
+    ))
+  )
+);
+
+4) Service mode bypass:
+
+CREATE POLICY sr_schedprop_service_bypass
+ON cc_service_run_schedule_proposals
+FOR ALL
+USING (is_service_mode());
+
+============================================================
+C) SERVER — ENDPOINTS (REQUIRED)
+============================================================
+
+Add to the correct router:
+- The run stakeholder view endpoints live in server/routes/stakeholder-runs.ts mounted at /api/runs
+Implement under /api/runs/:id/...
+
+1) GET /api/runs/:id/schedule-proposals
+- requireAuth
+- authorize via existing resolveAccessContext() logic (tenant owner or stakeholder)
+- returns last 50 events ordered by created_at desc
+- also return derived “latest_state” computed server-side:
+   latest_event_type
+   latest_proposed_window (if last event proposed/countered)
+   turns_used (count of proposed/countered)
+   turns_remaining (cap - turns_used)
+   is_closed (accepted/declined)
+
+Turn cap rule:
+- Default cap = 3 turns (where a “turn” is proposed or countered)
+- Hardcode cap in code for now as constant TURN_CAP = 3 (no schema yet)
+- Enforce in POST too
+
+Response:
+
+{
+  ok: true,
+  turn_cap: 3,
+  turns_used: n,
+  turns_remaining: m,
+  latest: { event_type, proposed_start?, proposed_end?, note?, created_at, actor_role },
+  events: [...]
+}
+
+2) POST /api/runs/:id/schedule-proposals
+Body:
+{
+  event_type: 'proposed'|'countered'|'accepted'|'declined',
+  proposed_start?: string,
+  proposed_end?: string,
+  note?: string,
+  response_id?: string,
+  resolution_id?: string
+}
+
+Rules:
+- If event_type in ('proposed','countered'): require proposed_start/proposed_end
+- If accepted/declined: do not allow proposed_start/proposed_end
+- Enforce turn cap:
+   count existing proposed/countered for run
+   if >= 3, reject with 409 error.turn_cap_reached
+- Closing rule:
+   if latest_event_type is accepted or declined, reject any further events with 409 error.negotiation_closed
+- Actor role:
+   determine from access context:
+     if tenant owner => actor_role='tenant'
+     else stakeholder => 'stakeholder'
+- Insert event row (append-only)
+
+Notifications:
+- If actor_role='tenant', notify stakeholder(s) with access (recipient_tenant_id is not enough; notify individuals)
+  For Phase 2C-3: notify ONLY stakeholders who have responded with request_change OR have any response on run.
+  Minimal query:
+    SELECT DISTINCT stakeholder_individual_id
+    FROM cc_service_run_stakeholder_responses
+    WHERE run_id = $1
+- If actor_role='stakeholder', notify tenant via recipient_tenant_id = run_tenant_id
+Use existing notification creation pattern used in Phase 2C-1/2C-2.
+
+Action URLs:
+- Stakeholder: /app/runs/:id/view
+- Tenant: /app/provider/runs/:id
+
+============================================================
+D) FRONTEND — UI WIRING (REQUIRED)
+============================================================
+
+1) ProviderRunDetailPage
+Inside the Stakeholder responses card OR resolution UI:
+- When resolving a response as “Propose change”, add a secondary CTA:
+  “Create proposed time”
+  Opens a lightweight dialog:
+    - start datetime
+    - end datetime
+    - optional note
+  Submits POST /api/runs/:id/schedule-proposals with:
+    event_type='proposed'
+    resolution_id=<the resolution row if available>
+    response_id=<the response row>
+- After success, show latest proposal summary inline:
+  “Proposed: Jan 28, 2:00 PM – 4:00 PM”
+- If turn cap reached or closed, show tokenized error message
+
+2) RunStakeholderViewPage
+Add a “Schedule proposal” card if latest event_type is proposed/countered:
+- Show proposed window + note
+- Provide 3 buttons:
+  Accept
+  Counter (opens same datetime dialog)
+  Decline
+Each submits POST /api/runs/:id/schedule-proposals with the relevant event_type.
+
+3) Data fetching
+Add useQuery:
+queryKey: ['/api/runs', id, 'schedule-proposals']
+GET endpoint above
+Invalidate this query on POST success.
+
+============================================================
+E) COPY TOKENS (REQUIRED)
+============================================================
+
+Add tokens:
+
+provider.schedule_proposal.title = "Schedule proposal"
+provider.schedule_proposal.create = "Create proposed time"
+provider.schedule_proposal.proposed = "Proposed"
+provider.schedule_proposal.counter = "Counter"
+provider.schedule_proposal.accept = "Accept"
+provider.schedule_proposal.decline = "Decline"
+provider.schedule_proposal.note_label = "Optional note"
+provider.schedule_proposal.turn_cap = "Maximum change requests reached."
+provider.schedule_proposal.closed = "This proposal is closed."
+
+stakeholder.schedule_proposal.title = "Schedule proposal"
+stakeholder.schedule_proposal.accepted = "Accepted"
+stakeholder.schedule_proposal.declined = "Declined"
+
+No forbidden terms.
+
+============================================================
+F) PROOF DOC (REQUIRED)
+============================================================
+
+Create:
+proof/v3.5/step11c-phase2c3-schedule-proposals-proof.md
+
+Include:
+1) SQL schema + constraints
+2) RLS policies
+3) GET/POST request examples
+4) Turn cap proof (3 turns)
+5) Closed negotiation proof
+6) UI screenshots/snippets:
+   - provider create proposal
+   - stakeholder accept/counter/decline
+7) Notification proof (tenant + stakeholder)
+
+DONE WHEN
+- Provider can create a structured proposed window
+- Stakeholder can accept/counter/decline
+- Turn cap enforced
+- Accepted/declined closes negotiation
+- All events append-only
+- Proof doc exists

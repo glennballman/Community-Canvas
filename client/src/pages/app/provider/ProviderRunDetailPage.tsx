@@ -4,11 +4,19 @@ import { Link, useParams, useLocation } from 'wouter';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, Truck, 
   MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus, Edit2, Reply,
-  Check, X, AlertTriangle, MoreHorizontal
+  Check, X, AlertTriangle, MoreHorizontal, CalendarClock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +25,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { useCopy } from '@/copy/useCopy';
 import { useToast } from '@/hooks/use-toast';
@@ -100,6 +111,29 @@ interface Resolution {
   message: string | null;
   resolved_at: string;
   resolver_name: string | null;
+}
+
+interface ScheduleProposalEvent {
+  id: string;
+  run_id: string;
+  actor_individual_id: string;
+  actor_role: 'tenant' | 'stakeholder';
+  event_type: 'proposed' | 'countered' | 'accepted' | 'declined';
+  proposed_start: string | null;
+  proposed_end: string | null;
+  note: string | null;
+  created_at: string;
+  actor_name: string | null;
+}
+
+interface ScheduleProposalsData {
+  ok: boolean;
+  turn_cap: number;
+  turns_used: number;
+  turns_remaining: number;
+  is_closed: boolean;
+  latest: ScheduleProposalEvent | null;
+  events: ScheduleProposalEvent[];
 }
 
 function maskEmail(email: string): string {
@@ -248,6 +282,13 @@ export default function ProviderRunDetailPage() {
   const [notifyModalOpen, setNotifyModalOpen] = useState(false);
   const [notifyPrefillInvitees, setNotifyPrefillInvitees] = useState<PrefillInvitee[] | undefined>();
   const [notifyPrefillMessage, setNotifyPrefillMessage] = useState<string | undefined>();
+  
+  // Schedule Proposal state
+  const [proposalDialogOpen, setProposalDialogOpen] = useState(false);
+  const [proposalResponseId, setProposalResponseId] = useState<string | null>(null);
+  const [proposedStart, setProposedStart] = useState('');
+  const [proposedEnd, setProposedEnd] = useState('');
+  const [proposalNote, setProposalNote] = useState('');
 
   const { data, isLoading, error } = useQuery<{ 
     ok: boolean; 
@@ -323,6 +364,76 @@ export default function ProviderRunDetailPage() {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
   });
+
+  // Schedule Proposals query and mutation
+  const { data: proposalsData } = useQuery<ScheduleProposalsData>({
+    queryKey: ['/api/runs', id, 'schedule-proposals'],
+    queryFn: async () => {
+      const res = await fetch(`/api/runs/${id}/schedule-proposals`);
+      if (!res.ok) return { ok: false, turn_cap: 3, turns_used: 0, turns_remaining: 3, is_closed: false, latest: null, events: [] };
+      return res.json();
+    },
+    enabled: !!id
+  });
+
+  const proposalMutation = useMutation({
+    mutationFn: async ({ eventType, start, end, note, responseId }: { 
+      eventType: 'proposed' | 'countered' | 'accepted' | 'declined';
+      start?: string;
+      end?: string;
+      note?: string;
+      responseId?: string;
+    }) => {
+      const res = await apiRequest('POST', `/api/runs/${id}/schedule-proposals`, { 
+        event_type: eventType, 
+        proposed_start: start,
+        proposed_end: end,
+        note,
+        response_id: responseId
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/runs', id, 'schedule-proposals'] });
+      setProposalDialogOpen(false);
+      setProposedStart('');
+      setProposedEnd('');
+      setProposalNote('');
+      setProposalResponseId(null);
+      toast({ title: resolve('provider.schedule_proposal.proposed'), description: 'The stakeholder has been notified.' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  });
+
+  const handleOpenProposalDialog = (responseId: string) => {
+    setProposalResponseId(responseId);
+    // Set default times (next day, 2-hour window)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+    const endTime = new Date(tomorrow);
+    endTime.setHours(12, 0, 0, 0);
+    setProposedStart(tomorrow.toISOString().slice(0, 16));
+    setProposedEnd(endTime.toISOString().slice(0, 16));
+    setProposalNote('');
+    setProposalDialogOpen(true);
+  };
+
+  const handleSubmitProposal = () => {
+    if (!proposedStart || !proposedEnd) {
+      toast({ title: 'Error', description: 'Please enter start and end times', variant: 'destructive' });
+      return;
+    }
+    proposalMutation.mutate({
+      eventType: 'proposed',
+      start: proposedStart,
+      end: proposedEnd,
+      note: proposalNote || undefined,
+      responseId: proposalResponseId || undefined
+    });
+  };
 
   if (isLoading) {
     return (
@@ -705,7 +816,11 @@ export default function ProviderRunDetailPage() {
                                   {resolve('stakeholder_resolution.declined')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => resolveMutation.mutate({ responseId: resp.id, resolutionType: 'proposed_change' })}
+                                  onClick={() => {
+                                    resolveMutation.mutate({ responseId: resp.id, resolutionType: 'proposed_change' });
+                                    handleOpenProposalDialog(resp.id);
+                                  }}
+                                  disabled={proposalsData?.is_closed || proposalsData?.turns_remaining === 0}
                                   data-testid={`menu-resolve-propose-change-${resp.id}`}
                                 >
                                   <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
@@ -821,6 +936,76 @@ export default function ProviderRunDetailPage() {
         prefillInvitees={notifyPrefillInvitees}
         prefillMessage={notifyPrefillMessage}
       />
+
+      <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{resolve('provider.schedule_proposal.title')}</DialogTitle>
+            <DialogDescription>
+              {proposalsData?.turns_remaining === 0 
+                ? resolve('provider.schedule_proposal.turn_cap')
+                : proposalsData?.is_closed 
+                  ? resolve('provider.schedule_proposal.closed')
+                  : `${proposalsData?.turns_remaining || 3} ${proposalsData?.turns_remaining === 1 ? 'proposal' : 'proposals'} remaining`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="proposed-start">{resolve('provider.schedule_proposal.start_label')}</Label>
+              <Input
+                id="proposed-start"
+                type="datetime-local"
+                value={proposedStart}
+                onChange={(e) => setProposedStart(e.target.value)}
+                data-testid="input-proposal-start"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proposed-end">{resolve('provider.schedule_proposal.end_label')}</Label>
+              <Input
+                id="proposed-end"
+                type="datetime-local"
+                value={proposedEnd}
+                onChange={(e) => setProposedEnd(e.target.value)}
+                data-testid="input-proposal-end"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proposal-note">{resolve('provider.schedule_proposal.note_label')}</Label>
+              <Textarea
+                id="proposal-note"
+                value={proposalNote}
+                onChange={(e) => setProposalNote(e.target.value)}
+                placeholder="Any additional details..."
+                className="resize-none"
+                data-testid="input-proposal-note"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setProposalDialogOpen(false)}
+              data-testid="button-cancel-proposal"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitProposal}
+              disabled={proposalMutation.isPending || !proposedStart || !proposedEnd}
+              data-testid="button-submit-proposal"
+            >
+              {proposalMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <CalendarClock className="w-4 h-4 mr-2" />
+              )}
+              {resolve('provider.schedule_proposal.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

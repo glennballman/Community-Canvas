@@ -674,4 +674,332 @@ router.get('/:runId/resolutions', requireAuth, async (req: AuthRequest, res: Res
   }
 });
 
+// ============================================================
+// STEP 11C Phase 2C-3: Schedule Proposals
+// Deterministic negotiation primitive for service run schedule changes
+// ============================================================
+
+const TURN_CAP = 3; // Maximum number of proposed/countered turns
+const VALID_PROPOSAL_EVENT_TYPES = ['proposed', 'countered', 'accepted', 'declined'] as const;
+
+/**
+ * GET /api/runs/:id/schedule-proposals
+ * List schedule proposal events for a run with derived latest state
+ * STEP 11C Phase 2C-3
+ */
+router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: runId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!runId || !isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    // Resolve access context
+    const ctx = await resolveAccessContext(userId, tenantId, runId);
+
+    if (!ctx.hasStakeholderAccess && !ctx.isTenantOwner) {
+      return res.status(403).json({ 
+        ok: false, 
+        error: 'error.run.access_denied',
+        message: 'You do not have access to this run'
+      });
+    }
+
+    // Fetch all events for this run
+    const eventsResult = await pool.query(
+      `SELECT 
+        sp.id, sp.run_id, sp.actor_individual_id, sp.actor_role,
+        sp.response_id, sp.resolution_id, sp.event_type,
+        sp.proposed_start, sp.proposed_end, sp.note, sp.created_at,
+        i.name as actor_name
+       FROM cc_service_run_schedule_proposals sp
+       LEFT JOIN cc_individuals i ON sp.actor_individual_id = i.id
+       WHERE sp.run_id = $1
+       ORDER BY sp.created_at DESC
+       LIMIT 50`,
+      [runId]
+    );
+    const events = eventsResult.rows;
+
+    // Derive latest state
+    const turnsUsed = events.filter((e: any) => 
+      e.event_type === 'proposed' || e.event_type === 'countered'
+    ).length;
+    const turnsRemaining = Math.max(0, TURN_CAP - turnsUsed);
+    
+    const latestEvent = events[0] || null;
+    const isClosed = latestEvent && 
+      (latestEvent.event_type === 'accepted' || latestEvent.event_type === 'declined');
+
+    res.json({
+      ok: true,
+      turn_cap: TURN_CAP,
+      turns_used: turnsUsed,
+      turns_remaining: turnsRemaining,
+      is_closed: isClosed,
+      latest: latestEvent ? {
+        id: latestEvent.id,
+        event_type: latestEvent.event_type,
+        proposed_start: latestEvent.proposed_start,
+        proposed_end: latestEvent.proposed_end,
+        note: latestEvent.note,
+        created_at: latestEvent.created_at,
+        actor_role: latestEvent.actor_role,
+        actor_name: latestEvent.actor_name
+      } : null,
+      events
+    });
+  } catch (error: any) {
+    console.error('Schedule proposals list error:', error);
+    res.status(500).json({ ok: false, error: 'error.schedule_proposals.list_failed' });
+  }
+});
+
+/**
+ * POST /api/runs/:id/schedule-proposals
+ * Create a new schedule proposal event
+ * STEP 11C Phase 2C-3
+ */
+router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: runId } = req.params;
+    const tenantId = req.ctx?.tenant_id || req.user?.tenantId;
+    const userId = req.user!.id;
+
+    if (!runId || !isValidUUID(runId)) {
+      return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
+    }
+
+    const { event_type, proposed_start, proposed_end, note, response_id, resolution_id } = req.body;
+
+    // Validate event_type
+    if (!event_type || !VALID_PROPOSAL_EVENT_TYPES.includes(event_type)) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'error.schedule_proposal.invalid_event_type',
+        message: `event_type must be one of: ${VALID_PROPOSAL_EVENT_TYPES.join(', ')}`
+      });
+    }
+
+    // Validate window requirements
+    if ((event_type === 'proposed' || event_type === 'countered')) {
+      if (!proposed_start || !proposed_end) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'error.schedule_proposal.window_required',
+          message: 'proposed_start and proposed_end are required for proposed/countered events'
+        });
+      }
+      const start = new Date(proposed_start);
+      const end = new Date(proposed_end);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'error.schedule_proposal.invalid_dates',
+          message: 'proposed_start and proposed_end must be valid dates'
+        });
+      }
+      if (end <= start) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'error.schedule_proposal.invalid_window',
+          message: 'proposed_end must be after proposed_start'
+        });
+      }
+    } else if (event_type === 'accepted' || event_type === 'declined') {
+      if (proposed_start || proposed_end) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'error.schedule_proposal.no_window_for_decision',
+          message: 'accepted/declined events must not include proposed_start/proposed_end'
+        });
+      }
+    }
+
+    // Resolve access context
+    const ctx = await resolveAccessContext(userId, tenantId, runId);
+
+    if (!ctx.hasStakeholderAccess && !ctx.isTenantOwner) {
+      return res.status(403).json({ 
+        ok: false, 
+        error: 'error.run.access_denied',
+        message: 'You do not have access to this run'
+      });
+    }
+
+    // Get actor individual_id
+    const userResult = await pool.query(
+      `SELECT i.id FROM cc_users u JOIN cc_individuals i ON lower(u.email) = lower(i.email) WHERE u.id = $1`,
+      [userId]
+    );
+    if (userResult.rows.length === 0) {
+      return res.status(403).json({ ok: false, error: 'error.user.no_individual' });
+    }
+    const actorIndividualId = userResult.rows[0].id;
+
+    // Determine actor role
+    const actorRole = ctx.isTenantOwner ? 'tenant' : 'stakeholder';
+
+    // Get run tenant_id
+    const runResult = await pool.query(
+      `SELECT tenant_id, name FROM cc_n3_runs WHERE id = $1`,
+      [runId]
+    );
+    if (runResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'error.run.not_found' });
+    }
+    const runTenantId = runResult.rows[0].tenant_id;
+    const runName = runResult.rows[0].name || 'Service Run';
+
+    // Check existing events for turn cap and closed state
+    const existingResult = await pool.query(
+      `SELECT event_type, created_at
+       FROM cc_service_run_schedule_proposals
+       WHERE run_id = $1
+       ORDER BY created_at DESC`,
+      [runId]
+    );
+    const existingEvents = existingResult.rows;
+
+    // Check if negotiation is closed
+    const latestEvent = existingEvents[0];
+    if (latestEvent && (latestEvent.event_type === 'accepted' || latestEvent.event_type === 'declined')) {
+      return res.status(409).json({ 
+        ok: false, 
+        error: 'error.negotiation_closed',
+        message: 'This negotiation is already closed'
+      });
+    }
+
+    // Check turn cap for proposed/countered
+    if (event_type === 'proposed' || event_type === 'countered') {
+      const turnsUsed = existingEvents.filter((e: any) => 
+        e.event_type === 'proposed' || e.event_type === 'countered'
+      ).length;
+      if (turnsUsed >= TURN_CAP) {
+        return res.status(409).json({ 
+          ok: false, 
+          error: 'error.turn_cap_reached',
+          message: `Maximum of ${TURN_CAP} change proposals reached`
+        });
+      }
+    }
+
+    // Insert the event
+    const trimmedNote = note?.trim()?.slice(0, 2000) || null;
+    const insertResult = await pool.query(
+      `INSERT INTO cc_service_run_schedule_proposals 
+        (run_id, run_tenant_id, actor_individual_id, actor_role, 
+         response_id, resolution_id, event_type, proposed_start, proposed_end, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, event_type, proposed_start, proposed_end, note, created_at`,
+      [
+        runId,
+        runTenantId,
+        actorIndividualId,
+        actorRole,
+        response_id && isValidUUID(response_id) ? response_id : null,
+        resolution_id && isValidUUID(resolution_id) ? resolution_id : null,
+        event_type,
+        (event_type === 'proposed' || event_type === 'countered') ? new Date(proposed_start) : null,
+        (event_type === 'proposed' || event_type === 'countered') ? new Date(proposed_end) : null,
+        trimmedNote
+      ]
+    );
+
+    const newEvent = insertResult.rows[0];
+
+    // Send notifications
+    try {
+      if (actorRole === 'tenant') {
+        // Notify stakeholders who have responded
+        const stakeholdersResult = await pool.query(
+          `SELECT DISTINCT stakeholder_individual_id
+           FROM cc_service_run_stakeholder_responses
+           WHERE run_id = $1`,
+          [runId]
+        );
+        for (const row of stakeholdersResult.rows) {
+          await pool.query(
+            `INSERT INTO cc_notifications (
+              recipient_individual_id,
+              category,
+              priority,
+              channels,
+              context_type,
+              context_id,
+              body,
+              short_body,
+              action_url,
+              status
+            ) VALUES ($1, 'invitation', 'normal', ARRAY['in_app'], 'service_run', $2, $3, $4, $5, 'pending')`,
+            [
+              row.stakeholder_individual_id,
+              runId,
+              `Schedule ${event_type} for "${runName}"`,
+              `Schedule ${event_type}`,
+              `/app/runs/${runId}/view`
+            ]
+          );
+        }
+      } else {
+        // Stakeholder action - notify tenant
+        // Find tenant owner individual_id (simplified - notify first individual linked to tenant)
+        const tenantMembersResult = await pool.query(
+          `SELECT pm.individual_id
+           FROM cc_portal_memberships pm
+           JOIN cc_portals p ON pm.portal_id = p.id
+           WHERE p.tenant_id = $1
+           LIMIT 1`,
+          [runTenantId]
+        );
+        for (const row of tenantMembersResult.rows) {
+          await pool.query(
+            `INSERT INTO cc_notifications (
+              recipient_individual_id,
+              category,
+              priority,
+              channels,
+              context_type,
+              context_id,
+              body,
+              short_body,
+              action_url,
+              status
+            ) VALUES ($1, 'invitation', 'normal', ARRAY['in_app'], 'service_run', $2, $3, $4, $5, 'pending')`,
+            [
+              row.individual_id,
+              runId,
+              `Stakeholder ${event_type} schedule for "${runName}"`,
+              `Schedule ${event_type}`,
+              `/app/provider/runs/${runId}`
+            ]
+          );
+        }
+      }
+    } catch (notifyErr) {
+      console.error('Failed to create schedule proposal notification:', notifyErr);
+    }
+
+    res.json({
+      ok: true,
+      event: {
+        id: newEvent.id,
+        event_type: newEvent.event_type,
+        proposed_start: newEvent.proposed_start,
+        proposed_end: newEvent.proposed_end,
+        note: newEvent.note,
+        created_at: newEvent.created_at,
+        actor_role: actorRole
+      }
+    });
+  } catch (error: any) {
+    console.error('Schedule proposal create error:', error);
+    res.status(500).json({ ok: false, error: 'error.schedule_proposal.create_failed' });
+  }
+});
+
 export default router;

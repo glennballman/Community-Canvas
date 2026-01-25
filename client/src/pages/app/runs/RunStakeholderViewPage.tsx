@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, CheckCircle, AlertCircle, Loader2,
-  Bell, Building2, User, Shield, MessageSquare, Check, HelpCircle, RefreshCw
+  Bell, Building2, User, Shield, MessageSquare, Check, HelpCircle, RefreshCw, CalendarClock, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   Form, 
   FormControl, 
@@ -86,6 +96,29 @@ interface ResolutionsListResponse {
   resolutions: ResolutionItem[];
 }
 
+interface ScheduleProposalEvent {
+  id: string;
+  run_id: string;
+  actor_individual_id: string;
+  actor_role: 'tenant' | 'stakeholder';
+  event_type: 'proposed' | 'countered' | 'accepted' | 'declined';
+  proposed_start: string | null;
+  proposed_end: string | null;
+  note: string | null;
+  created_at: string;
+  actor_name: string | null;
+}
+
+interface ScheduleProposalsData {
+  ok: boolean;
+  turn_cap: number;
+  turns_used: number;
+  turns_remaining: number;
+  is_closed: boolean;
+  latest: ScheduleProposalEvent | null;
+  events: ScheduleProposalEvent[];
+}
+
 const stakeholderResponseFormSchema = z.object({
   response_type: z.enum(['confirm', 'request_change', 'question'], {
     required_error: 'Please select a response type',
@@ -145,6 +178,10 @@ export default function RunStakeholderViewPage() {
   const queryClient = useQueryClient();
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const [counterDialogOpen, setCounterDialogOpen] = useState(false);
+  const [counterStart, setCounterStart] = useState('');
+  const [counterEnd, setCounterEnd] = useState('');
+  const [counterNote, setCounterNote] = useState('');
 
   const form = useForm<StakeholderResponseFormData>({
     resolver: zodResolver(stakeholderResponseFormSchema),
@@ -168,6 +205,70 @@ export default function RunStakeholderViewPage() {
     queryKey: ['/api/runs', id, 'resolutions'],
     enabled: !!id && !!data?.ok,
   });
+
+  const { data: proposalsData } = useQuery<ScheduleProposalsData>({
+    queryKey: ['/api/runs', id, 'schedule-proposals'],
+    queryFn: async () => {
+      const res = await fetch(`/api/runs/${id}/schedule-proposals`);
+      if (!res.ok) return { ok: false, turn_cap: 3, turns_used: 0, turns_remaining: 3, is_closed: false, latest: null, events: [] };
+      return res.json();
+    },
+    enabled: !!id && !!data?.ok,
+  });
+
+  const proposalMutation = useMutation({
+    mutationFn: async ({ eventType, start, end, note }: { 
+      eventType: 'countered' | 'accepted' | 'declined';
+      start?: string;
+      end?: string;
+      note?: string;
+    }) => {
+      const res = await apiRequest('POST', `/api/runs/${id}/schedule-proposals`, { 
+        event_type: eventType, 
+        proposed_start: start,
+        proposed_end: end,
+        note,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/runs', id, 'schedule-proposals'] });
+      setCounterDialogOpen(false);
+      setCounterStart('');
+      setCounterEnd('');
+      setCounterNote('');
+    },
+  });
+
+  const handleOpenCounterDialog = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+    const endTime = new Date(tomorrow);
+    endTime.setHours(12, 0, 0, 0);
+    setCounterStart(tomorrow.toISOString().slice(0, 16));
+    setCounterEnd(endTime.toISOString().slice(0, 16));
+    setCounterNote('');
+    setCounterDialogOpen(true);
+  };
+
+  const handleSubmitCounter = () => {
+    if (!counterStart || !counterEnd) return;
+    proposalMutation.mutate({
+      eventType: 'countered',
+      start: counterStart,
+      end: counterEnd,
+      note: counterNote || undefined,
+    });
+  };
+
+  const handleAcceptProposal = () => {
+    proposalMutation.mutate({ eventType: 'accepted' });
+  };
+
+  const handleDeclineProposal = () => {
+    proposalMutation.mutate({ eventType: 'declined' });
+  };
 
   const submitMutation = useMutation({
     mutationFn: async (body: StakeholderResponseFormData) => {
@@ -561,6 +662,108 @@ export default function RunStakeholderViewPage() {
         </CardContent>
       </Card>
 
+      {proposalsData?.latest && (proposalsData.latest.event_type === 'proposed' || proposalsData.latest.event_type === 'countered') && !proposalsData.is_closed && (
+        <Card data-testid="card-schedule-proposal">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="w-5 h-5" />
+              {resolve('stakeholder.schedule_proposal.title') || 'Schedule proposal'}
+            </CardTitle>
+            <CardDescription>
+              The service provider has proposed a schedule change. You can accept, counter, or decline.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-md bg-muted/50 border" data-testid="proposal-details">
+              <div className="flex items-start gap-3">
+                <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium">Proposed time</p>
+                  <p className="text-sm text-muted-foreground">
+                    {proposalsData.latest.proposed_start && new Date(proposalsData.latest.proposed_start).toLocaleString()}
+                    {' — '}
+                    {proposalsData.latest.proposed_end && new Date(proposalsData.latest.proposed_end).toLocaleString()}
+                  </p>
+                  {proposalsData.latest.note && (
+                    <p className="text-sm text-muted-foreground mt-2 italic">"{proposalsData.latest.note}"</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {proposalsData.latest.actor_role === 'tenant' ? 'Provider' : 'You'} • {new Date(proposalsData.latest.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={handleAcceptProposal}
+                disabled={proposalMutation.isPending}
+                data-testid="button-accept-proposal"
+              >
+                {proposalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                {resolve('provider.schedule_proposal.accept') || 'Accept'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleOpenCounterDialog}
+                disabled={proposalMutation.isPending || proposalsData.turns_remaining === 0}
+                data-testid="button-counter-proposal"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                {resolve('provider.schedule_proposal.counter') || 'Counter'}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeclineProposal}
+                disabled={proposalMutation.isPending}
+                data-testid="button-decline-proposal"
+              >
+                <X className="w-4 h-4 mr-2" />
+                {resolve('provider.schedule_proposal.decline') || 'Decline'}
+              </Button>
+            </div>
+
+            {proposalsData.turns_remaining === 0 && (
+              <p className="text-xs text-amber-600" data-testid="text-turn-cap">
+                {resolve('provider.schedule_proposal.turn_cap') || 'Maximum change requests reached.'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {proposalsData?.is_closed && proposalsData.latest && (
+        <Card data-testid="card-schedule-proposal-closed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="w-5 h-5" />
+              {resolve('stakeholder.schedule_proposal.title') || 'Schedule proposal'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              {proposalsData.latest.event_type === 'accepted' ? (
+                <>
+                  <Badge className="bg-green-500/20 text-green-600" data-testid="badge-accepted">
+                    <Check className="w-3 h-3 mr-1" />
+                    {resolve('stakeholder.schedule_proposal.accepted') || 'Accepted'}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">on {new Date(proposalsData.latest.created_at).toLocaleString()}</span>
+                </>
+              ) : (
+                <>
+                  <Badge className="bg-red-500/20 text-red-600" data-testid="badge-declined">
+                    <X className="w-3 h-3 mr-1" />
+                    {resolve('stakeholder.schedule_proposal.declined') || 'Declined'}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">on {new Date(proposalsData.latest.created_at).toLocaleString()}</span>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex justify-center">
         <Button variant="outline" asChild data-testid="button-back-notifications-bottom">
           <Link href="/app/notifications">
@@ -569,6 +772,63 @@ export default function RunStakeholderViewPage() {
           </Link>
         </Button>
       </div>
+
+      <Dialog open={counterDialogOpen} onOpenChange={setCounterDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{resolve('provider.schedule_proposal.counter') || 'Counter proposal'}</DialogTitle>
+            <DialogDescription>
+              Propose an alternative time that works better for you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="counter-start">{resolve('provider.schedule_proposal.start_label') || 'Proposed start'}</Label>
+              <Input
+                id="counter-start"
+                type="datetime-local"
+                value={counterStart}
+                onChange={(e) => setCounterStart(e.target.value)}
+                data-testid="input-counter-start"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="counter-end">{resolve('provider.schedule_proposal.end_label') || 'Proposed end'}</Label>
+              <Input
+                id="counter-end"
+                type="datetime-local"
+                value={counterEnd}
+                onChange={(e) => setCounterEnd(e.target.value)}
+                data-testid="input-counter-end"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="counter-note">{resolve('provider.schedule_proposal.note_label') || 'Optional note'}</Label>
+              <Textarea
+                id="counter-note"
+                value={counterNote}
+                onChange={(e) => setCounterNote(e.target.value)}
+                placeholder="Why this time works better..."
+                className="resize-none"
+                data-testid="input-counter-note"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCounterDialogOpen(false)} data-testid="button-cancel-counter">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmitCounter}
+              disabled={proposalMutation.isPending || !counterStart || !counterEnd}
+              data-testid="button-submit-counter"
+            >
+              {proposalMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              {resolve('provider.schedule_proposal.counter') || 'Counter'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

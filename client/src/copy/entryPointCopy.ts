@@ -326,6 +326,23 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'stakeholder_resolution.message_label': 'Optional message',
     'stakeholder_resolution.resolved_at': 'Resolved',
     'stakeholder_resolution.resolved_by': 'Resolved by',
+    
+    // STEP 11C Phase 2C-3: Schedule Proposals
+    'provider.schedule_proposal.title': 'Schedule proposal',
+    'provider.schedule_proposal.create': 'Create proposed time',
+    'provider.schedule_proposal.proposed': 'Proposed',
+    'provider.schedule_proposal.counter': 'Counter',
+    'provider.schedule_proposal.accept': 'Accept',
+    'provider.schedule_proposal.decline': 'Decline',
+    'provider.schedule_proposal.note_label': 'Optional note',
+    'provider.schedule_proposal.turn_cap': 'Maximum change requests reached.',
+    'provider.schedule_proposal.closed': 'This proposal is closed.',
+    'provider.schedule_proposal.start_label': 'Proposed start',
+    'provider.schedule_proposal.end_label': 'Proposed end',
+    'stakeholder.schedule_proposal.title': 'Schedule proposal',
+    'stakeholder.schedule_proposal.accepted': 'Accepted',
+    'stakeholder.schedule_proposal.declined': 'Declined',
+    'stakeholder.schedule_proposal.countered': 'Counter proposed',
   },
 
   lodging: {

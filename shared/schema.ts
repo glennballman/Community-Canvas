@@ -8849,3 +8849,32 @@ export const insertResponseResolutionSchema = createInsertSchema(ccServiceRunRes
 });
 export type ResponseResolution = typeof ccServiceRunResponseResolutions.$inferSelect;
 export type InsertResponseResolution = z.infer<typeof insertResponseResolutionSchema>;
+
+// ============================================================
+// STEP 11C Phase 2C-3: Schedule Proposals
+// Deterministic negotiation primitive for service run schedule changes
+// ============================================================
+
+export const ccServiceRunScheduleProposals = pgTable("cc_service_run_schedule_proposals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  runId: uuid("run_id").notNull(),
+  runTenantId: uuid("run_tenant_id").notNull(),
+  actorIndividualId: uuid("actor_individual_id").notNull(),
+  actorRole: text("actor_role").notNull(), // 'tenant' | 'stakeholder'
+  responseId: uuid("response_id"),
+  resolutionId: uuid("resolution_id"),
+  eventType: text("event_type").notNull(), // 'proposed' | 'countered' | 'accepted' | 'declined'
+  proposedStart: timestamp("proposed_start", { withTimezone: true }),
+  proposedEnd: timestamp("proposed_end", { withTimezone: true }),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  runCreatedIdx: index("idx_sr_schedprop_run_created").on(table.runId, table.createdAt),
+  runEventIdx: index("idx_sr_schedprop_run_event").on(table.runId, table.eventType),
+}));
+
+export const insertScheduleProposalSchema = createInsertSchema(ccServiceRunScheduleProposals).omit({
+  id: true, createdAt: true
+});
+export type ScheduleProposal = typeof ccServiceRunScheduleProposals.$inferSelect;
+export type InsertScheduleProposal = z.infer<typeof insertScheduleProposalSchema>;
