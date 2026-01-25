@@ -9,6 +9,7 @@ import {
   findUUIDsInString,
   deepScanForUUIDs,
   filterAllowedUUIDPaths,
+  assertNoUUIDs,
   STRUCTURAL_UUID_PATHS,
   PROPOSAL_CONTEXT_PATHS,
 } from './leakScan';
@@ -258,6 +259,30 @@ describe('Leak Scanner Utilities', () => {
       expect(filtered.length).toBe(1);
       expect(filtered[0].path).toBe('latest.evil_field');
     });
+  });
+});
+
+describe('assertNoUUIDs with allowMasked', () => {
+  it('throws when full UUID is present', () => {
+    expect(() => assertNoUUIDs(`ID: ${VALID_UUID}`)).toThrow();
+  });
+
+  it('throws when full UUID is present even with allowMasked=true', () => {
+    expect(() => assertNoUUIDs(`ID: ${VALID_UUID}`, { allowMasked: true })).toThrow();
+  });
+
+  it('passes when masked UUID is present and allowMasked=true', () => {
+    const masked = VALID_UUID.substring(0, 8) + '…';
+    expect(() => assertNoUUIDs(`ID: ${masked}`, { allowMasked: true })).not.toThrow();
+  });
+
+  it('throws when masked UUID is present and allowMasked=false', () => {
+    const masked = VALID_UUID.substring(0, 8) + '…';
+    expect(() => assertNoUUIDs(`ID: ${masked}`, { allowMasked: false })).not.toThrow();
+  });
+
+  it('passes when no UUIDs at all', () => {
+    expect(() => assertNoUUIDs('No UUIDs here')).not.toThrow();
   });
 });
 

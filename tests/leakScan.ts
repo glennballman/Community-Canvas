@@ -63,13 +63,22 @@ export function assertNoUUIDs(
     textToCheck = textToCheck.replace(maskedPattern, '');
   }
 
-  const locations = deepScanForUUIDs(
-    typeof objOrString === 'string' ? objOrString : objOrString
-  );
+  const foundUUIDs = findUUIDsInString(textToCheck);
+  
+  if (allowedPaths.length === 0) {
+    if (foundUUIDs.length > 0) {
+      throw new Error(`Found UUIDs in text: ${foundUUIDs.join(', ')}`);
+    }
+    return;
+  }
+
+  const locations = deepScanForUUIDs(objOrString);
 
   const disallowedLocations = locations.filter(loc => {
     return !allowedPaths.some(allowed => 
-      loc.path === allowed || loc.path.startsWith(allowed + '.')
+      loc.path === allowed || 
+      loc.path.startsWith(allowed + '.') ||
+      loc.path.startsWith(allowed + '[')
     );
   });
 
