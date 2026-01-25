@@ -87,6 +87,7 @@ import ProviderInboxPage from './pages/app/provider/ProviderInboxPage';
 import ProviderRequestDetailPage from './pages/app/provider/ProviderRequestDetailPage';
 import ProviderRunsPage from './pages/app/provider/ProviderRunsPage';
 import ProviderRunDetailPage from './pages/app/provider/ProviderRunDetailPage';
+import RunStakeholderViewPage from './pages/app/runs/RunStakeholderViewPage';
 
 // Pages - Contractor Preview (PROMPT 8)
 import ContractorWorkRequestPreview from './pages/app/ContractorWorkRequestPreview';
@@ -606,6 +607,9 @@ export default function App() {
                 {/* Provider Runs (Service Provider Experience Phase 2) */}
                 <Route path="provider/runs" element={<ProviderRunsPage />} />
                 <Route path="provider/runs/:id" element={<ProviderRunDetailPage />} />
+                
+                {/* Stakeholder Run View (STEP 11C Phase 2B-2.1) */}
+                <Route path="runs/:id/view" element={<RunStakeholderViewPage />} />
                 
                 {/* Resident Calendar (my-place) - uses ScheduleBoard time spine */}
                 <Route path="my-place/calendar" element={<OpsCalendarBoardPage mode="resident" />} />

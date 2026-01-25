@@ -151,6 +151,7 @@ import calendarRouter from "./routes/calendar";
 import commandConsoleRouter from "./routes/command-console";
 import publicPortalConditionsRouter from "./routes/public-portal-conditions";
 import messageActionsRouter from "./routes/message-actions";
+import stakeholderRunsRouter from "./routes/stakeholder-runs";
 import { publicQuery, serviceQuery } from "./db/tenantDb";
 import express from "express";
 
@@ -578,6 +579,9 @@ export async function registerRoutes(
   
   // Provider Inbox (Service Provider Experience Phase 1)
   app.use('/api/provider', providerRouter);
+  
+  // Stakeholder Run Views (STEP 11C Phase 2B-2.1)
+  app.use('/api/runs', stakeholderRunsRouter);
   
   // Contractor Ingestions (Prompt A2)
   app.use('/api/contractor/ingestions', contractorIngestionsRouter);

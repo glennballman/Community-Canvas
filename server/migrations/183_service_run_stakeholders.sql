@@ -58,4 +58,17 @@ CREATE POLICY service_mode_all ON cc_service_run_stakeholders
   FOR ALL
   USING (is_service_mode());
 
+DROP POLICY IF EXISTS run_tenant_insert ON cc_service_run_stakeholders;
+CREATE POLICY run_tenant_insert ON cc_service_run_stakeholders
+  FOR INSERT
+  WITH CHECK (
+    run_tenant_id = current_tenant_id()
+    OR is_service_mode()
+  );
+
+DROP POLICY IF EXISTS public_insert ON cc_service_run_stakeholders;
+CREATE POLICY public_insert ON cc_service_run_stakeholders
+  FOR INSERT
+  WITH CHECK (true);
+
 COMMIT;

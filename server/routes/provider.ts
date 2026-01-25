@@ -2471,7 +2471,7 @@ router.post('/runs/:runId/stakeholder-invites/:inviteId/revoke', requireAuth, as
     const runName = runResult.rows[0].name || 'Service Run';
 
     const inviteResult = await pool.query(
-      `SELECT id, invitee_email, status, inviter_individual_id
+      `SELECT id, invitee_email, status, inviter_individual_id, claimed_by_individual_id
        FROM cc_invitations
        WHERE id = $1 AND context_id = $2 AND inviter_tenant_id = $3`,
       [inviteId, runId, tenantId]
@@ -2498,6 +2498,26 @@ router.post('/runs/:runId/stakeholder-invites/:inviteId/revoke', requireAuth, as
        WHERE id = $4`,
       [userId, reason || null, isSilent, inviteId]
     );
+
+    // Revoke stakeholder access row if invitation was claimed (STEP 11C Phase 2B-2.1)
+    if (invite.status === 'claimed' || invite.claimed_by_individual_id) {
+      try {
+        await pool.query(
+          `UPDATE cc_service_run_stakeholders
+           SET status = 'revoked',
+               revoked_at = now(),
+               revoked_reason = COALESCE($1, 'invitation_revoked'),
+               updated_at = now()
+           WHERE invite_id = $2
+              OR (run_id = $3 AND stakeholder_individual_id = $4)`,
+          [reason || null, inviteId, runId, invite.claimed_by_individual_id]
+        );
+        console.log(`[Revoke] Stakeholder access revoked for invite ${inviteId}`);
+      } catch (stakeErr: any) {
+        console.error('[Revoke] Failed to revoke stakeholder access:', stakeErr.message);
+        // Non-fatal: revocation continues
+      }
+    }
 
     await createInviteNotification(
       invite.inviter_individual_id,

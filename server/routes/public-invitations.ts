@@ -240,11 +240,13 @@ router.post('/:token/claim', async (req: Request, res: Response) => {
       `SELECT 
         id,
         invitee_email,
+        invitee_role,
         status,
         claim_token_expires_at,
         claimed_by_individual_id,
         inviter_tenant_id,
         inviter_individual_id,
+        context_type,
         context_id,
         context_name
       FROM cc_invitations
@@ -326,6 +328,47 @@ router.post('/:token/claim', async (req: Request, res: Response) => {
          AND status <> 'claimed'`,
       [invitation.id, individualId, claimedByTenantId]
     );
+
+    // Create stakeholder access row for service_run context (STEP 11C Phase 2B-2.1)
+    if (invitation.context_type === 'service_run' && individualId && invitation.context_id) {
+      try {
+        await pool.query(
+          `INSERT INTO cc_service_run_stakeholders
+           (run_id, run_tenant_id, stakeholder_individual_id, invite_id, stakeholder_role, status, granted_at)
+           VALUES ($1, $2, $3, $4, $5, 'active', now())
+           ON CONFLICT (run_id, stakeholder_individual_id)
+           DO UPDATE SET
+             status = 'active',
+             revoked_at = NULL,
+             revoked_reason = NULL,
+             invite_id = EXCLUDED.invite_id,
+             updated_at = now()`,
+          [
+            invitation.context_id,
+            invitation.inviter_tenant_id,
+            individualId,
+            invitation.id,
+            invitation.invitee_role || null
+          ]
+        );
+        console.log(`[Claim] Stakeholder access granted for run ${invitation.context_id} to individual ${individualId}`);
+        
+        // Create "Access granted" notification to claimant with link to stakeholder view
+        const runName = invitation.context_name || 'Service Run';
+        await createInviteNotification(
+          individualId,
+          'system',
+          `You now have access to "${runName}"`,
+          'Access granted',
+          'invitation',
+          invitation.id,
+          `/app/runs/${invitation.context_id}/view`
+        );
+      } catch (stakeErr: any) {
+        console.error('[Claim] Failed to create stakeholder access:', stakeErr.message);
+        // Non-fatal: claim still succeeds, but access row may be missing
+      }
+    }
 
     if (invitation.inviter_individual_id) {
       const runName = invitation.context_name || 'Service Run';
