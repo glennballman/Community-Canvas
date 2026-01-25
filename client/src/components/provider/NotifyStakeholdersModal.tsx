@@ -922,7 +922,28 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
                         {inv.invitee_name && (
                           <p className="text-xs text-muted-foreground">{inv.invitee_name}</p>
                         )}
-                        {(inv as any).email_delivered === false && (
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {(inv as any).delivery_channel && (
+                            <Badge 
+                              variant="outline" 
+                              className={
+                                (inv as any).delivery_channel === 'in_app' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                (inv as any).delivery_channel === 'both' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                (inv as any).delivery_channel === 'email' ? 'bg-green-50 text-green-700 border-green-200' :
+                                'bg-muted text-muted-foreground'
+                              }
+                              data-testid={`badge-delivery-created-${inv.id}`}
+                            >
+                              {resolve(`provider.notify.delivery.${(inv as any).delivery_channel}`) || (inv as any).delivery_channel}
+                            </Badge>
+                          )}
+                          {(inv as any).on_platform && (
+                            <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-indigo-200" data-testid={`badge-on-platform-created-${inv.id}`}>
+                              {resolve('provider.notify.bulk.badge.on_platform')}
+                            </Badge>
+                          )}
+                        </div>
+                        {(inv as any).email_delivered === false && !(inv as any).on_platform && (
                           <p className="text-xs text-yellow-600 flex items-center gap-1 mt-1">
                             <MailX className="w-3 h-3" />
                             Email unavailable - copy link instead
@@ -971,12 +992,26 @@ export function NotifyStakeholdersModal({ open, onOpenChange, runId, runName }: 
                               {inv.invitee_name && (
                                 <p className="text-xs text-muted-foreground">{inv.invitee_name}</p>
                               )}
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {getStatusBadge(inv.status)}
                                 {inv.sent_via && (
-                                  <span className="text-xs text-muted-foreground">
-                                    via {inv.sent_via}
-                                  </span>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={
+                                      inv.sent_via === 'in_app' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                      inv.sent_via === 'both' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                      inv.sent_via === 'email' ? 'bg-green-50 text-green-700 border-green-200' :
+                                      'bg-muted text-muted-foreground'
+                                    }
+                                    data-testid={`badge-delivery-${inv.id}`}
+                                  >
+                                    {resolve(`provider.notify.delivery.${inv.sent_via}`) || inv.sent_via}
+                                  </Badge>
+                                )}
+                                {(inv as any).on_platform && (
+                                  <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-indigo-200" data-testid={`badge-on-platform-${inv.id}`}>
+                                    {resolve('provider.notify.bulk.badge.on_platform')}
+                                  </Badge>
                                 )}
                               </div>
                               {inv.viewed_at && (

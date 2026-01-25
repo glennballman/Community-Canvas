@@ -74,12 +74,13 @@ interface EffectivePolicy {
   individualHourlyCap: number;
   perRequestCap: number;
   emailSendPerMinute: number;
+  skipEmailIfOnPlatform: boolean;
 }
 
 async function loadEffectivePolicy(tenantId: string): Promise<EffectivePolicy | null> {
   try {
     const platformResult = await pool.query(
-      `SELECT tenant_daily_cap, individual_hourly_cap, per_request_cap, email_send_per_minute
+      `SELECT tenant_daily_cap, individual_hourly_cap, per_request_cap, email_send_per_minute, skip_email_if_on_platform
        FROM cc_platform_invite_policy WHERE policy_key = 'default'`
     );
     
@@ -91,7 +92,7 @@ async function loadEffectivePolicy(tenantId: string): Promise<EffectivePolicy | 
     const platform = platformResult.rows[0];
     
     const tenantResult = await pool.query(
-      `SELECT tenant_daily_cap, individual_hourly_cap, per_request_cap, email_send_per_minute
+      `SELECT tenant_daily_cap, individual_hourly_cap, per_request_cap, email_send_per_minute, skip_email_if_on_platform
        FROM cc_tenant_invite_policy WHERE tenant_id = $1`,
       [tenantId]
     );
@@ -103,6 +104,7 @@ async function loadEffectivePolicy(tenantId: string): Promise<EffectivePolicy | 
       individualHourlyCap: tenantOverride.individual_hourly_cap ?? platform.individual_hourly_cap,
       perRequestCap: tenantOverride.per_request_cap ?? platform.per_request_cap,
       emailSendPerMinute: tenantOverride.email_send_per_minute ?? platform.email_send_per_minute,
+      skipEmailIfOnPlatform: tenantOverride.skip_email_if_on_platform ?? platform.skip_email_if_on_platform ?? false,
     };
   } catch (error) {
     console.error('[InvitePolicy] Failed to load policy:', error);
@@ -2187,9 +2189,23 @@ router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthReques
     );
     const inviterName = inviterResult.rows[0]?.display_name || inviterResult.rows[0]?.email || 'Service Provider';
 
+    // Batch lookup individuals by email for on-platform detection
+    const normalizedEmails = invitees.map((inv: any) => inv.email.toLowerCase().trim());
+    const individualsResult = await pool.query(
+      `SELECT id, lower(email) AS email, full_name AS display_name
+       FROM cc_individuals
+       WHERE lower(email) = ANY($1::text[])`,
+      [normalizedEmails]
+    );
+    const individualsByEmail = new Map<string, { id: string; displayName: string | null }>();
+    for (const row of individualsResult.rows) {
+      individualsByEmail.set(row.email, { id: row.id, displayName: row.display_name || null });
+    }
+
     const createdInvitations: any[] = [];
     let emailsSent = 0;
     let emailsSkipped = 0;
+    let inAppSent = 0;
 
     const emailMinuteKey = `${tenantId}:${getUTCMinute()}`;
 
@@ -2231,44 +2247,83 @@ router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthReques
       );
 
       const created = insertResult.rows[0];
+      const inviteeEmailLower = inv.email.toLowerCase().trim();
+      const onPlatformMatch = individualsByEmail.get(inviteeEmailLower);
+      const isOnPlatform = !!onPlatformMatch;
+      const inviteeIndividualId = onPlatformMatch?.id || null;
+
       let emailDelivered = false;
+      let inAppDelivered = false;
+      let deliveryChannel: 'email' | 'in_app' | 'both' | 'link' = 'link';
 
-      const emailCheck = checkAndIncrementLimit(
-        emailMinuteLimits,
-        emailMinuteKey,
-        policy.emailSendPerMinute,
-        60 * 1000
-      );
+      // If on-platform, create in-app notification to invitee
+      if (isOnPlatform && inviteeIndividualId) {
+        await createInviteNotification(
+          inviteeIndividualId,
+          'invitation',
+          `You've been invited to view "${runName}".`,
+          'New invitation',
+          'invitation',
+          created.id,
+          `/i/${claimToken}`
+        );
+        inAppDelivered = true;
+        inAppSent++;
+      }
 
-      if (emailCheck.allowed && isEmailEnabled()) {
-        const template = invitationCreated({
-          runName,
-          inviterName,
-          claimUrl,
-          token: claimToken
-        });
+      // Determine if we should send email
+      const shouldSendEmail = !isOnPlatform || !policy.skipEmailIfOnPlatform;
 
-        const emailResult = await sendEmail({
-          to: inv.email,
-          subject: template.subject,
-          html: template.html,
-          text: template.text,
-          metadata: { invitationId: created.id, runId }
-        });
+      if (shouldSendEmail) {
+        const emailCheck = checkAndIncrementLimit(
+          emailMinuteLimits,
+          emailMinuteKey,
+          policy.emailSendPerMinute,
+          60 * 1000
+        );
 
-        if (emailResult.sent) {
-          emailDelivered = true;
-          emailsSent++;
-          await pool.query(
-            `UPDATE cc_invitations SET sent_via = 'email' WHERE id = $1`,
-            [created.id]
-          );
+        if (emailCheck.allowed && isEmailEnabled()) {
+          const template = invitationCreated({
+            runName,
+            inviterName,
+            claimUrl,
+            token: claimToken
+          });
+
+          const emailResult = await sendEmail({
+            to: inv.email,
+            subject: template.subject,
+            html: template.html,
+            text: template.text,
+            metadata: { invitationId: created.id, runId }
+          });
+
+          if (emailResult.sent) {
+            emailDelivered = true;
+            emailsSent++;
+          } else {
+            emailsSkipped++;
+          }
         } else {
           emailsSkipped++;
         }
-      } else {
-        emailsSkipped++;
       }
+
+      // Determine delivery channel and update sent_via
+      if (inAppDelivered && emailDelivered) {
+        deliveryChannel = 'both';
+      } else if (inAppDelivered) {
+        deliveryChannel = 'in_app';
+      } else if (emailDelivered) {
+        deliveryChannel = 'email';
+      } else {
+        deliveryChannel = 'link';
+      }
+
+      await pool.query(
+        `UPDATE cc_invitations SET sent_via = $2 WHERE id = $1`,
+        [created.id, deliveryChannel]
+      );
 
       createdInvitations.push({
         id: created.id,
@@ -2277,7 +2332,10 @@ router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthReques
         status: created.status,
         claim_token_expires_at: created.claim_token_expires_at,
         claim_url: `/i/${created.claim_token}`,
-        email_delivered: emailDelivered
+        email_delivered: emailDelivered,
+        on_platform: isOnPlatform,
+        invitee_individual_id: inviteeIndividualId,
+        delivery_channel: deliveryChannel
       });
     }
 
@@ -2297,7 +2355,9 @@ router.post('/runs/:id/stakeholder-invites', requireAuth, async (req: AuthReques
       invitations: createdInvitations,
       emails_sent: emailsSent,
       emails_skipped: emailsSkipped,
-      email_enabled: isEmailEnabled()
+      in_app_sent: inAppSent,
+      email_enabled: isEmailEnabled(),
+      skip_email_if_on_platform: policy.skipEmailIfOnPlatform
     });
   } catch (error: any) {
     console.error('Create stakeholder invites error:', error);
