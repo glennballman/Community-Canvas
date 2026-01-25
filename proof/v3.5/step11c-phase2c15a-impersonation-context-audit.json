@@ -1,0 +1,292 @@
+{
+  "audit_date": "2026-01-25",
+  "audit_phase": "2C-15A",
+  "status": "COMPLETE",
+  
+  "routing_decision_tree": {
+    "entry_point": "AppRouterSwitch",
+    "location": "client/src/components/routing/AppRouterSwitch.tsx",
+    "decision_flow": [
+      {
+        "condition": "!authReady",
+        "action": "render_loading_spinner"
+      },
+      {
+        "condition": "impersonation.active && !impersonation.tenant && !isSelectTenantPath",
+        "action": "redirect_to_/app/select-tenant"
+      },
+      {
+        "condition": "impersonation.active && impersonation.tenant && isPlatformPath",
+        "action": "redirect_to_/app"
+      },
+      {
+        "condition": "else",
+        "action": "render_outlet"
+      }
+    ],
+    "layout_selection": {
+      "note": "Determined by route config, not AppRouterSwitch",
+      "routes": [
+        { "path": "/app/platform/*", "layout": "PlatformLayout" },
+        { "path": "/app/founder/*", "layout": "FounderLayout" },
+        { "path": "/app/*", "layout": "TenantAppLayout" }
+      ]
+    }
+  },
+
+  "endpoints_list": [
+    {
+      "path": "/api/foundation/auth/whoami",
+      "method": "GET",
+      "location": "server/routes/foundation.ts:189",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": null
+      },
+      "returns_impersonation": true,
+      "returns_memberships": false,
+      "note": "Primary impersonation state source for AuthContext"
+    },
+    {
+      "path": "/api/foundation/auth/me",
+      "method": "GET",
+      "location": "server/routes/foundation.ts:244",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": null
+      },
+      "returns_impersonation": false,
+      "returns_memberships": true,
+      "note": "Returns REAL user's tenants (ccTenants)"
+    },
+    {
+      "path": "/api/foundation/auth/login",
+      "method": "POST",
+      "location": "server/routes/foundation.ts:93",
+      "guards": {
+        "auth_required": false,
+        "tenant_required": false,
+        "role_required": null
+      },
+      "returns_impersonation": false,
+      "returns_memberships": true,
+      "note": "Sets JWT token and returns user tenants"
+    },
+    {
+      "path": "/api/foundation/auth/logout",
+      "method": "POST",
+      "location": "server/routes/foundation.ts:174",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": null
+      },
+      "returns_impersonation": false,
+      "returns_memberships": false,
+      "note": "Clears session"
+    },
+    {
+      "path": "/api/me/context",
+      "method": "GET",
+      "location": "server/routes/user-context.ts:16",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": null
+      },
+      "returns_impersonation": true,
+      "returns_memberships": true,
+      "note": "CRITICAL: Returns REAL user's memberships, not impersonated user's"
+    },
+    {
+      "path": "/api/me/switch-tenant",
+      "method": "POST",
+      "location": "server/routes/user-context.ts:199",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": null
+      },
+      "returns_impersonation": false,
+      "returns_memberships": false,
+      "note": "Sets session.current_tenant_id"
+    },
+    {
+      "path": "/api/admin/impersonation/users",
+      "method": "GET",
+      "location": "server/routes/admin-impersonation.ts:28",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": "platform_admin"
+      },
+      "returns_impersonation": false,
+      "returns_memberships": true,
+      "note": "Search users for impersonation, includes their memberships"
+    },
+    {
+      "path": "/api/admin/impersonation/start",
+      "method": "POST",
+      "location": "server/routes/admin-impersonation.ts:111",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": "platform_admin"
+      },
+      "returns_impersonation": true,
+      "returns_memberships": true,
+      "note": "Starts impersonation, tenant_id is OPTIONAL"
+    },
+    {
+      "path": "/api/admin/impersonation/stop",
+      "method": "POST",
+      "location": "server/routes/admin-impersonation.ts:351",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": "platform_admin"
+      },
+      "returns_impersonation": false,
+      "returns_memberships": false,
+      "note": "Clears session.impersonation"
+    },
+    {
+      "path": "/api/admin/impersonation/status",
+      "method": "GET",
+      "location": "server/routes/admin-impersonation.ts:395",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": "platform_admin"
+      },
+      "returns_impersonation": true,
+      "returns_memberships": true,
+      "note": "Returns impersonated user's memberships"
+    },
+    {
+      "path": "/api/admin/impersonation/set-tenant",
+      "method": "POST",
+      "location": "server/routes/admin-impersonation.ts:273",
+      "guards": {
+        "auth_required": true,
+        "tenant_required": false,
+        "role_required": "platform_admin"
+      },
+      "returns_impersonation": false,
+      "returns_memberships": false,
+      "note": "Sets tenant context for active impersonation"
+    }
+  ],
+
+  "nav_gating_rules": {
+    "v3Nav": {
+      "location": "client/src/lib/routes/v3Nav.ts",
+      "filter_context": {
+        "isAuthenticated": "boolean",
+        "hasTenant": "boolean",
+        "hasPortal": "boolean",
+        "isPlatformAdmin": "boolean",
+        "tenantRole": "string | undefined",
+        "portalRole": "string | undefined",
+        "founderNavEnabled": "boolean | undefined"
+      },
+      "rules": [
+        { "flag": "hiddenInProduction", "hides_if": "NODE_ENV === 'production'" },
+        { "flag": "platformAdminOnly", "hides_if": "!isPlatformAdmin" },
+        { "flag": "requiresTenant", "hides_if": "!hasTenant" },
+        { "flag": "requiresPortal", "hides_if": "!hasPortal" },
+        { "flag": "tenantRolesAny", "hides_if": "tenantRole not in array" },
+        { "flag": "portalRolesAny", "hides_if": "portalRole not in array" }
+      ],
+      "your_places_config": {
+        "label": "Your Places",
+        "href": "/app/places",
+        "requiresTenant": false,
+        "always_visible": true
+      }
+    },
+    "platformNav": {
+      "location": "client/src/lib/routes/platformNav.ts",
+      "filter_context": {
+        "hasTenantMemberships": "boolean"
+      },
+      "your_places_config": {
+        "label": "Your Places",
+        "href": "/app/places",
+        "requiresTenantMemberships": true,
+        "hidden_for_glenn": true
+      }
+    }
+  },
+
+  "tenant_auto_selection": {
+    "presence": false,
+    "where_prevented": "server/routes/admin-impersonation.ts:157",
+    "invariant_comment_lines": "148-155",
+    "behavior": "selectedTenant = null if no tenant_id provided in request"
+  },
+
+  "effective_identity_fields": [
+    {
+      "field": "user.id",
+      "source": "JWT (req.user.userId)",
+      "purpose": "Real user identity for auth"
+    },
+    {
+      "field": "user.isPlatformAdmin",
+      "source": "JWT (req.user.isPlatformAdmin)",
+      "purpose": "Platform-level permissions"
+    },
+    {
+      "field": "impersonation.active",
+      "source": "Session → /api/foundation/auth/whoami",
+      "purpose": "Whether impersonating another user"
+    },
+    {
+      "field": "impersonation.target_user",
+      "source": "Session → /api/foundation/auth/whoami",
+      "purpose": "Impersonated user identity"
+    },
+    {
+      "field": "impersonation.tenant",
+      "source": "Session → /api/foundation/auth/whoami",
+      "purpose": "Selected tenant context (CAN BE NULL)"
+    },
+    {
+      "field": "memberships",
+      "source": "/api/me/context or /api/admin/impersonation/status",
+      "purpose": "Available tenant memberships"
+    }
+  ],
+
+  "issues_identified": [
+    {
+      "id": "ISSUE-1",
+      "severity": "medium",
+      "description": "Duplicate impersonation state with different shapes in AuthContext vs TenantContext",
+      "auth_shape": "{ active, target_user, tenant, role, expires_at }",
+      "tenant_shape": "{ is_impersonating, tenant_id, tenant_name, tenant_type, tenant_role, portal_slug, expires_at }"
+    },
+    {
+      "id": "ISSUE-2",
+      "severity": "high",
+      "description": "/api/me/context returns REAL user's memberships, not impersonated user's memberships",
+      "impact": "TenantContext.memberships shows wrong data during impersonation"
+    },
+    {
+      "id": "ISSUE-3",
+      "severity": "medium",
+      "description": "No UserShell layout - impersonation with null tenant forces user to SelectTenantPage",
+      "user_expectation": "Should land on user-level page showing impersonated user's tenants"
+    },
+    {
+      "id": "ISSUE-4",
+      "severity": "high",
+      "description": "Broken logout routes in PlatformLayout and FounderLayout",
+      "broken_path": "/api/logout",
+      "correct_path": "/api/foundation/auth/logout"
+    }
+  ]
+}

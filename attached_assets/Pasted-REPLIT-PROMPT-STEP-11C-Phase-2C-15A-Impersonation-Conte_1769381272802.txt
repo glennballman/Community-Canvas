@@ -1,0 +1,101 @@
+REPLIT PROMPT — STEP 11C Phase 2C-15A: Impersonation & Context Audit (No Behavior Changes)
+
+ROLE: Forensic auditor.
+RULE: Do not change routing behavior, guards, or UI flows in this step. Audit only.
+
+A) Inventory the current auth + context model
+
+Locate and print (file paths + key excerpts):
+
+AuthContext state shape (including impersonation fields)
+
+TenantContext state shape
+
+AppRouterSwitch decision tree for choosing layouts/routes
+
+ImpersonationBanner data source and render rules
+
+any “tenant selection” logic (/app/select-tenant route, how it’s reached)
+
+Identify the canonical “effective identity” fields used everywhere:
+
+effective user id/email/name
+
+platform admin flag
+
+impersonation active flag
+
+tenant_context (selected tenant) vs available memberships
+
+B) Map the actual APIs used (whoami/context/memberships)
+
+List the endpoints and what they return (include example JSON from dev):
+
+/api/foundation/auth/whoami (or equivalent)
+
+/api/me/context
+
+any memberships endpoint (if exists)
+
+impersonation start/stop endpoints
+
+tenant context set endpoint (if exists)
+
+For each endpoint, document:
+
+auth requirement
+
+tenant requirement
+
+role requirement
+
+whether it returns impersonation state
+
+whether it returns tenant memberships
+
+C) Tenant membership resolution rules
+
+Find where cc_tenant_users is loaded into request context:
+
+identify exact code path
+
+what happens when platform admin has zero memberships (Glenn)
+
+what happens when impersonating Mathew (has 2 memberships)
+
+Confirm how role is chosen during impersonation:
+
+does it use the impersonated user’s membership role?
+
+does it ever “guess” a tenant?
+
+D) UI nav generation audit
+
+Find the code that builds left-nav items and filters them.
+Report:
+
+what inputs it uses (role, tenant_id, platform_admin)
+
+how it behaves if tenant_id is null
+
+where “Your Places” is added and what gates it
+
+E) Output artifacts
+
+Create:
+
+proof/v3.5/step11c-phase2c15a-impersonation-context-audit.md
+
+proof/v3.5/step11c-phase2c15a-impersonation-context-audit.json
+
+The JSON must include:
+
+routing decision tree
+
+endpoints list with guards
+
+nav gating rules
+
+“tenant auto-selection” presence: true/false + where
+
+STOP after audit. Do not fix anything yet.
