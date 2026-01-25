@@ -1,0 +1,259 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2C-1 (CC-13)
+Stakeholder Responses: Confirm / Request Change / Ask Question
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Additive-only. No refactors. No breaking changes. No forbidden terminology.
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+Enable authenticated stakeholders (and run-owning tenants) to submit and view “responses” on a service run:
+- confirm
+- request_change
+- question
+
+Requirements:
+1) Append-only response records (audit-grade), derived “latest response” view
+2) RLS-secured (stakeholder can insert/select own; tenant can select all for run)
+3) API:
+   - POST /api/runs/:id/respond
+   - GET /api/runs/:id/responses
+4) UI:
+   - Add “Your Response” card in RunStakeholderViewPage.tsx (after “Your Access” card)
+   - Use RadioGroup + Textarea + Button (existing components)
+   - Show latest response and history list (no timeline component needed)
+5) Notifications:
+   - Notify run-owning tenant when a stakeholder responds
+   - Use tenant-level notifications (recipient_tenant_id) since cc_n3_runs has no owner_individual_id
+
+AUDIT-CONFIRMED CONTEXT
+- Stakeholder view endpoint file: server/routes/stakeholder-runs.ts
+- Stakeholder auth resolves individualId via email join
+- RLS helpers exist: current_individual_id(), current_tenant_id(), is_service_mode()
+- Notification lookup supports recipient_tenant_id OR recipient_individual_id
+- No need to use messaging threads; use cc_notifications
+
+TARGET FILES
+- Migration: next additive migration file
+- shared/schema.ts (Drizzle)
+- server/routes/stakeholder-runs.ts (add endpoints + include latest response in /view)
+- client/src/pages/app/runs/RunStakeholderViewPage.tsx
+- copy tokens: client/src/copy/entryPointCopy.ts (service entrypoint copy)
+
+========================================================
+A) DB MIGRATION — cc_service_run_stakeholder_responses (REQUIRED)
+========================================================
+
+Create table:
+
+cc_service_run_stakeholder_responses
+- id uuid PK default gen_random_uuid()
+- run_id uuid NOT NULL REFERENCES cc_n3_runs(id) ON DELETE CASCADE
+- run_tenant_id uuid NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE
+- stakeholder_individual_id uuid NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE
+- response_type text NOT NULL
+  allowed: 'confirm' | 'request_change' | 'question'  (enforce via CHECK constraint)
+- message text NULL
+- responded_at timestamptz NOT NULL DEFAULT now()
+- created_at timestamptz NOT NULL DEFAULT now()
+
+Indexes:
+- INDEX on (run_id, responded_at DESC)
+- INDEX on (stakeholder_individual_id, responded_at DESC)
+- INDEX on (run_tenant_id, responded_at DESC)
+
+Idempotency / dedupe (IMPORTANT):
+Stakeholders may click twice. Add a soft idempotency constraint aligned to audit philosophy:
+- Create a UNIQUE index on (run_id, stakeholder_individual_id, response_type, date_trunc('minute', responded_at)) is not possible as index expression uniqueness can be messy.
+Instead implement idempotency in API:
+- If an identical response_type+message was submitted by same stakeholder within last 60 seconds, return the existing latest row.
+
+RLS:
+- ENABLE ROW LEVEL SECURITY
+Policies (keep minimal and consistent with other tables):
+1) stakeholder_select_own:
+   FOR SELECT USING (stakeholder_individual_id = current_individual_id())
+2) stakeholder_insert_own:
+   FOR INSERT WITH CHECK (stakeholder_individual_id = current_individual_id())
+3) tenant_select_by_run_tenant:
+   FOR SELECT USING (run_tenant_id = current_tenant_id())
+4) service_mode_all:
+   FOR ALL USING (is_service_mode()) WITH CHECK (is_service_mode())
+
+No UPDATE/DELETE paths needed (append-only).
+
+========================================================
+B) DRIZZLE SCHEMA (REQUIRED)
+========================================================
+Update shared/schema.ts to add cc_service_run_stakeholder_responses table with correct types and exports.
+
+========================================================
+C) BACKEND — Add endpoints in server/routes/stakeholder-runs.ts (REQUIRED)
+========================================================
+
+1) POST /api/runs/:id/respond
+Location: server/routes/stakeholder-runs.ts under existing router
+
+Auth:
+- Use the same requireAuth already in this file.
+- Resolve individualId exactly as /:id/view does (email join); reuse helper logic (do not duplicate if avoidable).
+
+Authorization:
+- Allow if:
+  A) stakeholder has active row in cc_service_run_stakeholders for this run
+  OR
+  B) tenant owner access: cc_n3_runs.tenant_id = current tenant context (existing logic)
+
+Request body:
+{
+  response_type: 'confirm' | 'request_change' | 'question',
+  message?: string
+}
+
+Validation:
+- response_type required; must be one of the allowed values
+- message optional; trim; max length 2000
+- No forbidden terms introduced in copy; code can use response_type values as above
+
+Insert:
+- Determine runTenantId by querying cc_n3_runs.tenant_id for runId
+- stakeholder_individual_id = resolved individualId
+- Insert new response row (append-only)
+
+Idempotency (60s window):
+Before insert, check latest response by this stakeholder for this run:
+SELECT id, response_type, message, responded_at
+FROM cc_service_run_stakeholder_responses
+WHERE run_id=$1 AND stakeholder_individual_id=$2
+ORDER BY responded_at DESC
+LIMIT 1
+If:
+- same response_type
+- same normalized message (NULL treated as '')
+- responded_at >= now() - interval '60 seconds'
+Then return that row and DO NOT insert a new one.
+
+Notify run owning tenant:
+- Insert into cc_notifications with:
+  recipient_tenant_id = runTenantId
+  category='invitation' (or 'alert' if your system prefers; choose 'invitation' only if already used for invites; otherwise use 'alert')
+  short_body = 'New stakeholder response'
+  body = `A stakeholder responded on "${run.name}".`
+  context_type = 'service_run'
+  context_id = runId
+  action_url = `/app/provider/runs/${runId}` (tenant-scoped view for the owner tenant)
+Channels:
+- ['in_app'] only (email is optional later; Phase 2C-1 is in-app)
+
+Return:
+{ ok:true, response:{ id, run_id, stakeholder_individual_id, response_type, message, responded_at } }
+
+2) GET /api/runs/:id/responses
+Auth/authorization same as respond.
+Return list ordered by responded_at desc.
+For stakeholders: they may see ONLY their own responses (RLS already enforces)
+For tenant owners: they see all responses (tenant_select policy)
+
+Response shape:
+{ ok:true, responses:[...] }
+
+3) Enhance existing GET /:id/view response (optional but recommended for UX)
+Add:
+- latest_response (derived)
+Compute by:
+SELECT DISTINCT ON (run_id, stakeholder_individual_id) ...
+But for stakeholder view page we only need latest for current stakeholder:
+SELECT id, response_type, message, responded_at
+FROM cc_service_run_stakeholder_responses
+WHERE run_id=$1 AND stakeholder_individual_id=$2
+ORDER BY responded_at DESC
+LIMIT 1
+Include as:
+access.latest_response = {...} or run.latest_response = {...}
+Choose a consistent place (recommend: access.latest_response)
+
+========================================================
+D) FRONTEND — Add “Your Response” card (REQUIRED)
+========================================================
+
+File: client/src/pages/app/runs/RunStakeholderViewPage.tsx
+
+Placement:
+After "Your Access" card (audit said after line ~135), before "Service Run Details".
+
+UI behavior:
+- RadioGroup with 3 options:
+  - Confirm
+  - Request change
+  - Ask a question
+- Textarea optional message (placeholder token)
+- Submit button "Send response"
+
+Data loading:
+- If /view includes access.latest_response, initialize UI with it
+- Also load history via GET /api/runs/:id/responses (React Query)
+  - show list of prior responses (max 10) with:
+    - response_type label
+    - responded_at formatted
+    - message if present
+
+Mutation:
+POST /api/runs/:id/respond
+On success:
+- invalidate queries for /api/runs/:id/view and /api/runs/:id/responses
+- show inline success text (no toast dependency unless existing)
+
+Terminology:
+- Use “service run” not calendar
+- No forbidden terms in any UI text
+
+========================================================
+E) COPY TOKENS (REQUIRED)
+========================================================
+
+Add tokens under the service entry point copy (consistent with existing provider tokens).
+In client/src/copy/entryPointCopy.ts add:
+
+provider.stakeholder.response.title = "Your response"
+provider.stakeholder.response.help = "Send a response to the service provider."
+provider.stakeholder.response.type.label = "Response type"
+provider.stakeholder.response.type.confirm = "Confirm"
+provider.stakeholder.response.type.request_change = "Request change"
+provider.stakeholder.response.type.question = "Ask a question"
+provider.stakeholder.response.message.label = "Message (optional)"
+provider.stakeholder.response.message.placeholder = "Add details for the service provider…"
+provider.stakeholder.response.submit = "Send response"
+provider.stakeholder.response.history.title = "Previous responses"
+provider.stakeholder.response.success = "Response sent."
+
+If a different namespace is used for stakeholder pages, adapt but keep token structure consistent.
+
+========================================================
+F) PROOF DOC (REQUIRED)
+========================================================
+
+Create:
+proof/v3.5/step11c-phase2c1-stakeholder-responses-proof.md
+
+Include:
+1) Migration summary: schema + indexes + RLS policies
+2) API proof:
+   - POST respond as stakeholder succeeds
+   - idempotency within 60s returns same row
+   - GET responses as stakeholder returns only own
+   - GET responses as tenant owner returns all
+3) Notification proof:
+   - cc_notifications row created with recipient_tenant_id=runTenantId
+   - action_url points to /app/provider/runs/:id
+4) UI proof:
+   - screenshot or code excerpt showing the “Your response” card
+   - shows history list rendering
+5) Certification checklist
+
+DONE WHEN
+- Stakeholders can submit responses and see their history
+- Tenant owners can see all responses (via API + RLS)
+- Notifications fire to run-owning tenant
+- Proof doc exists under proof/v3.5/

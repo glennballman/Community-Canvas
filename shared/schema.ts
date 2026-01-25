@@ -8800,3 +8800,30 @@ export const insertVisibilityEdgeSchema = createInsertSchema(ccVisibilityEdges).
 });
 export type VisibilityEdge = typeof ccVisibilityEdges.$inferSelect;
 export type InsertVisibilityEdge = z.infer<typeof insertVisibilityEdgeSchema>;
+
+// ============================================================================
+// STEP 11C Phase 2C-1: Stakeholder Responses (CC-13)
+// Append-only audit log for stakeholder responses to service runs
+// Patent CC-13 Inventor Glenn Ballman
+// ============================================================================
+
+export const ccServiceRunStakeholderResponses = pgTable("cc_service_run_stakeholder_responses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  runId: uuid("run_id").notNull(),
+  runTenantId: uuid("run_tenant_id").notNull(),
+  stakeholderIndividualId: uuid("stakeholder_individual_id").notNull(),
+  responseType: text("response_type").notNull(), // 'confirm' | 'request_change' | 'question'
+  message: text("message"),
+  respondedAt: timestamp("responded_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  runIdx: index("idx_stakeholder_responses_run").on(table.runId, table.respondedAt),
+  individualIdx: index("idx_stakeholder_responses_individual").on(table.stakeholderIndividualId, table.respondedAt),
+  tenantIdx: index("idx_stakeholder_responses_tenant").on(table.runTenantId, table.respondedAt),
+}));
+
+export const insertStakeholderResponseSchema = createInsertSchema(ccServiceRunStakeholderResponses).omit({
+  id: true, createdAt: true
+});
+export type StakeholderResponse = typeof ccServiceRunStakeholderResponses.$inferSelect;
+export type InsertStakeholderResponse = z.infer<typeof insertStakeholderResponseSchema>;
