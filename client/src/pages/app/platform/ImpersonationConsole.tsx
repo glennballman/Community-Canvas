@@ -12,6 +12,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/contexts/AuthContext';
+import { queryClient } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +72,7 @@ interface ImpersonationStatus {
 
 export function ImpersonationConsole(): React.ReactElement {
   const [, navigate] = useLocation();
+  const { refreshSession, impersonation, token } = useAuth();
   const [users, setUsers] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,18 +81,18 @@ export function ImpersonationConsole(): React.ReactElement {
   const [starting, setStarting] = useState<string | null>(null);
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
   
   const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
   const [showTenantPicker, setShowTenantPicker] = useState(false);
 
   const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem('cc_token');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     return headers;
-  }, []);
+  }, [token]);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -174,8 +177,12 @@ export function ImpersonationConsole(): React.ReactElement {
       const data = await response.json();
       
       if (data.ok) {
+        setShowOverlay(true);
+        queryClient.clear();
+        await refreshSession();
         await fetchStatus();
         navigate('/app');
+        setShowOverlay(false);
       } else if (data.memberships) {
         const user = users.find(u => u.id === userId);
         if (user) {
@@ -196,6 +203,7 @@ export function ImpersonationConsole(): React.ReactElement {
   async function handleStopImpersonation() {
     setStopping(true);
     setError(null);
+    setShowOverlay(true);
     
     try {
       const response = await fetch('/api/admin/impersonation/stop', {
@@ -207,6 +215,8 @@ export function ImpersonationConsole(): React.ReactElement {
       const data = await response.json();
       
       if (data.ok) {
+        queryClient.clear();
+        await refreshSession();
         await fetchStatus();
       } else {
         setError(data.error || 'Failed to stop impersonation');
@@ -216,6 +226,7 @@ export function ImpersonationConsole(): React.ReactElement {
       setError('Failed to stop impersonation');
     } finally {
       setStopping(false);
+      setShowOverlay(false);
     }
   }
 
@@ -227,7 +238,19 @@ export function ImpersonationConsole(): React.ReactElement {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <>
+      {showOverlay && (
+        <div 
+          className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center"
+          data-testid="impersonation-overlay"
+        >
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+            <p className="text-lg font-medium">Switching identity...</p>
+          </div>
+        </div>
+      )}
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold mb-2">User Impersonation</h1>
         <p className="text-muted-foreground">
@@ -418,6 +441,7 @@ export function ImpersonationConsole(): React.ReactElement {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,0 +1,92 @@
+REPLIT PROMPT — STEP 11C Phase 2C-13.1: Impersonation UX Correctness + No White Screen
+
+ROLE: Senior frontend+backend engineer
+MODE: Fix root cause. No hacks. No full-page reloads. Keep app shell mounted.
+
+PROBLEMS OBSERVED
+1) Start/stop impersonation causes 2–5s white screen (likely full reload / provider remount / error fallback).
+2) After “Active impersonation”, UI sometimes shows no banner and user remains in platform console.
+
+GOALS
+A) Start/stop impersonation must be SPA-smooth:
+   - no blank white screen
+   - show an overlay “Switching identity…” for <= 1s
+B) After starting impersonation:
+   - banner must appear everywhere (top bar) showing impersonated email + tenant slug + role
+   - automatically redirect off /app/platform/* to /app (tenant surface)
+C) After stopping impersonation:
+   - banner disappears
+   - redirect to /app/platform/impersonation
+
+IMPLEMENTATION PLAN
+
+1) SERVER: Provide a single authoritative context endpoint
+- If not already present, add GET /api/foundation/auth/whoami (or reuse existing /api/me)
+Return:
+{
+  ok: true,
+  user: { id, email, is_platform_admin },
+  impersonation: {
+    active: boolean,
+    target_user: { id, email, display_name } | null,
+    tenant: { id, slug, name } | null,
+    role: string | null,
+    expires_at: string | null
+  }
+}
+
+Ensure it reflects the *effective* acting identity (impersonated user if active).
+
+2) CLIENT: Centralize “refresh auth context”
+In AuthContext / SessionContext:
+- add async refreshSession(): fetch whoami, update state
+- ensure callers can await it
+
+3) CLIENT: Start/Stop impersonation must:
+- call API
+- await refreshSession()
+- invalidate tenant-scoped caches (React Query: queryClient.clear() OR invalidateQueries(['tenant', tenantId]) )
+- then SPA navigate (React Router navigate), NOT window.location.*
+
+Start flow:
+- await POST start
+- await refreshSession
+- navigate('/app')  // leave platform routes
+
+Stop flow:
+- await POST stop
+- await refreshSession
+- navigate('/app/platform/impersonation')
+
+4) GLOBAL BANNER
+Add a top-level banner component rendered inside the main app shell (not only the impersonation page):
+- Visible whenever session.impersonation.active is true
+- Shows: “Impersonating: {name/email} • Tenant: {slug} • Role: {role}”
+- Includes “Stop” button calling stop flow above
+- Must be null-safe and never throw during session refresh.
+
+5) NO WHITE SCREEN
+- remove any window.location.reload/assign/href from impersonation code paths
+- if you have a “reset app” pattern, replace with:
+  - a full-screen *overlay* over existing UI: “Switching identity…”
+  - keep layout mounted
+
+6) TESTS
+Add UI tests verifying:
+- starting impersonation triggers refreshSession + navigate('/app')
+- banner appears after start, disappears after stop
+- no full-page reload call (spy on window.location methods if applicable)
+
+Add API tests:
+- whoami reflects impersonation active state
+- start/stop endpoints set/clear session correctly
+
+PROOF DOC
+Create proof/v3.5/step11c-phase2c13_1-impersonation-ux-no-white-screen-proof.md
+Include:
+- root cause found (which line called window.location.* or provider remount)
+- before/after behavior
+- tests passing
+
+DELIVERABLE
+Commit + proof doc + test output.

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { queryClient } from '@/lib/queryClient';
 
 interface User {
     id: string;
@@ -17,6 +18,22 @@ interface CCTenant {
     role: string;
 }
 
+interface ImpersonationState {
+    active: boolean;
+    target_user: {
+        id: string;
+        email: string;
+        display_name: string;
+    } | null;
+    tenant: {
+        id: string;
+        slug: string | null;
+        name: string;
+    } | null;
+    role: string | null;
+    expires_at: string | null;
+}
+
 interface AuthContextType {
     user: User | null;
     ccTenants: CCTenant[];
@@ -24,9 +41,19 @@ interface AuthContextType {
     loading: boolean;
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
+    refreshSession: () => Promise<void>;
     isAuthenticated: boolean;
     isPlatformAdmin: boolean;
+    impersonation: ImpersonationState;
 }
+
+const defaultImpersonation: ImpersonationState = {
+    active: false,
+    target_user: null,
+    tenant: null,
+    role: null,
+    expires_at: null,
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -35,6 +62,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [ccTenants, setCCTenants] = useState<CCTenant[]>([]);
     const [token, setToken] = useState<string | null>(localStorage.getItem('cc_token'));
     const [loading, setLoading] = useState(true);
+    const [impersonation, setImpersonation] = useState<ImpersonationState>(defaultImpersonation);
+
+    const refreshSession = useCallback(async () => {
+        const storedToken = localStorage.getItem('cc_token');
+        if (!storedToken) {
+            setImpersonation(defaultImpersonation);
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/foundation/auth/whoami', {
+                headers: { Authorization: `Bearer ${storedToken}` },
+                credentials: 'include',
+            });
+            const data = await res.json();
+            if (data.ok) {
+                setImpersonation(data.impersonation || defaultImpersonation);
+            }
+        } catch (err) {
+            console.error('Failed to refresh session:', err);
+        }
+    }, []);
 
     useEffect(() => {
         async function checkAuth() {
@@ -49,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         setUser(data.user);
                         setCCTenants(data.tenants || []);
                         setToken(storedToken);
+                        await refreshSession();
                     } else {
                         localStorage.removeItem('cc_token');
                         setToken(null);
@@ -62,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(false);
         }
         checkAuth();
-    }, []);
+    }, [refreshSession]);
 
     useEffect(() => {
         async function devAutoLogin() {
@@ -90,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setToken(data.token);
                 setUser(data.user);
                 setCCTenants(data.tenants || []);
+                await refreshSession();
                 return true;
             }
             return false;
@@ -100,7 +151,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function logout() {
-        // Call server to invalidate session
         const storedToken = localStorage.getItem('cc_token');
         if (storedToken) {
             try {
@@ -117,14 +167,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         }
         
-        // Clear local state
         localStorage.removeItem('cc_token');
         setToken(null);
         setUser(null);
         setCCTenants([]);
-        
-        // Navigate to login/home
-        window.location.href = '/';
+        setImpersonation(defaultImpersonation);
+        queryClient.clear();
     }
 
     return (
@@ -135,8 +183,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             loading,
             login,
             logout,
+            refreshSession,
             isAuthenticated: !!token && !!user,
-            isPlatformAdmin: user?.isPlatformAdmin || false
+            isPlatformAdmin: user?.isPlatformAdmin || false,
+            impersonation
         }}>
             {children}
         </AuthContext.Provider>

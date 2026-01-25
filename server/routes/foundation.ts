@@ -186,6 +186,61 @@ router.post('/auth/logout', authenticateToken, async (req: AuthRequest, res: Res
     }
 });
 
+router.get('/auth/whoami', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+        const userResult = await serviceQuery(`
+            SELECT id, email, given_name, family_name, display_name, avatar_url, 
+                   is_platform_admin, status
+            FROM cc_users WHERE id = $1
+        `, [req.user!.userId]);
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ ok: false, error: 'User not found' });
+        }
+
+        const user = userResult.rows[0];
+        
+        const session = (req as any).session;
+        const impersonation = session?.impersonation;
+        const isImpersonating = impersonation && new Date(impersonation.expires_at) > new Date();
+
+        res.json({
+            ok: true,
+            user: {
+                id: user.id,
+                email: user.email,
+                displayName: user.display_name || `${user.given_name} ${user.family_name}`,
+                isPlatformAdmin: user.is_platform_admin
+            },
+            impersonation: isImpersonating ? {
+                active: true,
+                target_user: {
+                    id: impersonation.impersonated_user_id,
+                    email: impersonation.impersonated_user_email,
+                    display_name: impersonation.impersonated_user_name
+                },
+                tenant: impersonation.tenant_id ? {
+                    id: impersonation.tenant_id,
+                    slug: impersonation.tenant_slug || null,
+                    name: impersonation.tenant_name
+                } : null,
+                role: impersonation.tenant_role || null,
+                expires_at: impersonation.expires_at
+            } : {
+                active: false,
+                target_user: null,
+                tenant: null,
+                role: null,
+                expires_at: null
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Whoami error:', error);
+        res.status(500).json({ ok: false, error: 'Failed to get identity' });
+    }
+});
+
 router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const userResult = await serviceQuery(`
