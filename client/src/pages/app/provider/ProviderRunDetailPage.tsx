@@ -4,7 +4,7 @@ import { Link, useParams, useLocation } from 'wouter';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, Truck, 
   MessageSquare, FileText, Globe, AlertCircle, Loader2, Plus, Edit2, Reply,
-  Check, X, AlertTriangle, MoreHorizontal, CalendarClock
+  Check, X, AlertTriangle, MoreHorizontal, CalendarClock, ChevronDown, Paperclip
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useCopy } from '@/copy/useCopy';
 import { useToast } from '@/hooks/use-toast';
 import { useMarketActions } from '@/policy/useMarketActions';
@@ -113,6 +118,14 @@ interface Resolution {
   resolver_name: string | null;
 }
 
+interface ProposalContext {
+  quote_draft_id?: string;
+  estimate_id?: string;
+  bid_id?: string;
+  trip_id?: string;
+  selected_scope_option?: string;
+}
+
 interface ScheduleProposalEvent {
   id: string;
   run_id: string;
@@ -122,13 +135,22 @@ interface ScheduleProposalEvent {
   proposed_start: string | null;
   proposed_end: string | null;
   note: string | null;
+  proposal_context: ProposalContext | null;
   created_at: string;
   actor_name: string | null;
+}
+
+interface ScheduleProposalsPolicy {
+  allow_counter: boolean;
+  provider_can_initiate: boolean;
+  stakeholder_can_initiate: boolean;
+  allow_proposal_context: boolean;
 }
 
 interface ScheduleProposalsData {
   ok: boolean;
   turn_cap: number;
+  policy: ScheduleProposalsPolicy;
   turns_used: number;
   turns_remaining: number;
   is_closed: boolean;
@@ -289,6 +311,13 @@ export default function ProviderRunDetailPage() {
   const [proposedStart, setProposedStart] = useState('');
   const [proposedEnd, setProposedEnd] = useState('');
   const [proposalNote, setProposalNote] = useState('');
+  // Proposal context fields (Phase 2C-4)
+  const [contextExpanded, setContextExpanded] = useState(false);
+  const [contextQuoteDraftId, setContextQuoteDraftId] = useState('');
+  const [contextEstimateId, setContextEstimateId] = useState('');
+  const [contextBidId, setContextBidId] = useState('');
+  const [contextTripId, setContextTripId] = useState('');
+  const [contextScopeOption, setContextScopeOption] = useState('');
 
   const { data, isLoading, error } = useQuery<{ 
     ok: boolean; 
@@ -377,19 +406,21 @@ export default function ProviderRunDetailPage() {
   });
 
   const proposalMutation = useMutation({
-    mutationFn: async ({ eventType, start, end, note, responseId }: { 
+    mutationFn: async ({ eventType, start, end, note, responseId, proposalContext }: { 
       eventType: 'proposed' | 'countered' | 'accepted' | 'declined';
       start?: string;
       end?: string;
       note?: string;
       responseId?: string;
+      proposalContext?: ProposalContext;
     }) => {
       const res = await apiRequest('POST', `/api/runs/${id}/schedule-proposals`, { 
         event_type: eventType, 
         proposed_start: start,
         proposed_end: end,
         note,
-        response_id: responseId
+        response_id: responseId,
+        proposal_context: proposalContext
       });
       return res.json();
     },
@@ -400,6 +431,13 @@ export default function ProviderRunDetailPage() {
       setProposedEnd('');
       setProposalNote('');
       setProposalResponseId(null);
+      // Reset context fields (Phase 2C-4)
+      setContextExpanded(false);
+      setContextQuoteDraftId('');
+      setContextEstimateId('');
+      setContextBidId('');
+      setContextTripId('');
+      setContextScopeOption('');
       toast({ title: resolve('provider.schedule_proposal.proposed'), description: 'The stakeholder has been notified.' });
     },
     onError: (err: Error) => {
@@ -418,7 +456,25 @@ export default function ProviderRunDetailPage() {
     setProposedStart(tomorrow.toISOString().slice(0, 16));
     setProposedEnd(endTime.toISOString().slice(0, 16));
     setProposalNote('');
+    // Reset context fields (Phase 2C-4)
+    setContextExpanded(false);
+    setContextQuoteDraftId('');
+    setContextEstimateId('');
+    setContextBidId('');
+    setContextTripId('');
+    setContextScopeOption('');
     setProposalDialogOpen(true);
+  };
+
+  // Build proposal context object if any fields are filled (Phase 2C-4)
+  const buildProposalContext = (): ProposalContext | undefined => {
+    const context: ProposalContext = {};
+    if (contextQuoteDraftId.trim()) context.quote_draft_id = contextQuoteDraftId.trim();
+    if (contextEstimateId.trim()) context.estimate_id = contextEstimateId.trim();
+    if (contextBidId.trim()) context.bid_id = contextBidId.trim();
+    if (contextTripId.trim()) context.trip_id = contextTripId.trim();
+    if (contextScopeOption.trim()) context.selected_scope_option = contextScopeOption.trim();
+    return Object.keys(context).length > 0 ? context : undefined;
   };
 
   const handleSubmitProposal = () => {
@@ -431,7 +487,8 @@ export default function ProviderRunDetailPage() {
       start: proposedStart,
       end: proposedEnd,
       note: proposalNote || undefined,
-      responseId: proposalResponseId || undefined
+      responseId: proposalResponseId || undefined,
+      proposalContext: buildProposalContext()
     });
   };
 
@@ -982,6 +1039,97 @@ export default function ProviderRunDetailPage() {
                 data-testid="input-proposal-note"
               />
             </div>
+            
+            {/* Proposal Context Section (Phase 2C-4) */}
+            {proposalsData?.policy?.allow_proposal_context && (
+              <Collapsible open={contextExpanded} onOpenChange={setContextExpanded}>
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full justify-between gap-2"
+                    data-testid="button-toggle-context"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Paperclip className="w-4 h-4" />
+                      {resolve('provider.schedule_proposals.proposal_context.title')}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${contextExpanded ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 pt-3">
+                  <p className="text-xs text-muted-foreground">
+                    {resolve('provider.schedule_proposals.proposal_context.help')}
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="context-quote-draft" className="text-xs">
+                      {resolve('provider.schedule_proposals.proposal_context.quote_draft_id')}
+                    </Label>
+                    <Input
+                      id="context-quote-draft"
+                      value={contextQuoteDraftId}
+                      onChange={(e) => setContextQuoteDraftId(e.target.value)}
+                      placeholder="Optional UUID"
+                      className="text-sm"
+                      data-testid="input-context-quote-draft-id"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="context-estimate" className="text-xs">
+                      {resolve('provider.schedule_proposals.proposal_context.estimate_id')}
+                    </Label>
+                    <Input
+                      id="context-estimate"
+                      value={contextEstimateId}
+                      onChange={(e) => setContextEstimateId(e.target.value)}
+                      placeholder="Optional UUID"
+                      className="text-sm"
+                      data-testid="input-context-estimate-id"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="context-bid" className="text-xs">
+                      {resolve('provider.schedule_proposals.proposal_context.bid_id')}
+                    </Label>
+                    <Input
+                      id="context-bid"
+                      value={contextBidId}
+                      onChange={(e) => setContextBidId(e.target.value)}
+                      placeholder="Optional UUID"
+                      className="text-sm"
+                      data-testid="input-context-bid-id"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="context-trip" className="text-xs">
+                      {resolve('provider.schedule_proposals.proposal_context.trip_id')}
+                    </Label>
+                    <Input
+                      id="context-trip"
+                      value={contextTripId}
+                      onChange={(e) => setContextTripId(e.target.value)}
+                      placeholder="Optional UUID"
+                      className="text-sm"
+                      data-testid="input-context-trip-id"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="context-scope" className="text-xs">
+                      {resolve('provider.schedule_proposals.proposal_context.selected_scope_option')}
+                    </Label>
+                    <Input
+                      id="context-scope"
+                      value={contextScopeOption}
+                      onChange={(e) => setContextScopeOption(e.target.value)}
+                      placeholder="e.g., hybrid, outsourced"
+                      className="text-sm"
+                      maxLength={64}
+                      data-testid="input-context-scope-option"
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
           <DialogFooter>
             <Button 

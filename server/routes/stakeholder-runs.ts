@@ -726,7 +726,7 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
       `SELECT 
         sp.id, sp.run_id, sp.actor_individual_id, sp.actor_role,
         sp.response_id, sp.resolution_id, sp.event_type,
-        sp.proposed_start, sp.proposed_end, sp.note, sp.created_at,
+        sp.proposed_start, sp.proposed_end, sp.note, sp.metadata, sp.created_at,
         i.name as actor_name
        FROM cc_service_run_schedule_proposals sp
        LEFT JOIN cc_individuals i ON sp.actor_individual_id = i.id
@@ -735,7 +735,12 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
        LIMIT 50`,
       [runId]
     );
-    const events = eventsResult.rows;
+    // Map events to include proposal_context from metadata
+    const events = eventsResult.rows.map((e: any) => ({
+      ...e,
+      proposal_context: e.metadata?.proposal_context ?? null,
+      metadata: undefined // Don't expose full metadata
+    }));
 
     // Derive latest state
     const turnsUsed = events.filter((e: any) => 
@@ -767,6 +772,7 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
         proposed_start: latestEvent.proposed_start,
         proposed_end: latestEvent.proposed_end,
         note: latestEvent.note,
+        proposal_context: latestEvent.proposal_context,
         created_at: latestEvent.created_at,
         actor_role: latestEvent.actor_role,
         actor_name: latestEvent.actor_name
@@ -794,7 +800,7 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
       return res.status(400).json({ ok: false, error: 'error.run.invalid_id' });
     }
 
-    const { event_type, proposed_start, proposed_end, note, response_id, resolution_id } = req.body;
+    const { event_type, proposed_start, proposed_end, note, response_id, resolution_id, proposal_context } = req.body;
 
     // Validate event_type
     if (!event_type || !VALID_PROPOSAL_EVENT_TYPES.includes(event_type)) {
@@ -837,6 +843,66 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
           error: 'error.schedule_proposal.no_window_for_decision',
           message: 'accepted/declined events must not include proposed_start/proposed_end'
         });
+      }
+    }
+
+    // Validate proposal_context if provided (Phase 2C-4)
+    const ALLOWED_CONTEXT_KEYS = ['quote_draft_id', 'estimate_id', 'bid_id', 'trip_id', 'selected_scope_option'];
+    const UUID_CONTEXT_KEYS = ['quote_draft_id', 'estimate_id', 'bid_id', 'trip_id'];
+    let validatedProposalContext: Record<string, string> | null = null;
+    
+    if (proposal_context && typeof proposal_context === 'object') {
+      const contextKeys = Object.keys(proposal_context);
+      const unknownKeys = contextKeys.filter(k => !ALLOWED_CONTEXT_KEYS.includes(k));
+      
+      if (unknownKeys.length > 0) {
+        return res.status(400).json({
+          ok: false,
+          error: 'error.request.invalid_proposal_context',
+          message: `Unknown proposal_context keys: ${unknownKeys.join(', ')}`
+        });
+      }
+      
+      // Validate UUID fields
+      for (const key of UUID_CONTEXT_KEYS) {
+        if (proposal_context[key]) {
+          if (typeof proposal_context[key] !== 'string' || !isValidUUID(proposal_context[key])) {
+            return res.status(400).json({
+              ok: false,
+              error: 'error.request.invalid_proposal_context',
+              message: `${key} must be a valid UUID`
+            });
+          }
+        }
+      }
+      
+      // Validate selected_scope_option length
+      if (proposal_context.selected_scope_option) {
+        if (typeof proposal_context.selected_scope_option !== 'string') {
+          return res.status(400).json({
+            ok: false,
+            error: 'error.request.invalid_proposal_context',
+            message: 'selected_scope_option must be a string'
+          });
+        }
+        if (proposal_context.selected_scope_option.length > 64) {
+          return res.status(400).json({
+            ok: false,
+            error: 'error.request.invalid_proposal_context',
+            message: 'selected_scope_option must be 64 characters or less'
+          });
+        }
+      }
+      
+      // Build validated context (only non-empty values)
+      validatedProposalContext = {};
+      for (const key of ALLOWED_CONTEXT_KEYS) {
+        if (proposal_context[key]) {
+          validatedProposalContext[key] = proposal_context[key];
+        }
+      }
+      if (Object.keys(validatedProposalContext).length === 0) {
+        validatedProposalContext = null;
       }
     }
 
@@ -925,14 +991,29 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
       });
     }
 
+    // Check proposal_context policy (Phase 2C-4)
+    if (validatedProposalContext && !policy.allowProposalContext) {
+      return res.status(403).json({
+        ok: false,
+        error: 'error.negotiation.proposal_context_not_allowed',
+        message: 'Proposal context attachments are not allowed for this tenant'
+      });
+    }
+
+    // Build metadata object
+    const metadata: Record<string, any> = {};
+    if (validatedProposalContext) {
+      metadata.proposal_context = validatedProposalContext;
+    }
+
     // Insert the event
     const trimmedNote = note?.trim()?.slice(0, 2000) || null;
     const insertResult = await pool.query(
       `INSERT INTO cc_service_run_schedule_proposals 
         (run_id, run_tenant_id, actor_individual_id, actor_role, 
-         response_id, resolution_id, event_type, proposed_start, proposed_end, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, event_type, proposed_start, proposed_end, note, created_at`,
+         response_id, resolution_id, event_type, proposed_start, proposed_end, note, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, event_type, proposed_start, proposed_end, note, metadata, created_at`,
       [
         runId,
         runTenantId,
@@ -943,7 +1024,8 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
         event_type,
         (event_type === 'proposed' || event_type === 'countered') ? new Date(proposed_start) : null,
         (event_type === 'proposed' || event_type === 'countered') ? new Date(proposed_end) : null,
-        trimmedNote
+        trimmedNote,
+        JSON.stringify(metadata)
       ]
     );
 
@@ -1029,6 +1111,7 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
         proposed_start: newEvent.proposed_start,
         proposed_end: newEvent.proposed_end,
         note: newEvent.note,
+        proposal_context: newEvent.metadata?.proposal_context ?? null,
         created_at: newEvent.created_at,
         actor_role: actorRole
       }

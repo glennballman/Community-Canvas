@@ -1,0 +1,193 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2C-4
+Proposal Context Attachment for Schedule Proposals (Metadata + Policy-Gated)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive change. No refactors. Use existing policy tables. Evidence-first.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+CONTEXT (AS-BUILT, FROM AUDIT)
+There is no dedicated “proposal shell” system in code.
+We will support a “proposal context attachment” to schedule proposal events using the existing
+cc_service_run_schedule_proposals.metadata JSONB column, gated by the negotiation policy:
+allow_proposal_context (already implemented in Phase 2C-3.0).
+
+SUPPORTED CONTEXT TARGETS (ID-only references)
+- quote_draft_id (cc_quote_drafts)
+- estimate_id (cc_estimates)
+- bid_id (cc_bids)
+- trip_id (cc_trips) (existing proposal system)
+Optional:
+- selected_scope_option (string enum-ish: 'diy'|'hybrid'|'outsourced' or other free text)
+
+GOAL
+1) Allow providers to attach proposal-context references when creating schedule proposal events
+   ONLY if policy.allow_proposal_context = true for negotiation_type='schedule'.
+2) Persist these references in metadata under a strict object shape.
+3) Expose proposal_context read-only in:
+   - Provider schedule proposal UI (dialog + list)
+   - Stakeholder schedule proposal UI (card/list)
+4) Enforce validation server-side:
+   - IDs must be UUIDs
+   - Only allowed keys can be written
+   - No PII in metadata
+5) Update proof documentation and add QA gating assertions.
+
+TARGETS
+Backend:
+- server route handling POST /api/runs/:id/schedule-proposals
+- server route handling GET /api/runs/:id/schedule-proposals
+(Wherever Phase 2C-3 schedule proposals live)
+
+Frontend:
+- Provider UI: schedule proposal dialog used from provider resolution dropdown
+- Stakeholder UI: schedule proposal card + counter dialog
+
+========================================================
+A) DEFINE METADATA SHAPE (STRICT)
+========================================================
+All schedule proposal events may include:
+
+metadata.proposal_context = {
+  quote_draft_id?: string,
+  estimate_id?: string,
+  bid_id?: string,
+  trip_id?: string,
+  selected_scope_option?: string
+}
+
+Rules:
+- proposal_context is OPTIONAL
+- proposal_context keys are OPTIONAL
+- Any provided *_id must be valid UUID
+- selected_scope_option max length 64
+- No other keys allowed under proposal_context
+- No free-form nested objects
+- Total metadata JSON size must remain small (< 4KB) for safety
+
+========================================================
+B) BACKEND: POLICY-GATED WRITE SUPPORT
+========================================================
+In POST /api/runs/:id/schedule-proposals:
+1) Load effective negotiation policy for tenantId + type='schedule'
+   (use Phase 2C-3.0 policy resolver already implemented)
+2) If request includes proposal_context AND policy.allow_proposal_context is false:
+   return 403:
+   { ok:false, error:'error.negotiation.proposal_context_not_allowed' }
+
+3) Validate proposal_context keys:
+   - Reject unknown keys with 400:
+     { ok:false, error:'error.request.invalid_proposal_context' }
+   - Validate UUID fields if present (quote_draft_id, estimate_id, bid_id, trip_id)
+   - Validate selected_scope_option length <= 64
+
+4) Persist into metadata JSONB with the canonical shape:
+   metadata = jsonb_set(coalesce(metadata,'{}'::jsonb), '{proposal_context}', $X::jsonb, true)
+   OR in code: build metadata object before insert.
+
+5) Do NOT attempt to dereference IDs (no joins, no lookups) in Phase 2C-4.
+   This is reference-only attachment.
+
+========================================================
+C) BACKEND: READ SUPPORT
+========================================================
+In GET /api/runs/:id/schedule-proposals:
+Ensure each event returns metadata.proposal_context if present.
+If the endpoint currently returns metadata, ensure proposal_context passes through.
+If it does not return metadata, add ONLY:
+proposal_context: event.metadata?.proposal_context ?? null
+
+No other metadata fields should be exposed unless already exposed.
+
+========================================================
+D) FRONTEND: PROVIDER UI
+========================================================
+In the provider schedule proposal dialog:
+1) Add an OPTIONAL collapsible section titled via copy token:
+   provider.schedule_proposals.proposal_context.title
+2) Fields (simple text inputs, UUID validation client-side):
+   - Quote draft ID
+   - Estimate ID
+   - Bid ID
+   - Trip ID
+   - Selected scope option
+3) On submit, include proposal_context only if any field is populated.
+4) If server returns 403 proposal_context_not_allowed:
+   show inline error + hide the section for that tenant (optional UX),
+   but do NOT break schedule proposal creation.
+
+Additionally, in the provider schedule proposal list display:
+- If proposal_context present: show a small “Proposal context attached” row
+  listing which IDs exist (masked display like “Quote draft attached”),
+  do not print raw UUIDs by default—use “Copy ID” small button if needed.
+
+========================================================
+E) FRONTEND: STAKEHOLDER UI
+========================================================
+In stakeholder schedule proposal card/list:
+- Show a read-only block if proposal_context exists:
+  Title token: stakeholder.schedule_proposals.proposal_context.title
+  Body token: stakeholder.schedule_proposals.proposal_context.body
+- Display only which types are attached (Quote draft / Estimate / Bid / Trip / Scope option).
+- Do NOT display raw UUIDs unless behind a “Show details” disclosure.
+
+========================================================
+F) COPY TOKENS (REQUIRED)
+========================================================
+Add tokens in the existing copy system (entryPointCopy.ts or appropriate file):
+
+Provider:
+- provider.schedule_proposals.proposal_context.title
+- provider.schedule_proposals.proposal_context.help
+- provider.schedule_proposals.proposal_context.quote_draft_id
+- provider.schedule_proposals.proposal_context.estimate_id
+- provider.schedule_proposals.proposal_context.bid_id
+- provider.schedule_proposals.proposal_context.trip_id
+- provider.schedule_proposals.proposal_context.selected_scope_option
+- provider.schedule_proposals.proposal_context.not_allowed (for 403)
+
+Stakeholder:
+- stakeholder.schedule_proposals.proposal_context.title
+- stakeholder.schedule_proposals.proposal_context.body
+- stakeholder.schedule_proposals.proposal_context.badge (e.g., “Context attached”)
+
+Keep text short. Do not use forbidden words.
+
+========================================================
+G) PROOF DOC (REQUIRED)
+========================================================
+Create/update:
+proof/v3.5/step11c-phase2c4-proposal-context-attachment-proof.md
+
+Must include:
+1) Evidence of policy gating:
+   - show allow_proposal_context=false causes 403 when proposal_context sent
+   - show allow_proposal_context=true allows insert
+2) Example request/response payloads:
+   - POST with proposal_context
+   - GET returns proposal_context
+3) UI screenshots not required, but include code excerpts:
+   - provider dialog section rendering
+   - stakeholder read-only block rendering
+4) QA gating assertions:
+   A1) Unknown key rejected (400)
+   A2) Invalid UUID rejected (400)
+   A3) Policy disabled returns 403
+   A4) Policy enabled persists + returns proposal_context
+   A5) Stakeholder UI does not leak raw UUIDs by default
+
+DONE WHEN
+- Provider can attach proposal_context references when policy allows
+- Provider is blocked with 403 when policy disallows
+- Stakeholder sees “context attached” without UUID leakage
+- Proof doc exists
+
+HARD RULES
+- No new tables
+- No schema changes
+- No email changes
+- No visibility graph changes
+- No refactors

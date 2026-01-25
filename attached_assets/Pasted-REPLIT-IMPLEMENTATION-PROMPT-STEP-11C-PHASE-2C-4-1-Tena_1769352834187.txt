@@ -1,0 +1,175 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2C-4.1
+Tenant Override UI + API for Schedule Negotiation Policy
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive change. No refactors. No schema changes (tables already exist).
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+Allow a tenant admin to override schedule negotiation policy values (stored in cc_tenant_negotiation_policy),
+specifically including:
+- allow_proposal_context (gate for Phase 2C-4 attachments)
+- max_turns (optional)
+and show the effective policy (platform default merged with overrides).
+
+SCOPE
+- Negotiation type: 'schedule' only (for this phase)
+- Add API endpoints (GET + PATCH) for current tenant
+- Add a small UI panel in the app to view/change overrides
+- Add copy tokens
+- Add proof doc
+
+HARD RULES
+- No new tables
+- No changes to existing negotiation event tables
+- No changes to visibility graph
+- Do not use forbidden terms anywhere in UI copy
+
+========================================================
+A) BACKEND — Add Tenant Policy Endpoints
+========================================================
+1) Create a new route file:
+server/routes/negotiation-policy.ts
+
+Mount it in server/routes.ts as:
+app.use('/api/policies/negotiation', negotiationPolicyRouter);
+
+2) Auth / Tenant Context
+Use the same auth strategy already used in provider/stakeholder routes:
+- accept session auth OR JWT
+- require tenant context (req.ctx.tenant_id or req.user.tenantId)
+
+3) Authorization (Tenant Admin Gate)
+Implement a minimal check that caller is allowed to administer tenant policy.
+Use whatever role table exists for tenant membership (commonly cc_tenant_users or cc_tenant_individuals).
+Audit quickly inside code and choose the existing authoritative table in this codebase:
+- If cc_tenant_users exists: require role IN ('owner','admin')
+- Else if cc_tenant_individuals exists: require role IN ('owner','admin')
+If neither exists, fall back to “tenant owner only” using any existing pattern you find.
+DO NOT invent a new role system.
+
+Return 403:
+{ ok:false, error:'error.auth.forbidden' }
+
+4) GET /api/policies/negotiation/schedule
+Return:
+{
+  ok: true,
+  negotiation_type: 'schedule',
+  platform: { ...platformRow },
+  tenant_override: { ...tenantRowOrNull },
+  effective: { ...mergedEffectivePolicy }
+}
+
+Where effective = platform + tenant_override (tenant non-null fields override platform values)
+
+5) PATCH /api/policies/negotiation/schedule
+Body:
+{
+  max_turns?: number | null,
+  allow_proposal_context?: boolean | null
+}
+
+Rules:
+- Missing field => no change
+- null => set tenant override column to NULL (inherit platform)
+- Validate max_turns:
+  - if not null: integer between 1 and 20 (hard safety bound)
+- Persist via UPSERT into cc_tenant_negotiation_policy with tenant_id and negotiation_type='schedule'
+- Update updated_at
+
+Response:
+{ ok:true, tenant_override: <row>, effective: <merged> }
+
+========================================================
+B) FRONTEND — Add Tenant Override Panel
+========================================================
+1) Location
+Add a small admin/settings panel somewhere that already exists in app nav.
+Do NOT invent a new top-level product area if there is already:
+- /app/settings
+- /app/admin
+- /app/operator
+Pick the most appropriate existing location based on current repo structure.
+
+If none exist, create:
+client/src/pages/app/TenantNegotiationPolicyPage.tsx
+Route: /app/settings/negotiation
+
+Add nav entry in the existing nav config file (v3Nav.ts) under a settings/admin grouping.
+
+2) UI
+Use shadcn Card + Switch + Input.
+Display:
+- Effective policy summary (read-only)
+- Overrides editor (editable)
+
+Controls (schedule):
+- Toggle: allow_proposal_context (3-state behavior)
+  - Inherit (null)
+  - On (true)
+  - Off (false)
+Implement as:
+  - Switch for On/Off
+  - plus a small “Inherit platform setting” checkbox
+  - If inherit checked => send null on PATCH
+- max_turns numeric input (optional)
+  - same inherit checkbox pattern
+  - if inherit => null
+
+Use TanStack Query v5:
+- useQuery key: ['/api/policies/negotiation/schedule']
+- useMutation PATCH and invalidate that query
+
+3) UX requirements
+- Show platform default values
+- Show whether tenant is inheriting or overriding
+- Show “Saved” toast or inline success text
+- Handle 403 forbidden with a clear message
+
+========================================================
+C) COPY TOKENS (REQUIRED)
+========================================================
+Add tokens to the existing copy token system (entryPointCopy.ts or wherever provider tokens were added):
+
+policy.negotiation.schedule.title: "Schedule negotiation policy"
+policy.negotiation.schedule.help: "Controls how schedule proposals can be negotiated for this tenant."
+policy.negotiation.platform_defaults: "Platform defaults"
+policy.negotiation.tenant_overrides: "Tenant overrides"
+policy.negotiation.effective: "Effective policy"
+policy.negotiation.allow_proposal_context.label: "Allow proposal context attachments"
+policy.negotiation.allow_proposal_context.help: "When enabled, schedule proposals may include attached context references."
+policy.negotiation.max_turns.label: "Maximum turns"
+policy.negotiation.inherit: "Inherit platform setting"
+policy.negotiation.save: "Save changes"
+policy.negotiation.forbidden: "You don't have permission to change policy for this tenant."
+
+No forbidden words.
+
+========================================================
+D) PROOF DOC (REQUIRED)
+========================================================
+Create:
+proof/v3.5/step11c-phase2c41-tenant-negotiation-policy-ui-proof.md
+
+Include:
+1) GET payload example showing platform, tenant_override, effective
+2) PATCH example setting allow_proposal_context=true and max_turns override
+3) PATCH example setting allow_proposal_context=null (inherit)
+4) Permission check evidence (403 path)
+5) UI code excerpts: query/mutation + inherit toggle behavior
+6) QA gating assertions:
+   - A1: Non-admin cannot PATCH (403)
+   - A2: Inherit sets NULL in tenant override
+   - A3: Effective reflects merged values
+   - A4: max_turns validation rejects >20 or <1 (400)
+
+DONE WHEN
+- Tenant admin can view and edit schedule policy overrides in UI
+- Backend persists overrides in cc_tenant_negotiation_policy
+- Effective policy matches resolver behavior used by schedule proposals
+- Proof doc exists under proof/v3.5/

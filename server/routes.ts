@@ -111,6 +111,7 @@ import qaRunnerRouter from "./routes/qa-runner";
 import proposalsRouter from "./routes/proposals";
 import opsRouter from "./routes/ops";
 import publicJobsRouter from "./routes/public-jobs";
+import negotiationPolicyRouter from "./routes/negotiation-policy";
 import jobsRouter from "./routes/jobs";
 import moderationJobsRouter from "./routes/moderation-jobs";
 import embedsRouter from "./routes/embeds";
@@ -561,6 +562,9 @@ export async function registerRoutes(
 
   // Register P2.17 Emergency Drill Mode routes
   app.use('/api/drills', drillsRouter);
+
+  // Phase 2C-4.1 Negotiation Policy Management API
+  app.use('/api/tenant', negotiationPolicyRouter);
 
   // N3 Service Run Monitor + Replan Engine (Patent CC-01)
   app.use('/api/n3', n3Router);

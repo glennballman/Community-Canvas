@@ -108,6 +108,7 @@ import ConversationsPage from './pages/ConversationsPage';
 import CirclesPage from './pages/app/CirclesPage';
 import { CirclesListPage, CircleCreatePage, CircleDetailPage } from './pages/app/circles';
 import SettingsPage from './pages/app/SettingsPage';
+import NegotiationPolicySettingsPage from './pages/app/NegotiationPolicySettingsPage';
 import NotificationsPage from './pages/app/NotificationsPage';
 import SystemExplorerPage from './pages/app/SystemExplorerPage';
 
@@ -632,6 +633,7 @@ export default function App() {
                 <Route path="circles/:circleId" element={<CircleDetailPage />} />
                 <Route path="circles/switch" element={<CirclesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="settings/negotiation-policies" element={<NegotiationPolicySettingsPage />} />
               </Route>
 
               {/* ========================================== */}

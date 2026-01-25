@@ -38,6 +38,7 @@ import {
   Search,
   Image,
   Map,
+  Handshake,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -193,6 +194,7 @@ export const V3_NAV: NavSection[] = [
       { icon: Settings, label: 'Admin Home', href: '/app/admin', testId: 'nav-admin', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: UserCog, label: 'Roles', href: '/app/admin/roles', testId: 'nav-roles', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: Settings, label: 'Settings', href: '/app/admin/settings', testId: 'nav-settings', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
+      { icon: Handshake, label: 'Negotiation Policies', href: '/app/settings/negotiation-policies', testId: 'nav-negotiation-policies', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: Wallet, label: 'Folios', href: '/app/admin/folios', testId: 'nav-folios', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: BarChart3, label: 'Usage', href: '/app/admin/usage', testId: 'nav-usage', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
       { icon: ShieldCheck, label: 'Certifications', href: '/app/admin/certifications', testId: 'nav-certifications', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
