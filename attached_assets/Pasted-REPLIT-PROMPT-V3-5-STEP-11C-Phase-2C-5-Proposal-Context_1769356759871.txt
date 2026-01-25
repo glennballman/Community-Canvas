@@ -1,0 +1,192 @@
+REPLIT PROMPT — V3.5 — STEP 11C — Phase 2C-5 Proposal Context Rendering Hooks (Policy-Gated, No UUID Leakage)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first, additive-only, no schema changes, no new domain models.
+TERMINOLOGY LOCKED:
+✅ service provider
+✅ reservation
+❌ contractor
+❌ booking
+❌ calendar
+
+OBJECTIVE (Phase 2C-5)
+Make schedule proposal `proposal_context` references useful and navigable via read-only rendering hooks in:
+1) Provider schedule proposal history UI (inline inside ProviderRunDetailPage.tsx)
+2) Stakeholder schedule proposal card UI (inline inside RunStakeholderViewPage.tsx)
+Optionally: provider negotiation section if already present in ProviderRunDetailPage.
+
+POLICY RULE (HARD)
+If effective policy `allow_proposal_context=false`:
+- Do not render “Context attached”
+- Do not render chips
+- Do not render copy affordances
+- Do not leak any proposal_context fields in UI (even masked)
+
+NO UUID LEAKAGE (HARD)
+- Never show raw UUID strings by default.
+- Default UI: show “Context attached” + type chips only.
+- Provide “Copy ID” affordance behind an explicit disclosure/expand toggle.
+- Even after disclosure: show masked ID (e.g., first 8 chars + ellipsis) and a copy button that copies the full UUID to clipboard.
+- Disclose only when user clicks “Show IDs” (or equivalent), not on initial render.
+
+CONFIRMED INPUTS
+UI locations:
+- Provider: client/src/pages/app/provider/ProviderRunDetailPage.tsx
+- Stakeholder: client/src/pages/app/runs/RunStakeholderViewPage.tsx
+(both inline components)
+
+API response shape (confirmed):
+- proposal_context is nested object: event.metadata?.proposal_context ?? null
+- stakeholder route already returns `policy.allow_proposal_context` and `history[].proposal_context`
+Sample structure:
+{
+  quote_draft_id: "uuid",
+  estimate_id: "uuid",
+  bid_id: "uuid",
+  trip_id: "uuid",
+  selected_scope_option: "hybrid"
+}
+
+Copy namespaces (confirmed):
+- Provider: provider.schedule_proposals.proposal_context.*
+- Stakeholder: stakeholder.schedule_proposals.proposal_context.*
+- Policy/negotiation: policy.negotiation.*
+- Settings: settings.negotiation.*
+
+DELIVERABLES
+A) UI rendering hooks for proposal_context (provider + stakeholder)
+B) Shared tiny UI helper component (optional but recommended) to prevent drift
+C) Copy tokens added to client/src/copy/entryPointCopy.ts (same file you referenced)
+D) Proof doc: proof/v3.5/step11c-phase2c5-proposal-context-rendering-proof.md
+E) Gating assertions and “no UUID leakage” checks.
+
+IMPLEMENTATION DETAILS
+
+1) Add a small shared component (recommended)
+Create:
+- client/src/components/ProposalContextInline.tsx
+
+Props:
+- mode: "provider" | "stakeholder"  (controls copy namespaces)
+- allow: boolean  (effective policy allow_proposal_context)
+- proposalContext: object | null
+- density?: "compact" | "regular" (optional)
+
+Behavior:
+- If !allow or !proposalContext: render null.
+- Determine which chips to show based on which keys exist and are non-null:
+  - quote_draft_id => chip label from copy token (provider/stakeholder).proposal_context.chip.quote_draft
+  - estimate_id => chip label ...chip.estimate
+  - bid_id => chip label ...chip.bid
+  - trip_id => chip label ...chip.trip
+  - selected_scope_option => chip label ...chip.scope_option plus a value badge (hybrid/whatever) BUT do not treat it like an ID.
+- Render a header row:
+  - Text: (provider/stakeholder).proposal_context.label.context_attached
+- Render chips as small pill badges.
+- Add a disclosure toggle:
+  - Button text: (provider/stakeholder).proposal_context.action.show_ids / hide_ids
+  - Default collapsed.
+- When expanded, render rows ONLY for UUID fields present (quote_draft_id, estimate_id, bid_id, trip_id):
+  - Label: ...field.quote_draft_id, etc.
+  - Masked display: first 8 chars + "…" + last 4 chars (or first 8 only; choose one consistent pattern)
+  - Copy button: ...action.copy_id
+  - Use navigator.clipboard.writeText(id) with success toast or inline “Copied” microfeedback (existing toast system if present; otherwise a tiny local state “Copied” for 1.5s)
+- Absolutely do not render raw UUID in DOM outside the disclosure section.
+
+2) Wire into Stakeholder UI
+File:
+- client/src/pages/app/runs/RunStakeholderViewPage.tsx
+
+Locate the schedule negotiation / proposal card / history render (inline).
+Find where it renders `latest_proposal` and/or `history`.
+
+Add ProposalContextInline in:
+- Latest proposal card (preferred): pass proposalContext=latest_proposal?.proposal_context ?? null
+- For each history event (optional): add beneath event content, but only if it does not clutter; use density="compact" if used in list.
+
+Use policy from response:
+- allow = !!data.policy?.allow_proposal_context
+
+Mode:
+- mode="stakeholder"
+
+3) Wire into Provider UI
+File:
+- client/src/pages/app/provider/ProviderRunDetailPage.tsx
+
+Locate schedule proposal history / negotiation section.
+Add ProposalContextInline similarly:
+- Next to latest proposal and/or per-event history.
+
+IMPORTANT: Ensure provider page has access to the effective policy allow_proposal_context.
+If provider API response does NOT include policy.allow_proposal_context:
+- Patch the provider endpoint to include it, using the same negotiation policy resolver already used elsewhere.
+- Do NOT change schema.
+- Ensure the provider endpoint maps proposal_context from event metadata the same way stakeholder-runs does.
+
+4) Copy tokens (entryPointCopy.ts)
+In client/src/copy/entryPointCopy.ts, add the following keys:
+
+Provider namespace:
+provider.schedule_proposals.proposal_context.label.context_attached
+provider.schedule_proposals.proposal_context.action.show_ids
+provider.schedule_proposals.proposal_context.action.hide_ids
+provider.schedule_proposals.proposal_context.action.copy_id
+provider.schedule_proposals.proposal_context.chip.quote_draft
+provider.schedule_proposals.proposal_context.chip.estimate
+provider.schedule_proposals.proposal_context.chip.bid
+provider.schedule_proposals.proposal_context.chip.trip
+provider.schedule_proposals.proposal_context.chip.scope_option
+provider.schedule_proposals.proposal_context.field.quote_draft_id
+provider.schedule_proposals.proposal_context.field.estimate_id
+provider.schedule_proposals.proposal_context.field.bid_id
+provider.schedule_proposals.proposal_context.field.trip_id
+
+Stakeholder namespace:
+stakeholder.schedule_proposals.proposal_context.(same key set as provider)
+
+Keep strings concise and neutral:
+- “Context attached”
+- “Show IDs” / “Hide IDs”
+- “Copy ID”
+- “Quote Draft”, “Estimate”, “Bid”, “Trip”, “Scope option”
+- Field labels: “Quote draft ID”, etc.
+
+5) Proof doc (required)
+Create:
+- proof/v3.5/step11c-phase2c5-proposal-context-rendering-proof.md
+
+Include:
+A) Files changed list
+B) Screenshots (or described UI states) for:
+   - allow_proposal_context=true: shows “Context attached” + chips; IDs hidden by default; disclosure works; copy works
+   - allow_proposal_context=false: no context UI at all; no chips; no disclosure
+C) Explicit “No UUID leakage” assertions:
+   - Default render contains zero UUID substrings
+   - Only after disclosure does masked ID appear
+   - Full UUID only goes to clipboard, not displayed
+D) API assertions:
+   - provider and stakeholder responses both provide policy.allow_proposal_context (or effective equivalent)
+   - proposal_context mapping from metadata to response is present and stable
+
+6) QA / Safety checks
+- Add a lightweight unit test if there is an existing test harness for React components; otherwise add a simple runtime assertion in dev:
+   - In ProposalContextInline, in collapsed state, ensure it never renders any of the UUID values.
+- Ensure no UUID is included in data-testid attributes or aria-labels.
+
+ACCEPTANCE CRITERIA (MUST PASS)
+1) Policy gating works:
+   - allow_proposal_context=false => proposal_context UI is fully absent
+2) No UUID leakage:
+   - On initial render, no raw UUID appears anywhere
+3) Disclosure + copy works:
+   - Show IDs reveals masked IDs and Copy ID buttons copy full UUID
+4) Copy tokens used and present in entryPointCopy.ts
+5) Proof doc exists and includes required assertions
+
+OUTPUT
+After implementation, return:
+- A concise summary of changes
+- Links/paths to modified files
+- Proof doc path
+- Any notes on provider endpoint patch (if needed)

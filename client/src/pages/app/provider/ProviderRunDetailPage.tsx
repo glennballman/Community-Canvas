@@ -37,6 +37,7 @@ import {
 import { useCopy } from '@/copy/useCopy';
 import { useToast } from '@/hooks/use-toast';
 import { useMarketActions } from '@/policy/useMarketActions';
+import { ProposalContextInline } from '@/components/ProposalContextInline';
 import type { ActionKind } from '@/policy/marketModePolicy';
 import { PublishRunModal } from '@/components/provider/PublishRunModal';
 import { AddRequestsModal } from '@/components/provider/AddRequestsModal';
@@ -1007,6 +1008,19 @@ export default function ProviderRunDetailPage() {
               }
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Show latest proposal context if present (Phase 2C-5) */}
+          {proposalsData?.latest && (
+            <div className="mb-4">
+              <ProposalContextInline
+                mode="provider"
+                allow={proposalsData?.policy?.allow_proposal_context ?? false}
+                proposalContext={proposalsData.latest.proposal_context}
+                density="compact"
+              />
+            </div>
+          )}
+          
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="proposed-start">{resolve('provider.schedule_proposal.start_label')}</Label>

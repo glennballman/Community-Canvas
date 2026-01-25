@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/form';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
+import { ProposalContextInline } from '@/components/ProposalContextInline';
 
 interface StakeholderRunView {
   id: string;
@@ -711,38 +712,12 @@ export default function RunStakeholderViewPage() {
               </div>
             </div>
 
-            {/* Proposal Context Display (Phase 2C-4) */}
-            {proposalsData.latest.proposal_context && Object.keys(proposalsData.latest.proposal_context).length > 0 && (
-              <div className="p-3 rounded-md bg-accent/30 border border-accent-foreground/10" data-testid="proposal-context-block">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary" className="text-xs" data-testid="badge-context-attached">
-                    {resolve('stakeholder.schedule_proposals.proposal_context.badge') || 'References attached'}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  {resolve('stakeholder.schedule_proposals.proposal_context.body') || 'The provider has attached context to this proposal.'}
-                </p>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  {proposalsData.latest.proposal_context.quote_draft_id && (
-                    <li data-testid="context-quote-draft">Quote draft attached</li>
-                  )}
-                  {proposalsData.latest.proposal_context.estimate_id && (
-                    <li data-testid="context-estimate">Estimate attached</li>
-                  )}
-                  {proposalsData.latest.proposal_context.bid_id && (
-                    <li data-testid="context-bid">Bid attached</li>
-                  )}
-                  {proposalsData.latest.proposal_context.trip_id && (
-                    <li data-testid="context-trip">Reservation attached</li>
-                  )}
-                  {proposalsData.latest.proposal_context.selected_scope_option && (
-                    <li data-testid="context-scope">
-                      Scope option: <span className="font-medium">{proposalsData.latest.proposal_context.selected_scope_option}</span>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
+            {/* Proposal Context Display (Phase 2C-5) */}
+            <ProposalContextInline
+              mode="stakeholder"
+              allow={proposalsData.policy.allow_proposal_context}
+              proposalContext={proposalsData.latest.proposal_context}
+            />
 
             <div className="flex flex-wrap gap-2">
               <Button
