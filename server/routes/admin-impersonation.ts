@@ -145,31 +145,26 @@ router.post('/start', async (req: AuthRequest, res: Response) => {
     
     const memberships = membershipsResult.rows;
     
-    // Determine which tenant to use
+    // PHASE 2C-13.5: Impersonation semantics correction
+    // "Impersonate user" must ONLY set acting_user, NOT tenant_context
+    // Tenant selection must be explicit via separate /set-tenant endpoint
+    // 
+    // INVARIANT: Impersonation has TWO independent dimensions:
+    //   1) acting_user (impersonated user identity)
+    //   2) tenant_context (selected tenant for operations - starts as NULL)
+    //
+    // We return user's memberships for the client to display tenant selection UI
     let selectedTenant = null;
+    
     if (tenant_id) {
-      // User specified a tenant - verify membership
+      // Explicit tenant specified - verify membership and set it
       selectedTenant = memberships.find(m => m.tenant_id === tenant_id);
       if (!selectedTenant) {
         return res.status(400).json({ ok: false, error: 'User is not a member of specified tenant' });
       }
-    } else if (memberships.length === 1) {
-      // User has exactly one membership - auto-select
-      selectedTenant = memberships[0];
-    } else if (memberships.length > 1) {
-      // Multiple memberships - require explicit selection
-      return res.status(400).json({ 
-        ok: false, 
-        error: 'User has multiple tenant memberships. Please specify tenant_id.',
-        memberships: memberships.map(m => ({
-          tenant_id: m.tenant_id,
-          tenant_name: m.tenant_name,
-          tenant_slug: m.tenant_slug,
-          role: m.role,
-        })),
-      });
     }
-    // If no memberships, selectedTenant remains null (platform admin with no tenants)
+    // If no tenant_id provided, selectedTenant remains NULL
+    // This is the correct behavior - tenant must be explicitly chosen
     
     // Set expiration (1 hour from now)
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -252,12 +247,99 @@ router.post('/start', async (req: AuthRequest, res: Response) => {
         tenant_name: selectedTenant?.tenant_name || null,
         role: selectedTenant?.role || null,
       },
+      // Include user's memberships for tenant selection UI
+      memberships: memberships.map(m => ({
+        tenant_id: m.tenant_id,
+        tenant_name: m.tenant_name,
+        tenant_slug: m.tenant_slug,
+        role: m.role,
+      })),
       expires_at: expiresAt,
     });
     
   } catch (error) {
     console.error('Error starting impersonation:', error);
     res.status(500).json({ ok: false, error: 'Failed to start impersonation' });
+  }
+});
+
+/**
+ * POST /api/admin/impersonation/set-tenant
+ * 
+ * Sets the tenant context for an active impersonation session.
+ * Requires an active impersonation session.
+ * Body: { tenant_id }
+ */
+router.post('/set-tenant', async (req: AuthRequest, res: Response) => {
+  try {
+    const { tenant_id } = req.body;
+    
+    if (!tenant_id) {
+      return res.status(400).json({ ok: false, error: 'tenant_id is required' });
+    }
+    
+    const session = (req as any).session;
+    const impersonation = session?.impersonation;
+    
+    if (!impersonation || new Date(impersonation.expires_at) <= new Date()) {
+      return res.status(400).json({ ok: false, error: 'No active impersonation session' });
+    }
+    
+    // Verify the impersonated user has membership in this tenant
+    const membershipResult = await serviceQuery(`
+      SELECT tu.tenant_id, tu.role, t.name as tenant_name, t.slug as tenant_slug
+      FROM cc_tenant_users tu
+      JOIN cc_tenants t ON t.id = tu.tenant_id
+      WHERE tu.user_id = $1 AND tu.tenant_id = $2 AND tu.status = 'active' AND t.status = 'active'
+    `, [impersonation.impersonated_user_id, tenant_id]);
+    
+    if (membershipResult.rows.length === 0) {
+      return res.status(403).json({ ok: false, error: 'User is not a member of this tenant' });
+    }
+    
+    const tenant = membershipResult.rows[0];
+    
+    // Update session impersonation with tenant
+    session.impersonation = {
+      ...session.impersonation,
+      tenant_id: tenant.tenant_id,
+      tenant_name: tenant.tenant_name,
+      tenant_slug: tenant.tenant_slug,
+      tenant_role: tenant.role,
+    };
+    
+    // Set current tenant context
+    session.current_tenant_id = tenant.tenant_id;
+    session.roles = [tenant.role];
+    
+    // Log the tenant selection
+    try {
+      await serviceQuery(`
+        UPDATE cc_impersonation_logs
+        SET tenant_id = $1
+        WHERE admin_user_id = $2 
+          AND (impersonated_user_id = $3 OR ended_at IS NULL)
+          AND ended_at IS NULL
+        ORDER BY started_at DESC
+        LIMIT 1
+      `, [tenant_id, impersonation.admin_user_id, impersonation.impersonated_user_id]);
+    } catch (logError) {
+      console.warn('Could not update impersonation log with tenant:', logError);
+    }
+    
+    res.json({
+      ok: true,
+      tenant: {
+        id: tenant.tenant_id,
+        name: tenant.tenant_name,
+        slug: tenant.tenant_slug,
+        role: tenant.role,
+      },
+    });
+    
+  } catch (error) {
+    console.error('Error setting tenant for impersonation:', error);
+    res.status(500).json({ ok: false, error: 'Failed to set tenant' });
   }
 });
 
@@ -308,6 +390,7 @@ router.post('/stop', async (req: AuthRequest, res: Response) => {
  * GET /api/admin/impersonation/status
  * 
  * Gets the current impersonation status.
+ * Includes memberships of the impersonated user for tenant selection.
  */
 router.get('/status', async (req: AuthRequest, res: Response) => {
   const session = (req as any).session;
@@ -315,6 +398,27 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
   
   if (!impersonation || new Date(impersonation.expires_at) <= new Date()) {
     return res.json({ ok: true, is_impersonating: false });
+  }
+  
+  // Fetch impersonated user's memberships for tenant selection UI
+  let memberships: any[] = [];
+  try {
+    const membershipsResult = await serviceQuery(`
+      SELECT tu.tenant_id, tu.role, t.name as tenant_name, t.slug as tenant_slug
+      FROM cc_tenant_users tu
+      JOIN cc_tenants t ON t.id = tu.tenant_id
+      WHERE tu.user_id = $1 AND tu.status = 'active' AND t.status = 'active'
+      ORDER BY t.name
+    `, [impersonation.impersonated_user_id]);
+    
+    memberships = membershipsResult.rows.map(m => ({
+      tenant_id: m.tenant_id,
+      tenant_name: m.tenant_name,
+      tenant_slug: m.tenant_slug,
+      role: m.role,
+    }));
+  } catch (err) {
+    console.warn('Could not fetch impersonated user memberships:', err);
   }
   
   res.json({
@@ -327,6 +431,7 @@ router.get('/status', async (req: AuthRequest, res: Response) => {
     tenant_name: impersonation.tenant_name,
     tenant_role: impersonation.tenant_role,
     expires_at: impersonation.expires_at,
+    memberships, // Include for tenant selection
   });
 });
 

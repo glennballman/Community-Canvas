@@ -39,6 +39,7 @@ import { AppRouterSwitch } from './components/routing/AppRouterSwitch';
 
 // Pages - App
 import { TenantPicker } from './pages/app/TenantPicker';
+import SelectTenantPage from './pages/app/SelectTenantPage';
 import { Dashboard } from './pages/app/Dashboard';
 import DashboardPage from './pages/app/DashboardPage';
 import FounderHomePage from './pages/app/FounderHomePage';
@@ -394,6 +395,9 @@ export default function App() {
               {/* impersonation redirect logic              */}
               {/* ========================================== */}
               <Route path="/app" element={<AppRouterSwitch />}>
+                
+                {/* SELECT TENANT PAGE - for impersonation without tenant */}
+                <Route path="select-tenant" element={<SelectTenantPage />} />
                 
                 {/* PLATFORM MODE - /app/platform/* */}
                 <Route path="platform" element={<PlatformLayout />}>

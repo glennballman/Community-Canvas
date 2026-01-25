@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'wouter';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { queryClient } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -71,7 +71,7 @@ interface ImpersonationStatus {
 }
 
 export function ImpersonationConsole(): React.ReactElement {
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const { refreshSession, impersonation, token } = useAuth();
   const [users, setUsers] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -182,17 +182,17 @@ export function ImpersonationConsole(): React.ReactElement {
         const refreshed = await refreshSession();
         if (refreshed) {
           await fetchStatus();
-          navigate('/app');
+          // Phase 2C-13.5: Navigate to select-tenant if no tenant was specified
+          // (impersonation now starts with tenant=null by default)
+          if (tenantId) {
+            navigate('/app');
+          } else {
+            navigate('/app/select-tenant');
+          }
         } else {
           setError('Failed to refresh session after starting impersonation');
         }
         setShowOverlay(false);
-      } else if (data.memberships) {
-        const user = users.find(u => u.id === userId);
-        if (user) {
-          setSelectedUser({ ...user, memberships: data.memberships });
-          setShowTenantPicker(true);
-        }
       } else {
         setError(data.error || 'Failed to start impersonation');
       }

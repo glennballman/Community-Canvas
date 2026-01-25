@@ -10,13 +10,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { queryClient } from '@/lib/queryClient';
 
 export function ImpersonationBanner(): React.ReactElement | null {
   const { impersonation, refreshSession, token } = useAuth();
-  const [, navigate] = useLocation();
+  const navigate = useNavigate();
   const [stopping, setStopping] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -193,13 +193,15 @@ export function ImpersonationBanner(): React.ReactElement | null {
           <span style={{ fontWeight: 600 }}>
             {targetUser?.display_name || targetUser?.email || 'Unknown'}
           </span>
-          {tenant && (
-            <>
-              <span style={{ opacity: 0.6 }}>|</span>
-              <span style={{ fontWeight: 500 }}>
-                Tenant: {tenant.slug || tenant.name}
-              </span>
-            </>
+          <span style={{ opacity: 0.6 }}>|</span>
+          {tenant ? (
+            <span style={{ fontWeight: 500 }}>
+              Tenant: {tenant.slug || tenant.name}
+            </span>
+          ) : (
+            <span style={{ fontWeight: 500, fontStyle: 'italic', opacity: 0.8 }}>
+              Tenant: (none selected)
+            </span>
           )}
           {role && (
             <span style={{ 

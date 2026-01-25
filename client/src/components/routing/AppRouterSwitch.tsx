@@ -50,16 +50,39 @@ export function AppRouterSwitch() {
   }, [location.pathname, authReady, impersonation.active, navMode]);
 
   // --------------------------------------------------------------------------
-  // CENTRALIZED IMPERSONATION REDIRECT
-  // If impersonation.active AND pathname starts with /app/platform,
-  // redirect to /app using replace=true (one-shot)
+  // CENTRALIZED IMPERSONATION REDIRECT (Phase 2C-13.5)
+  // 
+  // INVARIANT: Impersonation has TWO independent dimensions:
+  //   1) acting_user (impersonated user identity)
+  //   2) tenant_context (selected tenant for operations)
+  // 
+  // Cases:
+  // A) If impersonation.active AND tenant is NULL AND NOT on /app/select-tenant:
+  //    - Redirect to /app/select-tenant
+  // B) If impersonation.active AND pathname starts with /app/platform:
+  //    - Redirect to /app (or /app/select-tenant if no tenant)
   // --------------------------------------------------------------------------
   useEffect(() => {
     if (!authReady) return;
     
     const isPlatformPath = location.pathname.startsWith('/app/platform');
+    const isSelectTenantPath = location.pathname === '/app/select-tenant';
+    const hasTenant = !!impersonation.tenant;
     
-    if (impersonation.active && isPlatformPath && !hasRedirectedRef.current) {
+    // Case A: Impersonating with no tenant selected - need to pick one
+    if (impersonation.active && !hasTenant && !isSelectTenantPath && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      throttledLog(
+        'AppRouterSwitch-redirect',
+        '[AppRouterSwitch] Redirect fired:',
+        { from: location.pathname, to: '/app/select-tenant', reason: 'impersonation active but no tenant selected' }
+      );
+      navigate('/app/select-tenant', { replace: true });
+      return;
+    }
+    
+    // Case B: Impersonating with tenant on platform path - redirect to tenant app
+    if (impersonation.active && hasTenant && isPlatformPath && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
       throttledLog(
         'AppRouterSwitch-redirect',
@@ -68,7 +91,7 @@ export function AppRouterSwitch() {
       );
       navigate('/app', { replace: true });
     }
-  }, [authReady, impersonation.active, location.pathname, navigate]);
+  }, [authReady, impersonation.active, impersonation.tenant, location.pathname, navigate]);
 
   // Show loading until auth is ready
   if (!authReady) {
