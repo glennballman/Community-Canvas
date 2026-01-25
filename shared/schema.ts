@@ -8827,3 +8827,25 @@ export const insertStakeholderResponseSchema = createInsertSchema(ccServiceRunSt
 });
 export type StakeholderResponse = typeof ccServiceRunStakeholderResponses.$inferSelect;
 export type InsertStakeholderResponse = z.infer<typeof insertStakeholderResponseSchema>;
+
+// Response Resolutions (append-only)
+export const ccServiceRunResponseResolutions = pgTable("cc_service_run_response_resolutions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  responseId: uuid("response_id").notNull(),
+  runId: uuid("run_id").notNull(),
+  runTenantId: uuid("run_tenant_id").notNull(),
+  resolverIndividualId: uuid("resolver_individual_id").notNull(),
+  resolutionType: text("resolution_type").notNull(), // 'acknowledged' | 'accepted' | 'declined' | 'proposed_change'
+  message: text("message"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  responseIdx: index("idx_run_response_resolutions_response").on(table.responseId, table.resolvedAt),
+  runIdx: index("idx_run_response_resolutions_run").on(table.runId),
+}));
+
+export const insertResponseResolutionSchema = createInsertSchema(ccServiceRunResponseResolutions).omit({
+  id: true, createdAt: true
+});
+export type ResponseResolution = typeof ccServiceRunResponseResolutions.$inferSelect;
+export type InsertResponseResolution = z.infer<typeof insertResponseResolutionSchema>;

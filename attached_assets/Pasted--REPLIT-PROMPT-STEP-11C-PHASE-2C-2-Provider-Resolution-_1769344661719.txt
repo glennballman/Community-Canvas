@@ -1,0 +1,300 @@
+✅ REPLIT PROMPT — STEP 11C PHASE 2C-2
+
+Provider Resolution Loop for Stakeholder Responses
+
+ROLE: Senior Platform Architect + Governance / Audit Authority
+MODE: Additive only. No refactors. No breaking changes.
+TERMINOLOGY LOCKED:
+
+service run
+
+stakeholder
+
+response
+
+resolution
+❌ Do NOT introduce chat, threads, comments, or calendars
+❌ Do NOT modify existing response semantics
+
+GOAL
+
+Enable providers (tenant owners) to explicitly resolve stakeholder responses in a durable, auditable way.
+
+This closes the loop:
+
+Invite → Claim → Access → Respond → Resolve
+
+Resolutions must be:
+
+Append-only
+
+Attributed to an individual
+
+Visible to both tenant and stakeholder
+
+Notification-driven
+
+Non-destructive (no overwrites)
+
+SCOPE (EXACT)
+INCLUDES
+
+New append-only resolution table
+
+RLS policies
+
+API endpoints (POST + GET)
+
+Provider UI actions
+
+Stakeholder visibility
+
+Notifications
+
+EXCLUDES
+
+Schedule negotiation (future phase)
+
+Editing or deleting responses
+
+Chat or free-form threads
+
+Billing / monetization
+
+A) DATABASE — NEW TABLE
+Create table: cc_service_run_response_resolutions
+CREATE TABLE cc_service_run_response_resolutions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  response_id uuid NOT NULL
+    REFERENCES cc_service_run_stakeholder_responses(id) ON DELETE CASCADE,
+
+  run_id uuid NOT NULL
+    REFERENCES cc_n3_runs(id) ON DELETE CASCADE,
+
+  run_tenant_id uuid NOT NULL
+    REFERENCES cc_tenants(id),
+
+  resolver_individual_id uuid NOT NULL
+    REFERENCES cc_individuals(id),
+
+  resolution_type text NOT NULL CHECK (
+    resolution_type IN ('acknowledged', 'accepted', 'declined', 'proposed_change')
+  ),
+
+  message text,
+
+  resolved_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+Indexes
+CREATE INDEX idx_run_response_resolutions_response
+  ON cc_service_run_response_resolutions(response_id, resolved_at DESC);
+
+CREATE INDEX idx_run_response_resolutions_run
+  ON cc_service_run_response_resolutions(run_id);
+
+Idempotency Guard (Optional but Recommended)
+
+Prevent accidental double-click spam within 30 seconds:
+
+CREATE UNIQUE INDEX uq_response_resolution_idempotent
+ON cc_service_run_response_resolutions (
+  response_id,
+  resolver_individual_id,
+  resolution_type,
+  date_trunc('minute', resolved_at)
+);
+
+B) RLS POLICIES
+
+Enable RLS:
+
+ALTER TABLE cc_service_run_response_resolutions ENABLE ROW LEVEL SECURITY;
+
+SELECT
+
+Tenant owners can see all resolutions for their run
+
+Stakeholders can see resolutions linked to their own responses
+
+CREATE POLICY resolution_select
+ON cc_service_run_response_resolutions
+FOR SELECT
+USING (
+  run_tenant_id = current_tenant_id()
+  OR resolver_individual_id = current_individual_id()
+);
+
+INSERT (Tenant Only)
+CREATE POLICY resolution_insert_tenant
+ON cc_service_run_response_resolutions
+FOR INSERT
+WITH CHECK (
+  run_tenant_id = current_tenant_id()
+  AND is_service_mode() = false
+);
+
+SERVICE MODE BYPASS
+CREATE POLICY resolution_service_bypass
+ON cc_service_run_response_resolutions
+FOR ALL
+USING (is_service_mode());
+
+C) BACKEND API
+1) POST /api/runs/:runId/responses/:responseId/resolve
+
+Auth: requireAuth
+Authorization: Tenant owner only
+
+Body
+
+{
+  "resolution_type": "acknowledged | accepted | declined | proposed_change",
+  "message": "optional text"
+}
+
+
+Logic
+
+Verify tenant owns the run
+
+Verify response exists and belongs to run
+
+Insert new resolution row
+
+Create notification to stakeholder:
+
+category: invitation
+
+context_type: service_run
+
+context_id: runId
+
+action_url: /app/runs/${runId}/view
+
+Response
+
+{ "ok": true }
+
+2) GET /api/runs/:runId/resolutions
+
+Returns resolution history for a run.
+
+Tenant: all
+Stakeholder: only resolutions related to their responses
+
+D) FRONTEND — PROVIDER UI
+Location
+
+ProviderRunDetailPage.tsx
+Inside Stakeholder responses card.
+
+UI Additions
+
+For each response row:
+
+Add Resolve dropdown (tenant only):
+
+Acknowledge
+
+Accept
+
+Decline
+
+Propose change
+
+Optional message textarea
+
+Submit button
+
+After Resolution
+
+Show resolution badge:
+
+🟢 Accepted
+
+🔵 Acknowledged
+
+🔴 Declined
+
+🟠 Change proposed
+
+Show resolver + timestamp
+
+Disable further resolution actions (append-only rule)
+
+E) FRONTEND — STAKEHOLDER VIEW
+Location
+
+RunStakeholderViewPage.tsx
+
+For each response:
+
+Show latest resolution (if any)
+
+Badge + message
+
+Timestamp
+
+No action buttons here (read-only).
+
+F) COPY TOKENS (ADD)
+stakeholder_resolution.acknowledged = "Acknowledged"
+stakeholder_resolution.accepted = "Accepted"
+stakeholder_resolution.declined = "Declined"
+stakeholder_resolution.proposed_change = "Change proposed"
+
+stakeholder_resolution.resolve_cta = "Resolve"
+stakeholder_resolution.message_label = "Optional message"
+stakeholder_resolution.resolved_at = "Resolved"
+
+G) NOTIFICATIONS
+
+On resolution insert:
+
+Recipient: stakeholder_individual_id
+
+Channel: in_app (+ email if enabled)
+
+Message example:
+
+“Your response to {{run_name}} has been {{resolution_type}}.”
+
+H) PROOF DOC (REQUIRED)
+
+Create:
+
+proof/v3.5/step11c-phase2c2-response-resolution-proof.md
+
+
+Include:
+
+Table schema + indexes
+
+RLS policies
+
+API request/response examples
+
+UI screenshots or JSX snippets
+
+Notification payload example
+
+Idempotency proof
+
+Certification checklist
+
+DONE WHEN
+
+Provider can resolve responses
+
+Stakeholders see resolution
+
+No overwrites occur
+
+All actions are append-only
+
+Notifications fire correctly
+
+Proof doc exists
