@@ -1,0 +1,127 @@
+REPLIT AUDIT PROMPT — STEP 11C PHASE 2B-1 (CC-13) Bulk Invite Ingest (CSV + Paste) + Dedupe
+
+ROLE: Senior Platform Architect + QA Gatekeeper (READ-ONLY AUDIT)
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+GOAL: Inventory exact as-built primitives so we can implement Bulk Invite Ingest correctly:
+- CSV upload + paste list
+- normalization + dedupe
+- “already on platform” detection
+- policy-aware limits (per_request, tenant_daily, individual_hourly)
+- safe error reporting + proof path
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+------------------------------------------------------------
+A) UI UPLOAD & PARSING PRIMITIVES
+------------------------------------------------------------
+1) Search for existing CSV upload UI or file upload components:
+rg -n "csv|CSV|file upload|input type=\"file\"|Dropzone|papaparse" client/src
+
+2) Search for any existing server-side upload endpoints/middleware:
+rg -n "multer|busboy|formidable|multipart/form-data|upload" server
+
+3) Identify any existing “paste list” UX pattern:
+rg -n "textarea.*paste|paste list|bulk" client/src
+
+Report:
+- component names + file paths
+- patterns for showing row-level validation errors
+- any existing table/grid component used for previews
+
+------------------------------------------------------------
+B) EXISTING INVITE CREATION ENDPOINTS (single + multi)
+------------------------------------------------------------
+1) Locate STEP 11C endpoints:
+- POST /api/provider/runs/:id/stakeholder-invites
+- GET /api/provider/runs/:id/stakeholder-invites
+- POST /api/provider/runs/:runId/stakeholder-invites/:inviteId/resend
+- POST /api/provider/runs/:runId/stakeholder-invites/:inviteId/revoke
+
+For each:
+- file path
+- request body schema
+- response shape
+- whether it already accepts arrays/bulk
+
+------------------------------------------------------------
+C) EMAIL + POLICY ENFORCEMENT HOOKS
+------------------------------------------------------------
+1) Confirm how effective invite policy is resolved:
+- where cc_platform_invite_policy is read
+- where cc_tenant_invite_policy override is applied
+- confirm per_request_cap usage location
+
+2) Confirm email send behavior:
+- where emailService is called
+- how failures/skips are represented in response
+- how sent_via is set
+
+------------------------------------------------------------
+D) IDENTITY MATCHING PRIMITIVES (Already-on-platform detection)
+------------------------------------------------------------
+We need the EXACT tables/queries used to detect “already on platform”.
+
+1) Find how email normalization is handled:
+rg -n "lower\\(email\\)|normalizeEmail|toLowerCase\\(\\)" server shared
+
+2) Identify canonical identity table(s) for email match:
+- cc_users.email
+- cc_individuals.email
+(Confirm which is authoritative for “already on platform” in your flows.)
+
+Run SQL or code references:
+rg -n "FROM cc_users|FROM cc_individuals" server
+
+3) Confirm if invitee_email uniqueness exists per run:
+- Is it allowed to create multiple invitations to same email for same run?
+- Is there a unique index on cc_invitations for (context_type, context_id, invitee_email)?
+If unsure, run:
+\d+ cc_invitations
+and/or list indexes:
+SELECT indexname, indexdef FROM pg_indexes WHERE tablename='cc_invitations';
+
+------------------------------------------------------------
+E) REQUIRED BULK INGEST BEHAVIOR (to evaluate feasibility)
+------------------------------------------------------------
+Audit whether system already has:
+- a “validate only” endpoint pattern (dry-run)
+- a “preview rows” UI pattern
+- server-side CSV parsing libs already installed
+
+------------------------------------------------------------
+F) OUTPUT FORMAT (REQUIRED)
+------------------------------------------------------------
+Return:
+
+1) UI Stack Feasibility:
+- Can we parse CSV client-side? (papaparse present?)
+- Is there multipart upload support? (multer/busboy present?)
+- Best minimal approach: client-side parse + JSON POST vs server-side upload
+
+2) Backend Bulk Endpoint Design Constraints (as-built):
+- What existing invite endpoint accepts today
+- Whether it can be extended safely to accept bulk arrays
+
+3) Dedupe Rules Feasibility:
+- What indexes/constraints exist on cc_invitations
+- Whether we must dedupe in code to avoid conflicts
+
+4) Identity Matching:
+- Best authoritative table for email existence
+- How to flag “already on platform”
+
+5) Policy + Rate Limits:
+- How to apply per_request_cap to bulk ingest
+- How to apply tenant_daily/individual_hourly to bulk ingest
+
+6) Recommended Minimal Implementation Path (no code):
+- 5–9 steps
+- include proof doc requirements
+
+IMPORTANT:
+- Do NOT implement anything.
+- Do NOT propose schema changes unless audit proves missing constraints.
+- Paste the full audit report back into ChatGPT.
