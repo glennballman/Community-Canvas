@@ -274,3 +274,71 @@ SELECT status, revoked_at, revoked_reason FROM cc_service_run_stakeholders WHERE
 - ✅ "service provider" (not "contractor")
 - ✅ "reservation" (not "booking")
 - ✅ No forbidden terms in UI or copy
+
+---
+
+## QA Gating Verification (Certification Assertions)
+
+### 1. Unique Constraint Works ✅
+
+```sql
+SELECT conname, contype FROM pg_constraint WHERE conname = 'uq_run_stakeholder';
+-- Result: uq_run_stakeholder | u (unique constraint)
+```
+
+`UNIQUE(run_id, stakeholder_individual_id)` prevents double grants. Duplicate inserts become upserts via `ON CONFLICT DO UPDATE`.
+
+### 2. RLS Policy Correctness ✅
+
+**Verified policies on `cc_service_run_stakeholders`:**
+
+| Policy | Command | Purpose |
+|--------|---------|---------|
+| `stakeholder_self_select` | SELECT | Stakeholder reads own rows (`stakeholder_individual_id = current_individual_id()`) |
+| `run_tenant_select` | SELECT | Tenant owner reads stakes for their runs (`run_tenant_id = current_tenant_id()`) |
+| `run_tenant_update` | UPDATE | Tenant owner updates stakes for their runs |
+| `run_tenant_insert` | INSERT | Tenant-scoped inserts |
+| `public_insert` | INSERT | Public inserts (claim flow from public endpoints) |
+| `service_mode_all` | ALL | Service mode bypass for internal operations |
+
+**Access isolation verified:**
+- Stakeholder can SELECT only where `stakeholder_individual_id = current_individual_id() OR is_service_mode()`
+- Tenant can SELECT/UPDATE/INSERT only where `run_tenant_id = current_tenant_id() OR is_service_mode()`
+- No cross-tenant or cross-stakeholder access without service mode
+
+### 3. Revocation Semantics ✅
+
+**Revoke flips to revoked + sets revoked_at** (provider.ts:2506-2510):
+```typescript
+SET status = 'revoked',
+    revoked_at = now(),
+    revoked_reason = COALESCE($1, 'invitation_revoked'),
+    updated_at = now()
+```
+
+**Re-claim reactivates row** (public-invitations.ts:340-345):
+```typescript
+ON CONFLICT (run_id, stakeholder_individual_id)
+DO UPDATE SET
+  status = 'active',
+  revoked_at = NULL,
+  revoked_reason = NULL,
+  invite_id = EXCLUDED.invite_id,
+  updated_at = now()
+```
+
+### 4. Action URLs Don't Leak Tenant Pages ✅
+
+| Scenario | URL | Correct |
+|----------|-----|---------|
+| Pre-claim (invitee) | `/i/:token` (public claim page) | ✅ No tenant leak |
+| Post-claim notification (stakeholder) | `/app/runs/:runId/view` | ✅ Stakeholder-safe view |
+| Claim notification (provider) | `/app/provider/runs/:runId` | ✅ Tenant-scoped provider route |
+
+**No deep links to tenant-scoped provider pages for stakeholders.**
+
+---
+
+## Certification Status
+
+✅ **CERTIFIED** - All four QA gating assertions verified.
