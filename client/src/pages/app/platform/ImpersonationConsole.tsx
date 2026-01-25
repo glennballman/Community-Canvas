@@ -179,9 +179,13 @@ export function ImpersonationConsole(): React.ReactElement {
       if (data.ok) {
         setShowOverlay(true);
         queryClient.clear();
-        await refreshSession();
-        await fetchStatus();
-        navigate('/app');
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          await fetchStatus();
+          navigate('/app');
+        } else {
+          setError('Failed to refresh session after starting impersonation');
+        }
         setShowOverlay(false);
       } else if (data.memberships) {
         const user = users.find(u => u.id === userId);
@@ -216,8 +220,12 @@ export function ImpersonationConsole(): React.ReactElement {
       
       if (data.ok) {
         queryClient.clear();
-        await refreshSession();
-        await fetchStatus();
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          await fetchStatus();
+        } else {
+          setError('Failed to refresh session after stopping impersonation');
+        }
       } else {
         setError(data.error || 'Failed to stop impersonation');
       }

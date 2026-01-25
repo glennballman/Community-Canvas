@@ -41,7 +41,7 @@ interface AuthContextType {
     loading: boolean;
     login: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
-    refreshSession: () => Promise<void>;
+    refreshSession: () => Promise<boolean>;
     isAuthenticated: boolean;
     isPlatformAdmin: boolean;
     impersonation: ImpersonationState;
@@ -64,11 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [impersonation, setImpersonation] = useState<ImpersonationState>(defaultImpersonation);
 
-    const refreshSession = useCallback(async () => {
+    const refreshSession = useCallback(async (): Promise<boolean> => {
         const storedToken = localStorage.getItem('cc_token');
         if (!storedToken) {
             setImpersonation(defaultImpersonation);
-            return;
+            return false;
         }
 
         try {
@@ -76,12 +76,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 headers: { Authorization: `Bearer ${storedToken}` },
                 credentials: 'include',
             });
+            
+            if (!res.ok) {
+                console.warn('Whoami returned non-OK status:', res.status);
+                return false;
+            }
+            
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.warn('Whoami returned non-JSON response');
+                return false;
+            }
+            
             const data = await res.json();
             if (data.ok) {
                 setImpersonation(data.impersonation || defaultImpersonation);
+                return true;
             }
+            return false;
         } catch (err) {
             console.error('Failed to refresh session:', err);
+            return false;
         }
     }, []);
 

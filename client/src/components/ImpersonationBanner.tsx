@@ -85,11 +85,22 @@ export function ImpersonationBanner(): React.ReactElement | null {
         },
       });
 
+      if (!response.ok) {
+        console.error('Stop impersonation failed:', response.status);
+        setStopping(false);
+        setShowOverlay(false);
+        return;
+      }
+
       const data = await response.json();
       if (data.ok) {
         queryClient.clear();
-        await refreshSession();
-        navigate('/app/platform/impersonation');
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          navigate('/app/platform/impersonation');
+        }
+      } else {
+        console.error('Stop impersonation returned not ok:', data.error);
       }
     } catch (error) {
       console.error('Failed to stop impersonation:', error);
