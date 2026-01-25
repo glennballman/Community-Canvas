@@ -1,0 +1,230 @@
+REPLIT PROMPT — V3.5 — STEP 11C — Phase 2C-7 No-Leak Regression Pack (API + UI + DB Guardrails)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first, ship-correct-now. Schema/model changes allowed if needed, but prefer tests first.
+TERMINOLOGY LOCKED:
+✅ service provider
+✅ reservation
+❌ contractor
+❌ booking
+❌ calendar
+
+PHASE 2C-7 OBJECTIVE
+Add automated regression coverage so Phase 2C-5 (UI) + 2C-6 (server+DB) guarantees cannot silently break.
+
+Guarantees to lock in with tests:
+1) Policy gate: allow_proposal_context=false => proposal_context is stripped on WRITE and on READ
+2) No leakage: responses never return invalid proposal_context (bad UUIDs/unknown keys/oversized selected_scope_option)
+3) UI: collapsed state renders zero UUID substrings; disclosure reveals masked IDs only; copy copies full UUID without displaying it
+4) DB constraint: constraint exists and is validated (or at least present); guard against accidental removal/rename
+
+DELIVERABLES
+A) API-level integration tests for schedule proposals (provider + stakeholder endpoints)
+B) UI-level tests for ProposalContextInline component
+C) A “leak scanner” helper used by both API + UI tests
+D) Proof doc: proof/v3.5/step11c-phase2c7-no-leak-regression-pack-proof.md
+
+========================================================
+STEP 0 — DETECT EXISTING TEST STACK (NO GUESSING)
+========================================================
+Audit package.json and existing tests to determine:
+- Unit runner: vitest or jest?
+- React test library present?
+- Any supertest-style API integration harness?
+- Any existing test db harness (Neon test DB, sqlite, or transactional pg)?
+
+Output in proof doc:
+- Runner chosen and why
+- How tests are executed (pnpm test, pnpm vitest, etc.)
+- Any existing test setup files used
+
+If no harness exists:
+- Use vitest (preferred) and @testing-library/react for UI
+- For API tests:
+  - Prefer supertest against the Express app instance if available
+  - If no app export exists, add a minimal test-only export (additive) in server/app.ts (or existing server entry)
+  - Do NOT change production behavior
+
+========================================================
+STEP 1 — Shared Leak Scanner Utility
+========================================================
+Create:
+- server/test/leakScan.ts (or tests/leakScan.ts depending on repo convention)
+
+Implement helpers:
+1) UUID_REGEX (same as 2C-5/2C-6):
+   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+2) findUUIDsInString(s: string): string[]
+   - return all uuid matches
+
+3) deepScanForUUIDs(obj: unknown): { path: string; value: string }[]
+   - Walk JSON recursively (objects/arrays/strings)
+   - Record any string containing a UUID match with JSON path
+
+4) assertNoUUIDs(objOrString, opts?: { allowMasked?: boolean })
+   - allowMasked=true permits strings like "a1b2c3d4…" (8 chars + ellipsis) but NOT full UUIDs
+   - default: full UUIDs forbidden
+
+========================================================
+STEP 2 — API Integration Tests (WRITE + READ + POLICY GATE)
+========================================================
+Create test file:
+- server/routes/__tests__/scheduleProposals.noLeak.test.ts
+
+Test cases MUST cover:
+A) WRITE PATH SANITIZATION
+1) When allow_proposal_context=true:
+   - POST schedule proposal with proposal_context containing:
+     - valid UUIDs for quote_draft_id/estimate_id/bid_id/trip_id
+     - unknown key: "evil_key": "should_drop"
+     - invalid UUID: "estimate_id": "not-a-uuid"
+     - selected_scope_option longer than 32 chars
+   - Expect:
+     - Response latest.proposal_context:
+       - quote_draft_id present (valid)
+       - estimate_id absent or null (invalid dropped)
+       - evil_key absent
+       - selected_scope_option truncated? (NO) — must be dropped if >32 (per 2C-6)
+     - Then GET the schedule proposals endpoint:
+       - Confirm stored events return only sanitized keys
+
+2) When allow_proposal_context=false:
+   - POST schedule proposal with proposal_context containing valid UUIDs
+   - Expect:
+     - Response latest.proposal_context is null
+     - GET returns latest.proposal_context null and all events proposal_context null
+     - Additionally verify DB row metadata does not contain proposal_context (if test db allows querying)
+
+B) READ PATH SANITIZATION (LEGACY/CORRUPTED ROWS)
+3) Seed a row directly (or via helper) with metadata.proposal_context containing:
+   - invalid UUID strings
+   - unknown keys
+   - selected_scope_option oversized
+   - then GET endpoint
+   - Expect response proposal_context is null or sanitized with invalid fields removed
+   - No invalid fields returned
+
+C) RESPONSE MUST NOT LEAK UUIDS OUTSIDE proposal_context
+4) For GET responses:
+   - Run deepScanForUUIDs(responseBody)
+   - Assert that full UUIDs appear ONLY inside:
+     - latest.proposal_context.<uuid fields>
+     - events[i].proposal_context.<uuid fields>
+   - (If your system includes other UUID fields like run_id etc, this test must EXEMPT known structural IDs.
+     Implement allowlist paths:
+       - run_id
+       - event_id
+       - proposal_id
+     DO NOT exempt arbitrary strings.
+   - The purpose is to ensure we do not accidentally echo metadata with hidden IDs elsewhere.
+
+D) POLICY OBJECT CONSISTENCY
+5) Verify policy.allow_proposal_context exists on both provider and stakeholder endpoints:
+   - GET as stakeholder
+   - GET as provider
+   - Expect both responses include policy.allow_proposal_context boolean and it matches effective policy.
+
+Implementation notes:
+- If you have a test helper to create a run + memberships + roles, use it.
+- If not, add a minimal test fixture builder:
+  - createTenant()
+  - createRun()
+  - createMembership(role)
+  - issueSessionCookie() or inject auth header as existing tests do
+- Do NOT bypass auth in production code. If a test-only auth shortcut exists, use only in test env.
+
+========================================================
+STEP 3 — UI Component Tests (ProposalContextInline)
+========================================================
+Create:
+- client/src/components/__tests__/ProposalContextInline.test.tsx
+
+Use @testing-library/react (or existing stack).
+
+Test cases:
+1) Policy gate:
+   - render with allow=false and a proposalContext containing valid UUIDs
+   - expect: container is empty (no "Context attached", no chips)
+
+2) No UUID leakage (collapsed default):
+   - render allow=true with valid UUIDs
+   - ensure:
+     - screen contains "Context attached"
+     - chips render
+     - NO full UUID substrings exist in document.body.textContent
+     - Use findUUIDsInString(document.body.textContent) => []
+
+3) Disclosure only when valid UUID exists:
+   - render allow=true with proposalContext having ONLY invalid UUID values
+   - expect: "Show IDs" button NOT present
+
+4) Disclosure shows masked only:
+   - render allow=true with one valid UUID
+   - click “Show IDs”
+   - expect masked value pattern "^[0-9a-f]{8}…$"
+   - expect no full UUID in DOM
+
+5) Copy copies full UUID without rendering it:
+   - mock navigator.clipboard.writeText
+   - click “Show IDs”
+   - click “Copy ID”
+   - expect clipboard called with full UUID
+   - expect DOM still contains no full UUID
+
+Also validate:
+- unknown keys do not create chips or rows (pass extra keys in proposalContext object; component should ignore)
+
+========================================================
+STEP 4 — DB Guardrail Test (Constraint Exists)
+========================================================
+Create:
+- server/db/__tests__/proposalContext.constraint.test.ts
+
+Test:
+- Query pg_constraint + pg_class to ensure constraint exists:
+  - constraint name: chk_proposal_context_shape
+  - table: cc_service_run_schedule_proposals
+- Additionally assert function exists:
+  - is_valid_proposal_context(jsonb)
+- If constraint names differ, update to the actual names created by migration 189.
+
+If you have multiple environments:
+- The test can be “best effort” and skipped if no DB connection in CI,
+  BUT must run in the normal test environment used by Replit.
+
+========================================================
+STEP 5 — Proof Doc (Required)
+========================================================
+Create:
+proof/v3.5/step11c-phase2c7-no-leak-regression-pack-proof.md
+
+Include:
+A) Test stack audit (runner, libraries)
+B) Files added/changed
+C) API tests summary:
+   - list each test case and PASS output
+D) UI tests summary:
+   - list each test case and PASS output
+E) DB constraint test summary
+F) Explicit regression guarantees:
+   - “If allow_proposal_context=false, both write and read strip proposal_context”
+   - “Invalid proposal_context cannot be returned”
+   - “UI never displays full UUIDs even after disclosure”
+G) How to run:
+   - exact command(s) used in Replit/CI
+
+========================================================
+ACCEPTANCE CRITERIA (MUST PASS)
+========================================================
+1) All tests pass locally in Replit
+2) API tests prove sanitize + policy gate on write and read
+3) UI tests prove no full UUID leakage and correct disclosure gating
+4) DB test proves constraint exists (and function exists)
+5) Proof doc exists with PASS evidence and commands
+
+OUTPUT REQUIRED FROM REPLIT
+- commands executed + output summary
+- list of test files added
+- proof doc path and contents (or key excerpts)
+- any adjustments needed to export app instance for supertest (if required)
