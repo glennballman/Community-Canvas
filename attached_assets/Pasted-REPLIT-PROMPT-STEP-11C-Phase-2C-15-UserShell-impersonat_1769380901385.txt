@@ -1,0 +1,106 @@
+REPLIT PROMPT — STEP 11C Phase 2C-15: UserShell (impersonated user-first) + Logout Fix
+
+Goal: When platform admin impersonates a user, the app must land in the impersonated user shell immediately (user nav), with no tenant required. Tenant selection is optional and happens only when the user chooses to enter a tenant.
+
+A) Fix Logout (must be done first, it’s breaking recovery)
+
+Remove all uses of window.location.href = '/api/logout' from:
+
+client/src/layouts/PlatformLayout.tsx
+
+client/src/layouts/FounderLayout.tsx
+
+anywhere else it exists
+
+Replace those with await auth.logout() (AuthContext.logout) and then navigate('/').
+
+Add a server compatibility route so old links don’t 404:
+
+GET /api/logout → calls same server logout handler as /api/foundation/auth/logout and returns a redirect or {ok:true}.
+
+B) Stop forcing tenant selection when impersonation starts
+
+Right now impersonation with tenant_context = NULL routes to /app/select-tenant. That is wrong. We need a user-first shell.
+
+Implement UserShell mode:
+
+1) Add UserShell layout
+
+Create:
+
+client/src/layouts/UserShellLayout.tsx
+
+Render it when:
+
+authenticated
+
+impersonation.active === true
+
+effective_tenant_id is null
+
+UserShell must show:
+
+impersonation banner
+
+left nav for user-level pages (not platform, not tenant)
+
+a default page that lists the impersonated user’s tenant memberships with “Enter” buttons
+
+2) Create a user landing page
+
+Create:
+
+client/src/pages/app/UserHomePage.tsx
+
+It must:
+
+show “Acting as: {effective user}”
+
+list memberships for the effective user
+
+each membership has “Enter tenant” which sets tenant context then navigates to /app
+
+3) Add/Use an API for memberships in tenantless mode
+
+If /api/me/context already includes memberships for the effective user, reuse it.
+If not, add:
+
+GET /api/app/me/memberships
+Guard: requireAuth only (no requireTenant).
+Returns memberships for the effective user (impersonated if active).
+
+4) Routing precedence (single owner)
+
+Update AppRouterSwitch so layout selection is:
+
+if not authed → auth routes
+
+else if impersonation.active:
+
+if tenant_context is null → UserShellLayout (DEFAULT)
+
+else → TenantAppLayout
+
+else if is_platform_admin → PlatformLayout
+
+else → TenantAppLayout
+
+/app/select-tenant should become optional (can still exist), but must never be the default landing page.
+
+C) Tests (minimum)
+
+Add tests proving:
+
+logout no longer hits /api/logout from client layouts (uses AuthContext.logout)
+
+GET /api/logout no longer 404s
+
+impersonation active + tenant_context null renders UserShellLayout (not select-tenant)
+
+clicking “Enter tenant” sets tenant context and routes into tenant app
+
+Deliverables
+
+Proof doc: proof/v3.5/step11c-phase2c15-user-shell-logout-fix-proof.md
+
+All tests passing
