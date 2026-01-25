@@ -1,10 +1,13 @@
 /**
  * TENANT APP LAYOUT
  * 
- * Used for: /app/* routes
+ * Used for: /app/* routes (excluding /app/platform/* and /app/founder/*)
  * 
  * Uses V3_NAV from v3Nav.ts as the single source of truth for navigation.
  * Navigation is filtered based on user context (role, tenant, portal, platform admin).
+ * 
+ * NOTE: Impersonation redirect logic is CENTRALIZED in AppRouterSwitch.
+ * This layout does NOT redirect to /app/platform automatically.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -31,6 +34,17 @@ import { PortalSelector } from '../components/PortalSelector';
 import { ContextIndicator } from '../components/context/ContextIndicator';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getFilteredNavSections, NavSection, NavItem } from '../lib/routes/v3Nav';
+
+// Throttle helper for forensic logs
+const throttleTimestamps: Record<string, number> = {};
+function throttledLog(key: string, ...args: unknown[]) {
+  if (process.env.NODE_ENV !== 'development') return;
+  const now = Date.now();
+  if (!throttleTimestamps[key] || now - throttleTimestamps[key] > 500) {
+    throttleTimestamps[key] = now;
+    console.debug(...args);
+  }
+}
 
 // ============================================================================
 // TENANT TYPE ICONS (using lucide-react icons, not emojis)
@@ -62,7 +76,7 @@ export function TenantAppLayout(): React.ReactElement {
     switchTenant,
     impersonation,
   } = useTenant();
-  const { ready: authReady } = useAuth();
+  const { ready: authReady, navMode } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
@@ -94,6 +108,15 @@ export function TenantAppLayout(): React.ReactElement {
   // CRITICAL: Wait for authReady before making redirect decisions
   // During impersonation, currentTenant should be provided by TenantContext
   const needsRedirectToPlaces = authReady && !isAtRoot && !isNoTenantRoute && !currentTenant && initialized && !loading;
+
+  // Forensic logging (throttled)
+  useEffect(() => {
+    throttledLog(
+      'TenantAppLayout-guard',
+      '[TenantAppLayout] Guard eval:',
+      { pathname: location.pathname, authReady, impersonationActive: impersonation.is_impersonating, navMode, hasTenant: !!currentTenant }
+    );
+  }, [location.pathname, authReady, impersonation.is_impersonating, navMode, currentTenant]);
 
   // --------------------------------------------------------------------------
   // Auth redirect

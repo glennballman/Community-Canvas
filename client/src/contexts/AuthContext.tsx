@@ -1,6 +1,17 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { queryClient } from '@/lib/queryClient';
 
+// Throttle helper for forensic logs (prevents console spam)
+const throttleTimestamps: Record<string, number> = {};
+function throttledLog(key: string, ...args: unknown[]) {
+  if (process.env.NODE_ENV !== 'development') return;
+  const now = Date.now();
+  if (!throttleTimestamps[key] || now - throttleTimestamps[key] > 500) {
+    throttleTimestamps[key] = now;
+    console.debug(...args);
+  }
+}
+
 interface User {
     id: string;
     email: string;
@@ -71,9 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [impersonation, setImpersonation] = useState<ImpersonationState>(defaultImpersonation);
 
     const refreshSession = useCallback(async (): Promise<boolean> => {
+        const startMs = Date.now();
         const storedToken = localStorage.getItem('cc_token');
+        
+        throttledLog('refreshSession-start', '[AuthContext] refreshSession: start', { hasToken: !!storedToken });
+        
         if (!storedToken) {
             setImpersonation(defaultImpersonation);
+            throttledLog('refreshSession-no-token', '[AuthContext] refreshSession: no token, returning false');
             return false;
         }
 
@@ -83,12 +99,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 credentials: 'include',
             });
             
+            const durationMs = Date.now() - startMs;
+            const contentType = res.headers.get('content-type');
+            
+            throttledLog('refreshSession-response', '[AuthContext] refreshSession: response', {
+                status: res.status,
+                ok: res.ok,
+                contentType,
+                durationMs,
+            });
+            
             if (!res.ok) {
                 console.warn('Whoami returned non-OK status:', res.status);
                 return false;
             }
             
-            const contentType = res.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 console.warn('Whoami returned non-JSON response');
                 return false;
@@ -97,6 +122,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await res.json();
             if (data.ok) {
                 setImpersonation(data.impersonation || defaultImpersonation);
+                throttledLog('refreshSession-done', '[AuthContext] refreshSession: complete', {
+                    impersonationActive: data.impersonation?.active || false,
+                    durationMs,
+                });
                 return true;
             }
             return false;

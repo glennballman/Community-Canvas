@@ -4,9 +4,12 @@
  * Layout for Platform Admin mode: /app/platform/*
  * Uses PLATFORM_NAV as the single source of truth.
  * Does NOT show tenant-requiring sections.
+ * 
+ * NOTE: Impersonation redirect logic is CENTRALIZED in AppRouterSwitch.
+ * This layout does NOT handle impersonation redirects.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -18,49 +21,38 @@ import {
 import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
-import { getPlatformNavSections, PlatformNavSection, PlatformNavItem } from '../lib/routes/platformNav';
-import { useToast } from '@/hooks/use-toast';
+import { getPlatformNavSections } from '../lib/routes/platformNav';
+
+// Throttle helper for forensic logs
+const throttleTimestamps: Record<string, number> = {};
+function throttledLog(key: string, ...args: unknown[]) {
+  if (process.env.NODE_ENV !== 'development') return;
+  const now = Date.now();
+  if (!throttleTimestamps[key] || now - throttleTimestamps[key] > 500) {
+    throttleTimestamps[key] = now;
+    console.debug(...args);
+  }
+}
 
 export function PlatformLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, initialized } = useTenant();
-  const { impersonation, hasTenantMemberships, ready: authReady } = useAuth();
-  const { toast } = useToast();
+  const { impersonation, hasTenantMemberships, ready: authReady, navMode } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  
-  // Latch to prevent multiple redirects
-  const hasRedirectedRef = useRef(false);
 
   const sections = getPlatformNavSections({ hasTenantMemberships });
   
-  // Impersonation redirect guard with latch
+  // Forensic logging (throttled)
   useEffect(() => {
-    // Only fire when auth is fully ready AND impersonation is active AND we haven't redirected yet
-    if (authReady && impersonation.active && !hasRedirectedRef.current) {
-      hasRedirectedRef.current = true;
-      if (process.env.NODE_ENV === 'development') {
-        console.debug('[PlatformLayout] Redirect fired: impersonation active, navigating to /app');
-      }
-      toast({
-        title: 'Impersonation Active',
-        description: 'End impersonation to access platform admin.',
-        variant: 'destructive',
-      });
-      navigate('/app', { replace: true });
-    }
-  }, [authReady, impersonation.active, navigate, toast]);
-  
-  // If impersonation is active and we're redirecting, show minimal UI
-  if (impersonation.active) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Redirecting...</p>
-      </div>
+    throttledLog(
+      'PlatformLayout-guard',
+      '[PlatformLayout] Guard eval:',
+      { pathname: location.pathname, authReady, impersonationActive: impersonation.active, navMode }
     );
-  }
+  }, [location.pathname, authReady, impersonation.active, navMode]);
 
   // Wait for both tenant context and auth to be ready
   if (loading || !initialized || !authReady) {

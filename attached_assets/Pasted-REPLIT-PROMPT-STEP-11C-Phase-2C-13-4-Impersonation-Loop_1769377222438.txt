@@ -1,0 +1,72 @@
+REPLIT PROMPT — STEP 11C Phase 2C-13.4: Impersonation Loop Forensics + Deterministic Router Split
+
+ROLE: Senior frontend engineer + QA
+MODE: Stop the loop by making routing ownership deterministic. Add forensic logs to identify the bounce.
+
+CURRENT BUG
+- After impersonating Mathew, URL flashes repeatedly and UI is stuck on spinner indefinitely.
+- This indicates ping-pong redirects OR authReady never resolves.
+
+NON-NEGOTIABLE INVARIANT
+At runtime, for any given pathname, only ONE layout/router branch may decide redirects.
+We must not have both PlatformLayout and TenantLayout competing.
+
+A) ADD FORENSICS (TEMP DEV LOGS, SAFE)
+1) In AuthContext refreshSession:
+   - log once per call: start, status code, ok, content-type, duration ms
+   - include impersonation.active and navMode after parse
+2) In PlatformLayout + TenantLayout guards:
+   - log when guard evaluates (pathname, authReady, impersonation.active, navMode)
+   - log when it navigates (from -> to) including replace=true
+
+Add a simple in-memory throttle:
+- do not log more than once per 500ms per component to avoid console spam.
+
+B) FIX ROUTER OWNERSHIP (PRIMARY CHANGE)
+1) Create a single “AppRouterSwitch” at /app root that chooses which shell to render based on auth state:
+   - If pathname startsWith('/app/platform'):
+        render PlatformShell
+     else:
+        render TenantShell
+2) Impersonation rule:
+   - If impersonation.active === true AND pathname startsWith('/app/platform'):
+        immediate redirect to '/app' using replace=true
+   - This redirect must live ONLY in AppRouterSwitch (centralized), not in PlatformLayout.
+3) Remove impersonation redirect logic from PlatformLayout entirely (no latches there).
+4) TenantShell must NEVER redirect to /app/platform automatically. (No “if platform admin then go to platform” logic.)
+
+C) FIX AUTH READY / RETRY LOOP
+1) Ensure refreshSession is called exactly once on app boot (e.g., in AuthProvider useEffect with empty deps)
+2) If refreshSession fails (non-OK or non-JSON):
+   - set authReady=true with an unauth state (user=null) so UI can render login instead of spinning forever
+   - do NOT continuously retry in a tight loop
+3) If token is missing, set unauth and authReady=true immediately.
+
+D) REMOVE ANY CACHE CLEARING THAT CAN LOOP
+Search for queryClient.clear() and ensure:
+- only called inside explicit user actions (start/stop impersonation handlers)
+- never called in layouts, providers, or effects that can re-run repeatedly.
+
+E) ADD TEST
+Add a UI test that simulates:
+- impersonation.active=true
+- navigating to /app/platform
+Expect:
+- single redirect to /app (replace)
+- no further navigation calls
+
+F) ACCEPTANCE CRITERIA
+- Starting impersonation no longer causes URL flashing.
+- Visiting /app/platform while impersonating results in ONE redirect to /app and the tenant shell loads.
+- No infinite spinners: authReady always resolves to true.
+
+G) PROOF DOC
+Create proof/v3.5/step11c-phase2c13_4-router-split-loop-fix-proof.md
+Include:
+- reproduction steps before
+- log snippet showing prior ping-pong
+- explanation of centralized switch
+- tests passing
+
+DELIVERABLE
+Commit with code + proof doc.

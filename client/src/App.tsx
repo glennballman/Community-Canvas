@@ -35,6 +35,7 @@ import { TenantAppLayout } from './layouts/TenantAppLayout';
 import { PublicPortalLayout } from './layouts/PublicPortalLayout';
 import { PlatformLayout } from './layouts/PlatformLayout';
 import { FounderLayout } from './layouts/FounderLayout';
+import { AppRouterSwitch } from './components/routing/AppRouterSwitch';
 
 // Pages - App
 import { TenantPicker } from './pages/app/TenantPicker';
@@ -388,47 +389,45 @@ export default function App() {
               </Route>
 
               {/* ========================================== */}
-              {/* PLATFORM MODE - /app/platform/*           */}
-              {/* Dedicated layout for Platform Admin mode  */}
+              {/* APP ROUTES - /app/*                       */}
+              {/* AppRouterSwitch handles centralized       */}
+              {/* impersonation redirect logic              */}
               {/* ========================================== */}
-              <Route path="/app/platform" element={<PlatformLayout />}>
-                <Route index element={<PlatformHomePage />} />
-                <Route path="tenants" element={<TenantsListPage />} />
-                <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
-                <Route path="tenants/:tenantId/portals" element={<TenantPortalsPage />} />
-                <Route path="tenants/:tenantId/users" element={<TenantUsersPage />} />
-                <Route path="analytics" element={<AnalyticsPage />} />
-                <Route path="users" element={<UsersManagement />} />
-                <Route path="system-explorer" element={<SystemExplorerPage />} />
-                <Route path="data-management" element={<AdminInfrastructure />} />
-                <Route path="settings" element={<AdminSettingsPage />} />
-                <Route path="impersonation" element={<ImpersonationConsole />} />
-                <Route path="command-console/roads" element={<CommandConsoleRoadsPage />} />
-                <Route path="command-console/ferries" element={<CommandConsoleFerriesPage />} />
-                <Route path="command-console/weather" element={<CommandConsoleWeatherPage />} />
-                <Route path="command-console/hydro" element={<CommandConsoleHydroPage />} />
-                <Route path="command-console/earthquakes" element={<CommandConsoleEarthquakesPage />} />
-                <Route path="command-console/dependency-rules" element={<CommandConsoleDependencyRulesPage />} />
-                <Route path="command-console/bamfield" element={<CommandConsoleBamfieldPage />} />
-              </Route>
+              <Route path="/app" element={<AppRouterSwitch />}>
+                
+                {/* PLATFORM MODE - /app/platform/* */}
+                <Route path="platform" element={<PlatformLayout />}>
+                  <Route index element={<PlatformHomePage />} />
+                  <Route path="tenants" element={<TenantsListPage />} />
+                  <Route path="tenants/:tenantId" element={<TenantDetailPage />} />
+                  <Route path="tenants/:tenantId/portals" element={<TenantPortalsPage />} />
+                  <Route path="tenants/:tenantId/users" element={<TenantUsersPage />} />
+                  <Route path="analytics" element={<AnalyticsPage />} />
+                  <Route path="users" element={<UsersManagement />} />
+                  <Route path="system-explorer" element={<SystemExplorerPage />} />
+                  <Route path="data-management" element={<AdminInfrastructure />} />
+                  <Route path="settings" element={<AdminSettingsPage />} />
+                  <Route path="impersonation" element={<ImpersonationConsole />} />
+                  <Route path="command-console/roads" element={<CommandConsoleRoadsPage />} />
+                  <Route path="command-console/ferries" element={<CommandConsoleFerriesPage />} />
+                  <Route path="command-console/weather" element={<CommandConsoleWeatherPage />} />
+                  <Route path="command-console/hydro" element={<CommandConsoleHydroPage />} />
+                  <Route path="command-console/earthquakes" element={<CommandConsoleEarthquakesPage />} />
+                  <Route path="command-console/dependency-rules" element={<CommandConsoleDependencyRulesPage />} />
+                  <Route path="command-console/bamfield" element={<CommandConsoleBamfieldPage />} />
+                </Route>
 
-              {/* ========================================== */}
-              {/* FOUNDER MODE - /app/founder/*             */}
-              {/* Dedicated layout for Founder Solo mode    */}
-              {/* ========================================== */}
-              <Route path="/app/founder" element={<FounderLayout />}>
-                <Route index element={<FounderHomePage />} />
-                <Route path="organizations" element={<FounderOrganizationsPage />} />
-                <Route path="work" element={<FounderWorkPage />} />
-                <Route path="reservations" element={<FounderReservationsPage />} />
-                <Route path="analytics" element={<FounderAnalyticsPage />} />
-              </Route>
+                {/* FOUNDER MODE - /app/founder/* */}
+                <Route path="founder" element={<FounderLayout />}>
+                  <Route index element={<FounderHomePage />} />
+                  <Route path="organizations" element={<FounderOrganizationsPage />} />
+                  <Route path="work" element={<FounderWorkPage />} />
+                  <Route path="reservations" element={<FounderReservationsPage />} />
+                  <Route path="analytics" element={<FounderAnalyticsPage />} />
+                </Route>
 
-              {/* ========================================== */}
-              {/* TENANT APP - /app/*                       */}
-              {/* Tenant-scoped routes (requires tenant)    */}
-              {/* ========================================== */}
-              <Route path="/app" element={<TenantAppLayout />}>
+                {/* TENANT APP - /app/* (default) */}
+                <Route element={<TenantAppLayout />}>
                 <Route index element={<AppHomeRedirect />} />
                 <Route path="places" element={<TenantPicker />} />
                 <Route path="dashboard" element={<DashboardPage />} />
@@ -621,6 +620,7 @@ export default function App() {
                 <Route path="settings/negotiation-policies" element={<NegotiationPolicySettingsPage />} />
                 <Route path="settings/negotiation-audit" element={<NegotiationAuditPage />} />
                 <Route path="settings/proof-verification" element={<ProofVerificationPage />} />
+                </Route>
               </Route>
 
               {/* ========================================== */}
