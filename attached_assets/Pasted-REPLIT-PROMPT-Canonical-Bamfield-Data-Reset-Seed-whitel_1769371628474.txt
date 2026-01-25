@@ -1,0 +1,508 @@
+REPLIT PROMPT — Canonical Bamfield Data Reset + Seed (whitelist, Glenn platform-only)
+REPLIT PROMPT — V3.5 CANONICAL BAMFIELD DATA RESET + SEED (WHITELIST)
+
+ROLE: DBA + Platform Engineer
+MODE: Evidence-first. Backup first. Then WHITELIST keep only canonical users/tenants.
+HARD RULES:
+- Glenn (glenn@envirogroupe.com) must remain PLATFORM ADMIN ONLY with ZERO tenant memberships. 【CANONICAL doc】
+- Do NOT insert invalid tenant role strings into cc_tenant_users.role.
+  Allowed roles: tenant_owner, tenant_admin, operator, staff, member.
+  Use cc_tenant_users.title + permissions JSONB to preserve “crew_chief”, etc.
+- We do not care about dev data; but we will backup core tables before deletes.
+
+============================================================
+PHASE 0 — SNAPSHOT COUNTS (pre)
+============================================================
+Run these and paste output into proof doc:
+```sql
+select count(*) as users from cc_users;
+select count(*) as tenants from cc_tenants;
+select count(*) as tenant_users from cc_tenant_users;
+select count(*) as portals from cc_portals;
+select count(*) as zones from cc_zones;
+
+============================================================
+PHASE 1 — BACKUP (REQUIRED)
+create table if not exists _backup_cc_users_20260125 as select * from cc_users;
+create table if not exists _backup_cc_tenants_20260125 as select * from cc_tenants;
+create table if not exists _backup_cc_tenant_users_20260125 as select * from cc_tenant_users;
+create table if not exists _backup_cc_portals_20260125 as select * from cc_portals;
+create table if not exists _backup_cc_zones_20260125 as select * from cc_zones;
+
+============================================================
+PHASE 2 — DEFINE CANONICAL WHITELISTS
+
+A) Canonical TENANT slugs (24 real tenants + platform) 【CANONICAL + review doc】
+NOTE: If your environment has additional REQUIRED platform system tenants, add them here explicitly.
+
+-- Canonical tenant slugs
+with canonical_tenants(slug) as (
+  values
+  ('community-canvas'), -- platform
+  -- Government / Community
+  ('bamfield-community'),
+  ('east-bamfield-community'),
+  ('west-bamfield-community'),
+  ('anacla-community'),
+  ('uchucklesaht-tribe'),
+  -- Business
+  ('1252093-bc-ltd'),
+  ('bamfield-property-maintenance'),
+  ('ethans-landing-inc'),
+  ('woods-end-landing'),
+  ('woods-end-marina'),
+  ('save-paradise-parking'),
+  ('bamfield-adventure-center'),
+  ('broken-island-adventures'),
+  ('lucky-lander-services'),
+  ('inlet-express'),
+  ('harbourside-lodge'),
+  ('flora-stays'),
+  ('floras-restaurant'),
+  ('hfn-marina'),
+  ('lady-rose-marine'),
+  ('eileen-scott-park'),
+  ('grappler-boat-launch'),
+  ('bamfield-chamber'),
+  -- Individual
+  ('wade-residence')
+)
+select * from canonical_tenants;
+
+
+B) Canonical USER emails (platform admin + core personas) 【CANONICAL doc】
+(If a persona has no email in the doc, skip them for now or assign a dev email you approve.)
+
+with canonical_users(email) as (
+  values
+  ('glenn@envirogroupe.com'),
+  ('ellen@enviropaving.com'),
+  ('pavel@remoteserve.ca'),
+  ('mathew@woodsendlanding.com'),
+  ('wade@bamfield.net'),
+  ('sheryl@brokenislandadventures.com'),
+  ('john@brokenislandadventures.com'),
+  ('rachel@woodsendlanding.com'),
+  ('brian@luckylander.com'),
+  ('jill@woodsendlanding.com'),
+  ('marnie@bamfieldchamber.com'),
+  ('neil@inletexpress.com'),
+  ('brendaharbourside@gmail.com'),
+  ('gil@florastays.com')
+)
+select * from canonical_users;
+
+============================================================
+PHASE 3 — DELETE TEST CRUFT + NON-WHITELIST TENANTS/USERS
+
+First delete tenant memberships for users we’re about to remove:
+
+with canonical_users(email) as (
+  values
+  ('glenn@envirogroupe.com'),
+  ('ellen@enviropaving.com'),
+  ('pavel@remoteserve.ca'),
+  ('mathew@woodsendlanding.com'),
+  ('wade@bamfield.net'),
+  ('sheryl@brokenislandadventures.com'),
+  ('john@brokenislandadventures.com'),
+  ('rachel@woodsendlanding.com'),
+  ('brian@luckylander.com'),
+  ('jill@woodsendlanding.com'),
+  ('marnie@bamfieldchamber.com'),
+  ('neil@inletexpress.com'),
+  ('brendaharbourside@gmail.com'),
+  ('gil@florastays.com')
+)
+delete from cc_tenant_users tu
+where tu.user_id in (
+  select u.id from cc_users u
+  where u.email is not null
+    and u.email not in (select email from canonical_users)
+    and coalesce(u.is_platform_admin,false) = false
+);
+
+
+Delete non-whitelist tenants’ memberships:
+
+with canonical_tenants(slug) as (
+  values
+  ('community-canvas'),
+  ('bamfield-community'),
+  ('east-bamfield-community'),
+  ('west-bamfield-community'),
+  ('anacla-community'),
+  ('uchucklesaht-tribe'),
+  ('1252093-bc-ltd'),
+  ('bamfield-property-maintenance'),
+  ('ethans-landing-inc'),
+  ('woods-end-landing'),
+  ('woods-end-marina'),
+  ('save-paradise-parking'),
+  ('bamfield-adventure-center'),
+  ('broken-island-adventures'),
+  ('lucky-lander-services'),
+  ('inlet-express'),
+  ('harbourside-lodge'),
+  ('flora-stays'),
+  ('floras-restaurant'),
+  ('hfn-marina'),
+  ('lady-rose-marine'),
+  ('eileen-scott-park'),
+  ('grappler-boat-launch'),
+  ('bamfield-chamber'),
+  ('wade-residence')
+)
+delete from cc_tenant_users tu
+where tu.tenant_id in (
+  select t.id from cc_tenants t
+  where t.slug not in (select slug from canonical_tenants)
+);
+
+
+Delete non-whitelist tenants:
+
+with canonical_tenants(slug) as (
+  values
+  ('community-canvas'),
+  ('bamfield-community'),
+  ('east-bamfield-community'),
+  ('west-bamfield-community'),
+  ('anacla-community'),
+  ('uchucklesaht-tribe'),
+  ('1252093-bc-ltd'),
+  ('bamfield-property-maintenance'),
+  ('ethans-landing-inc'),
+  ('woods-end-landing'),
+  ('woods-end-marina'),
+  ('save-paradise-parking'),
+  ('bamfield-adventure-center'),
+  ('broken-island-adventures'),
+  ('lucky-lander-services'),
+  ('inlet-express'),
+  ('harbourside-lodge'),
+  ('flora-stays'),
+  ('floras-restaurant'),
+  ('hfn-marina'),
+  ('lady-rose-marine'),
+  ('eileen-scott-park'),
+  ('grappler-boat-launch'),
+  ('bamfield-chamber'),
+  ('wade-residence')
+)
+delete from cc_tenants
+where slug not in (select slug from canonical_tenants);
+
+
+Delete non-whitelist non-platform-admin users:
+
+with canonical_users(email) as (
+  values
+  ('glenn@envirogroupe.com'),
+  ('ellen@enviropaving.com'),
+  ('pavel@remoteserve.ca'),
+  ('mathew@woodsendlanding.com'),
+  ('wade@bamfield.net'),
+  ('sheryl@brokenislandadventures.com'),
+  ('john@brokenislandadventures.com'),
+  ('rachel@woodsendlanding.com'),
+  ('brian@luckylander.com'),
+  ('jill@woodsendlanding.com'),
+  ('marnie@bamfieldchamber.com'),
+  ('neil@inletexpress.com'),
+  ('brendaharbourside@gmail.com'),
+  ('gil@florastays.com')
+)
+delete from cc_users u
+where coalesce(u.is_platform_admin,false) = false
+  and u.email is not null
+  and u.email not in (select email from canonical_users);
+
+============================================================
+PHASE 4 — UPSERT CANONICAL TENANTS
+
+-- Minimal tenant columns: slug, name, tenant_type, status
+-- Adjust tenant_type values to match your schema’s valid enum set.
+
+insert into cc_tenants (slug, name, tenant_type, status)
+values
+  ('community-canvas','Community Canvas','platform','active'),
+
+  ('bamfield-community','Bamfield Community','government','active'),
+  ('east-bamfield-community','East Bamfield Community','government','active'),
+  ('west-bamfield-community','West Bamfield Community','government','active'),
+  ('anacla-community','Anacla Community','government','active'),
+  ('uchucklesaht-tribe','Uchucklesaht Tribe','government','active'),
+
+  ('1252093-bc-ltd','1252093 BC LTD','business','active'),
+  ('bamfield-property-maintenance','Bamfield Property Maintenance','business','active'),
+  ('ethans-landing-inc','Ethans Landing Inc','business','active'),
+  ('woods-end-landing','Woods End Landing','business','active'),
+  ('woods-end-marina','Woods End Marina','business','active'),
+  ('save-paradise-parking','Save Paradise Parking','business','active'),
+  ('bamfield-adventure-center','Bamfield Adventure Center','business','active'),
+  ('broken-island-adventures','Broken Island Adventures','business','active'),
+  ('lucky-lander-services','Lucky Lander Services','business','active'),
+  ('inlet-express','Inlet Express','business','active'),
+  ('harbourside-lodge','Harbourside Lodge','business','active'),
+  ('flora-stays',"Flora's Stays",'business','active'),
+  ('floras-restaurant',"Flora's Restaurant",'business','active'),
+  ('hfn-marina','HFN Marina','business','active'),
+  ('lady-rose-marine','Lady Rose Marine','business','active'),
+  ('eileen-scott-park','Eileen Scott Park','business','active'),
+  ('grappler-boat-launch','Grappler Boat Launch','business','active'),
+  ('bamfield-chamber','Bamfield Chamber of Commerce','business','active'),
+
+  ('wade-residence','Wade Residence','individual','active')
+on conflict (slug) do update
+set name = excluded.name,
+    tenant_type = excluded.tenant_type,
+    status = excluded.status;
+
+============================================================
+PHASE 5 — UPSERT CANONICAL USERS
+
+NOTE: We assume cc_users has columns: email, display_name (or name), given_name, family_name, is_platform_admin, status.
+Adjust the column names to your actual schema (you provided display_name/given_name/family_name exist).
+
+-- Glenn: platform admin only
+insert into cc_users (email, display_name, given_name, family_name, status, is_platform_admin, created_at, updated_at)
+values ('glenn@envirogroupe.com','Glenn Ballman','Glenn','Ballman','active',true,now(),now())
+on conflict (email) do update
+set display_name=excluded.display_name,
+    given_name=excluded.given_name,
+    family_name=excluded.family_name,
+    status=excluded.status,
+    is_platform_admin=true,
+    updated_at=now();
+
+-- Non-platform users (is_platform_admin=false)
+insert into cc_users (email, display_name, status, is_platform_admin, created_at, updated_at)
+values
+  ('ellen@enviropaving.com','Ellen White','active',false,now(),now()),
+  ('pavel@remoteserve.ca','Pavel Novak','active',false,now(),now()),
+  ('mathew@woodsendlanding.com','Mathew Vetten','active',false,now(),now()),
+  ('wade@bamfield.net','Wade Thompson','active',false,now(),now()),
+  ('sheryl@brokenislandadventures.com','Sheryl Ferguson','active',false,now(),now()),
+  ('john@brokenislandadventures.com','John Mass','active',false,now(),now()),
+  ('rachel@woodsendlanding.com','Rachel Lovick','active',false,now(),now()),
+  ('brian@luckylander.com','Brian Baird','active',false,now(),now()),
+  ('jill@woodsendlanding.com','Jill Popoff','active',false,now(),now()),
+  ('marnie@bamfieldchamber.com','Marnie','active',false,now(),now()),
+  ('neil@inletexpress.com','Neil Wright','active',false,now(),now()),
+  ('brendaharbourside@gmail.com','Brenda Yamamoto','active',false,now(),now()),
+  ('gil@florastays.com','Gil','active',false,now(),now())
+on conflict (email) do update
+set display_name=excluded.display_name,
+    status=excluded.status,
+    is_platform_admin=false,
+    updated_at=now();
+
+============================================================
+PHASE 6 — CANONICAL MEMBERSHIPS (VALID ROLE MAPPING)
+
+ROLE MAPPING (required due to auth guards)
+
+canonical “admin” -> tenant_admin
+
+canonical “owner” -> tenant_owner
+
+canonical “crew_chief” -> operator (title='Crew Chief', permissions-> crew_chief true)
+
+-- Glenn must have ZERO memberships (P0 invariant will enforce)
+delete from cc_tenant_users
+where user_id = (select id from cc_users where email='glenn@envirogroupe.com');
+
+-- Ellen -> 1252093 BC LTD (tenant_admin)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'Tenant Admin', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='ellen@enviropaving.com' and t.slug='1252093-bc-ltd'
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='Tenant Admin', permissions='{}'::jsonb, status='active', updated_at=now();
+
+-- Pavel -> 1252093 BC LTD (operator + crew chief semantics)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'operator', 'Crew Chief', jsonb_build_object('crew_chief', true), 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='pavel@remoteserve.ca' and t.slug='1252093-bc-ltd'
+on conflict (tenant_id, user_id) do update
+set role='operator', title='Crew Chief', permissions=jsonb_build_object('crew_chief', true), status='active', updated_at=now();
+
+-- Pavel -> Bamfield Property Maintenance (tenant_admin)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'PIC Admin', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='pavel@remoteserve.ca' and t.slug='bamfield-property-maintenance'
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='PIC Admin', permissions='{}'::jsonb, status='active', updated_at=now();
+
+-- Mathew -> Woods End Landing (tenant_admin)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'Operator Admin', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='mathew@woodsendlanding.com' and t.slug='woods-end-landing'
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='Operator Admin', permissions='{}'::jsonb, status='active', updated_at=now();
+
+-- Wade -> Wade Residence (tenant_owner)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_owner', 'Residence Owner', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='wade@bamfield.net' and t.slug='wade-residence'
+on conflict (tenant_id, user_id) do update
+set role='tenant_owner', title='Residence Owner', permissions='{}'::jsonb, status='active', updated_at=now();
+
+-- Sheryl (4 memberships) — tenant_admin for primary + communities (per canonical intent)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'Multi-Community Coordinator', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='sheryl@brokenislandadventures.com'
+  and t.slug in ('broken-island-adventures','bamfield-community','east-bamfield-community','west-bamfield-community')
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='Multi-Community Coordinator', status='active', updated_at=now();
+
+-- John -> Broken Island Adventures (tenant_admin)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'Co-owner Admin', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='john@brokenislandadventures.com' and t.slug='broken-island-adventures'
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='Co-owner Admin', status='active', updated_at=now();
+
+-- Woods End staff/admins
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'operator', 'Operations', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email in ('rachel@woodsendlanding.com','jill@woodsendlanding.com')
+  and t.slug='woods-end-landing'
+on conflict (tenant_id, user_id) do update
+set role='operator', title='Operations', status='active', updated_at=now();
+
+-- Brian -> Lucky Lander Services (operator)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'operator', 'Landing Craft Operator', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='brian@luckylander.com' and t.slug='lucky-lander-services'
+on conflict (tenant_id, user_id) do update
+set role='operator', title='Landing Craft Operator', status='active', updated_at=now();
+
+-- Marnie -> Bamfield Chamber (tenant_admin)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'Chamber Admin', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='marnie@bamfieldchamber.com' and t.slug='bamfield-chamber'
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='Chamber Admin', status='active', updated_at=now();
+
+-- Neil -> Inlet Express (operator)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'operator', 'Water Taxi Operator', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='neil@inletexpress.com' and t.slug='inlet-express'
+on conflict (tenant_id, user_id) do update
+set role='operator', title='Water Taxi Operator', status='active', updated_at=now();
+
+-- Brenda -> Harbourside Lodge (tenant_admin)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'Lodge Owner/Admin', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='brendaharbourside@gmail.com' and t.slug='harbourside-lodge'
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='Lodge Owner/Admin', status='active', updated_at=now();
+
+-- Gil -> Flora's Stays (tenant_admin)
+insert into cc_tenant_users (user_id, tenant_id, role, title, permissions, status, joined_at, created_at, updated_at)
+select u.id, t.id, 'tenant_admin', 'Lodging Owner/Admin', '{}'::jsonb, 'active', now(), now(), now()
+from cc_users u, cc_tenants t
+where u.email='gil@florastays.com' and t.slug='flora-stays'
+on conflict (tenant_id, user_id) do update
+set role='tenant_admin', title='Lodging Owner/Admin', status='active', updated_at=now();
+
+============================================================
+PHASE 7 — ZONES RESET TO REAL BAMFIELD LOCATIONS (IF cc_zones USED)
+
+If cc_zones is actively used, replace fake zones with real ones:
+
+Bamfield Community portal zones (6)
+
+Bamfield QA portal zones (4)
+
+NOTE: This phase requires knowing portal slugs for the community + QA portals.
+First, locate portal IDs:
+
+select id, slug, owner_tenant_id from cc_portals
+where slug in ('bamfield','bamfield-qa','bamfield-community','bamfield-community-portal')
+order by slug;
+
+
+Then, delete existing zones for those portals and insert canonical zones per your canonical doc.
+
+(Implement this phase only after confirming the correct portal slugs in your environment.)
+
+============================================================
+PHASE 8 — POST-VERIFY QUERIES (REQUIRED)
+
+Run and paste output into proof doc:
+
+-- Glenn is platform admin with NO tenant memberships (P0)
+select u.email, u.is_platform_admin, count(tu.tenant_id) as tenant_memberships
+from cc_users u
+left join cc_tenant_users tu on tu.user_id=u.id
+where u.email='glenn@envirogroupe.com'
+group by u.email, u.is_platform_admin;
+
+-- Sheryl has 4 memberships
+select u.email, t.slug, tu.role, tu.title
+from cc_users u
+join cc_tenant_users tu on tu.user_id=u.id
+join cc_tenants t on t.id=tu.tenant_id
+where u.email='sheryl@brokenislandadventures.com'
+order by t.slug;
+
+-- Tenant count should be ~24/25 depending on whether you include platform
+select count(*) as tenant_count from cc_tenants;
+
+-- List all canonical users and their tenant slugs
+select u.email, u.display_name,
+       coalesce(string_agg(t.slug, ', ' order by t.slug),'') as tenants
+from cc_users u
+left join cc_tenant_users tu on tu.user_id=u.id
+left join cc_tenants t on t.id=tu.tenant_id
+where u.email in (
+  'glenn@envirogroupe.com','ellen@enviropaving.com','pavel@remoteserve.ca','mathew@woodsendlanding.com',
+  'wade@bamfield.net','sheryl@brokenislandadventures.com','john@brokenislandadventures.com',
+  'rachel@woodsendlanding.com','brian@luckylander.com','jill@woodsendlanding.com',
+  'marnie@bamfieldchamber.com','neil@inletexpress.com','brendaharbourside@gmail.com','gil@florastays.com'
+)
+group by u.email, u.display_name
+order by u.display_name;
+
+============================================================
+PROOF DOC
+
+Create: proof/v3.5/canonical-bamfield-test-data-cleanup-proof.md
+
+Include:
+
+Pre/post counts
+
+Deleted tenants/users counts
+
+Glenn invariant check (0 memberships)
+
+Sheryl 4 membership rows
+
+Canonical users + tenant list output
+
+Note role mapping (admin->tenant_admin, owner->tenant_owner, crew_chief->operator+title/permissions)
+
+DONE WHEN:
+
+No test cruft remains
+
+Canonical tenants/users exist
+
+Glenn has 0 tenant memberships (enforced by P0)
+
+Auth guards work (tenant_admin/operator/etc. are valid roles)
