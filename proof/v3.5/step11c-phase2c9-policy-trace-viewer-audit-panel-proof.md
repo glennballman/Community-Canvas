@@ -75,7 +75,7 @@ Community Canvas V3.5 Phase 2C-9 implements a Policy Trace Viewer and Run Audit 
 | effective_policy_id | uuid | Which policy was applied |
 | effective_policy_updated_at | timestamp | Policy version timestamp |
 | effective_policy_hash | char(64) | SHA-256 of policy content |
-| request_fingerprint | char(64) | Unique request identifier |
+| request_fingerprint | text | Unique dedupe key: `runId:actorType:policyHash` |
 | created_at | timestamp | Event timestamp |
 
 **Indexes**:
