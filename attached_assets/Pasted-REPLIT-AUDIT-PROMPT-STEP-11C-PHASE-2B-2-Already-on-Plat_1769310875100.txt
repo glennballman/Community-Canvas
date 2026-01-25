@@ -1,0 +1,57 @@
+REPLIT AUDIT PROMPT — STEP 11C PHASE 2B-2 (Already-on-Platform Fast Path)
+
+ROLE: Senior Platform Architect + QA Gatekeeper (READ-ONLY AUDIT)
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+
+GOAL
+Determine the cleanest “already on platform” fast path for stakeholder invitations:
+- in-app notification delivery
+- optional message thread creation (if messaging exists)
+- optional skipping email when user is on platform
+- permission/read model after claim or immediate linkage
+
+TERMINOLOGY LOCKED:
+- ✅ service provider
+- ✅ reservation
+- ❌ booking / contractor / calendar
+
+A) IDENTITY TRUTH
+1) Confirm canonical mapping:
+- cc_users.id vs cc_individuals.id relationship (are they the same ID or linked?)
+Search:
+rg -n "cc_users.*cc_individuals|individual_id.*user" server shared
+Check schema relationships in shared/schema.ts.
+
+2) Confirm which entity notifications target:
+- recipient_individual_id is used: does that correspond to cc_individuals.id?
+Find notification creation sites and what ID they pass.
+
+B) MESSAGING PRIMITIVES (optional)
+1) Is there a messages/threads system usable for “you were invited”?
+rg -n "cc_messages|threads|conversations|messageRoutingService" server client/src
+List relevant routes and UI entry points.
+
+C) INVITE INSERT PATH
+1) In provider invite creation, identify where emailService is called.
+2) Identify where in-app notifications are created.
+3) Confirm response includes per-invite delivery fields (sent_via, emails_sent/skipped).
+
+D) EXISTING “skip email if on platform” PATTERNS
+Search for any prior pattern:
+rg -n "skip.*email|email_enabled.*false|channels.*email|notification_channel" server
+
+E) LINKAGE AFTER CLAIM / ACCESS
+1) After claim, what grants authenticated access to run detail?
+- Is there a membership table update or visibility edge created?
+Locate where claim flow writes after claimed status.
+If none, identify what’s still missing.
+
+OUTPUT
+Return:
+1) Identity mapping truth (IDs + canonical recipient ID type)
+2) Whether messaging exists and can be used
+3) Recommended delivery policy for on-platform emails:
+   - notify in-app only?
+   - notify in-app + email?
+   - create message thread?
+4) Minimal implementation steps (no code) + proof doc expectations
