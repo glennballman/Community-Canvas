@@ -1,0 +1,162 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2C-1.1
+Tenant Run Detail: Stakeholder Responses Panel (No Notes System Assumed)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive UI + safe reuse of existing API. No refactors. No schema changes.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+Surface stakeholder responses on the tenant-scoped ProviderRunDetailPage as a new Card section.
+
+Requirements:
+1) Add a “Stakeholder responses” Card on ProviderRunDetailPage
+2) Fetch responses via existing authenticated endpoint:
+   GET /api/runs/:id/responses
+   (already mounted at /api/runs, authorizes tenant owners)
+3) Display identities safely:
+   - prefer stakeholder_name if present
+   - else masked stakeholder_email (j***n@example.com)
+   - else fallback “Stakeholder”
+4) Show:
+   - response_type badge (Confirm / Request change / Question)
+   - responded_at timestamp
+   - message (if present)
+5) No “new since last viewed” persistence in DB.
+   Optional localStorage watermark is allowed, but only if tiny and contained.
+6) Update copy tokens for labels and empty states.
+
+CONTEXT (AUDIT VERIFIED)
+- Provider run detail page:
+  client/src/pages/app/provider/ProviderRunDetailPage.tsx
+- Existing data query key:
+  ['/api/provider/runs', id]
+- Insertion point:
+  Add card after Publications card (around line ~466), before Actions card column ends
+- Existing endpoint:
+  server/routes/stakeholder-runs.ts provides GET /api/runs/:id/responses
+  Tenant owner access returns:
+  stakeholder_name + stakeholder_email via LEFT JOIN cc_individuals
+- Recommended query key for responses:
+  ['/api/runs', id, 'responses']
+
+TARGET FILES
+- client/src/pages/app/provider/ProviderRunDetailPage.tsx
+- client/src/copy/entryPointCopy.ts (or the correct copy file used by ProviderRunDetailPage)
+- (Optional) client/src/lib/maskEmail.ts (if you choose to add a tiny shared util; otherwise local helper)
+
+========================================================
+A) UI — Add Stakeholder Responses Card (REQUIRED)
+========================================================
+
+File: client/src/pages/app/provider/ProviderRunDetailPage.tsx
+
+1) Add a React Query fetch for responses:
+
+useQuery<{ ok: boolean; responses: Array<{
+  id: string;
+  response_type: 'confirm'|'request_change'|'question';
+  message: string | null;
+  responded_at: string;
+  stakeholder_individual_id: string;
+  stakeholder_name: string | null;
+  stakeholder_email: string | null;
+}> }>({
+  queryKey: ['/api/runs', id, 'responses'],
+  queryFn: async () => {
+    const res = await apiRequest('GET', `/api/runs/${id}/responses`);
+    return await res.json();
+  },
+  enabled: !!id
+});
+
+NOTE:
+- Do NOT change existing provider run detail query.
+- This is a second query, scoped only to responses.
+- Handle { ok:false } gracefully.
+
+2) Insert a new <Card> section after the Publications Card.
+
+Card Layout:
+Title row:
+- "Stakeholder responses" (copy token)
+- small count badge optional (responses.length)
+
+Body:
+- Loading state: skeleton rows or “Loading…”
+- Empty state: “No stakeholder responses yet.”
+- List up to 10 most recent (endpoint already LIMIT 50; slice in UI)
+Each row:
+- Left: Display name (name or masked email or “Stakeholder”)
+- Right: responded_at formatted (relative optional; absolute acceptable)
+- Below: response_type badge + message
+
+Response type badge mapping:
+- confirm => “Confirmed”
+- request_change => “Request change”
+- question => “Question”
+
+Use existing shadcn/ui components already used in this page:
+Card, Badge, Separator, etc.
+
+3) Mask email in UI if name missing:
+Implement a tiny helper inside the component OR add a small shared util:
+maskEmail(email):
+- j***n@example.com style (same as server helper described in audit)
+Do NOT import server code. Duplicate logic client-side if needed.
+
+4) Optional localStorage watermark (ONLY if tiny):
+If implemented:
+- key: cc_run_responses_last_seen_${id}
+- on successful load of responses (tenant view), store newest responded_at
+- show “New” badge on rows where responded_at > stored value
+This is optional; if it adds complexity, skip.
+
+========================================================
+B) COPY TOKENS (REQUIRED)
+========================================================
+
+Add tokens to the copy system used by ProviderRunDetailPage.
+(Your audit indicates useCopy() patterns exist elsewhere; follow the same approach used in this page.)
+
+Add:
+provider.run.responses.title = "Stakeholder responses"
+provider.run.responses.empty = "No stakeholder responses yet."
+provider.run.responses.loading = "Loading responses…"
+provider.run.responses.badge.confirm = "Confirmed"
+provider.run.responses.badge.request_change = "Request change"
+provider.run.responses.badge.question = "Question"
+provider.run.responses.identity.fallback = "Stakeholder"
+
+If ProviderRunDetailPage already uses resolve('...') tokens, integrate these there.
+If it uses literal strings currently, convert ONLY this new card’s strings to tokens (do not refactor whole page).
+
+========================================================
+C) QA / PROOF (REQUIRED)
+========================================================
+
+Create:
+proof/v3.5/step11c-phase2c11-provider-responses-panel-proof.md
+
+Include:
+1) UI code excerpt showing:
+   - the new useQuery for responses
+   - the new card insertion location
+2) Example response rendering (screenshot or code-based mock)
+3) Identity display logic:
+   - name preferred
+   - masked email fallback
+4) Confirm endpoint used:
+   GET /api/runs/:id/responses
+5) Terminology compliance check (no forbidden terms)
+6) Done criteria checklist
+
+DONE WHEN
+- ProviderRunDetailPage shows “Stakeholder responses” card
+- Responses load via GET /api/runs/:id/responses
+- Identity is displayed safely with masking fallback
+- Empty + loading states are correct
+- Proof doc exists under proof/v3.5/

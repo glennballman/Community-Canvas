@@ -301,6 +301,15 @@ export const ENTRY_POINT_COPY: Record<EntryPointType, Record<string, string>> = 
     'public.invite.title': "You've been invited to view a service run",
     'public.invite.read_only': 'Read-only',
     'public.invite.expired': 'This invitation link is invalid or expired.',
+    
+    // STEP 11C Phase 2C-1.1: Stakeholder Responses Panel
+    'provider.run.responses.title': 'Stakeholder responses',
+    'provider.run.responses.empty': 'No stakeholder responses yet.',
+    'provider.run.responses.loading': 'Loading responses…',
+    'provider.run.responses.badge.confirm': 'Confirmed',
+    'provider.run.responses.badge.request_change': 'Request change',
+    'provider.run.responses.badge.question': 'Question',
+    'provider.run.responses.identity.fallback': 'Stakeholder',
   },
 
   lodging: {

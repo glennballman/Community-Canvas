@@ -74,6 +74,23 @@ interface Publication {
   published_at?: string;
 }
 
+interface StakeholderResponse {
+  id: string;
+  response_type: 'confirm' | 'request_change' | 'question';
+  message: string | null;
+  responded_at: string;
+  stakeholder_individual_id: string;
+  stakeholder_name: string | null;
+  stakeholder_email: string | null;
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '***';
+  const maskedLocal = local.length > 2 ? local[0] + '***' + local.slice(-1) : '***';
+  return `${maskedLocal}@${domain}`;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   scheduled: 'bg-blue-500/20 text-blue-400',
   in_progress: 'bg-yellow-500/20 text-yellow-400',
@@ -234,6 +251,19 @@ export default function ProviderRunDetailPage() {
     visibility: 'PRIVATE'
   });
 
+  const { data: responsesData, isLoading: responsesLoading } = useQuery<{
+    ok: boolean;
+    responses: StakeholderResponse[];
+  }>({
+    queryKey: ['/api/runs', id, 'responses'],
+    queryFn: async () => {
+      const res = await fetch(`/api/runs/${id}/responses`);
+      if (!res.ok) return { ok: false, responses: [] };
+      return res.json();
+    },
+    enabled: !!id
+  });
+
   if (isLoading) {
     return (
       <div className="flex-1 p-4">
@@ -266,6 +296,7 @@ export default function ProviderRunDetailPage() {
   const run = data.run;
   const attachedRequests = data.attached_requests || [];
   const publications = data.publications || [];
+  const responses = responsesData?.responses || [];
   
   const heldRequests = attachedRequests.filter(a => a.status === 'HELD');
   const committedRequests = attachedRequests.filter(a => a.status === 'COMMITTED');
@@ -460,6 +491,78 @@ export default function ProviderRunDetailPage() {
                       <span>{pub.portal_name}</span>
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-stakeholder-responses">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                {resolve('provider.run.responses.title')}
+                {responses.length > 0 && (
+                  <Badge variant="secondary" className="text-xs" data-testid="badge-responses-count">
+                    {responses.length}
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>Feedback from notified stakeholders</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {responsesLoading ? (
+                <div className="text-center py-6 text-muted-foreground" data-testid="text-responses-loading">
+                  <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin opacity-50" />
+                  <p>{resolve('provider.run.responses.loading')}</p>
+                </div>
+              ) : responses.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p data-testid="text-no-responses">{resolve('provider.run.responses.empty')}</p>
+                </div>
+              ) : (
+                <div className="space-y-3" data-testid="list-stakeholder-responses">
+                  {responses.slice(0, 10).map(resp => {
+                    const displayName = resp.stakeholder_name 
+                      ? resp.stakeholder_name 
+                      : resp.stakeholder_email 
+                        ? maskEmail(resp.stakeholder_email)
+                        : resolve('provider.run.responses.identity.fallback');
+                    
+                    const badgeLabel = resp.response_type === 'confirm' 
+                      ? resolve('provider.run.responses.badge.confirm')
+                      : resp.response_type === 'request_change'
+                        ? resolve('provider.run.responses.badge.request_change')
+                        : resolve('provider.run.responses.badge.question');
+                    
+                    const badgeVariant = resp.response_type === 'confirm' 
+                      ? 'default' 
+                      : resp.response_type === 'question' 
+                        ? 'secondary' 
+                        : 'outline';
+                    
+                    return (
+                      <div key={resp.id} className="p-3 rounded-md bg-muted/50 space-y-2" data-testid={`response-item-${resp.id}`}>
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm" data-testid="text-response-identity">{displayName}</span>
+                            <Badge variant={badgeVariant as 'default' | 'secondary' | 'outline'} className="text-xs" data-testid="badge-response-type">
+                              {badgeLabel}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground" data-testid="text-response-time">
+                            {new Date(resp.responded_at).toLocaleDateString('en-CA', {
+                              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        {resp.message && (
+                          <p className="text-sm text-muted-foreground" data-testid="text-response-message">
+                            {resp.message}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
