@@ -1,0 +1,81 @@
+REPLIT PROMPT — STEP 11C Phase 2C-13: Session Exit + Platform Impersonation (V3.5)
+
+ROLE: Senior platform engineer. Evidence-first. Do not introduce “quick dev auth” cookies. Implement proper logout + proper platform-admin impersonation UI using existing /api/admin/impersonation capabilities if present.
+
+TERMS LOCKED:
+- Use “reservation”, “service provider”
+- Do not use “booking”, “contractor”, “calendar”
+
+CONTEXT:
+- Glenn (glenn@envirogroupe.com) is platform admin only and MUST NOT access tenant-only flows directly.
+- Tenant-only verification flows (Proof Verification) require tenant_owner or tenant_admin.
+- Current problem: user cannot log out (they tried /api/logout → 404) and cannot find a UI path to impersonate Matthew.
+
+GOAL:
+1) Add a correct logout endpoint.
+2) Add platform-admin-only impersonation UI (Platform menu) that:
+   - lists users (search)
+   - allows “Start impersonation” and “Stop impersonation”
+   - after impersonation, app context shows the impersonated user and tenant context operates normally for tenant-only pages.
+
+A) SERVER — Logout
+1) Implement POST /api/auth/logout (or the project’s canonical auth router namespace if different):
+   - Requires auth (if session exists)
+   - Destroys server session and clears auth cookies/tokens
+   - Returns { ok: true }
+2) Add a lightweight GET /api/auth/whoami returning:
+   - { ok: true, user: { id, email, is_platform_admin }, ctx: { tenant_id, roles, is_impersonating, impersonated_user_id? } }
+   - This is for UI debugging only; do not leak secrets.
+
+B) SERVER — Platform Impersonation (use existing infrastructure)
+1) Locate existing platform impersonation API. Deprecation audit indicates it exists and is used:
+   - /api/admin/impersonation/*
+2) If it exists:
+   - ensure it is guarded by requirePlatformAdmin only
+   - confirm it can:
+     a) list users
+     b) start impersonation for a target user_id
+     c) stop impersonation
+3) If it does NOT exist, implement minimal set:
+   - GET /api/admin/impersonation/users?query=
+   - POST /api/admin/impersonation/start { user_id }
+   - POST /api/admin/impersonation/stop
+   Requirements:
+   - Platform-admin only
+   - Stores impersonation state in session (e.g., session.impersonated_user_id)
+   - tenantContext must treat impersonation as precedence over raw session user when setting req.ctx (follow existing impersonation precedence rules)
+   - No schema changes required.
+
+C) CLIENT — Wire Logout
+1) Add a “Sign out” action in the user menu that calls POST /api/auth/logout then hard-navigates to /login (or existing entry route).
+2) Ensure it clears any localStorage bearer token if used.
+
+D) CLIENT — Platform Impersonation Page
+1) Add page: client/src/pages/app/platform/PlatformImpersonationPage.tsx
+2) Add nav item under Platform:
+   - Label: “Impersonation”
+   - Route: /app/platform/impersonation
+   - Guard: platform admin only
+3) UI requirements:
+   - Search input (email/name)
+   - Results list with “Impersonate” button
+   - If currently impersonating: show banner with masked user id + email, and “Stop impersonation”
+   - After start/stop: refresh /api/me/context (or /api/auth/whoami) and redirect to /app (or last page)
+
+E) QA / TESTS
+Add tests covering:
+1) Logout clears session: subsequent /api/auth/whoami returns 401/unauth
+2) Platform admin can list users and start/stop impersonation
+3) While impersonating, tenant-only endpoint access is based on impersonated user roles (e.g., tenant_admin) and NOT Glenn’s platform-only role.
+
+F) PROOF DOC
+Create: proof/v3.5/step11c-phase2c13-logout-impersonation-proof.md
+Include:
+- endpoints
+- guards
+- UI route
+- screenshots optional
+- test list + pass status
+
+DELIVERABLE:
+Single PR/commit implementing all above, additive only.

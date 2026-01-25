@@ -470,6 +470,39 @@ async function handleLogout(req: Request, res: Response) {
 router.post('/logout', handleLogout);
 router.get('/logout', handleLogout);
 
+/**
+ * GET /api/auth/whoami
+ * Lightweight debug endpoint for UI: returns user + impersonation context
+ */
+router.get('/whoami', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const session = (req as any).session;
+    const impersonation = session?.impersonation;
+    
+    // Check if impersonation is valid
+    const isImpersonating = impersonation?.expires_at && new Date(impersonation.expires_at) > new Date();
+    
+    res.json({
+      ok: true,
+      user: {
+        id: req.user!.id,
+        email: req.user!.email,
+        is_platform_admin: req.user!.isPlatformAdmin || false,
+      },
+      ctx: {
+        tenant_id: session?.current_tenant_id || null,
+        roles: session?.roles || [],
+        is_impersonating: isImpersonating || false,
+        impersonated_user_id: isImpersonating ? impersonation?.impersonated_user_id : undefined,
+        impersonated_tenant_id: isImpersonating ? impersonation?.tenant_id : undefined,
+      }
+    });
+  } catch (error) {
+    console.error('Whoami error:', error);
+    res.status(500).json({ ok: false, error: 'Failed to get user context' });
+  }
+});
+
 router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user!.id;
