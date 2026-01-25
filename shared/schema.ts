@@ -4961,6 +4961,40 @@ export type Invitation = typeof ccInvitations.$inferSelect;
 export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
 
 // ============================================================================
+// SERVICE RUN STAKEHOLDERS (STEP 11C Phase 2B-2.1)
+// ============================================================================
+
+export const ccServiceRunStakeholders = pgTable("cc_service_run_stakeholders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  runId: uuid("run_id").notNull(),
+  runTenantId: uuid("run_tenant_id").notNull(),
+  stakeholderIndividualId: uuid("stakeholder_individual_id").notNull(),
+  inviteId: uuid("invite_id"),
+  stakeholderRole: text("stakeholder_role"),
+  status: text("status").notNull().default("active"),
+  grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  revokedReason: text("revoked_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  runIdx: index("idx_run_stakeholders_run_id").on(table.runId),
+  individualIdx: index("idx_run_stakeholders_individual").on(table.stakeholderIndividualId),
+  tenantIdx: index("idx_run_stakeholders_tenant").on(table.runTenantId),
+  inviteIdx: index("idx_run_stakeholders_invite").on(table.inviteId),
+  statusIdx: index("idx_run_stakeholders_status").on(table.status),
+  uniqueRunStakeholder: uniqueIndex("uq_run_stakeholder").on(table.runId, table.stakeholderIndividualId),
+}));
+
+export const insertServiceRunStakeholderSchema = createInsertSchema(ccServiceRunStakeholders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type ServiceRunStakeholder = typeof ccServiceRunStakeholders.$inferSelect;
+export type InsertServiceRunStakeholder = z.infer<typeof insertServiceRunStakeholderSchema>;
+
+// ============================================================================
 // REFERRALS (Bundle 104)
 // ============================================================================
 

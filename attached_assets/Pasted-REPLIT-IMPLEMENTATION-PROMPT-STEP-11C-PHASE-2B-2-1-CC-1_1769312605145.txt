@@ -1,0 +1,233 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2B-2.1 (CC-13)
+Authenticated Run Stakeholder Access via Dedicated Table (No Visibility Edges)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Additive changes allowed (no live data). No refactors.
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+When a stakeholder invitation is CLAIMED, the claimant must gain authenticated, durable, revocable access to the service run inside the app — without relying on public token URLs.
+
+Implement this via a dedicated table:
+- records stakeholder access grants per service run
+- created automatically on invitation claim
+- revoked automatically on invitation revoke (if claimed)
+- enforceable via RLS + endpoint validation
+- add a read-only authenticated endpoint for stakeholders to view run details
+
+IMPORTANT
+- Do NOT use cc_visibility_edges for this.
+- Do NOT change existing provider routes’ authorization model.
+- Add a new “stakeholder view” API + page, so provider routes remain tenant-scoped.
+
+============================================================
+A) DB — Add dedicated stakeholder access table (REQUIRED)
+============================================================
+
+Create a new additive migration that adds:
+
+1) New table: cc_service_run_stakeholders
+
+Columns (minimum required):
+- id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+- run_id uuid NOT NULL REFERENCES cc_n3_runs(id) ON DELETE CASCADE
+- run_tenant_id uuid NOT NULL REFERENCES cc_tenants(id) ON DELETE CASCADE
+  (the tenant that owns the run; denormalized for policy/RLS + auditing)
+- stakeholder_individual_id uuid NOT NULL REFERENCES cc_individuals(id) ON DELETE CASCADE
+- invite_id uuid NULL REFERENCES cc_invitations(id) ON DELETE SET NULL
+- stakeholder_role text NULL
+  (copy from cc_invitations.invitee_role; store as text to avoid enum coupling)
+- status text NOT NULL DEFAULT 'active'
+  (values: 'active' | 'revoked' — keep as text for minimal coupling)
+- granted_at timestamptz NOT NULL DEFAULT now()
+- revoked_at timestamptz NULL
+- revoked_reason text NULL
+- created_at timestamptz NOT NULL DEFAULT now()
+- updated_at timestamptz NOT NULL DEFAULT now()
+
+Constraints / indexes:
+- UNIQUE(run_id, stakeholder_individual_id)
+- INDEX(run_id)
+- INDEX(stakeholder_individual_id)
+- INDEX(run_tenant_id)
+
+2) RLS
+Enable RLS and add policies consistent with your established patterns (DO NOT GUESS: copy from existing tenant/member tables):
+
+Access rules:
+- A stakeholder can SELECT rows where stakeholder_individual_id = current individual context
+- The run owning tenant (run_tenant_id) can SELECT/UPDATE rows when tenant matches current tenant context
+- service_mode bypass should allow internal operations
+
+If your system uses request GUCs (app.individual_id / app.tenant_id / app.service_mode), reuse those.
+
+3) Drizzle schema
+Update shared/schema.ts to include cc_service_run_stakeholders table.
+
+============================================================
+B) BACKEND — Create stake row on invitation claim (REQUIRED)
+============================================================
+
+Target: POST /api/i/:token/claim endpoint (public-invitations claim path)
+
+After the invitation is successfully updated to status='claimed' (and you have claimed_by_individual_id):
+1) Load invitation context needed for grant:
+- invitation.id
+- invitation.context_type must be 'service_run'
+- invitation.context_id is runId
+- invitation.inviter_tenant_id is run tenant (already used for claimed_by_tenant_id attribution)
+- invitation.invitee_role (optional)
+
+2) Insert stakeholder grant (idempotent):
+INSERT INTO cc_service_run_stakeholders
+(run_id, run_tenant_id, stakeholder_individual_id, invite_id, stakeholder_role, status, granted_at)
+VALUES (...)
+ON CONFLICT (run_id, stakeholder_individual_id)
+DO UPDATE SET
+  status='active',
+  revoked_at=NULL,
+  revoked_reason=NULL,
+  updated_at=now();
+
+This guarantees:
+- claiming re-activates access if previously revoked
+- deterministic audit trail via invite_id linkage
+
+IMPORTANT:
+- Do NOT attempt to grant access for non-service_run context types.
+- If context_type != 'service_run', skip this logic safely.
+
+============================================================
+C) BACKEND — Revoke stake row on invitation revoke (REQUIRED)
+============================================================
+
+Target: POST /api/provider/runs/:runId/stakeholder-invites/:inviteId/revoke
+
+After marking invitation revoked:
+- If invitation.status was claimed OR claimed_by_individual_id is not null:
+  UPDATE cc_service_run_stakeholders
+  SET status='revoked',
+      revoked_at=now(),
+      revoked_reason=COALESCE($reason,'revoked'),
+      updated_at=now()
+  WHERE invite_id = $inviteId
+     OR (run_id = $runId AND stakeholder_individual_id = invitation.claimed_by_individual_id);
+
+Do NOT delete rows; keep auditability.
+
+============================================================
+D) BACKEND — Add authenticated stakeholder run view endpoint (REQUIRED)
+============================================================
+
+Create a NEW route file or add to a safe existing one:
+GET /api/runs/:id/view
+
+Auth:
+- require authenticated session/JWT (same AuthContext used by app)
+- must have current individual_id available (use your established req.ctx.individual_id or equivalent)
+
+Authorization:
+- Allow if EXISTS a row in cc_service_run_stakeholders where:
+  run_id = $runId
+  stakeholder_individual_id = current individual_id
+  status='active'
+- OR allow if the requesting tenant owns the run (provider path compatibility), but DO NOT replace provider routes. This endpoint can support both.
+
+Response:
+Return a stakeholder-safe view of the run:
+- run.id
+- run.name (note: your schema uses name not title)
+- run.market_mode
+- scheduled dates/times if present
+- minimal location/zone labels (no sensitive internal addresses unless your model already treats them as shareable)
+- publishing state (optional)
+- inviter tenant display info (name)
+- stakeholder_role + granted_at
+
+Do NOT include:
+- internal pricing ledgers
+- private notes
+- any PII beyond what is necessary
+
+Add { ok:true, run:{...} } envelope.
+
+============================================================
+E) FRONTEND — Add a simple authenticated run view page (REQUIRED)
+============================================================
+
+Add a new page:
+client/src/pages/app/runs/RunStakeholderViewPage.tsx
+
+Route:
+- /app/runs/:id/view
+
+Use Wouter.
+
+Page behavior:
+- fetch GET /api/runs/:id/view via React Query
+- show:
+  - run name
+  - status badges
+  - “You have access to this run as: <role>”
+  - link back to notifications page
+- If 403/404 show “You don’t have access to this run.”
+
+IMPORTANT:
+- Do NOT reuse ProviderRunDetailPage (tenant-scoped).
+- Do NOT introduce forbidden terms.
+
+Update routing registration:
+- wherever app routes are declared (audit-driven; find existing v3Nav or route table)
+- add this page without adding to left nav if you prefer (can be deep-linked from notification action_url)
+
+============================================================
+F) IN-APP NOTIFICATION ACTION URL UPDATE (REQUIRED)
+============================================================
+
+Update the invitee notification action_url for on-platform fast path:
+- previously: /i/:token
+- now: if invitation is claimed and stakeholder row exists, we want /app/runs/:runId/view
+But we must not break the pre-claim experience.
+
+Implement rule:
+- On invitation creation notification to invitee:
+  action_url = `/i/${token}` (pre-claim)
+- On claim success:
+  create an additional notification to claimant:
+    “Access granted” with action_url = `/app/runs/${runId}/view`
+  (Do not mutate old notifications unless your system supports it cleanly.)
+
+Also, on invitation claimed notify inviter as today (no change).
+
+============================================================
+G) PROOF DOC (REQUIRED)
+============================================================
+
+Create:
+proof/v3.5/step11c-phase2b21-run-stakeholder-access-proof.md
+
+Include:
+1) Migration summary (table schema + indexes + RLS notes)
+2) Claim flow evidence:
+   - invitation claimed
+   - cc_service_run_stakeholders row created (SQL output)
+3) Stakeholder endpoint authZ evidence:
+   - request without stake row → denied
+   - request with active row → allowed
+4) Revoke flow evidence:
+   - invitation revoked
+   - stakeholder row status becomes revoked (not deleted)
+5) UI evidence:
+   - RunStakeholderViewPage loads for stakeholder
+6) Notification evidence:
+   - post-claim “Access granted” notification with /app/runs/:id/view link
+
+DONE WHEN
+- claiming an invitation creates or reactivates stakeholder access row
+- revoking an invitation revokes stakeholder access row
+- authenticated stakeholders can view run via /api/runs/:id/view + /app/runs/:id/view
+- provider tenant routes remain unchanged
+- proof doc exists under proof/v3.5/
