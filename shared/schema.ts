@@ -8939,3 +8939,18 @@ export interface ResolvedNegotiationPolicy {
   stakeholderCanInitiate: boolean;
   allowProposalContext: boolean;
 }
+
+export interface NegotiationPolicyTrace {
+  negotiation_type: NegotiationType;
+  effective_source: 'platform' | 'tenant_override';
+  platform_policy_id: string;
+  tenant_policy_id: string | null;
+  effective_policy_id: string;
+  effective_policy_updated_at: string;
+  effective_policy_hash: string;
+}
+
+export interface ResolvedNegotiationPolicyWithTrace {
+  policy: ResolvedNegotiationPolicy;
+  trace: NegotiationPolicyTrace;
+}

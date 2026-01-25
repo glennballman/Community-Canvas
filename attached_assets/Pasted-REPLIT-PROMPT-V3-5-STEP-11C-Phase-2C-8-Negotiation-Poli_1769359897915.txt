@@ -1,0 +1,232 @@
+REPLIT PROMPT — V3.5 — STEP 11C — Phase 2C-8 Negotiation Policy Audit Trail (Proof-Grade Determinism)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first, ship-correct-now. Additive schema/model changes allowed if they improve certifiability.
+TERMINOLOGY LOCKED:
+✅ service provider
+✅ reservation
+❌ contractor
+❌ booking
+❌ calendar
+
+PHASE 2C-8 OBJECTIVE
+Make negotiation policy resolution *auditable and deterministic* so every schedule negotiation response can prove:
+- what effective policy was applied
+- where it came from (platform vs tenant override)
+- which record/version was used
+- when it was last updated
+Optionally: append an immutable audit record so the system can later prove “this response used this policy.”
+
+SCOPE (Schedule negotiation)
+Endpoints that return schedule negotiation data (provider + stakeholder), including:
+- policy object in response
+- latest proposal + events/history
+
+DELIVERABLES
+A) Response Policy Trace fields (mandatory)
+B) Resolver instrumentation that returns a structured trace (mandatory)
+C) Optional append-only audit persistence (recommended) with minimal risk of write amplification
+D) Automated tests (API + DB where applicable)
+E) Proof doc: proof/v3.5/step11c-phase2c8-negotiation-policy-audit-trail-proof.md
+
+========================================================
+STEP 0 — AUDIT EXISTING POLICY RESOLVER (NO GUESSING)
+========================================================
+Find the existing negotiation policy resolver used in Step 11C / Phase 2C-3.0.
+Confirm:
+- what it takes as inputs (tenant_id, portal_id, negotiation_type, etc.)
+- how it chooses platform vs tenant override
+- what tables it reads (e.g., cc_platform_negotiation_policy / cc_tenant_negotiation_policy or similarly named)
+- whether it already returns IDs and updated_at values
+Record findings in the proof doc “A) Resolver Audit”.
+
+If the resolver currently returns only flags (max_turns, allow_counter, allow_proposal_context, etc.):
+- Extend it to also return a trace object (additive).
+
+========================================================
+STEP 1 — Define the Policy Trace Shape (MANDATORY)
+========================================================
+Add to the schedule negotiation API response a new top-level object:
+policy_trace: {
+  negotiation_type: "schedule",
+  effective_source: "platform" | "tenant_override",
+  platform_policy_id: string | null,
+  tenant_policy_id: string | null,
+  effective_policy_id: string,          // whichever won
+  effective_policy_updated_at: string,  // ISO timestamp
+  effective_policy_hash: string         // stable hash of the effective policy fields (see below)
+}
+
+Also add to the existing policy object (if not already present):
+policy: {
+  ...existing flags...
+  allow_proposal_context: boolean
+  // DO NOT add raw DB internals here—trace goes in policy_trace
+}
+
+Hash rules:
+- Hash MUST be derived from the effective policy values that influence behavior:
+  - max_turns
+  - allow_counter
+  - provider_can_initiate / stakeholder_can_initiate (if present)
+  - allow_proposal_context
+  - any other schedule negotiation flags
+- Use a deterministic JSON canonicalization approach:
+  - Build a plain object with sorted keys, then JSON.stringify it
+  - Hash with sha256 (Node crypto)
+- Output as hex string
+
+IMPORTANT:
+- Do not expose tenant configuration beyond what is necessary.
+- Do not include tenant IDs inside the hash payload.
+- Hash exists so the system can compare “same policy” over time and for audit linkage.
+
+========================================================
+STEP 2 — Extend Resolver to Return Trace (MANDATORY)
+========================================================
+Modify the resolver to return:
+{
+  policy: { ...flags... },
+  trace: {
+    effective_source,
+    platform_policy_id,
+    tenant_policy_id,
+    effective_policy_id,
+    effective_policy_updated_at,
+    effective_policy_hash
+  }
+}
+
+Ensure trace values are populated:
+- If tenant override exists and is active => effective_source="tenant_override"
+- Else => "platform"
+- effective_policy_id is whichever record was used
+- updated_at taken from that record
+- IDs should be UUID or string keys as stored
+
+If either table lacks updated_at:
+- Add updated_at columns via additive migration OR derive from existing timestamps
+- If adding columns, backfill with NOW() for existing rows (safe) and set default NOW()
+
+========================================================
+STEP 3 — Wire Trace Into Provider + Stakeholder Endpoints (MANDATORY)
+========================================================
+For BOTH schedule proposals endpoints:
+- provider endpoint (e.g., GET /api/runs/:id/schedule-proposals)
+- stakeholder endpoint (existing in server/routes/stakeholder-runs.ts or similar)
+
+Ensure response includes BOTH:
+- policy: { ...flags... allow_proposal_context ... }
+- policy_trace: { ...trace fields... }
+
+Also ensure the policy gate used elsewhere (2C-6) is aligned:
+- apply allow_proposal_context from the effective policy returned by resolver
+- make sure you are not recomputing policy in multiple places inconsistently
+
+========================================================
+STEP 4 — Optional Append-Only Audit Persistence (RECOMMENDED)
+========================================================
+We want a proof-grade record without creating huge write amplification on every page refresh.
+
+RECOMMENDED approach: “Once per actor per run per policy_hash” audit record.
+
+Option A (Preferred): New append-only table (additive schema)
+Create migration to add:
+cc_negotiation_policy_audit_events
+Columns:
+- id uuid pk default gen_random_uuid()
+- created_at timestamptz default now()
+- tenant_id uuid not null
+- portal_id uuid not null
+- run_id uuid not null
+- actor_tenant_membership_id uuid null   // if you have a membership/session actor id
+- actor_type text not null              // "provider" | "stakeholder" | "tenant_admin" etc.
+- negotiation_type text not null        // "schedule"
+- effective_source text not null        // "platform" | "tenant_override"
+- effective_policy_id uuid not null
+- effective_policy_updated_at timestamptz not null
+- effective_policy_hash text not null
+- request_fingerprint text not null     // stable: `${run_id}:${actor_type}:${effective_policy_hash}`
+
+Constraints:
+- UNIQUE(request_fingerprint) to prevent duplicates
+Indexes:
+- (run_id, negotiation_type, created_at desc)
+- (tenant_id, portal_id, created_at desc)
+
+RLS:
+- Must follow existing RLS patterns (tenant isolation)
+- Only tenant_admin/tenant_owner and relevant operators can read
+- Writes allowed from API server with correct tenant context
+
+Endpoint behavior:
+- On GET schedule proposals, attempt insert audit record:
+  - If UNIQUE violation => ignore (already recorded)
+  - This makes it “append-only once” per fingerprint
+
+Option B (If you already have an append-only “service run events” ledger):
+- Instead of a new table, append a policy_resolved event to the existing append-only run events table
+- MUST ensure dedupe using same fingerprint logic
+
+Choose A or B based on existing architecture; document your choice in the proof doc.
+
+========================================================
+STEP 5 — Tests (MANDATORY)
+========================================================
+Add/extend tests under the existing Phase 2C-7 harness.
+
+1) API tests: policy_trace presence and correctness
+- Provider endpoint returns policy_trace with:
+  - effective_source in {"platform","tenant_override"}
+  - effective_policy_id non-empty
+  - effective_policy_updated_at ISO date
+  - effective_policy_hash stable (same inputs => same hash)
+- Stakeholder endpoint returns same trace for same run/policy
+
+2) Resolver tests: override precedence
+- Seed a platform policy and a tenant override
+- Confirm resolver chooses tenant override and sets effective_source correctly
+
+3) Hash determinism test
+- Same policy => same hash
+- Change any flag (e.g., allow_proposal_context) => hash changes
+
+4) Optional audit persistence tests (if implemented)
+- First request inserts audit record
+- Second request does not create duplicate (UNIQUE prevents it)
+- Verify request_fingerprint matches expected format and includes policy_hash
+
+========================================================
+STEP 6 — Proof Doc (MANDATORY)
+========================================================
+Create:
+proof/v3.5/step11c-phase2c8-negotiation-policy-audit-trail-proof.md
+
+Include:
+A) Resolver Audit (what existed, what changed)
+B) Files changed list
+C) Response examples (provider + stakeholder) showing policy_trace fields (no sensitive leakage)
+D) Hash algorithm description + inputs list
+E) Test results summary (counts + key PASS excerpts)
+F) If audit persistence enabled:
+   - migration number
+   - table or event store chosen
+   - dedupe strategy (request_fingerprint)
+   - RLS/read scope
+
+========================================================
+ACCEPTANCE CRITERIA (MUST PASS)
+========================================================
+1) Provider + stakeholder endpoints both return policy_trace with required fields
+2) effective_source correctly reflects precedence
+3) effective_policy_hash is deterministic and changes on policy changes
+4) No additional sensitive tenant config leakage beyond trace + policy flags
+5) Tests pass
+6) Proof doc exists with evidence
+7) If audit persistence implemented: dedupe prevents write amplification
+
+OUTPUT REQUIRED FROM REPLIT
+- Summary of changes
+- Which tables/constraints were touched (if any)
+- Proof doc path + contents (or key excerpts)
+- Test command + summary output

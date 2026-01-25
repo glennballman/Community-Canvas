@@ -2,8 +2,9 @@ import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { JWT_SECRET } from '../middleware/auth';
-import { loadNegotiationPolicy, validatePolicyEnforcement } from '../lib/negotiation-policy';
+import { loadNegotiationPolicy, loadNegotiationPolicyWithTrace, validatePolicyEnforcement } from '../lib/negotiation-policy';
 import { sanitizeAndGateProposalContextForWrite, sanitizeAndGateProposalContextForRead } from '../lib/proposalContext';
+import { recordPolicyAuditEvent, type AuditActorType } from '../lib/policyAudit';
 
 const router = Router();
 
@@ -719,8 +720,8 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
     }
     const runTenantId = runCheckResult.rows[0].tenant_id;
 
-    // Load negotiation policy
-    const policy = await loadNegotiationPolicy(runTenantId, 'schedule');
+    // Load negotiation policy with trace for audit trail
+    const { policy, trace: policyTrace } = await loadNegotiationPolicyWithTrace(runTenantId, 'schedule');
 
     // Fetch all events for this run
     const eventsResult = await pool.query(
@@ -755,6 +756,28 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
       (latestEvent.event_type === 'declined' && policy.closeOnDecline)
     );
 
+    // Determine actor type for audit
+    const auditActorType: AuditActorType = ctx.isTenantOwner ? 'provider' : 'stakeholder';
+
+    // Get actor individual_id for audit (if available)
+    let actorIndividualId: string | null = null;
+    try {
+      const userResult = await pool.query(
+        `SELECT i.id FROM cc_users u JOIN cc_individuals i ON lower(u.email) = lower(i.email) WHERE u.id = $1`,
+        [userId]
+      );
+      actorIndividualId = userResult.rows[0]?.id ?? null;
+    } catch { }
+
+    // Record audit event (non-blocking, dedupe by fingerprint)
+    recordPolicyAuditEvent({
+      tenantId: runTenantId,
+      runId,
+      actorIndividualId,
+      actorType: auditActorType,
+      trace: policyTrace
+    }).catch(() => {}); // Swallow errors, audit is non-critical
+
     res.json({
       ok: true,
       turn_cap: policy.maxTurns,
@@ -767,6 +790,7 @@ router.get('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res:
         stakeholder_can_initiate: policy.stakeholderCanInitiate,
         allow_proposal_context: policy.allowProposalContext
       },
+      policy_trace: policyTrace,
       latest: latestEvent ? {
         id: latestEvent.id,
         event_type: latestEvent.event_type,
@@ -886,8 +910,8 @@ router.post('/:id/schedule-proposals', requireAuth, async (req: AuthRequest, res
     const runTenantId = runResult.rows[0].tenant_id;
     const runName = runResult.rows[0].name || 'Service Run';
 
-    // Load negotiation policy
-    const policy = await loadNegotiationPolicy(runTenantId, 'schedule');
+    // Load negotiation policy with trace
+    const { policy } = await loadNegotiationPolicyWithTrace(runTenantId, 'schedule');
 
     // Check existing events for turn cap and closed state
     const existingResult = await pool.query(
