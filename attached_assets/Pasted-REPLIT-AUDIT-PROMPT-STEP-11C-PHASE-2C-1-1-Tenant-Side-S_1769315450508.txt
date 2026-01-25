@@ -1,0 +1,155 @@
+REPLIT AUDIT PROMPT — STEP 11C PHASE 2C-1.1
+Tenant-Side Stakeholder Responses Panel (Integrate into existing Notes system) — AUDIT FIRST
+
+ROLE: Senior Platform Architect + QA Gatekeeper (READ-ONLY AUDIT)
+MODE: Evidence-first. DO NOT implement. DO NOT refactor. DO NOT change schema.
+
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+We already implemented stakeholder responses (cc_service_run_stakeholder_responses + /api/runs/:id/responses + latest_response).
+Now we must surface stakeholder responses in the tenant run detail view in the correct place:
+INSIDE the existing “Notes” section architecture (which has specific sections/use-cases).
+
+We need an audit that answers, with file/line evidence:
+1) Where the Provider Run Detail page is and how it loads run data
+2) What the Notes system is (components, sections, storage tables, scope rules)
+3) The safest insertion point for a “Stakeholder responses” panel that does NOT violate Notes semantics
+4) How to display stakeholder identity safely (privacy + tenancy)
+5) Which API endpoint we should call from the provider run detail page to fetch stakeholder responses for a run (likely a new tenant-scoped endpoint)
+
+CRITICAL CONSTRAINT
+Stakeholder responses are in a shared table and include stakeholder_individual_id.
+Provider tenant can read them via RLS (run_tenant_id policy), but we must ensure:
+- Provider UI uses tenant-scoped auth paths
+- No public token URLs
+- No forbidden terms
+
+------------------------------------------------------------
+A) PROVIDER RUN DETAIL PAGE INVENTORY
+------------------------------------------------------------
+Locate exact files + routes:
+- client/src/pages/app/provider/ProviderRunDetailPage.tsx
+- Any nested components it uses for notes / right rail / panels
+
+Report:
+1) Where the "Notes" section renders (component name, file path)
+2) Where to add a new subsection inside Notes (e.g., a tab, accordion, card, or section list)
+3) Whether ProviderRunDetailPage already has React Query usage and what query keys it uses
+
+Provide file/line evidence.
+
+------------------------------------------------------------
+B) NOTES SYSTEM INVENTORY (MASSIVE SECTION)
+------------------------------------------------------------
+Find the Notes implementation and list:
+
+1) UI components:
+- file paths
+- section types / keys
+- how sections are defined (enum, config array, schema-driven, etc.)
+Search:
+rg -n "Notes|notes|note_section|noteSection|Three-Layer|official|business|personal" client/src server shared
+
+2) Backend tables:
+Identify what tables back Notes:
+- cc_notes? cc_entity_notes? cc_note_sections? cc_run_notes?
+Search in shared/schema.ts for "note" and list all relevant tables.
+
+3) Scope rules:
+Determine how notes are scoped:
+- per tenant?
+- per run?
+- per portal?
+- per individual?
+- visibility levels (official/business/personal or similar)
+Extract the exact rules from code.
+
+4) Where Notes are fetched:
+- endpoints called by ProviderRunDetailPage
+- response shapes
+- any caching/invalidation patterns
+
+------------------------------------------------------------
+C) STAKEHOLDER RESPONSES DATA ACCESS PATH (TENANT VIEW)
+------------------------------------------------------------
+We need to show responses on the provider run detail page.
+
+Audit:
+1) Can provider tenant call existing GET /api/runs/:id/responses safely?
+- Where is that route defined (likely server/routes/stakeholder-runs.ts)
+- Is it mounted under /api/runs or different router?
+- Does it require stakeholder auth only, or does it allow tenant_owner (it should, per Phase 2C-1)
+
+2) If it is safe, confirm recommended query key and shape for UI usage.
+
+3) If it is NOT safe or not mounted in provider router, propose minimal tenant-scoped alias endpoint:
+GET /api/provider/runs/:id/stakeholder-responses
+but DO NOT implement yet — just confirm need.
+
+------------------------------------------------------------
+D) IDENTITY DISPLAY RULES (PRIVACY + TENANCY)
+------------------------------------------------------------
+We must display who responded.
+
+Audit what is available:
+1) In cc_service_run_stakeholder_responses:
+- stakeholder_individual_id
+2) How can tenant resolve stakeholder display safely?
+- Is there an existing “anonymize label” helper used in STEP 11A preview or other areas?
+Search:
+rg -n "Candidate A|Candidate|anonym|mask|masked" server client/src
+
+3) Do we have permission to show full stakeholder name to the run-owning tenant?
+If the existing system rules say “no PII unless claimed” or similar, extract those rules.
+Otherwise, propose a safe default:
+- show masked email if available
+- or “Stakeholder” + last 4 of individual id
+But do NOT decide without evidence—report what patterns exist.
+
+------------------------------------------------------------
+E) “NEW SINCE LAST VIEWED” WATERMARK FEASIBILITY
+------------------------------------------------------------
+We want a small UX improvement:
+- show which responses are new since provider last viewed the run detail
+
+Audit existing “last viewed” patterns:
+Search:
+rg -n "last_viewed|viewed_at|read_at|seen_at|watermark" server shared client/src
+
+If exists, report table + columns and how it’s updated.
+If not, recommend simplest approach:
+- no persistence yet (skip)
+- or store per-run last_viewed in localStorage (tenant-side) (only if already used elsewhere)
+
+DO NOT implement, just report feasibility.
+
+------------------------------------------------------------
+F) OUTPUT REQUIRED (MUST BE CONCRETE)
+------------------------------------------------------------
+Return a structured audit report with:
+
+1) ProviderRunDetailPage integration map:
+- file/lines
+- where Notes renders
+- where a new subsection would plug in
+
+2) Notes system map:
+- tables
+- routes
+- section definitions
+- scoping/visibility rules
+
+3) Responses access plan:
+- whether GET /api/runs/:id/responses can be used directly
+- if not, specify the minimal alias endpoint needed
+
+4) Identity display rule recommendation grounded in existing patterns
+
+5) “New since viewed” feasibility recommendation grounded in existing patterns
+
+After this audit is pasted back into ChatGPT, I will generate the full Replit implementation prompt for STEP 11C Phase 2C-1.1.
+DO NOT IMPLEMENT ANYTHING IN THIS AUDIT RUN.
