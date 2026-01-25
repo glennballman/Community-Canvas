@@ -1,0 +1,239 @@
+REPLIT PROMPT — V3.5 — STEP 11C — Phase 2C-10 Run Proof Export (Deterministic Audit Pack)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first, ship-correct-now. Additive schema/model changes allowed if they improve certifiability.
+TERMINOLOGY LOCKED:
+✅ service provider
+✅ reservation
+❌ contractor
+❌ booking
+❌ calendar
+
+PHASE 2C-10 OBJECTIVE
+Provide a tenant-admin/owner-only “Run Proof Export” that produces a deterministic, portable evidence bundle
+for a specific run’s schedule negotiation, including:
+- policy_trace (effective policy + hash + source)
+- policy audit events (cc_negotiation_policy_audit_events) for that run
+- schedule proposal negotiation events/history (sanitized, policy-gated)
+- export metadata (exported_at, portal_id, run_id, negotiation_type)
+WITHOUT leaking sensitive tenant configuration or raw event metadata.
+
+Exports must be deterministic:
+- stable field ordering
+- stable sort order
+- stable schema version string
+- consistent timestamps formatting (ISO)
+- no nondeterministic IDs generated inside the bundle
+
+DELIVERABLES
+A) API endpoint to generate export bundle:
+   - GET /api/app/runs/:id/negotiation-proof-export?format=json|csv (default json)
+B) UI affordance:
+   - “Export proof” button on NegotiationAuditPage and/or Run detail page for tenant admins
+   - Download JSON (and optionally CSV summary)
+C) Deterministic export schema + versioning
+D) Tests:
+   - RLS/role gating
+   - determinism (same data => identical output)
+   - policy gating (allow_proposal_context=false => proposal_context excluded)
+E) Proof doc:
+   - proof/v3.5/step11c-phase2c10-run-proof-export-proof.md
+
+CONTEXT (AS BUILT)
+- Schedule proposals endpoint returns: policy, policy_trace, latest, events/history
+- Policy audit events exist: cc_negotiation_policy_audit_events (request_fingerprint is TEXT, raw `runId:actorType:policyHash`)
+- Proposal context is sanitized + policy-gated at source (2C-6)
+- Regression no-leak tests exist (2C-7)
+- UI audit panel exists (2C-9)
+
+========================================================
+STEP 1 — Define Export Schema (MANDATORY)
+========================================================
+Create a versioned export schema:
+- schema_version: "cc.v3_5.step11c.2c10.run_proof_export.v1"
+
+JSON structure (top-level keys in this exact order):
+{
+  "schema_version": "...",
+  "exported_at": "ISO timestamp",
+  "tenant_id": "uuid",          // OPTIONAL: include only if your policy allows; if included, ensure admin-only
+  "portal_id": "uuid",
+  "run_id": "uuid",
+  "negotiation_type": "schedule",
+  "policy_trace": { ... },
+  "policy": { ...flags... },
+  "audit_events": [ ... ],
+  "negotiation": {
+    "latest": { ... },
+    "events": [ ... ]
+  }
+}
+
+Rules:
+- Use canonical ordering for object keys (build objects in code in consistent order).
+- audit_events sorted by created_at ASC, then id ASC
+- negotiation.events sorted by created_at ASC, then id ASC
+- timestamps normalized to ISO strings
+- DO NOT include raw `metadata` blobs from event tables; include only whitelisted fields.
+- proposal_context included ONLY if policy.allow_proposal_context=true (and sanitized).
+- If allow_proposal_context=false => proposal_context MUST be null/absent in all exported sections.
+
+CSV format (optional):
+- Provide a summary CSV with audit_events only (or negotiation events only)
+- Keep it simple: one row per audit event
+- JSON remains the canonical export
+
+========================================================
+STEP 2 — Server: Export Builder (MANDATORY)
+========================================================
+Add:
+- server/lib/runProofExport.ts
+
+Implement:
+- buildRunProofExport({ tenantId, portalId, runId, actorContext, format }): returns { json, csv? }
+
+Data sources (must be tenant-scoped and access-checked):
+1) policy + policy_trace:
+   - reuse the same resolver/loader used by schedule proposals endpoint (2C-8)
+   - ensure trace matches what the runtime uses
+
+2) audit events:
+   - query cc_negotiation_policy_audit_events WHERE run_id=runId ORDER BY created_at ASC, id ASC
+   - only include whitelisted columns:
+     id, created_at, portal_id, run_id, actor_type, actor_tenant_membership_id,
+     negotiation_type, effective_source, effective_policy_id, effective_policy_updated_at,
+     effective_policy_hash, request_fingerprint
+   - do NOT include tenant_id in each row; tenant context is implied
+
+3) negotiation events:
+   - reuse the same query logic used by /api/runs/:id/schedule-proposals
+   - ensure proposal_context is sanitized and policy-gated (call the existing sanitizers/gates)
+   - whitelist fields for each event (do not dump full rows):
+     id, created_at, type/status, actor_type (if present), message/notes (if present and allowed),
+     proposal payload fields already exposed to clients,
+     proposal_context (only when allowed)
+   - ensure stable ordering ASC
+
+4) latest:
+   - derive from events or query the latest event
+   - ensure it matches the API’s “latest” representation
+
+Determinism:
+- Do NOT include any random nonce
+- Do NOT include request headers
+- Do NOT include session IDs
+- For exported_at: accept that exported_at will differ by time; determinism tests should pin exported_at to a supplied value in test mode.
+
+Implement an option:
+- buildRunProofExport(..., { exportedAtOverride?: string }) for tests
+
+========================================================
+STEP 3 — Server Route (MANDATORY)
+========================================================
+Create:
+- server/routes/negotiation-proof-export.ts
+
+Route:
+GET /api/app/runs/:id/negotiation-proof-export?format=json|csv
+
+Auth (hard):
+- requireTenant
+- requireRole('tenant_owner','tenant_admin')
+
+Access scope:
+- tenant admins/owners only (do not broaden to providers/stakeholders in 2C-10)
+
+Response headers:
+- For json:
+  Content-Type: application/json
+  Content-Disposition: attachment; filename="run-proof-export-<runId>-<YYYYMMDD>.json"
+- For csv:
+  Content-Type: text/csv
+  Content-Disposition: attachment; filename="run-proof-export-<runId>-<YYYYMMDD>.csv"
+
+Return:
+- raw file content (not wrapped in {ok:true}) if your download conventions prefer raw
+OR
+- { ok: true, filename, mime, data } if existing download pattern exists
+Choose the existing convention and document it in proof doc.
+
+========================================================
+STEP 4 — UI Affordance (MANDATORY)
+========================================================
+Add an “Export proof” button for tenant admins:
+
+Preferred placements:
+A) NegotiationAuditPage (settings):
+- Add button when run_id filter is set and yields results:
+  “Export proof for this run”
+- Or allow export per-row in results table (kebab menu → Export proof)
+
+B) ProviderRunDetailPage (admin-only panel):
+- If user is tenant_admin/owner, show “Export proof” near PolicyTraceSummary
+
+Implementation:
+- Use fetch to GET the endpoint, then trigger browser download via blob
+- Do not display the JSON inline
+
+Copy tokens:
+- settings.negotiation_audit.action.export_proof
+- settings.negotiation_audit.toast.export_started
+- settings.negotiation_audit.toast.export_failed
+- policy.negotiation_audit.action.export_proof (if used on run pages)
+
+========================================================
+STEP 5 — Tests (MANDATORY)
+========================================================
+Add tests under existing harness:
+
+A) API tests: server/routes/__tests__/negotiationProofExport.test.ts
+1) Role gating:
+   - non-admin cannot access (403)
+2) Tenant isolation:
+   - Tenant A admin cannot export Tenant B run (404 or 403; choose consistent pattern)
+3) Export schema shape:
+   - schema_version matches
+   - keys exist
+   - audit_events sorted ASC
+   - negotiation.events sorted ASC
+4) Policy gating:
+   - When allow_proposal_context=false => exported proposal_context absent/null everywhere
+5) Determinism test (excluding exported_at):
+   - Call builder with exportedAtOverride fixed
+   - Generate export twice with same DB state
+   - Expect exact string equality for JSON output (byte-for-byte)
+
+B) UI tests (optional but recommended):
+- Ensure button renders only for tenant_admin/owner
+- Mock fetch and verify it requests correct endpoint and triggers download
+
+========================================================
+STEP 6 — Proof Doc (MANDATORY)
+========================================================
+Create:
+proof/v3.5/step11c-phase2c10-run-proof-export-proof.md
+
+Include:
+A) Files changed list
+B) Export schema v1 (sample redacted output)
+C) Determinism rules (ordering + key order + timestamp normalization)
+D) Policy gating proof (allow_proposal_context false case)
+E) Test results summary + commands
+F) UI placement screenshots/descriptions
+
+========================================================
+ACCEPTANCE CRITERIA (MUST PASS)
+========================================================
+1) Admin-only export endpoint works and is tenant-isolated
+2) Export schema stable and versioned
+3) audit_events and negotiation.events are deterministically ordered
+4) proposal_context included ONLY when allow_proposal_context=true
+5) Determinism test passes (byte-identical output with fixed exported_at)
+6) UI export action works (download)
+7) Proof doc exists with evidence
+
+OUTPUT REQUIRED FROM REPLIT
+- Summary of changes
+- Endpoint path + auth behavior
+- Proof doc path + contents (or key excerpts)
+- Test command output summary

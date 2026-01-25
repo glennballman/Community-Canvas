@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Search, Copy, RefreshCw, FileText, ExternalLink } from 'lucide-react';
+import { Loader2, Search, Copy, RefreshCw, FileText, ExternalLink, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCopy } from '@/copy/useCopy';
 import { Link } from 'wouter';
@@ -149,6 +149,46 @@ export default function NegotiationAuditPage() {
     setRunIdFilter('');
     setPolicyHashFilter('');
     setOffset(0);
+  };
+
+  const [exportingRunId, setExportingRunId] = useState<string | null>(null);
+
+  const handleExportProof = async (runId: string, format: 'json' | 'csv' = 'json') => {
+    setExportingRunId(runId);
+    try {
+      const response = await fetch(`/api/app/runs/${runId}/negotiation-proof-export?format=${format}`);
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const contentDisposition = response.headers.get('content-disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch?.[1] || `run-proof-export-${runId}.${format}`;
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: resolve('settings.negotiation_audit.toast.export_started') || 'Export started',
+        description: `Downloading ${filename}`,
+        duration: 3000,
+      });
+    } catch {
+      toast({
+        title: resolve('settings.negotiation_audit.toast.export_failed') || 'Export failed',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    } finally {
+      setExportingRunId(null);
+    }
   };
   
   return (
@@ -314,6 +354,9 @@ export default function NegotiationAuditPage() {
                       <TableHead>
                         {resolve('settings.negotiation_audit.table.policy_hash') || 'Hash'}
                       </TableHead>
+                      <TableHead className="w-[80px]">
+                        {resolve('settings.negotiation_audit.table.actions') || 'Actions'}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -379,6 +422,23 @@ export default function NegotiationAuditPage() {
                               <Copy className="w-3 h-3" />
                             </Button>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleExportProof(event.run_id)}
+                            disabled={exportingRunId === event.run_id}
+                            data-testid={`button-export-proof-${event.run_id}`}
+                            title={resolve('settings.negotiation_audit.action.export_proof') || 'Export proof'}
+                          >
+                            {exportingRunId === event.run_id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
