@@ -1,0 +1,207 @@
+REPLIT IMPLEMENTATION PROMPT — STEP 11C PHASE 2B-1 (CC-13)
+Bulk Invite Ingest (CSV + Paste) + Preview + Dedupe + Already-on-Platform Flags
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Minimal additive changes. No refactors. Additive only. No schema changes unless proven necessary (audit says not required).
+TERMINOLOGY LOCKED:
+- ✅ “service provider”
+- ✅ “reservation”
+- ❌ booking / contractor / calendar
+
+GOAL
+In NotifyStakeholdersModal, add a bulk ingest flow:
+- Paste list OR upload CSV
+- Parse + normalize + dedupe
+- Show preview table with row statuses
+- Flag “already on platform” (cc_individuals.email match)
+- Prevent submitting duplicates for this run
+- Submit in batches obeying per_request_cap (policy)
+- Show per-row outcomes after submit
+- No breaking changes to existing single invite UX
+
+AUDIT FACTS (DO NOT RE-INVESTIGATE)
+- No papaparse installed; add it.
+- POST /api/provider/runs/:id/stakeholder-invites already accepts { invitees: [{email, name?, message?}] } arrays and enforces per_request_cap + daily/hourly caps.
+- No unique constraint on (context_type, context_id, invitee_email) so UI must dedupe.
+- Already-on-platform source: cc_individuals.email.
+
+FILES
+Frontend:
+- client/src/components/provider/NotifyStakeholdersModal.tsx
+- client/src/lib/queryClient.ts (if needed for apiRequest helpers only)
+- client/src/copy/entryPointCopy.ts (or wherever provider tokens live)
+- package.json (add papaparse)
+Backend (minimal):
+- server/routes/provider.ts (add one small batch lookup endpoint)
+Proof:
+- proof/v3.5/step11c-phase2b1-bulk-ingest-proof.md
+
+========================================================
+A) DEPENDENCY — Install CSV parser
+========================================================
+Add dependency:
+- papaparse
+- and types: @types/papaparse (if TS complains)
+
+Update package.json accordingly.
+
+========================================================
+B) BACKEND — Batch email existence check (REQUIRED)
+========================================================
+Add endpoint in server/routes/provider.ts:
+
+POST /api/provider/identity/email-lookup
+Auth: requireAuth
+Body: { emails: string[] }  (max 500 per request; enforce)
+Behavior:
+- Normalize: lower(trim(email))
+- Query cc_individuals for matches:
+  SELECT id, display_name, lower(email) as email
+  FROM cc_individuals
+  WHERE lower(email) = ANY($1::text[])
+- Return map:
+  { ok:true, matches:[{ email, individual_id, display_name }] }
+
+Security:
+- This is within authenticated provider context; no cross-tenant restriction needed because cc_individuals is global identity.
+- Do NOT return phone numbers or anything else.
+
+Add proof snippet in proof doc.
+
+========================================================
+C) FRONTEND — Bulk ingest UI inside NotifyStakeholdersModal
+========================================================
+Add a new section above the “Create invitations” action:
+
+1) Inputs:
+- Tabs or segmented buttons:
+  - “Paste list”
+  - “Upload CSV”
+- Paste list textarea (existing pattern) supports comma/newline separation.
+- Upload CSV button triggers hidden file input accept=".csv"
+
+2) Parsing rules:
+- Normalize email: trim + lowercase
+- Paste list parsing uses split(/[,\n]/)
+- CSV parsing via Papa.parse(file, { header:true, skipEmptyLines:true })
+  Accept these header aliases:
+  - email | Email | E-mail
+  - name | Name | full_name
+  - message | Message | note
+  If header missing, also support “first column is email” fallback when header=false.
+
+3) Validation:
+For each row produce:
+type BulkRow = {
+  row_id: string
+  email_raw: string
+  email: string | null
+  name?: string | null
+  message?: string | null
+  issues: string[]   // validation/dedupe flags
+  status: 'ready'|'invalid'|'duplicate_in_input'|'already_invited'|'submitted'|'created'|'skipped'|'rate_limited'|'error'
+  existing_individual?: { id:string, display_name?:string }
+}
+
+Rules:
+- invalid if email missing or not basic email pattern (simple regex ok)
+- mark duplicate_in_input if same normalized email appears >1 in parsed set (keep first, mark others)
+- fetch existing invitations for this run (see section D) and mark already_invited
+- call email-lookup endpoint for up to 500 unique emails and set existing_individual if matched
+- “ready” only if valid AND not duplicate_in_input AND not already_invited
+
+4) Preview table UI:
+Use simple Tailwind table (no new library). Columns:
+- Email
+- Name
+- Platform (badge: “On platform” if existing_individual)
+- State (badge from status)
+- Issues (small muted text)
+- Remove row action (trash icon)
+
+5) Submit behavior:
+- Determine batch size = policy.per_request_cap (from backend response or from portal policy API if you already expose it)
+Since policy is enforced on server, implement client batching as:
+  - submit only up to 50 at a time by default
+  - if server returns 429 per_request, split smaller and retry once
+Preferred: expose per_request_cap in an existing response:
+  - If GET invitations already returns policy: use it.
+  - If not, create a tiny endpoint:
+    GET /api/provider/invite-policy
+    returning EffectivePolicy.
+BUT avoid adding more endpoints unless necessary.
+Given audit says policy is checked server-side, simplest: hard-cap submit batches at 50 on client and rely on server config for higher caps later.
+
+Submit algorithm:
+- Gather rows where status='ready'
+- Chunk into batches of 50 (or smaller if none)
+- For each batch:
+  POST /api/provider/runs/:id/stakeholder-invites { invitees: batch.map({email,name,message}) }
+  Use response shape audit described:
+  { invitations[], emails_sent, emails_skipped, email_enabled }
+- Update row statuses:
+  - created if invitation returned for that email
+  - error if not returned
+  - if 429 rate limited: set remaining rows status='rate_limited' and stop
+
+6) Non-destructive:
+Do not break current single-invite flow. Bulk mode is additive.
+
+========================================================
+D) FRONTEND — Detect “already invited for this run” (REQUIRED)
+========================================================
+Before submit, fetch existing invitations for the run via existing:
+GET /api/provider/runs/:id/stakeholder-invites
+
+Build a set of normalized invitee_email for invitations whose status NOT IN ('revoked','expired')
+Mark any input rows with matching email as already_invited.
+
+Also dedupe against selected existing invites list live when modal refreshes.
+
+========================================================
+E) COPY TOKENS (REQUIRED)
+========================================================
+Add tokens (provider.notify.bulk.* namespace recommended):
+provider.notify.bulk.title = "Add multiple stakeholders"
+provider.notify.bulk.mode.paste = "Paste list"
+provider.notify.bulk.mode.csv = "Upload CSV"
+provider.notify.bulk.paste.placeholder = "Paste emails separated by commas or new lines"
+provider.notify.bulk.csv.button = "Choose CSV file"
+provider.notify.bulk.preview.title = "Preview"
+provider.notify.bulk.preview.help = "We’ll remove duplicates and skip anyone already invited."
+provider.notify.bulk.badge.on_platform = "On platform"
+provider.notify.bulk.badge.ready = "Ready"
+provider.notify.bulk.badge.invalid = "Invalid"
+provider.notify.bulk.badge.duplicate = "Duplicate"
+provider.notify.bulk.badge.already_invited = "Already invited"
+provider.notify.bulk.badge.created = "Created"
+provider.notify.bulk.badge.rate_limited = "Limit reached"
+provider.notify.bulk.submit = "Send invitations"
+provider.notify.bulk.remove = "Remove"
+provider.notify.bulk.error.csv_parse = "Couldn’t read that CSV. Check headers and try again."
+provider.notify.bulk.error.rate_limited = "Invitation limit reached. Try again later or adjust tenant policy."
+
+No forbidden terms.
+
+========================================================
+F) PROOF DOC (REQUIRED)
+========================================================
+Create: proof/v3.5/step11c-phase2b1-bulk-ingest-proof.md
+
+Include:
+1) Screenshot/text proof of new bulk UI sections (paste + CSV)
+2) Example CSV headers supported
+3) Evidence of dedupe within input (duplicate flagged)
+4) Evidence of already_invited detection (existing invite causes skip)
+5) Evidence of “On platform” badge from email lookup endpoint
+6) Batch submission behavior (50 chunk) + result statuses
+7) Rate limit handling (429 sets remaining to “Limit reached”)
+8) Terminology compliance check (no forbidden terms)
+
+DONE WHEN
+- Bulk ingest works via paste and CSV
+- Preview shows row-level statuses and issues
+- Dedupe works (input + already invited)
+- “On platform” tagging works via email lookup
+- Submits in batches and updates statuses
+- Proof doc exists under proof/v3.5/
