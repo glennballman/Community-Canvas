@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'wouter';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { 
   ArrowLeft, Clock, MapPin, Calendar, CheckCircle, AlertCircle, Loader2,
   Bell, Building2, User, Shield, MessageSquare, Check, HelpCircle, RefreshCw
@@ -11,7 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from '@/components/ui/form';
 import { useCopy } from '@/copy/useCopy';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -62,6 +72,15 @@ interface ResponsesListResponse {
   responses: StakeholderResponseItem[];
 }
 
+const stakeholderResponseFormSchema = z.object({
+  response_type: z.enum(['confirm', 'request_change', 'question'], {
+    required_error: 'Please select a response type',
+  }),
+  message: z.string().max(2000, 'Message must be 2000 characters or less').optional(),
+});
+
+type StakeholderResponseFormData = z.infer<typeof stakeholderResponseFormSchema>;
+
 function formatRole(role: string | null): string {
   if (!role) return 'Stakeholder';
   return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -111,42 +130,44 @@ export default function RunStakeholderViewPage() {
   const { resolve } = useCopy({ entryPoint: 'service' });
   const queryClient = useQueryClient();
 
-  const [responseType, setResponseType] = useState<string>('confirm');
-  const [message, setMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const form = useForm<StakeholderResponseFormData>({
+    resolver: zodResolver(stakeholderResponseFormSchema),
+    defaultValues: {
+      response_type: 'confirm',
+      message: '',
+    },
+  });
+
   const { data, isLoading, error } = useQuery<StakeholderViewResponse>({
-    queryKey: [`/api/runs/${id}/view`],
+    queryKey: ['/api/runs', id, 'view'],
     enabled: !!id,
   });
 
-  const { data: responsesData } = useQuery<ResponsesListResponse>({
+  const { data: responsesData, isLoading: responsesLoading, error: responsesError } = useQuery<ResponsesListResponse>({
     queryKey: ['/api/runs', id, 'responses'],
-    queryFn: async () => {
-      const res = await fetch(`/api/runs/${id}/responses`, { credentials: 'include' });
-      return res.json();
-    },
     enabled: !!id && !!data?.ok,
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (body: { response_type: string; message?: string }) => {
-      return apiRequest('POST', `/api/runs/${id}/respond`, body);
+    mutationFn: async (body: StakeholderResponseFormData) => {
+      return apiRequest('POST', `/api/runs/${id}/respond`, {
+        response_type: body.response_type,
+        message: body.message?.trim() || undefined,
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/runs/${id}/view`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/runs', id, 'view'] });
       queryClient.invalidateQueries({ queryKey: ['/api/runs', id, 'responses'] });
-      setMessage('');
+      form.reset({ response_type: 'confirm', message: '' });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     },
   });
 
-  const handleSubmitResponse = () => {
-    submitMutation.mutate({
-      response_type: responseType,
-      message: message.trim() || undefined,
-    });
+  const onSubmit = (data: StakeholderResponseFormData) => {
+    submitMutation.mutate(data);
   };
 
   if (isLoading) {
@@ -252,78 +273,124 @@ export default function RunStakeholderViewPage() {
             </div>
           )}
 
-          <div className="space-y-3">
-            <Label>{resolve('stakeholder.response.type.label') || 'Response type'}</Label>
-            <RadioGroup
-              value={responseType}
-              onValueChange={setResponseType}
-              className="flex flex-col gap-3"
-              data-testid="radio-response-type"
-            >
-              <div className="flex items-center space-x-3">
-                <RadioGroupItem value="confirm" id="confirm" data-testid="radio-confirm" />
-                <Label htmlFor="confirm" className="flex items-center gap-2 cursor-pointer">
-                  <Check className="w-4 h-4 text-green-600" />
-                  {resolve('stakeholder.response.type.confirm') || 'Confirm'}
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3">
-                <RadioGroupItem value="request_change" id="request_change" data-testid="radio-request-change" />
-                <Label htmlFor="request_change" className="flex items-center gap-2 cursor-pointer">
-                  <RefreshCw className="w-4 h-4 text-amber-600" />
-                  {resolve('stakeholder.response.type.request_change') || 'Request change'}
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3">
-                <RadioGroupItem value="question" id="question" data-testid="radio-question" />
-                <Label htmlFor="question" className="flex items-center gap-2 cursor-pointer">
-                  <HelpCircle className="w-4 h-4 text-blue-600" />
-                  {resolve('stakeholder.response.type.question') || 'Ask a question'}
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="response_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{resolve('stakeholder.response.type.label') || 'Response type'}</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        className="flex flex-col gap-3"
+                        data-testid="radio-response-type"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="confirm" id="confirm" data-testid="radio-confirm" />
+                          <label htmlFor="confirm" className="flex items-center gap-2 cursor-pointer text-sm">
+                            <Check className="w-4 h-4 text-green-600" />
+                            {resolve('stakeholder.response.type.confirm') || 'Confirm'}
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="request_change" id="request_change" data-testid="radio-request-change" />
+                          <label htmlFor="request_change" className="flex items-center gap-2 cursor-pointer text-sm">
+                            <RefreshCw className="w-4 h-4 text-amber-600" />
+                            {resolve('stakeholder.response.type.request_change') || 'Request change'}
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="question" id="question" data-testid="radio-question" />
+                          <label htmlFor="question" className="flex items-center gap-2 cursor-pointer text-sm">
+                            <HelpCircle className="w-4 h-4 text-blue-600" />
+                            {resolve('stakeholder.response.type.question') || 'Ask a question'}
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="space-y-2">
-            <Label htmlFor="message">
-              {resolve('stakeholder.response.message.label') || 'Message (optional)'}
-            </Label>
-            <Textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder={resolve('stakeholder.response.message.placeholder') || 'Add details for the service provider…'}
-              className="min-h-[80px]"
-              maxLength={2000}
-              data-testid="textarea-message"
-            />
-          </div>
+              <FormField
+                control={form.control}
+                name="message"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {resolve('stakeholder.response.message.label') || 'Message (optional)'}
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder={resolve('stakeholder.response.message.placeholder') || 'Add details for the service provider…'}
+                        className="min-h-[80px]"
+                        data-testid="textarea-message"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={handleSubmitResponse}
-              disabled={submitMutation.isPending}
-              data-testid="button-submit-response"
-            >
-              {submitMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                resolve('stakeholder.response.submit') || 'Send Response'
-              )}
-            </Button>
-            {showSuccess && (
-              <span className="text-sm text-green-600 dark:text-green-400" data-testid="success-message">
-                {resolve('stakeholder.response.success') || 'Response sent.'}
-              </span>
-            )}
-          </div>
+              <div className="flex items-center gap-4 flex-wrap">
+                <Button
+                  type="submit"
+                  disabled={submitMutation.isPending}
+                  data-testid="button-submit-response"
+                >
+                  {submitMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    resolve('stakeholder.response.submit') || 'Send Response'
+                  )}
+                </Button>
+                {showSuccess && (
+                  <span className="text-sm text-green-600 dark:text-green-400" data-testid="success-message">
+                    {resolve('stakeholder.response.success') || 'Response sent.'}
+                  </span>
+                )}
+                {submitMutation.isError && (
+                  <span className="text-sm text-destructive" data-testid="error-message">
+                    Failed to send response. Please try again.
+                  </span>
+                )}
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 
-      {responses.length > 1 && (
+      {responsesLoading && (
+        <Card className="mb-6" data-testid="card-response-history-loading">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Loading responses...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {responsesError && (
+        <Card className="mb-6" data-testid="card-response-history-error">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-center text-muted-foreground">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              <span className="text-sm">Failed to load response history</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!responsesLoading && !responsesError && responses.length > 1 && (
         <Card className="mb-6" data-testid="card-response-history">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
