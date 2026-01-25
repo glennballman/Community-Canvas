@@ -1,0 +1,91 @@
+REPLIT PROMPT — STEP 11C Phase 2C-13.5: Impersonation Semantics Correction (User ≠ Tenant)
+
+ROLE: Senior platform architect + QA gatekeeper
+MODE: Deep forensic audit, then implement minimal corrective refactor. No tenant guessing.
+
+PROBLEM STATEMENT (P0)
+Current implementation “Impersonate user” is auto-selecting a tenant (e.g., Woods End Landing) and redirecting into tenant context.
+This violates V3.5 semantics and will create systemic spaghetti.
+
+REQUIRED INVARIANTS
+A) Impersonation has TWO independent dimensions:
+   1) acting_user (impersonated user identity)
+   2) tenant_context (selected tenant for operations)
+B) “Impersonate Mathew” must ONLY set acting_user = Mathew.
+   It MUST NOT set tenant_context automatically.
+C) If tenant_context is null:
+   - tenant nav must not render tenant-scoped sections
+   - tenant-only API calls must not execute
+   - UI must show a deterministic “Select tenant to continue” affordance
+D) Tenant selection must be explicit:
+   - via tenant switcher OR a modal / page shown after impersonation start
+E) Support TWO distinct operator actions:
+   1) Impersonate User (user-only)
+   2) Impersonate Tenant (direct tenant context, without choosing a specific user) — optional, but do NOT fake it by guessing.
+
+PHASE 1 — FORENSIC AUDIT (must produce report before changes)
+1) Locate and enumerate ALL code paths that set tenant context during impersonation:
+   - server: impersonation start endpoint(s) and session fields
+   - server: /api/me/context and /api/foundation/auth/whoami response shaping
+   - client: AuthContext/TenantContext context resolution
+   - routing: AppRouterSwitch and any redirect logic
+   - cache: any query key logic that assumes tenantId exists
+2) Output a short audit file:
+   proof/v3.5/step11c-phase2c13_5-impersonation-semantics-audit.md
+   Include:
+   - where tenant is being auto-selected
+   - what heuristic is used (first membership / default / etc.)
+   - which UI expects tenant_id to exist
+
+PHASE 2 — IMPLEMENTATION (minimal, deterministic)
+SERVER
+1) Update impersonation session model:
+   - Store impersonation_target_user_id (required)
+   - Store impersonation_tenant_id (optional, nullable)
+2) Start impersonation endpoint MUST:
+   - set target_user_id
+   - set impersonation_tenant_id = NULL
+   - return { ok: true, impersonation: { active:true, user:..., tenant:null } }
+3) Add explicit endpoint to set tenant context while impersonating:
+   POST /api/admin/impersonation/set-tenant { tenant_id }
+   - requires platform admin
+   - verifies tenant_id is in target user’s memberships
+   - sets impersonation_tenant_id
+4) Stop impersonation clears both.
+
+CLIENT
+1) After “Impersonate user” succeeds:
+   - refreshSession()
+   - navigate to /app/select-tenant (new route) IF impersonation.active AND tenant_context is null
+2) Create /app/select-tenant page (tenant shell neutral):
+   - Lists the impersonated user’s tenant memberships
+   - “Continue” sets tenant via set-tenant endpoint
+   - Also allow “Continue without tenant” -> returns to platform (optional) BUT must be explicit.
+3) TenantContext must treat tenant_id as nullable:
+   - if null, do not fetch tenant-scoped data
+   - nav must show only neutral items + “Select tenant”
+4) Banner must display:
+   - Impersonating: Mathew
+   - Tenant: (none) until selected
+
+ROUTING
+1) Update AppRouterSwitch:
+   - If impersonation.active && tenant_context is null:
+       route everything under /app (except /app/platform/*) to /app/select-tenant
+   - Platform routes while impersonating:
+       allowed ONLY if tenant_context is null (so you can exit or choose), otherwise optional redirect rule can apply.
+   - Do NOT guess tenant.
+
+TESTS (must add)
+1) Start impersonation does NOT set tenant_context (server + client test)
+2) /app/select-tenant appears when impersonating with null tenant
+3) set-tenant requires membership
+4) after set-tenant, tenant nav renders correctly
+
+DELIVERABLES
+- proof/v3.5/step11c-phase2c13_5-impersonation-semantics-audit.md
+- proof/v3.5/step11c-phase2c13_5-impersonation-semantics-fix-proof.md
+- All tests passing
+
+ABSOLUTE RULE
+No tenant auto-selection heuristics. If code currently chooses “first membership” or “default tenant”, remove it.
