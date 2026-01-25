@@ -1,0 +1,101 @@
+PROMPT A — Full Guard Audit + Classification Report
+REPLIT PROMPT — V3.5 PLATFORM/TENANT AUTH GUARD AUDIT (requireTenant + requireRole)
+
+ROLE: Platform Architect + Security Auditor
+MODE: Evidence-first. No guessing. Produce an authoritative inventory + classification report.
+
+OBJECTIVE
+1) Find ALL usages of:
+   - requireTenant
+   - requireRole(
+   - requirePlatformAdmin (or any platform-only guard)
+   - any middleware that checks session.roles / session.tenant_id / portal_id
+2) Build a report that classifies each guarded endpoint/page as:
+   - ✅ Correctly scoped Tenant-only
+   - ✅ Correctly scoped Platform-only
+   - ⚠️ Mis-scoped: should be Platform-only but is Tenant-only
+   - ⚠️ Mis-scoped: should be Tenant-only but is Platform-only
+   - ⚠️ Ambiguous: needs explicit decision (list why)
+3) For mis-scoped items, propose the exact guard to use.
+
+OUTPUTS (REQUIRED)
+- A markdown report: proof/v3.5/platform-tenant-guard-audit.md
+- A machine-readable JSON report: proof/v3.5/platform-tenant-guard-audit.json
+
+METHOD (NO GUESSING)
+A) Code search
+Run ripgrep:
+- rg -n "requireTenant" server client
+- rg -n "requireRole\\(" server client
+- rg -n "is_platform_admin|platform_admin|requirePlatform|platform" server client
+- rg -n "session\\.tenant_id|session\\.portal_id|session\\.roles" server client
+
+B) For each match, capture:
+- file path + line number
+- route path (if server)
+- component/route (if client)
+- the guard(s) used
+- the *intended surface*: Platform vs Tenant (infer from route prefix and feature)
+  - /api/app/** usually tenant-scoped unless clearly platform admin console
+  - /api/p2/** or /api/platform/** if present = platform
+  - /app/settings/** often tenant (but NOT always)
+  - /app/platform/** or /app/admin/** might be platform
+
+C) Classification rules (use these)
+✅ Tenant-only correct if:
+- it modifies tenant data OR reads tenant-confidential data
+- relies on tenant_id context
+- uses cc_tenant_users roles (tenant_owner/tenant_admin)
+
+✅ Platform-only correct if:
+- it configures platform-wide systems, policies, templates, global registries
+- it should not require any tenant context
+- it should be accessible with is_platform_admin alone
+
+⚠️ Mis-scoped if:
+- platform admin is required to pick a tenant/circle just to view platform config
+- a route blocks platform admin because it requires tenant_owner/tenant_admin but the function is platform-wide
+- a tenant admin can access a platform-wide mutation endpoint
+
+D) Deliver “Fix Recommendation” per mis-scoped item:
+- Replace requireTenant+requireRole with requirePlatformAdmin
+- Or keep requireTenant but add explicit tenant role requirement
+- Or split into two endpoints: platform-level and tenant-level
+
+REPORT FORMAT
+In the markdown report include these sections:
+
+1) Summary counts
+- total guarded server routes
+- total guarded UI pages
+- number correct tenant-only
+- number correct platform-only
+- number mis-scoped each direction
+- number ambiguous
+
+2) Table: Guard Inventory (Server)
+Columns:
+- file
+- route
+- guard chain
+- classification
+- recommended change
+
+3) Table: Guard Inventory (Client)
+Columns:
+- file
+- page/route
+- guard chain (route guard)
+- classification
+- recommended change
+
+4) High-risk mis-scopes (top 10)
+Explain why each is risky.
+
+5) Decisions needed (if any)
+List ambiguous items with options.
+
+DELIVERABLE
+Create:
+- proof/v3.5/platform-tenant-guard-audit.md
+- proof/v3.5/platform-tenant-guard-audit.json

@@ -1,0 +1,344 @@
+{
+  "audit_date": "2026-01-25",
+  "auditor": "Replit Agent",
+  "summary": {
+    "total_guarded_server_routes": 274,
+    "total_guarded_ui_nav_items": 35,
+    "correctly_scoped_tenant_only": 245,
+    "correctly_scoped_platform_only": 16,
+    "mis_scoped": 0,
+    "ambiguous": 14
+  },
+  "platform_only_routes": [
+    {
+      "file": "server/routes/command-console.ts",
+      "route_prefix": "/api/p2/platform/command-console/*",
+      "guard_chain": ["requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/p2-platform.ts",
+      "route_prefix": "/api/p2/platform/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/admin-tenants.ts",
+      "route_prefix": "/api/foundation/tenants/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/admin-inventory.ts",
+      "route_prefix": "/api/admin/inventory/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/admin-moderation.ts",
+      "route_prefix": "/api/admin/moderation/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/admin-communities.ts",
+      "route_prefix": "/api/admin/communities/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/admin-impersonation.ts",
+      "route_prefix": "/api/admin/impersonation/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/admin-scm.ts",
+      "route_prefix": "/api/admin/scm/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/foundation.ts",
+      "route_prefix": "/api/foundation/users/*",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    },
+    {
+      "file": "server/routes/monetization.ts",
+      "route": "/api/monetization/assign-plan",
+      "guard_chain": ["authenticateToken", "requirePlatformAdmin"],
+      "classification": "correct_platform_only"
+    }
+  ],
+  "tenant_only_routes": [
+    {
+      "file": "server/routes/export-key-health.ts",
+      "route": "/api/app/export-signing-key-health",
+      "guard_chain": ["requireAuth", "requireTenant", "requireRole('tenant_owner', 'tenant_admin')"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/negotiation-proof-export.ts",
+      "route_prefix": "/api/app/negotiation-proof-export/*",
+      "guard_chain": ["requireAuth", "requireTenant", "requireRole('tenant_owner', 'tenant_admin')"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/negotiation-audit.ts",
+      "route_prefix": "/api/app/negotiation-audit/*",
+      "guard_chain": ["requireAuth", "requireTenant", "requireRole('tenant_owner', 'tenant_admin')"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/negotiation-policy.ts",
+      "route_prefix": "/api/app/negotiation-policies/*",
+      "guard_chain": ["requireTenant", "requireRole('tenant_owner', 'tenant_admin')"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/bids.ts",
+      "route_prefix": "/api/app/bids/*",
+      "guard_chain": ["requireAuth", "requireTenant"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/procurement-requests.ts",
+      "route_prefix": "/api/app/procurement/*",
+      "guard_chain": ["requireAuth", "requireTenant"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/work-requests.ts",
+      "route_prefix": "/api/app/work-requests/*",
+      "guard_chain": ["requireAuth", "requireTenant"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/crm.ts",
+      "route_prefix": "/api/app/crm/*",
+      "guard_chain": ["requireAuth", "requireTenant"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/claims.ts",
+      "route_prefix": "/api/app/claims/*",
+      "guard_chain": ["requireAuth", "requireTenant"],
+      "classification": "correct_tenant_only"
+    },
+    {
+      "file": "server/routes/calendar.ts",
+      "route_prefix": "/api/calendar/*",
+      "guard_chain": ["requireAuth", "requireTenant"],
+      "classification": "correct_tenant_only"
+    }
+  ],
+  "ambiguous_routes": [
+    {
+      "file": "server/routes/entities.ts",
+      "line": 23,
+      "route": "GET /datasets",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 42,
+      "route": "POST /datasets",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 79,
+      "route": "GET /records",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 186,
+      "route": "POST /entities",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 235,
+      "route": "POST /cc_entities/from-record/:id",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 254,
+      "route": "GET /links/queue",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 267,
+      "route": "POST /links/:id/accept",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 285,
+      "route": "POST /links/:id/reject",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 303,
+      "route": "POST /resolution/run-batch",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 314,
+      "route": "POST /records/:id/propose-links",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 391,
+      "route": "GET /claims/pending",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 411,
+      "route": "POST /claims/:id/approve",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/entities.ts",
+      "line": 455,
+      "route": "POST /claims/:id/reject",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    },
+    {
+      "file": "server/routes/apify.ts",
+      "line": 17,
+      "route": "/api/apify/*",
+      "current_guard": ["requireAuth", "requireRole('admin')"],
+      "issue": "admin_role_undefined",
+      "risk_level": "high",
+      "recommendation": "Replace with requirePlatformAdmin"
+    }
+  ],
+  "client_nav_guards": {
+    "platform_only": [
+      {
+        "label": "All Tenants",
+        "href": "/app/platform/tenants",
+        "guard": "platformAdminOnly",
+        "classification": "correct_platform_only"
+      },
+      {
+        "label": "Analytics",
+        "href": "/app/platform/analytics",
+        "guard": "platformAdminOnly",
+        "classification": "correct_platform_only"
+      },
+      {
+        "label": "System Explorer",
+        "href": "/app/platform/system-explorer",
+        "guard": "platformAdminOnly",
+        "classification": "correct_platform_only"
+      }
+    ],
+    "tenant_only": [
+      {
+        "label": "Proof Verification",
+        "href": "/app/settings/proof-verification",
+        "guard": "tenantRolesAny: ['tenant_owner', 'tenant_admin']",
+        "classification": "correct_tenant_only"
+      },
+      {
+        "label": "Negotiation Policies",
+        "href": "/app/settings/negotiation-policies",
+        "guard": "tenantRolesAny: ['tenant_owner', 'tenant_admin']",
+        "classification": "correct_tenant_only"
+      },
+      {
+        "label": "Negotiation Audit",
+        "href": "/app/settings/negotiation-audit",
+        "guard": "tenantRolesAny: ['tenant_owner', 'tenant_admin']",
+        "classification": "correct_tenant_only"
+      }
+    ]
+  },
+  "guard_definitions": {
+    "requireAuth": {
+      "file": "server/middleware/guards.ts",
+      "checks": "session.user_id exists"
+    },
+    "requireTenant": {
+      "file": "server/middleware/guards.ts",
+      "checks": "req.ctx.tenant_id exists"
+    },
+    "requireRole": {
+      "file": "server/middleware/guards.ts",
+      "checks": "req.ctx.role in provided roles",
+      "valid_roles": ["tenant_owner", "tenant_admin", "operator", "staff", "member"]
+    },
+    "requirePlatformAdmin": {
+      "file": "server/middleware/guards.ts",
+      "checks": "cc_users.is_platform_admin = true"
+    }
+  },
+  "action_items": [
+    {
+      "priority": "immediate",
+      "description": "Fix 14 ambiguous requireRole('admin') usages in entities.ts and apify.ts",
+      "files": ["server/routes/entities.ts", "server/routes/apify.ts"]
+    },
+    {
+      "priority": "verify",
+      "description": "Check requireRole implementation handles invalid role strings gracefully"
+    },
+    {
+      "priority": "document",
+      "description": "Add JSDoc to guard functions clarifying valid role values"
+    },
+    {
+      "priority": "test",
+      "description": "Add integration tests verifying platform/tenant separation"
+    }
+  ]
+}
