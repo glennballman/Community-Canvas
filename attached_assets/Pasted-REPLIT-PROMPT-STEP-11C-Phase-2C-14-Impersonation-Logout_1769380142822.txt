@@ -1,0 +1,90 @@
+REPLIT PROMPT — STEP 11C Phase 2C-14: Impersonation + Logout Forensic Audit & Deterministic Fix (NO GUESSING)
+
+ROLE: Senior platform engineer performing forensic auth + routing correction.
+GOAL: Eliminate impersonation confusion and make logout deterministic. Ensure Glenn (platform admin) remains platform-only forever.
+
+Non-Negotiable Invariants (must be enforced)
+
+Glenn platform admin is never in cc_tenant_users (already enforced by DB trigger — do not bypass).
+
+Impersonation has two independent dimensions and they must be represented explicitly:
+
+acting_user_id (who you are acting as)
+
+acting_tenant_id (which tenant context, optional / can be null)
+
+Impersonating a user must NOT auto-pick a tenant. Tenant selection is explicit and user-controlled.
+
+Routing precedence must be deterministic:
+
+If impersonation.active === true, platform UI must not render, regardless of is_platform_admin.
+
+If impersonation is active and acting_tenant_id is null → route to /app/select-tenant (or equivalent) and show a tenant chooser.
+
+If impersonation is active and tenant selected → render tenant app with impersonated role/nav.
+
+Logout must always work and must not depend on dead legacy routes.
+
+A) Forensic Audit (produce a report before changing code)
+
+Create: proof/v3.5/step11c-phase2c14-impersonation-logout-forensics.md
+
+1) Enumerate all auth/identity endpoints used by the client
+
+Search for client calls to:
+
+/api/logout
+
+/api/foundation/auth/logout
+
+/api/me/context
+
+/api/foundation/auth/whoami
+
+any impersonation endpoints (/api/admin/impersonation/* etc.)
+
+In the report, list:
+
+file path
+
+method (GET/POST)
+
+expected response shape
+
+where the token/cookie is stored and cleared
+
+2) Trace routing decisions and identify competing redirectors
+
+Inspect:
+
+client/src/App.tsx
+
+client/src/components/routing/AppRouterSwitch.tsx
+
+client/src/layouts/PlatformLayout.tsx
+
+client/src/layouts/TenantAppLayout.tsx
+
+client/src/contexts/AuthContext.tsx
+
+In the report, answer:
+
+Who decides “platform vs tenant vs impersonating” today?
+
+What conditions cause /app/platform to render even when impersonation banner is active?
+
+Where does the infinite redirect / URL flashing come from?
+
+Why does the “Your Places” entry still appear on the platform home panel?
+
+3) Reproduce with canonical users
+
+Using cleaned DB:
+
+Login as Glenn (platform admin)
+
+Start impersonation of Mathew (user-only)
+
+Observe: does UI route to /app/platform? does tenant auto-select? does nav match Mathew?
+
+Write the observed vs expected in the report.
