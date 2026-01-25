@@ -125,6 +125,13 @@ All Platform Admin functionality MUST live under `/app/platform/*`. The server r
 - `/app/founder/*` - Founder Solo mode (FounderLayout)
 - `/app/*` - Tenant app (TenantAppLayout)
 
+**Centralized Route Ownership (Phase 2C-13.4):**
+- `AppRouterSwitch` (`client/src/components/routing/AppRouterSwitch.tsx`) is the single owner of all `/app/*` routing decisions
+- **INVARIANT**: At runtime, for any given pathname, only ONE layout/router branch may decide redirects
+- Impersonation redirects from `/app/platform/*` to `/app` are handled ONLY by AppRouterSwitch (one-shot with latch)
+- Individual layouts (PlatformLayout, TenantAppLayout) must NOT contain competing redirect logic
+- All layout guards must wait for `authReady=true` before evaluating navigation decisions
+
 **DO NOT:**
 - Add new routes under `/admin/*`
 - Re-introduce legacy admin links
