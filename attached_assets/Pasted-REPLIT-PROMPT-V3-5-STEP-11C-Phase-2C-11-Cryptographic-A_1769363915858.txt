@@ -1,0 +1,270 @@
+REPLIT PROMPT — V3.5 — STEP 11C — Phase 2C-11 Cryptographic Attestation for Run Proof Export (Tamper-Evident)
+
+ROLE: Senior Platform Architect + QA Gatekeeper
+MODE: Evidence-first, ship-correct-now. Additive schema/model changes allowed if they improve certifiability.
+TERMINOLOGY LOCKED:
+✅ service provider
+✅ reservation
+❌ contractor
+❌ booking
+❌ calendar
+
+PHASE 2C-11 OBJECTIVE
+Make the Phase 2C-10 Run Proof Export tamper-evident by adding cryptographic attestation:
+- Compute a deterministic export hash (SHA-256 of the exact exported bytes)
+- Sign the hash using an Ed25519 signing key
+- Embed attestation fields in the export bundle:
+  - export_hash_sha256 (hex)
+  - signature_ed25519 (base64)
+  - signing_key_id (string)
+  - signed_at (ISO)
+  - signature_scope ("hash")
+- Provide a verification utility (server-side function + optional API endpoint)
+- Add tests proving:
+  - signature verifies for untouched export
+  - signature fails if any byte changes
+  - key rotation supported via signing_key_id
+- Proof doc: proof/v3.5/step11c-phase2c11-cryptographic-attestation-proof.md
+
+IMPORTANT SECURITY RULES
+- Private signing key MUST NOT be stored in the database.
+- Private signing key must come from environment/config (e.g., process.env.CC_EXPORT_SIGNING_PRIVATE_KEY).
+- Public keys MAY be stored for verification and rotation (optional).
+- Never log private key material.
+- Attestation must not change determinism of the core export content other than adding the attestation block in a stable place.
+
+SCOPE
+- JSON export is the canonical attested artifact.
+- CSV export:
+  - Either (A) provide a sidecar JSON attestation response, or
+  - (B) do not attest CSV and document this (preferred: attest JSON only).
+Choose one and document in proof.
+
+========================================================
+STEP 0 — AUDIT CURRENT EXPORT BUILDER OUTPUT (NO GUESSING)
+========================================================
+Locate:
+- server/lib/runProofExport.ts (2C-10)
+
+Confirm:
+- JSON is built as a string or object then stringified
+- deterministic sorting is already done
+- exported_at override exists for tests
+Record in proof doc “A) Export Builder Baseline”.
+
+========================================================
+STEP 1 — Key Management (ENV + Optional Public Key Registry)
+========================================================
+Required ENV vars:
+- CC_EXPORT_SIGNING_KEY_ID="k1" (string identifier)
+- CC_EXPORT_SIGNING_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY----- ..."
+
+Optional (recommended) for verification in-app:
+- CC_EXPORT_SIGNING_PUBLIC_KEYS_JSON='{"k1":"-----BEGIN PUBLIC KEY-----...","k2":"..."}'
+OR store public keys in DB (additive) for rotation and admin UI later.
+
+Prefer ENV JSON first (simpler, immediate).
+
+Implement:
+- server/lib/exportSigningKeys.ts
+Exports:
+- getSigningKeyId(): string
+- getPrivateKeyPem(): string
+- getPublicKeyPem(keyId: string): string | null
+- listPublicKeyIds(): string[]
+
+Validation:
+- Fail fast on startup if private key missing in production mode (but allow tests to inject).
+
+========================================================
+STEP 2 — Attestation Computation (Hash + Sign)
+========================================================
+Add:
+- server/lib/exportAttestation.ts
+
+Implement:
+1) sha256Hex(bytes: Buffer): string
+2) signEd25519Hash(hashHex: string, privateKeyPem: string): string (base64 signature)
+   - Use Node crypto:
+     - const keyObj = crypto.createPrivateKey(privateKeyPem)
+     - const sig = crypto.sign(null, Buffer.from(hashHex, 'hex'), keyObj)  // Ed25519 uses null algorithm
+     - return sig.toString('base64')
+
+3) verifyEd25519Hash(hashHex: string, signatureB64: string, publicKeyPem: string): boolean
+   - const pub = crypto.createPublicKey(publicKeyPem)
+   - crypto.verify(null, Buffer.from(hashHex, 'hex'), pub, Buffer.from(signatureB64,'base64'))
+
+4) buildAttestation(bytes: Buffer): {
+     export_hash_sha256: string,
+     signature_ed25519: string,
+     signing_key_id: string,
+     signed_at: string,
+     signature_scope: "hash"
+   }
+
+Determinism rule:
+- The hash must be computed over the EXACT exported bytes of the canonical JSON export (before adding attestation OR after?).
+Choose one (must be consistent and provable):
+Preferred approach:
+A) Compute hash over the “payload” portion (everything except attestation), then attach attestation.
+This avoids self-referential hashing.
+
+Implementation pattern:
+- Build a payload object WITHOUT attestation
+- Serialize deterministically to bytes (Buffer)
+- Hash + sign bytes
+- Attach attestation object to the final export as a top-level key (last key), then serialize final output for download
+
+Define stable placement:
+- Add top-level key `attestation` as the LAST key in the JSON export object.
+
+Update schema version:
+- Either keep v1 and add attestation optional OR bump to v2.
+Preferred: bump schema version to v2 for clarity:
+  cc.v3_5.step11c.2c11.run_proof_export.v2
+(Keep backward compatibility: if v1 requested, return without attestation; default to v2.)
+
+========================================================
+STEP 3 — Extend Export Route to Support Attestation
+========================================================
+Route:
+- GET /api/app/runs/:id/negotiation-proof-export
+
+Add query params:
+- version=v1|v2 (default v2)
+- attest=true|false (default true for v2, false for v1)
+
+Behavior:
+- For JSON:
+  - v2+attest=true => include attestation block
+  - v2+attest=false => omit attestation (still deterministic)
+  - v1 => existing behavior (no attestation, schema_version v1)
+- For CSV:
+  - Preferred: do not attest CSV; if attest requested, return 400 with clear error,
+    OR return CSV plus response header containing hash/signature (harder).
+Pick one and document.
+
+Headers:
+- Keep correct Content-Disposition for download filenames.
+- Optionally include headers:
+  - X-Export-Hash-Sha256
+  - X-Export-Signature-Ed25519
+  - X-Export-Signing-Key-Id
+(These are helpful but not required; the JSON attestation is canonical.)
+
+========================================================
+STEP 4 — Verification Utility + Optional Endpoint
+========================================================
+Mandatory:
+- server/lib/verifyRunProofExport.ts
+Function:
+- verifyExportAttestation(exportJsonString: string, publicKeys: map): { ok: boolean, reason?: string, key_id?: string, hash?: string }
+
+It should:
+- Parse JSON
+- Extract `attestation`
+- Reconstruct the payload bytes EXACTLY as signed:
+  - Remove attestation key from object
+  - Serialize with the same deterministic method used in builder
+- Compute hash, compare to export_hash_sha256
+- Verify signature using public key for signing_key_id
+
+Optional endpoint (admin-only):
+- POST /api/app/negotiation-proof-export/verify
+Auth:
+- tenant_owner/tenant_admin
+Body:
+- { export_json: string }
+Returns:
+- { ok: true, verified: true, signing_key_id, export_hash_sha256 }
+or { ok: true, verified: false, reason }
+This is helpful for internal ops; not public.
+
+========================================================
+STEP 5 — Deterministic Serialization (CRITICAL)
+========================================================
+If you are currently relying on object insertion order only, add a deterministic serializer:
+- server/lib/stableJson.ts
+Function:
+- stableStringify(obj): string
+Rules:
+- Sort object keys recursively
+- Preserve array order
+- Serialize without spacing
+
+Use stableStringify for:
+- payload serialization before signing
+- final export serialization (with attestation) for download
+
+This ensures:
+- Same logical export => same bytes => same hash
+
+========================================================
+STEP 6 — Tests (MANDATORY)
+========================================================
+Add tests under existing harness:
+
+File:
+- server/routes/__tests__/negotiationProofExport.attestation.test.ts
+
+Test cases:
+1) Attested export verifies
+- Generate export v2 attest=true with exported_at override fixed
+- Verify with public key
+- Expect verified=true
+
+2) Tamper fails
+- Modify one byte (e.g., change a character in policy_hash or proposed_start)
+- Verify => verified=false
+
+3) Key rotation
+- Provide two public keys JSON mapping (k1, k2)
+- Sign with k2 (swap env key id/private key for test)
+- Verify selects correct key and passes
+
+4) Hash stability
+- Generate export twice with fixed exported_at and same DB state
+- Payload hash (export_hash_sha256) must match exactly
+
+5) CSV behavior
+- If CSV not attested: attest=true + format=csv => 400
+- Or if you chose headers approach, test headers exist
+
+Also add:
+- unit tests for stableStringify (key sorting, nested objects)
+
+Test keys:
+- Use deterministic test Ed25519 keys committed ONLY to test fixtures (public + private in test folder)
+- Do not use production secrets.
+
+========================================================
+STEP 7 — Proof Doc (MANDATORY)
+========================================================
+Create:
+proof/v3.5/step11c-phase2c11-cryptographic-attestation-proof.md
+
+Include:
+A) Key management approach (ENV vars used, no private key in DB)
+B) Export schema v2 including attestation block example (redacted)
+C) Determinism rules + stableStringify description
+D) Verification method steps
+E) Tests summary + commands + PASS output excerpt
+F) Operational notes:
+   - how to rotate keys (change key_id + private key, keep old public keys available)
+
+========================================================
+ACCEPTANCE CRITERIA (MUST PASS)
+========================================================
+1) JSON export v2 contains attestation with hash + signature + key_id + signed_at
+2) Signature verifies for unchanged export
+3) Signature fails if export is modified
+4) Deterministic hashing proven with fixed exported_at
+5) No private key stored in DB or logged
+6) Tests pass and proof doc exists
+
+OUTPUT REQUIRED FROM REPLIT
+- Summary of changes
+- How stable serialization is implemented
+- Proof doc path + contents (or key excerpts)
+- Test command output summary
+- Any new ENV vars required

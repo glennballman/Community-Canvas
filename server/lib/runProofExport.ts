@@ -7,8 +7,12 @@ import { pool } from '../db';
 import { loadNegotiationPolicyWithTrace } from './negotiation-policy';
 import { sanitizeProposalContext, type SanitizedProposalContext } from './proposalContext';
 import type { NegotiationType, ResolvedNegotiationPolicy, NegotiationPolicyTrace } from '@shared/schema';
+import { stableStringify } from './stableJson';
+import { buildAttestation, canAttest, type ExportAttestation } from './exportAttestation';
 
-export const EXPORT_SCHEMA_VERSION = 'cc.v3_5.step11c.2c10.run_proof_export.v1';
+export const EXPORT_SCHEMA_VERSION_V1 = 'cc.v3_5.step11c.2c10.run_proof_export.v1';
+export const EXPORT_SCHEMA_VERSION_V2 = 'cc.v3_5.step11c.2c11.run_proof_export.v2';
+export const EXPORT_SCHEMA_VERSION = EXPORT_SCHEMA_VERSION_V2;
 
 export interface AuditEventExport {
   id: string;
@@ -58,6 +62,8 @@ export interface RunProofExport {
   };
 }
 
+export type ExportVersion = 'v1' | 'v2';
+
 export interface BuildExportOptions {
   tenantId: string;
   portalId?: string | null;
@@ -65,6 +71,9 @@ export interface BuildExportOptions {
   negotiationType?: NegotiationType;
   format?: 'json' | 'csv';
   exportedAtOverride?: string;
+  version?: ExportVersion;
+  attest?: boolean;
+  signedAtOverride?: string;
 }
 
 export interface ExportResult {
@@ -72,6 +81,8 @@ export interface ExportResult {
   csv?: string;
   filename: string;
   mimeType: string;
+  attestation?: ExportAttestation;
+  payloadHash?: string;
 }
 
 function formatTimestamp(date: Date | string | null): string {
@@ -219,6 +230,9 @@ export async function buildRunProofExport(options: BuildExportOptions): Promise<
     negotiationType = 'schedule',
     format = 'json',
     exportedAtOverride,
+    version = 'v2',
+    attest = version === 'v2',
+    signedAtOverride,
   } = options;
 
   const exportedAt = exportedAtOverride || new Date().toISOString();
@@ -247,8 +261,10 @@ export async function buildRunProofExport(options: BuildExportOptions): Promise<
 
   const latest = await queryNegotiationLatest(tenantId, runId);
 
+  const schemaVersion = version === 'v1' ? EXPORT_SCHEMA_VERSION_V1 : EXPORT_SCHEMA_VERSION_V2;
+
   const exportData: RunProofExport = {
-    schema_version: EXPORT_SCHEMA_VERSION,
+    schema_version: schemaVersion,
     exported_at: exportedAt,
     portal_id: portalId,
     run_id: runId,
@@ -262,12 +278,11 @@ export async function buildRunProofExport(options: BuildExportOptions): Promise<
     },
   };
 
-  const jsonOutput = JSON.stringify(exportData, null, 2);
-
   const dateStr = new Date(exportedAt).toISOString().slice(0, 10).replace(/-/g, '');
   const baseFilename = `run-proof-export-${runId}-${dateStr}`;
 
   if (format === 'csv') {
+    const jsonOutput = stableStringify(exportData);
     const csvOutput = generateAuditEventsCsv(sortedAuditEvents);
     return {
       json: jsonOutput,
@@ -276,6 +291,30 @@ export async function buildRunProofExport(options: BuildExportOptions): Promise<
       mimeType: 'text/csv',
     };
   }
+
+  const shouldAttest = attest && version === 'v2' && canAttest();
+
+  if (shouldAttest) {
+    const payloadBytes = Buffer.from(stableStringify(exportData), 'utf8');
+    const attestation = buildAttestation(payloadBytes, { signedAtOverride });
+    
+    const attestedExport = {
+      ...exportData,
+      attestation,
+    };
+
+    const jsonOutput = stableStringify(attestedExport);
+    
+    return {
+      json: jsonOutput,
+      filename: `${baseFilename}.json`,
+      mimeType: 'application/json',
+      attestation,
+      payloadHash: attestation.export_hash_sha256,
+    };
+  }
+
+  const jsonOutput = stableStringify(exportData);
 
   return {
     json: jsonOutput,
