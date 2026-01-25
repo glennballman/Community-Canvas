@@ -7,7 +7,7 @@
  * Navigation is filtered based on user context (role, tenant, portal, platform admin).
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Outlet, 
   NavLink, 
@@ -26,6 +26,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { useTenant } from '../contexts/TenantContext';
+import { useAuth } from '../contexts/AuthContext';
 import { PortalSelector } from '../components/PortalSelector';
 import { ContextIndicator } from '../components/context/ContextIndicator';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
@@ -61,10 +62,14 @@ export function TenantAppLayout(): React.ReactElement {
     switchTenant,
     impersonation,
   } = useTenant();
+  const { ready: authReady } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  
+  // Latch to prevent multiple redirects
+  const hasRedirectedRef = useRef(false);
 
   // Messages unread count query (global badge)
   const { data: unreadData } = useQuery<{ ok: boolean; count: number }>({
@@ -86,7 +91,9 @@ export function TenantAppLayout(): React.ReactElement {
   const noTenantRoutes = ['/app/places', '/app/onboarding'];
   const isNoTenantRoute = noTenantRoutes.some(r => location.pathname.startsWith(r));
   
-  const needsRedirectToRoot = !isAtRoot && !isNoTenantRoute && !currentTenant && initialized && !loading;
+  // CRITICAL: Wait for authReady before making redirect decisions
+  // During impersonation, currentTenant should be provided by TenantContext
+  const needsRedirectToPlaces = authReady && !isAtRoot && !isNoTenantRoute && !currentTenant && initialized && !loading;
 
   // --------------------------------------------------------------------------
   // Auth redirect
@@ -101,44 +108,29 @@ export function TenantAppLayout(): React.ReactElement {
   // --------------------------------------------------------------------------
   // Tenant redirect (when not at root and no tenant selected)
   // Redirect to places picker instead of /app root for cleaner UX
+  // CRITICAL: Uses latch to prevent multiple redirects
   // --------------------------------------------------------------------------
   
   useEffect(() => {
-    if (needsRedirectToRoot) {
-      navigate('/app/places');
+    if (needsRedirectToPlaces && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[TenantAppLayout] Redirect fired: no tenant, navigating to /app/places');
+      }
+      navigate('/app/places', { replace: true });
     }
-  }, [needsRedirectToRoot, navigate]);
+  }, [needsRedirectToPlaces, navigate]);
 
   // --------------------------------------------------------------------------
-  // Loading state
+  // Loading state - wait for both tenant context and auth to be ready
   // --------------------------------------------------------------------------
   
-  if (loading || !initialized) {
+  if (loading || !initialized || !authReady) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: '#060b15',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '4px solid rgba(59, 130, 246, 0.3)',
-            borderTopColor: '#3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px',
-          }} />
-          <p style={{ color: '#9ca3af' }}>Loading...</p>
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Loading session...</p>
         </div>
       </div>
     );
