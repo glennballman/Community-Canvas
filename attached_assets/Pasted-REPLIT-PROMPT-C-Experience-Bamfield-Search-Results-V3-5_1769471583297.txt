@@ -1,0 +1,203 @@
+REPLIT PROMPT C — Experience Bamfield Search + Results + V3.5 Reserve Handoff (NO CART)
+
+ROLE: Senior Platform Architect + QA Gatekeeper (evidence-first, no guessing)
+
+PURPOSE:
+Implement Experience Bamfield’s Search + Results screens and wire “Check Availability” + each result’s CTA to the V3.5 direct reserve flow:
+
+Availability API (confirmed): GET /api/public/cc_portals/:slug/availability
+
+Reserve route (canonical V3.5): /p/:portalSlug/reserve and /p/:portalSlug/reserve/:assetId
+
+ABSOLUTE RULE: Results must hand off into /p/experience-bamfield/reserve/:assetId (V3.5) and must NOT use or create any cart flows.
+
+HARD CONSTRAINTS (NON-NEGOTIABLE)
+
+DO NOT TOUCH CART (legacy/V1).
+No imports/refs/routes/endpoints/tables/components related to:
+
+server/services/cartService.ts
+
+/api/*cart* or /api/public/carts*
+
+cc_reservation_carts*
+
+ReserveShell
+
+/reserve/:portalSlug/:offerSlug
+
+DO NOT create any “cart-like” state stores (no zustand cartStore, no reducers named cart/trip).
+
+DO NOT change reservation creation logic. You only navigate into existing V3.5 reserve pages.
+
+Terminology: UI copy must use reserve/reservation (never “book/booking”).
+
+Minimal additive changes only; no refactors.
+
+SCOPE
+In-scope
+
+Add Search page for Experience Bamfield (reachable from the homepage CTA)
+
+Add Results screen showing returned availability results
+
+Add category tabs/filters for:
+
+Accommodations
+
+Parking
+
+Moorage
+
+Activities
+
+Wire each result CTA to:
+
+/p/experience-bamfield/reserve/:assetId
+
+Implement safe URL prefill for dates (+ optional group size) as query params:
+
+From search → reserve page
+
+(Reserve page may need a small additive change to read query params and prefill availability lookup)
+
+Out-of-scope
+
+Payments
+
+Holds
+
+Pricing calc enhancements
+
+Ledger/folio
+
+Email confirmations
+
+Real-time civic feeds widgets
+
+IMPLEMENTATION PLAN
+1) Add a Search route for the Experience portal
+
+Choose ONE consistent route strategy and implement it:
+
+Preferred (simple):
+
+Add "/p/:portalSlug/search" route in client/src/App.tsx
+
+Create page: client/src/pages/public/PortalSearchPage.tsx
+
+Only enable this page for portals that have settings.show_accommodations|parking|moorage|activities
+
+Experience Bamfield usage: /p/experience-bamfield/search
+
+Homepage CTA: Update Experience homepage “Check Availability” button to navigate to /p/experience-bamfield/search
+
+2) Use the existing AvailabilitySearch component
+
+On PortalSearchPage.tsx, render:
+
+AvailabilitySearch with portalSlug from params
+
+Allow user to select:
+
+Dates (required)
+
+Group size (optional, store for handoff only)
+
+Category (accommodations/parking/moorage/activities)
+
+Important: AvailabilitySearch currently derives assetType from entry point type. Ensure the UI supports the four Experience categories and maps them to the correct entry types.
+
+3) Build Results UI (list view is enough)
+
+Create:
+
+client/src/public/components/ExperienceResultsList.tsx (or similar)
+
+Display results returned by GET /api/public/cc_portals/:slug/availability
+
+Each result card must show:
+
+Title/name
+
+Short descriptor (type)
+
+Any metadata already available (capacity, size, location label if present)
+
+CTA: “Reserve” (not “Add to cart”)
+
+4) Wire the CTA to V3.5 reserve route (no cart)
+
+When user clicks Reserve on a result:
+
+Navigate to:
+
+/p/${portalSlug}/reserve/${assetId}?start=${startISO}&end=${endISO}&partySize=${partySize}
+
+start and end required
+
+partySize optional
+
+Do not call any create endpoints here. Just navigate.
+
+5) Add query param prefill support to PortalReservePage (additive only)
+
+In client/src/pages/public/PortalReservePage.tsx:
+
+Parse query params:
+
+start
+
+end
+
+partySize (optional)
+
+If present:
+
+Use them as initial state for the reserve page date selection and availability fetch
+
+Ensure this does not break existing behavior when params are absent.
+
+This addresses the documented gap: “No URL prefill for dates/party size.”
+
+REQUIRED PROOF OUTPUTS (WRITE FILES)
+
+proof/experiencebamfield/prompt-c-search-results.md
+
+New/modified routes (paths + line numbers)
+
+Files created/modified
+
+How Search calls availability endpoint
+
+Exact handoff URL used for reserve
+
+Notes on query param parsing added to PortalReservePage
+
+proof/experiencebamfield/no-cart-regression-prompt-c.md
+
+Command outputs:
+
+rg -n "cartService|cc_reservation_cart|/api/.*cart|ReserveShell|/reserve/:" client/src server/
+
+Confirm no new cart references were introduced.
+
+ACCEPTANCE TESTS
+
+From Experience homepage, clicking Check Availability navigates to /p/experience-bamfield/search.
+
+Searching (dates + category) calls:
+GET /api/public/cc_portals/experience-bamfield/availability
+
+Results render as a list of cards.
+
+Clicking Reserve on a result navigates to:
+/p/experience-bamfield/reserve/<assetId>?start=...&end=... (optional partySize)
+
+PortalReservePage reads query params and pre-fills dates (no blank state).
+
+Proof file confirms zero cart usage.
+
+IMPORTANT
+
+Do not implement a cart, do not create a cart, do not call cart endpoints, do not introduce “trip” flows. We are strictly reusing V3.5 direct reserve.

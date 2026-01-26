@@ -328,6 +328,7 @@ export default function App() {
               {/* PUBLIC BUSINESS PORTAL - /p/:portalSlug/* */}
               {/* ========================================== */}
               <Route path="/p/:portalSlug" element={<PortalHomePage />} />
+              <Route path="/p/:portalSlug/search" element={<PortalSearchPage />} />
               <Route path="/p/:portalSlug/onboarding" element={<PortalOnboardingPage />} />
               <Route path="/p/:portalSlug/reserve" element={<PortalReservePage />} />
               <Route path="/p/:portalSlug/reserve/:assetId" element={<PortalReservePage />} />
