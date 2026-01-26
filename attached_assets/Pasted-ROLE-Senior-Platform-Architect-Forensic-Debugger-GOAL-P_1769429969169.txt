@@ -1,0 +1,77 @@
+ROLE: Senior Platform Architect + Forensic Debugger
+GOAL: Prove DB truth about memberships for Mathew vs Glenn BEFORE any UI work.
+
+TASK A — Identify the user records
+1) Locate the users table (likely cc_users or similar) and find the exact table/column names.
+2) Run SQL to retrieve Mathew and Glenn user IDs. Use email if available; otherwise search by display_name.
+
+Provide:
+- Mathew user id + email + name
+- Glenn user id + email + name
+
+TASK B — Find membership tables
+1) Search Drizzle schema for tables containing “member”, “membership”, “tenant_actor”, “tenant_user”, or “portal_staff”.
+2) List candidate tables and their key columns (user_id/actor_id/tenant_id/role/status/deleted_at).
+
+TASK C — Membership proof queries (must run and paste results)
+Once Mathew and Glenn IDs are known, run queries to list their memberships across ALL candidate membership tables.
+- For Mathew: prove he has memberships granting access to Woods End Landing and Woods End Marina.
+- For Glenn: prove he has none (or list what he does have).
+
+TASK D — Tenant linkage proof
+For each membership row found for Mathew, join to tenants/portals table(s) to show the human-readable tenant/portal names:
+- “Woods End Landing”
+- “Woods End Marina”
+
+OUTPUT FORMAT
+Return a single report:
+
+1) User IDs found (Mathew, Glenn)
+2) Membership tables discovered (names + columns)
+3) Query results for Mathew (raw rows + joined names)
+4) Query results for Glenn (raw rows + joined names)
+5) Conclusion: “Mathew DOES / DOES NOT have memberships in DB”, and same for Glenn.
+Do not change any code yet.
+3) If you want SQL right now (generic templates)
+Once you know the actual table names, you can adapt these patterns quickly:
+
+sql
+Copy code
+-- Find Mathew / Glenn (adjust table/columns)
+select id, email, display_name
+from cc_users
+where lower(email) like '%mathew%'
+   or lower(display_name) like '%mathew%'
+   or lower(email) like '%glenn%'
+   or lower(display_name) like '%glenn%';
+sql
+Copy code
+-- List all tables that might be memberships (Postgres)
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+  and (
+    table_name ilike '%member%'
+    or table_name ilike '%membership%'
+    or table_name ilike '%tenant_actor%'
+    or table_name ilike '%tenant_user%'
+    or table_name ilike '%portal_staff%'
+    or table_name ilike '%role%'
+  )
+order by table_name;
+sql
+Copy code
+-- Once you identify the membership table, prove Mathew memberships (example)
+select *
+from cc_tenant_memberships
+where user_id = '<MATHEW_ID>'
+order by created_at desc;
+sql
+Copy code
+-- Join to tenant/portal for human-readable names (example)
+select m.*, t.name as tenant_name, p.name as portal_name
+from cc_tenant_memberships m
+left join cc_tenants t on t.id = m.tenant_id
+left join cc_portals p on p.id = m.portal_id
+where m.user_id = '<MATHEW_ID>'
+order by coalesce(m.created_at, now()) desc;
