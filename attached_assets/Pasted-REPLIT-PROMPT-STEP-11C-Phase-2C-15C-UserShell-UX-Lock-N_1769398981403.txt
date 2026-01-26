@@ -1,0 +1,124 @@
+REPLIT PROMPT — STEP 11C Phase 2C-15C: UserShell UX Lock + No Forced Tenant Gate (Impersonation)
+
+ROLE
+You are the platform architect implementing a targeted UX hardening change.
+Do NOT refactor auth, routing, or session systems beyond what is explicitly requested.
+Do NOT redesign navigation. Do NOT introduce new role concepts.
+
+GOAL (NON-NEGOTIABLE)
+When impersonating a user and tenant_context is NULL, the app must behave like “logged in as that user” (UserShell),
+NOT like a forced “Select Tenant” gate.
+
+We already have:
+- Two-dimensional impersonation model (acting_user vs tenant_context)
+- /api/me/context returns impersonated user memberships correctly
+- AppRouterSwitch exists and can branch layouts
+- SelectTenantPage exists at /app/select-tenant
+- Logout is fixed via AuthContext.logout()
+
+Now we must LOCK UX CONTRACT:
+
+UX CONTRACT (LOCK THIS)
+A) Regular user (non-impersonation) with no tenant memberships:
+- /app shows normal personal dashboard/home (whatever exists today)
+- No tenant picker shown
+
+B) Impersonated user with memberships AND tenant_context is NULL:
+- /app MUST render UserShellLayout home (not SelectTenantPage)
+- UserShellLayout home shows:
+  1) Personal nav (existing) + a “Your Places” section if memberships exist
+  2) Main content: “Choose a Place” card/grid listing memberships
+     - Each membership shows tenant name + role badge
+     - Primary action: “Enter” (sets tenant context) -> navigates to /app
+  3) Banner remains (Impersonating … Tenant: none selected)
+- NO redirect to /app/select-tenant
+- /app/select-tenant remains as an optional deep-link view, but never forced.
+
+C) Impersonated user with NO memberships AND tenant_context NULL:
+- /app renders UserShellLayout home with empty state:
+  “No places available for this user.”
+
+D) Impersonated user with tenant_context selected:
+- /app renders TenantAppLayout (existing behavior)
+- Tenant nav reflects impersonated user’s role in that tenant (already fixed)
+
+ROUTING RULES (STRICT)
+- /app must be the stable landing page in all cases.
+- /app/select-tenant must NEVER be an automatic redirect target.
+- All automatic redirects that force tenant selection MUST be removed.
+- The ONLY time /app/select-tenant appears is:
+  - user clicks “Change Place” (optional if already exists), OR
+  - user manually navigates to it, OR
+  - platform admin in impersonation chooses to open it.
+
+IMPLEMENTATION TASKS
+1) Audit current behavior:
+   - Find where we still render/force SelectTenantPage when impersonation.active && !tenant_context.
+   - Identify the exact if/redirect branch in AppRouterSwitch (or equivalent).
+
+2) Fix AppRouterSwitch routing:
+   - Replace any redirect or forced render of SelectTenantPage with:
+     impersonation.active && tenant_context NULL -> render UserShellLayout home.
+
+3) Implement/adjust UserShellLayout HOME:
+   - Must use memberships from /api/me/context (already returns impersonated memberships).
+   - Render list of memberships (“Your Places”).
+   - “Enter” action sets tenant context:
+     - Call existing endpoint used today to set tenant context (or implement if missing):
+       POST /api/admin/impersonation/set-tenant (already exists per earlier work)
+     - After success:
+       - refresh session/context
+       - navigate to /app (NOT /app/platform/*, NOT /app/select-tenant)
+
+4) Keep SelectTenantPage but make it optional:
+   - Ensure it works if visited directly.
+   - Ensure UserShell can link to it via “Choose a different place” (optional).
+
+5) Remove any “gate” language or flow:
+   - No blocking modal.
+   - No forced selection.
+
+6) Add a “Clear tenant context” action (minimal):
+   - If impersonation.active && tenant_context is set, provide a button in banner dropdown or UserShell:
+     “Back to User Home” that clears tenant_context (keeps impersonation)
+   - Implement via existing stop/clear tenant endpoint if available; otherwise add:
+     POST /api/admin/impersonation/set-tenant with tenant_id = null
+
+7) Tests (required)
+Add/adjust tests so this can’t regress:
+- Unit/integration tests for AppRouterSwitch decision:
+  a) impersonation.active && tenant=null -> renders UserShellLayout at /app
+  b) impersonation.active && tenant=null -> DOES NOT redirect to /app/select-tenant
+  c) impersonation.active && tenant=set -> TenantAppLayout
+- If routing tests exist, extend them.
+- Add a small server test for set-tenant null clearing behavior (if implemented).
+
+8) Proof artifact
+Create:
+- proof/v3.5/step11c-phase2c15c-usershell-ux-lock-proof.md
+Include:
+- What changed, files touched
+- Before/after routing logic
+- Screenshots not required, but include acceptance criteria checklist
+- Test output summary
+
+ACCEPTANCE CRITERIA (MUST PASS)
+✅ As Glenn platform admin, click “Impersonate Mathew”.
+→ Lands on /app (or stays there) showing UserShell home with Mathew’s memberships.
+✅ No automatic redirect to /app/select-tenant.
+✅ Clicking “Enter” for Woods End Landing sets tenant context and shows Mathew’s tenant navigation.
+✅ “Back to User Home” clears tenant context but stays impersonating Mathew and returns to UserShell.
+✅ Logout works from any state.
+
+CONSTRAINTS
+- Do NOT touch database cleanup work.
+- Do NOT reintroduce tenant auto-pick.
+- Do NOT add new tables.
+- Keep changes minimal and localized to routing + UserShell + set-tenant clearing.
+- Maintain existing guard semantics and /app namespace patterns.
+
+DELIVERABLES
+- Code changes
+- Tests
+- Proof markdown file
+- Confirm acceptance criteria explicitly
