@@ -8,6 +8,11 @@
  * 
  * NOTE: Impersonation redirect logic is CENTRALIZED in AppRouterSwitch.
  * This layout does NOT redirect to /app/platform automatically.
+ * 
+ * Phase 2C-15D INVARIANT: This layout MUST NOT render when impersonating without tenant.
+ * - AppRouterSwitch intercepts impersonation+no-tenant and renders UserShellLayout
+ * - If this layout is reached with impersonation.active && !currentTenant, it's a bug
+ * - Tenant name is ONLY derived from currentTenant, never from memberships or cache
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -163,6 +168,18 @@ export function TenantAppLayout(): React.ReactElement {
   // Don't render if not authenticated (will redirect)
   if (!user) {
     return <></>;
+  }
+
+  // --------------------------------------------------------------------------
+  // Phase 2C-15D INVARIANT: TenantAppLayout should NOT be reached when
+  // impersonating without tenant. AppRouterSwitch should intercept this case.
+  // If we reach here in that state, log a warning in dev mode.
+  // --------------------------------------------------------------------------
+  if (import.meta.env.DEV && impersonation.active && !currentTenant && !isNoTenantRoute && !isAtRoot) {
+    console.warn(
+      '[TenantAppLayout] INVARIANT VIOLATION: Reached TenantAppLayout while impersonating without tenant.',
+      { pathname: location.pathname, impersonation: !!impersonation.active, currentTenant: !!currentTenant }
+    );
   }
 
   // --------------------------------------------------------------------------

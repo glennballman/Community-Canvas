@@ -14,6 +14,11 @@
  * Phase 2C-15B: REMOVED forced redirect to /app/select-tenant
  * - Tenant selection is a USER ACTION, not a router mandate
  * - When impersonating with no tenant, UserShellLayout shows "Choose a Place" panel
+ * 
+ * Phase 2C-15D: INVARIANT - No tenant chrome without tenant context
+ * - When impersonating with tenant_context=NULL, UserShellLayout mounts for ALL /app/* routes
+ * - TenantAppLayout is UNREACHABLE when impersonating without tenant
+ * - No tenant name appears in any header/banner when tenant_context=NULL
  */
 
 import { useEffect, useRef } from 'react';
@@ -100,22 +105,22 @@ export function AppRouterSwitch() {
     );
   }
 
-  // Phase 2C-15B: Routes that should NOT show UserShellLayout even during impersonation
-  // These routes are accessible during impersonation without tenant
+  // Phase 2C-15D: Routes that keep their specialized layouts even during impersonation
+  // Platform and Founder paths have their own dedicated layouts
   const isPlatformPath = location.pathname.startsWith('/app/platform');
   const isFounderPath = location.pathname.startsWith('/app/founder');
   const isSelectTenantPath = location.pathname.startsWith('/app/select-tenant');
-  const isPlacesPath = location.pathname === '/app/places';
   
-  // Phase 2C-15B: Show UserShellLayout when impersonating without tenant
-  // ONLY for /app/* routes that are not platform/founder/select-tenant paths
+  // Phase 2C-15D: INVARIANT - When impersonating without tenant:
+  // - UserShellLayout renders for ALL /app/* routes (except platform/founder/select-tenant)
+  // - TenantAppLayout must NOT render (no tenant nav/modules)
+  // - /app/places now also uses UserShellLayout during impersonation without tenant
   const shouldShowUserShell = 
     impersonation.active && 
     !currentTenant &&
     !isPlatformPath &&
     !isFounderPath &&
-    !isSelectTenantPath &&
-    !isPlacesPath;
+    !isSelectTenantPath;
   
   if (shouldShowUserShell) {
     throttledLog(

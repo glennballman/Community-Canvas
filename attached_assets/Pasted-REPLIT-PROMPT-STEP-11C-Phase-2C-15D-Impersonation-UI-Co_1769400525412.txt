@@ -1,0 +1,78 @@
+REPLIT PROMPT — STEP 11C Phase 2C-15D: Impersonation UI Consistency Hardening (No Tenant == No Tenant Chrome)
+
+ROLE
+Platform architect. Surgical fix only.
+Do NOT refactor auth system. Do NOT redesign nav. Do NOT add new concepts.
+
+PROBLEM
+Current UI shows TenantAppLayout nav + “in <tenant>” banner while tenant_context is NULL.
+This violates UX Contract and creates state ambiguity.
+
+GOAL
+When impersonation.active && tenant_context is NULL:
+- ONLY UserShellLayout mounts (chrome + content)
+- TenantAppLayout must NOT mount (no tenant nav/modules)
+- Banner must never mention any tenant name
+
+ACCEPTANCE INVARIANTS (MUST HOLD)
+1) tenant_context == null:
+   - No tenant name appears anywhere in header/banner
+   - Role badge may show ONLY if derived from a selected membership (but there is none yet)
+   - Left nav does NOT include Operations/Reservations modules
+   - URL may be /app or /app/places — but layout must be UserShellLayout
+
+2) tenant_context != null:
+   - TenantAppLayout mounts
+   - Tenant nav/modules appear normally
+   - Banner can show: “Impersonating X in <tenant>”
+   - “Back to User Home” clears tenant_context and returns to UserShellLayout without leaving impersonation
+
+TASKS
+A) Audit layout mounting
+- Identify where the left nav + header/banners are defined:
+  likely TenantAppLayout.tsx, AppShell.tsx, LayoutFrame.tsx, or similar.
+- Confirm which layout is being rendered for /app/places when tenant_context is NULL.
+
+B) Fix AppRouterSwitch layout selection
+- Ensure routing decision uses ONE canonical computed value:
+  const hasTenantContext = !!session?.impersonation?.tenant?.id || !!tenantContext?.tenant_id;
+- If impersonation.active && !hasTenantContext:
+  render UserShellLayout (and ONLY UserShellLayout) for all /app/* routes that represent “user home” (including /app and /app/places).
+
+C) Remove tenant chrome leak
+- Ensure TenantAppLayout requires tenant_context before rendering its nav/header.
+  If tenant_context missing:
+    return <Redirect or fallback to UserShellLayout> is NOT allowed here.
+    Instead: TenantAppLayout should render a minimal placeholder OR throw a controlled invariant error in dev.
+  The correct fix is: TenantAppLayout should not be reachable when tenant_context is null.
+
+D) Banner truth source
+- Make banner derive tenant label ONLY from tenant_context (selected tenant),
+  never from “first membership” and never from “last tenant” or cached value.
+- If tenant_context null:
+  show: “Impersonating Mathew Vetten — No place selected”
+- If tenant_context set:
+  show: “Impersonating Mathew Vetten in Woods End Landing”
+
+E) Clear-tenant endpoint consistency
+- Verify POST set-tenant { tenant_id: null } also clears any cached tenant label in session response (/api/foundation/auth/whoami or /api/me/context)
+- Ensure client refreshSession() clears tenant display state after clearing.
+
+F) Tests (required)
+Add tests to prevent regression:
+1) impersonation active + tenant null -> TenantAppLayout not rendered (assert nav does NOT contain “Operations Board”)
+2) impersonation active + tenant null -> banner does NOT contain tenant name
+3) after set-tenant null -> banner updates and nav switches to UserShell
+4) after selecting tenant -> TenantAppLayout rendered and banner includes tenant name
+
+G) Proof
+Create proof/v3.5/step11c-phase2c15d-impersonation-layout-consistency-proof.md
+Include:
+- file list touched
+- exact routing branch logic
+- screenshots not required; include invariant checklist + test output.
+
+DO NOT
+- Do not invent “hybrid shell”
+- Do not show tenant modules without tenant_context
+- Do not infer tenant from membership until user clicks Enter/Manage
