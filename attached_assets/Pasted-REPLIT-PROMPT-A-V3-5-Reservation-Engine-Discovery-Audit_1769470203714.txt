@@ -1,0 +1,211 @@
+REPLIT PROMPT A — V3.5 Reservation Engine Discovery Audit (NO CART)
+
+ROLE: Senior Platform Architect + QA Gatekeeper (evidence-first, no guessing)
+
+PURPOSE:
+Identify the canonical V3.5 reservation engine implementation (server routes, services, DB tables, and client wiring) that powers /p/:portalSlug/reserve and /p/:portalSlug/reserve/:assetId.
+Produce an evidence-backed map so we can wire Experience Bamfield into the V3.5 reservation engine and avoid the legacy cart system.
+
+HARD CONSTRAINTS (NON-NEGOTIABLE)
+
+DO NOT implement any new features. This is audit only.
+
+DO NOT refactor. No behavioral changes.
+
+DO NOT wire anything to or through “cart”.
+
+DO NOT propose “cart” as the solution.
+
+Terminology: use reserve / reservation (never “book/booking”) in notes.
+
+Provide file paths + line ranges for every claim.
+
+SCOPE
+
+Audit must cover:
+
+A) Client (UI) wiring
+
+/p/:portalSlug/reserve
+
+/p/:portalSlug/reserve/:assetId
+
+B) Server (API) wiring
+
+Endpoints called by the reserve/reservation flow
+
+Services that create/hold/confirm reservations
+
+Any pricing, availability, holds, deposits, policies, cancellation terms
+
+C) Database
+
+Canonical reservation tables used by V3.5
+
+Any related ledger/folio tables involved in reservation confirmation
+
+D) Explicit CART segregation
+
+Determine whether server/services/cartService.ts is legacy / V1
+
+Prove whether the V3.5 reservation flow does or does not touch cart
+
+TASKS
+1) Route Entry Points
+
+Locate the exact UI entry points for reserve/reservation:
+
+PortalReservePage implementation file path
+
+Any child components used (stepper, selection, summary, payment/confirm)
+
+The data flow from route params/query params into API calls
+
+Output:
+
+client file list with paths + line ranges
+
+Identify the single primary “reserve flow” component and how it’s composed
+
+2) Public Portal Context Dependency
+
+Determine how reserve page obtains portal context and settings:
+
+Does it call /api/public/portal-context?
+
+Does it require portalSlug only?
+
+What settings flags affect reserve/reservation behavior?
+
+Output:
+
+Exact endpoint(s) used
+
+The shape of returned context relevant to reservations
+
+3) API Calls Inventory (from UI)
+
+From the reserve UI, list every API endpoint invoked, in order, including:
+
+availability lookup
+
+hold / pre-reservation
+
+create reservation
+
+confirm reservation
+
+payment intent (if any)
+
+policies/fees/taxes
+
+amendments/cancellations (if present)
+
+Output:
+A table with columns:
+
+UI file → function → endpoint → server handler file → handler function → notes
+
+4) Server Route Map
+
+For each endpoint discovered above, locate:
+
+route file
+
+handler function
+
+service function invoked
+
+authorization / tenant/portal scoping mechanism
+
+Output:
+
+file paths + line ranges
+
+scoping mechanism (portalSlug, portalId, tenantId, GUC, etc.)
+
+5) Database Tables (canonical)
+
+Determine the canonical V3.5 reservation tables used by the endpoints:
+
+list table names
+
+which endpoints write to which tables
+
+whether any ledger/folio records are written at confirm time
+
+Output:
+
+Table list (from schema or SQL introspection)
+
+For each table: “written by” endpoints/services (with file evidence)
+
+If unsure: run a read-only query to list tables matching cc_%reserv%, cc_%folio%, cc_%ledger%, cc_%hold%, cc_%quote%, cc_%availability%.
+
+6) CART PROOF (required)
+
+We must prove whether V3.5 reserve flow touches cart.
+
+Do these checks:
+
+Search server and client for references from reserve flow files into:
+
+cartService
+
+/api/cart
+
+CreateCartRequest
+
+AddItemRequest
+
+Cart* components/stores
+
+Output:
+
+A short “Cart Touchpoints” section:
+
+“Reserve flow touches cart: YES/NO”
+
+If YES: list exact files/lines and explain whether it’s legacy bridge or current dependency.
+
+If NO: provide evidence that reserve flow is independent.
+
+DELIVERABLES (WRITE FILES)
+
+Create these files:
+
+proof/experiencebamfield/reservation-engine-discovery.md
+Contents:
+
+Overview diagram (text)
+
+UI entry points
+
+API inventory table
+
+Server route map
+
+DB tables map
+
+Scoping model (portal/tenant)
+
+Notes on prefill parameters (dates, group size)
+
+proof/experiencebamfield/no-cart-proof.md
+Contents:
+
+command outputs / findings showing whether reserve flow references cart
+
+explicit conclusion
+
+SUCCESS CRITERIA
+
+We can point to exact V3.5 reservation engine endpoints/services/tables with evidence.
+
+We can wire Experience Bamfield “Check Availability” and result selection into /p/:portalSlug/reserve/:assetId with confidence.
+
+We have a written proof that cart is not used (or a documented bridge if it is).
+
+IMPORTANT NOTE
+
+This is audit only. Do not implement changes. If you discover missing pieces, document them as “Gaps” but do not build.
