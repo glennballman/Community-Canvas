@@ -1,0 +1,73 @@
+REPLIT PROMPT — Phase 2C-15E: Impersonation Route Ownership Fix (Stop Platform UI Rendering)
+
+ROLE: Senior engineer performing a forensic routing + layout ownership correction.
+MODE: Make minimal changes, no refactors beyond what is required to enforce the invariant.
+
+GOAL
+Fix the architecture breach shown in screenshots:
+- When impersonation.active === true and tenant_context is NULL, the app MUST NOT render PlatformLayout at /app/platform (or anywhere).
+- Instead it must render UserShellLayout under /app/*.
+This must be enforced even if routing is misconfigured elsewhere.
+
+HARD INVARIANT (P0)
+If session.impersonation.active === true:
+- PlatformLayout MUST NEVER render.
+- /app/platform/* routes MUST be inaccessible (redirect to /app).
+- “Platform Admin” nav must not be visible while impersonating.
+
+DELIVERABLES
+A) Forensic audit (write proof):
+1. Identify every place where PlatformLayout can mount.
+2. Identify every router branch that handles /app/platform/*.
+3. Confirm whether AppRouterSwitch truly wraps ALL /app/* routes including /app/platform/*.
+4. Log the actual route match order at runtime (dev-mode only) to show which route is winning.
+
+Output: proof/v3.5/step11c-phase2c15e-routing-ownership-audit.md
+
+B) Fix (minimal, enforce invariant)
+1) Add a hard guard INSIDE PlatformLayout.tsx:
+   - If impersonation.active is true (canonical parsed session), immediately navigate('/app') and render a small “Redirecting…” placeholder.
+   - Do NOT use latch logic; do not retry loops; do not flash URL 10 times.
+   - This is a safety net that prevents ANY platform UI during impersonation.
+
+2) Ensure AppRouterSwitch is the only owner of /app/*
+   - Remove any parallel Route tree that mounts PlatformLayout outside AppRouterSwitch.
+   - If Platform routes must exist, they must be inside the switch and selected ONLY when !impersonation.active.
+
+3) Add dev-mode assertion:
+   - If PlatformLayout ever renders while impersonation.active, log console.error with stack trace once.
+
+C) Tests
+Add integration tests (use existing test harness style):
+1) Given session with impersonation.active=true and tenant_context=null:
+   - Visiting /app/platform MUST redirect to /app (UserShell), not render Platform UI.
+2) Given impersonation inactive:
+   - /app/platform renders normally for platform admin.
+
+Output: tests/impersonation-blocks-platform-layout.test.ts
+
+D) Acceptance check
+Provide explicit manual steps + expected outcomes:
+- Glenn logs in as platform admin → /app/platform OK
+- Start impersonation Mathew (tenant null) → land at /app (UserShell)
+- Manually go to /app/platform → forced redirect back to /app (UserShell)
+- Stop impersonation → /app/platform accessible again
+
+FILES TO TOUCH (likely)
+- client/src/components/routing/AppRouterSwitch.tsx
+- client/src/layouts/PlatformLayout.tsx
+- client/src/App.tsx (route tree)
+- client/src/types/session.ts (ensure canonical parse used)
+- tests/*
+
+CONSTRAINTS
+- Do not introduce new impersonation dimensions.
+- Do not change API contracts.
+- No UX redesign. Just enforce invariant.
+- No “maybe” logic. Make it impossible for PlatformLayout to appear during impersonation.
+
+After changes, write: proof/v3.5/step11c-phase2c15e-proof.md with:
+- Audit summary
+- Diff summary
+- Test results
+- Screenshot notes (expected)

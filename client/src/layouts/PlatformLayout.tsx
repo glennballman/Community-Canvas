@@ -5,11 +5,13 @@
  * Uses PLATFORM_NAV as the single source of truth.
  * Does NOT show tenant-requiring sections.
  * 
- * NOTE: Impersonation redirect logic is CENTRALIZED in AppRouterSwitch.
- * This layout does NOT handle impersonation redirects.
+ * Phase 2C-15E HARD INVARIANT:
+ * If impersonation.active === true, this layout must NEVER render.
+ * AppRouterSwitch should redirect away before we get here, but this
+ * layout includes a safety-net guard that redirects to /app.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -34,6 +36,9 @@ function throttledLog(key: string, ...args: unknown[]) {
   }
 }
 
+// DEV ONLY: Track if we've already logged the invariant violation
+let hasLoggedInvariantViolation = false;
+
 export function PlatformLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,10 +47,53 @@ export function PlatformLayout(): React.ReactElement {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  
+  // Latch to prevent redirect loops
+  const hasRedirectedRef = useRef(false);
 
   const sections = getPlatformNavSections({ hasTenantMemberships });
   
-  // Forensic logging (throttled)
+  // --------------------------------------------------------------------------
+  // Phase 2C-15E: HARD INVARIANT - PlatformLayout must NEVER render during impersonation
+  // 
+  // This is a SAFETY NET. AppRouterSwitch should redirect away before we get here.
+  // If we DO get here during impersonation, log an error and redirect immediately.
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (!authReady) return;
+    
+    if (impersonation.active) {
+      // DEV ONLY: Log invariant violation once (with stack trace)
+      if (import.meta.env.DEV && !hasLoggedInvariantViolation) {
+        hasLoggedInvariantViolation = true;
+        console.error(
+          '[PlatformLayout] INVARIANT VIOLATION: PlatformLayout rendered during impersonation!',
+          { pathname: location.pathname, impersonation: impersonation.active },
+          new Error().stack
+        );
+      }
+      
+      // Safety-net redirect - navigate to /app
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        throttledLog(
+          'PlatformLayout-impersonation-redirect',
+          '[PlatformLayout] Safety redirect to /app (impersonation active)'
+        );
+        navigate('/app', { replace: true });
+      }
+    }
+  }, [authReady, impersonation.active, location.pathname, navigate]);
+  
+  // Reset redirect latch when impersonation ends
+  useEffect(() => {
+    if (!impersonation.active) {
+      hasRedirectedRef.current = false;
+      hasLoggedInvariantViolation = false;
+    }
+  }, [impersonation.active]);
+  
+  // Forensic logging (throttled) - MUST be before any conditional returns
   useEffect(() => {
     throttledLog(
       'PlatformLayout-guard',
@@ -53,6 +101,19 @@ export function PlatformLayout(): React.ReactElement {
       { pathname: location.pathname, authReady, impersonationActive: impersonation.active, navMode }
     );
   }, [location.pathname, authReady, impersonation.active, navMode]);
+
+  // Phase 2C-15E: If impersonation is active, show redirecting placeholder
+  // (The useEffect above handles the actual navigation)
+  if (impersonation.active) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Wait for both tenant context and auth to be ready
   if (loading || !initialized || !authReady) {

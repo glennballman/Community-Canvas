@@ -62,36 +62,37 @@ export function AppRouterSwitch() {
   }, [location.pathname, authReady, impersonation.active, navMode, currentTenant]);
 
   // --------------------------------------------------------------------------
-  // CENTRALIZED IMPERSONATION REDIRECT (Phase 2C-15B)
+  // CENTRALIZED IMPERSONATION REDIRECT (Phase 2C-15E)
   // 
   // INVARIANT: Impersonation has TWO independent dimensions:
   //   1) acting_user (impersonated user identity)
   //   2) tenant_context (selected tenant for operations)
   // 
+  // HARD INVARIANT (P0):
+  //   If impersonation.active === true, /app/platform/* is FORBIDDEN.
+  //   PlatformLayout must NEVER render during impersonation.
+  // 
   // REMOVED: Forced redirect to /app/select-tenant
   //   - UserShellLayout now handles tenant-less state gracefully
   //   - User sees "Choose a Place" panel, not a forced redirect
-  // 
-  // KEPT: Platform path redirect when impersonating with tenant
-  //   - If impersonating with tenant on /app/platform/*, redirect to /app
   // --------------------------------------------------------------------------
   useEffect(() => {
     if (!authReady) return;
     
     const isPlatformPath = location.pathname.startsWith('/app/platform');
-    const hasTenant = !!impersonation.tenant;
     
-    // Impersonating with tenant on platform path - redirect to tenant app
-    if (impersonation.active && hasTenant && isPlatformPath && !hasRedirectedRef.current) {
+    // Phase 2C-15E: Impersonation BLOCKS all platform routes (regardless of tenant)
+    // PlatformLayout must NEVER render during impersonation
+    if (impersonation.active && isPlatformPath && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
       throttledLog(
         'AppRouterSwitch-redirect',
         '[AppRouterSwitch] Redirect fired:',
-        { from: location.pathname, to: '/app', reason: 'impersonation active with tenant on platform path' }
+        { from: location.pathname, to: '/app', reason: 'impersonation active - platform routes blocked' }
       );
       navigate('/app', { replace: true });
     }
-  }, [authReady, impersonation.active, impersonation.tenant, location.pathname, navigate]);
+  }, [authReady, impersonation.active, location.pathname, navigate]);
 
   // Show loading until auth is ready
   if (!authReady) {
