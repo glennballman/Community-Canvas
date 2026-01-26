@@ -2,9 +2,13 @@
  * SelectTenantPage - Explicit tenant selection for impersonation
  * 
  * Phase 2C-13.5: Impersonation Semantics Correction
+ * Phase 2C-15C: This page is OPTIONAL - never forced by router
  * 
  * When impersonating a user, this page allows explicit selection
  * of which tenant context to operate under.
+ * 
+ * Access: Only via direct navigation or "Change Place" links.
+ * NOT automatically shown - UserShellLayout is shown instead at /app.
  */
 
 import { useState, useEffect, useCallback } from 'react';

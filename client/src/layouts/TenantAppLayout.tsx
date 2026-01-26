@@ -76,11 +76,12 @@ export function TenantAppLayout(): React.ReactElement {
     switchTenant,
     impersonation,
   } = useTenant();
-  const { ready: authReady, navMode } = useAuth();
+  const { ready: authReady, navMode, token, refreshSession } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [clearingTenant, setClearingTenant] = useState(false);
   
   // Latch to prevent multiple redirects
   const hasRedirectedRef = useRef(false);
@@ -114,9 +115,9 @@ export function TenantAppLayout(): React.ReactElement {
     throttledLog(
       'TenantAppLayout-guard',
       '[TenantAppLayout] Guard eval:',
-      { pathname: location.pathname, authReady, impersonationActive: impersonation.is_impersonating, navMode, hasTenant: !!currentTenant }
+      { pathname: location.pathname, authReady, impersonationActive: impersonation.active, navMode, hasTenant: !!currentTenant }
     );
-  }, [location.pathname, authReady, impersonation.is_impersonating, navMode, currentTenant]);
+  }, [location.pathname, authReady, impersonation.active, navMode, currentTenant]);
 
   // --------------------------------------------------------------------------
   // Auth redirect
@@ -282,6 +283,36 @@ export function TenantAppLayout(): React.ReactElement {
       navigate('/app/dashboard');
     } catch (error) {
       console.error('Failed to switch tenant:', error);
+    }
+  }
+
+  // Phase 2C-15C: Clear tenant context to return to UserShell home
+  async function handleBackToUserHome() {
+    if (!impersonation.active) return;
+    
+    setClearingTenant(true);
+    try {
+      const res = await fetch('/api/admin/impersonation/set-tenant', {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ tenant_id: null }),
+      });
+      
+      const data = await res.json();
+      if (data.ok) {
+        await refreshSession();
+        navigate('/app');
+      } else {
+        console.error('Failed to clear tenant:', data.error);
+      }
+    } catch (err) {
+      console.error('Failed to clear tenant context:', err);
+    } finally {
+      setClearingTenant(false);
     }
   }
 
@@ -638,7 +669,7 @@ export function TenantAppLayout(): React.ReactElement {
 
 
           {/* Platform Admin Link (if admin) */}
-          {user.is_platform_admin && !impersonation.is_impersonating && (
+          {user.is_platform_admin && !impersonation.active && (
             <Link
               to="/admin"
               data-testid="link-platform-admin"
@@ -779,6 +810,46 @@ export function TenantAppLayout(): React.ReactElement {
 
       {/* ====== MAIN CONTENT ====== */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Phase 2C-15C: Impersonation banner with "Back to User Home" */}
+        {impersonation.active && currentTenant && (
+          <div 
+            style={{
+              height: '36px',
+              backgroundColor: '#b45309',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              padding: '0 16px',
+              flexShrink: 0,
+            }}
+            data-testid="banner-impersonation"
+          >
+            <span style={{ fontSize: '13px', color: 'white' }}>
+              <Shield size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }} />
+              Impersonating <strong>{impersonation.target_user?.display_name || impersonation.target_user?.email}</strong> 
+              {' '} in <strong>{currentTenant.tenant_name}</strong>
+            </span>
+            <button
+              onClick={handleBackToUserHome}
+              disabled={clearingTenant}
+              style={{
+                fontSize: '12px',
+                color: 'white',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '4px 10px',
+                cursor: clearingTenant ? 'wait' : 'pointer',
+                opacity: clearingTenant ? 0.7 : 1,
+              }}
+              data-testid="button-back-to-user-home"
+            >
+              {clearingTenant ? 'Clearing...' : 'Back to User Home'}
+            </button>
+          </div>
+        )}
+
         {/* Top Bar with Context Indicator and View Mode Toggle */}
         <header style={{
           height: '48px',

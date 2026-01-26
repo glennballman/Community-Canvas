@@ -182,13 +182,9 @@ export function ImpersonationConsole(): React.ReactElement {
         const refreshed = await refreshSession();
         if (refreshed) {
           await fetchStatus();
-          // Phase 2C-13.5: Navigate to select-tenant if no tenant was specified
-          // (impersonation now starts with tenant=null by default)
-          if (tenantId) {
-            navigate('/app');
-          } else {
-            navigate('/app/select-tenant');
-          }
+          // Phase 2C-15C: Always navigate to /app, never force /app/select-tenant
+          // AppRouterSwitch will render UserShellLayout if no tenant is set
+          navigate('/app');
         } else {
           setError('Failed to refresh session after starting impersonation');
         }

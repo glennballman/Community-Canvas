@@ -266,23 +266,60 @@ router.post('/start', async (req: AuthRequest, res: Response) => {
 /**
  * POST /api/admin/impersonation/set-tenant
  * 
- * Sets the tenant context for an active impersonation session.
+ * Sets or clears the tenant context for an active impersonation session.
  * Requires an active impersonation session.
- * Body: { tenant_id }
+ * 
+ * Body: { tenant_id } where tenant_id can be:
+ *   - A valid tenant UUID: Sets that tenant as the context
+ *   - null/undefined: Clears tenant context (returns to UserShell home)
+ * 
+ * Phase 2C-15C: Supports clearing tenant to return to "Back to User Home"
  */
 router.post('/set-tenant', async (req: AuthRequest, res: Response) => {
   try {
     const { tenant_id } = req.body;
-    
-    if (!tenant_id) {
-      return res.status(400).json({ ok: false, error: 'tenant_id is required' });
-    }
     
     const session = (req as any).session;
     const impersonation = session?.impersonation;
     
     if (!impersonation || new Date(impersonation.expires_at) <= new Date()) {
       return res.status(400).json({ ok: false, error: 'No active impersonation session' });
+    }
+    
+    // Phase 2C-15C: If tenant_id is null/undefined, clear tenant context
+    if (!tenant_id) {
+      session.impersonation = {
+        ...session.impersonation,
+        tenant_id: null,
+        tenant_name: null,
+        tenant_slug: null,
+        tenant_role: null,
+      };
+      
+      // Clear current tenant context
+      session.current_tenant_id = null;
+      session.roles = [];
+      
+      // Log tenant clearing
+      try {
+        await serviceQuery(`
+          UPDATE cc_impersonation_logs
+          SET tenant_id = NULL
+          WHERE admin_user_id = $1 
+            AND impersonated_user_id = $2
+            AND ended_at IS NULL
+          ORDER BY started_at DESC
+          LIMIT 1
+        `, [impersonation.admin_user_id, impersonation.impersonated_user_id]);
+      } catch (logError) {
+        console.warn('Could not update impersonation log for tenant clear:', logError);
+      }
+      
+      return res.json({
+        ok: true,
+        tenant: null,
+        message: 'Tenant context cleared',
+      });
     }
     
     // Verify the impersonated user has membership in this tenant
