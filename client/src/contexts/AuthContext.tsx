@@ -89,12 +89,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (!storedToken) {
             setImpersonation(defaultImpersonation);
+            setCCTenants([]);
             throttledLog('refreshSession-no-token', '[AuthContext] refreshSession: no token, returning false');
             return false;
         }
 
         try {
-            const res = await fetch('/api/foundation/auth/whoami', {
+            // PHASE 2C-15: Call /api/me/context as source of truth for user + memberships + impersonation
+            const res = await fetch('/api/me/context', {
                 headers: { Authorization: `Bearer ${storedToken}` },
                 credentials: 'include',
             });
@@ -110,20 +112,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
             
             if (!res.ok) {
-                console.warn('Whoami returned non-OK status:', res.status);
+                console.warn('/api/me/context returned non-OK status:', res.status);
                 return false;
             }
             
             if (!contentType || !contentType.includes('application/json')) {
-                console.warn('Whoami returned non-JSON response');
+                console.warn('/api/me/context returned non-JSON response');
                 return false;
             }
             
             const data = await res.json();
             if (data.ok) {
-                setImpersonation(data.impersonation || defaultImpersonation);
+                // Parse impersonation state
+                const impersonationData = data.impersonation || {};
+                const newImpersonation: ImpersonationState = {
+                    active: impersonationData.active || false,
+                    target_user: impersonationData.target_user || null,
+                    tenant: impersonationData.tenant_id ? {
+                        id: impersonationData.tenant_id,
+                        slug: impersonationData.tenant_slug || null,
+                        name: impersonationData.tenant_name || '',
+                    } : null,
+                    role: impersonationData.role || null,
+                    expires_at: impersonationData.expires_at || null,
+                };
+                setImpersonation(newImpersonation);
+                
+                // Update user from /api/me/context response
+                if (data.user) {
+                    setUser({
+                        id: data.user.id,
+                        email: data.user.email,
+                        firstName: null,
+                        lastName: null,
+                        displayName: data.user.full_name || data.user.email,
+                        isPlatformAdmin: data.user.is_platform_admin || false,
+                    });
+                }
+                
+                // PHASE 2C-15: Hydrate memberships from /api/me/context
+                // This returns the EFFECTIVE user's memberships (impersonated if active)
+                const memberships = data.memberships || [];
+                setCCTenants(memberships.map((m: any) => ({
+                    id: m.tenant_id,
+                    name: m.tenant_name,
+                    slug: m.tenant_slug,
+                    type: m.tenant_type || 'business',
+                    role: m.role,
+                })));
+                
+                // Dev debug logging
+                if (process.env.NODE_ENV === 'development') {
+                    console.debug('[AuthContext] refreshSession: hydrated', {
+                        impersonationActive: newImpersonation.active,
+                        targetUser: newImpersonation.target_user?.email,
+                        membershipsCount: memberships.length,
+                        memberships: memberships.map((m: any) => m.tenant_name),
+                    });
+                }
+                
                 throttledLog('refreshSession-done', '[AuthContext] refreshSession: complete', {
-                    impersonationActive: data.impersonation?.active || false,
+                    impersonationActive: newImpersonation.active,
+                    membershipsCount: memberships.length,
                     durationMs,
                 });
                 return true;
@@ -140,18 +190,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const storedToken = localStorage.getItem('cc_token');
             if (storedToken) {
                 try {
-                    const res = await fetch('/api/foundation/auth/me', {
-                        headers: { Authorization: `Bearer ${storedToken}` }
+                    // PHASE 2C-15: Use /api/me/context as single source of truth
+                    // This gives us user, memberships, and impersonation state in one call
+                    const res = await fetch('/api/me/context', {
+                        headers: { Authorization: `Bearer ${storedToken}` },
+                        credentials: 'include',
                     });
-                    const data = await res.json();
-                    if (data.success) {
-                        setUser(data.user);
-                        setCCTenants(data.tenants || []);
-                        setToken(storedToken);
-                        await refreshSession();
-                    } else {
+                    
+                    if (!res.ok) {
+                        console.warn('Auth check failed:', res.status);
                         localStorage.removeItem('cc_token');
                         setToken(null);
+                    } else {
+                        const data = await res.json();
+                        if (data.ok) {
+                            setToken(storedToken);
+                            
+                            // Set user from context response
+                            setUser({
+                                id: data.user.id,
+                                email: data.user.email,
+                                firstName: null,
+                                lastName: null,
+                                displayName: data.user.full_name || data.user.email,
+                                isPlatformAdmin: data.user.is_platform_admin || false,
+                            });
+                            
+                            // Set memberships
+                            const memberships = data.memberships || [];
+                            setCCTenants(memberships.map((m: any) => ({
+                                id: m.tenant_id,
+                                name: m.tenant_name,
+                                slug: m.tenant_slug,
+                                type: m.tenant_type || 'business',
+                                role: m.role,
+                            })));
+                            
+                            // Set impersonation state
+                            const impersonationData = data.impersonation || {};
+                            setImpersonation({
+                                active: impersonationData.active || false,
+                                target_user: impersonationData.target_user || null,
+                                tenant: impersonationData.tenant_id ? {
+                                    id: impersonationData.tenant_id,
+                                    slug: impersonationData.tenant_slug || null,
+                                    name: impersonationData.tenant_name || '',
+                                } : null,
+                                role: impersonationData.role || null,
+                                expires_at: impersonationData.expires_at || null,
+                            });
+                            
+                            if (process.env.NODE_ENV === 'development') {
+                                console.debug('[AuthContext] checkAuth: hydrated', {
+                                    isPlatformAdmin: data.user.is_platform_admin,
+                                    membershipsCount: memberships.length,
+                                    impersonationActive: impersonationData.active || false,
+                                });
+                            }
+                        } else {
+                            localStorage.removeItem('cc_token');
+                            setToken(null);
+                        }
                     }
                 } catch (err) {
                     console.error('Auth check failed:', err);
@@ -166,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         }
         checkAuth();
-    }, [refreshSession]);
+    }, []);
 
     useEffect(() => {
         async function devAutoLogin() {
@@ -185,6 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const res = await fetch('/api/foundation/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ email, password })
             });
             const data = await res.json();
@@ -192,9 +292,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (data.success) {
                 localStorage.setItem('cc_token', data.token);
                 setToken(data.token);
-                setUser(data.user);
-                setCCTenants(data.tenants || []);
-                await refreshSession();
+                
+                // PHASE 2C-15: After login, call /api/me/context to get full state
+                // This ensures memberships and impersonation are properly hydrated
+                const contextRes = await fetch('/api/me/context', {
+                    headers: { Authorization: `Bearer ${data.token}` },
+                    credentials: 'include',
+                });
+                
+                if (contextRes.ok) {
+                    const contextData = await contextRes.json();
+                    if (contextData.ok) {
+                        // Set user from context
+                        setUser({
+                            id: contextData.user.id,
+                            email: contextData.user.email,
+                            firstName: null,
+                            lastName: null,
+                            displayName: contextData.user.full_name || contextData.user.email,
+                            isPlatformAdmin: contextData.user.is_platform_admin || false,
+                        });
+                        
+                        // Set memberships
+                        const memberships = contextData.memberships || [];
+                        setCCTenants(memberships.map((m: any) => ({
+                            id: m.tenant_id,
+                            name: m.tenant_name,
+                            slug: m.tenant_slug,
+                            type: m.tenant_type || 'business',
+                            role: m.role,
+                        })));
+                        
+                        // Set impersonation
+                        const impersonationData = contextData.impersonation || {};
+                        setImpersonation({
+                            active: impersonationData.active || false,
+                            target_user: impersonationData.target_user || null,
+                            tenant: impersonationData.tenant_id ? {
+                                id: impersonationData.tenant_id,
+                                slug: impersonationData.tenant_slug || null,
+                                name: impersonationData.tenant_name || '',
+                            } : null,
+                            role: impersonationData.role || null,
+                            expires_at: impersonationData.expires_at || null,
+                        });
+                    }
+                } else {
+                    // Fallback to login response data
+                    setUser(data.user);
+                    setCCTenants(data.tenants || []);
+                }
+                
                 return true;
             }
             return false;
@@ -221,12 +369,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         }
         
+        // PHASE 2C-15: Clear all local state
         localStorage.removeItem('cc_token');
+        localStorage.removeItem('cc_view_mode');
+        sessionStorage.clear(); // Clear any session-based state
+        
         setToken(null);
         setUser(null);
         setCCTenants([]);
         setImpersonation(defaultImpersonation);
+        setReady(false);
         queryClient.clear();
+        
+        // Hard navigate to ensure clean state
+        window.location.href = '/';
     }
 
     const hasTenantMemberships = ccTenants.length > 0;

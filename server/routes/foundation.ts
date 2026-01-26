@@ -175,6 +175,25 @@ router.post('/auth/logout', authenticateToken, async (req: AuthRequest, res: Res
     try {
         console.log(`[AUTH] User ${req.user!.userId} logged out`);
         
+        // PHASE 2C-15: Destroy tenant session
+        const session = (req as any).session;
+        if (session) {
+            // Clear impersonation if active
+            if (session.impersonation) {
+                delete session.impersonation;
+            }
+            // Destroy the session
+            session.destroy((err: any) => {
+                if (err) {
+                    console.error('Session destroy error:', err);
+                }
+            });
+        }
+        
+        // Clear session cookies
+        res.clearCookie('tenant_sid', { path: '/' });
+        res.clearCookie('platform_sid', { path: '/' });
+        
         res.json({
             success: true,
             message: 'Logged out successfully'

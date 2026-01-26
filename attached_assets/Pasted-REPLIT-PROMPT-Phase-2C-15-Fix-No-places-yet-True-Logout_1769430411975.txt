@@ -1,0 +1,54 @@
+REPLIT PROMPT — Phase 2C-15: Fix “No places yet” + True Logout (minimal, no rerouting redesign)
+
+ROLE: Senior platform engineer + forensic debugger.
+CONSTRAINTS:
+- Do not change AppRouterSwitch ownership rules.
+- Do not add new layouts.
+- Do not invent new auth modes.
+- Fix only memberships hydration + logout destruction.
+
+PART 1 — Fix memberships source-of-truth
+1) In client/src/contexts/AuthContext.tsx:
+   - Make refreshSession() call GET /api/me/context (not only /api/foundation/auth/whoami).
+   - Update state:
+     user <- response.user
+     impersonation <- response.impersonation
+     ccTenants <- response.memberships
+     hasTenantMemberships <- memberships.length > 0
+     navMode must respect impersonation.active (impersonating wins)
+   - Ensure ready=true is set after /api/me/context resolves (or fails with unauth).
+
+2) In UserShellLayout:
+   - Only show “No places yet” when ready=true AND memberships.length===0.
+   - If ready=false, show Loading.
+
+3) Add a temporary dev log (server + client) printing:
+   - acting_user_id resolved
+   - memberships.length
+   - impersonation.active
+   - to prove the client receives Mathew’s 1 membership.
+
+PART 2 — Fix logout for dual sessions + local token
+1) Implement POST /api/foundation/auth/logout (or /api/auth/logout if that’s the canonical router):
+   - Destroy tenant session (tenant_sid)
+   - Also destroy platform session (platform_sid) even if mounted on a different session middleware.
+     If two express-session middlewares overwrite req.session, store them as req.tenantSession and req.platformSession at mount time so handler can destroy both.
+   - Clear both cookies via res.clearCookie('tenant_sid') and res.clearCookie('platform_sid')
+   - Return { ok: true }
+
+2) In AuthContext.logout():
+   - await POST logout
+   - localStorage.removeItem('cc_token')
+   - clear any tenant/impersonation sessionStorage keys
+   - reset auth state to null/empty
+   - hard navigate to / (or /login)
+
+PART 3 — Tests
+- Add a test that after logout:
+  - GET /api/me/context returns 401 or ok:false unauth
+  - Refreshing the SPA lands unauthenticated
+
+DELIVERABLE:
+- Commit with minimal changes + a short proof note showing:
+  - Mathew impersonation now shows 1 place (Woods End Landing)
+  - logout truly logs out (refresh stays logged out)

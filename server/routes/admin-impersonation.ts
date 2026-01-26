@@ -190,6 +190,28 @@ router.post('/start', async (req: AuthRequest, res: Response) => {
         session.current_tenant_id = selectedTenant.tenant_id;
         session.roles = [selectedTenant.role];
       }
+      
+      // PHASE 2C-15G: Explicitly save session to ensure impersonation is persisted
+      // This is critical - without save(), the session might not be persisted before response
+      await new Promise<void>((resolve, reject) => {
+        session.save((err: Error | null) => {
+          if (err) {
+            console.error('Failed to save impersonation session:', err);
+            reject(err);
+          } else {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[Impersonation] Session saved:', {
+                sessionId: session.id?.substring(0, 8) || 'unknown',
+                impersonated_user_id: session.impersonation?.impersonated_user_id?.substring(0, 8),
+                tenant_id: session.impersonation?.tenant_id?.substring(0, 8) || 'null',
+              });
+            }
+            resolve();
+          }
+        });
+      });
+    } else {
+      console.warn('[Impersonation] No session available to save impersonation state!');
     }
     
     // Log the impersonation

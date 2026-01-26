@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { queryClient } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,7 @@ interface ImpersonationStatus {
 export function ImpersonationConsole(): React.ReactElement {
   const navigate = useNavigate();
   const { refreshSession, impersonation, token } = useAuth();
+  const { refreshContext: refreshTenantContext } = useTenant();
   const [users, setUsers] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -179,7 +181,13 @@ export function ImpersonationConsole(): React.ReactElement {
       if (data.ok) {
         setShowOverlay(true);
         queryClient.clear();
+        
+        // PHASE 2C-15G: Refresh BOTH AuthContext and TenantContext
+        // AuthContext updates user identity and impersonation state
+        // TenantContext updates memberships list for UserShellLayout
         const refreshed = await refreshSession();
+        await refreshTenantContext();
+        
         if (refreshed) {
           await fetchStatus();
           // Phase 2C-15C: Always navigate to /app, never force /app/select-tenant
@@ -216,7 +224,9 @@ export function ImpersonationConsole(): React.ReactElement {
       
       if (data.ok) {
         queryClient.clear();
+        // PHASE 2C-15G: Refresh both contexts when stopping impersonation
         const refreshed = await refreshSession();
+        await refreshTenantContext();
         if (refreshed) {
           await fetchStatus();
         } else {

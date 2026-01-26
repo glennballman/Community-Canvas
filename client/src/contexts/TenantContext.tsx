@@ -369,13 +369,13 @@ export function TenantProvider({ children }: TenantProviderProps) {
     if (found) return found;
     
     // If impersonating and not found in memberships, synthesize from impersonation data
-    if (impersonation.is_impersonating && impersonation.tenant_id === currentTenantId) {
+    if (impersonation.active && impersonation.tenant_id === currentTenantId) {
       return {
         tenant_id: impersonation.tenant_id,
         tenant_name: impersonation.tenant_name || 'Unknown Tenant',
-        tenant_slug: '', // Not critical for queries
-        tenant_type: (impersonation.tenant_type as TenantMembership['tenant_type']) || 'business',
-        role: impersonation.tenant_role || 'tenant_admin', // Use impersonated user's actual role
+        tenant_slug: impersonation.tenant_slug || '',
+        tenant_type: 'business', // Default type
+        role: impersonation.role || 'tenant_admin',
         is_primary: false,
       };
     }

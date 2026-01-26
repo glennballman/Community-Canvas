@@ -18,6 +18,16 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
     const realUserId = req.user?.userId;
     const session = (req as any).session;
     
+    // PHASE 2C-15G: Debug session state for impersonation
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[/api/me/context] Session debug:', {
+        hasSession: !!session,
+        sessionId: session?.id?.substring(0, 8) || 'none',
+        hasImpersonation: !!session?.impersonation,
+        impersonatedUserId: session?.impersonation?.impersonated_user_id?.substring(0, 8) || 'none',
+      });
+    }
+    
     // Check for active impersonation
     const impersonation = session?.impersonation;
     const isImpersonating = impersonation?.impersonated_user_id && 
@@ -65,6 +75,16 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
     `, [effectiveUserId]);
     
     const memberships = membershipsResult.rows;
+    
+    // PHASE 2C-15: Debug logging for membership hydration
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[/api/me/context] DEBUG:', {
+        effectiveUserId,
+        isImpersonating,
+        membershipsCount: memberships.length,
+        memberships: memberships.map((m: any) => ({ name: m.tenant_name, role: m.role })),
+      });
+    }
     
     // Determine current tenant context
     let currentTenantId = session?.current_tenant_id || null;
