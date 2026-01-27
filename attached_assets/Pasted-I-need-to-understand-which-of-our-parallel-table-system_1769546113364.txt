@@ -1,0 +1,82 @@
+I need to understand which of our parallel table systems are actively used vs. deprecated.
+
+### Part 1: Service Runs - Which Version is Active?
+```sql
+-- V1: cc_service_runs
+SELECT 
+    COUNT(*) as total_rows,
+    COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '90 days') as created_last_90_days,
+    MAX(created_at) as most_recent_created,
+    MAX(updated_at) as most_recent_updated
+FROM cc_service_runs;
+
+-- V2: cc_sr_service_runs
+SELECT 
+    COUNT(*) as total_rows,
+    COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '90 days') as created_last_90_days,
+    MAX(created_at) as most_recent_created,
+    MAX(updated_at) as most_recent_updated
+FROM cc_sr_service_runs;
+
+-- V3: cc_n3_runs
+SELECT 
+    COUNT(*) as total_rows,
+    COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '90 days') as created_last_90_days,
+    MAX(created_at) as most_recent_created,
+    MAX(updated_at) as most_recent_updated
+FROM cc_n3_runs;
+```
+
+### Part 2: Bids - Are Both Systems Active?
+```sql
+-- Procurement bids
+SELECT 
+    COUNT(*) as total_rows,
+    COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '90 days') as created_last_90_days,
+    MAX(created_at) as most_recent_created
+FROM cc_bids;
+
+-- Service run bids
+SELECT 
+    COUNT(*) as total_rows,
+    COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '90 days') as created_last_90_days,
+    MAX(created_at) as most_recent_created
+FROM cc_sr_contractor_bids;
+```
+
+### Part 3: Check Foreign Key References
+```sql
+-- What tables reference cc_service_runs (V1)?
+SELECT 
+    tc.table_name as referencing_table,
+    kcu.column_name as referencing_column,
+    ccu.table_name as referenced_table
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY' 
+  AND ccu.table_name IN ('cc_service_runs', 'cc_sr_service_runs', 'cc_n3_runs', 'cc_bids', 'cc_sr_contractor_bids');
+```
+
+### Part 4: Check API/Code References
+```bash
+# In the codebase, search for references to each table
+grep -r "cc_service_runs" --include="*.ts" --include="*.tsx" | wc -l
+grep -r "cc_sr_service_runs" --include="*.ts" --include="*.tsx" | wc -l
+grep -r "cc_n3_runs" --include="*.ts" --include="*.tsx" | wc -l
+grep -r "cc_bids" --include="*.ts" --include="*.tsx" | wc -l
+grep -r "cc_sr_contractor_bids" --include="*.ts" --include="*.tsx" | wc -l
+```
+
+### Output Request
+
+Create a markdown document `parallel-systems-audit.md` with:
+
+1. **Row counts and activity** for each parallel system
+2. **Foreign key dependencies** - what would break if we deprecated a table
+3. **Code references** - which tables are actively used in code
+4. **Recommendation** for each parallel system:
+   - KEEP (actively used, canonical)
+   - DEPRECATE (no longer used, can drop)
+   - CONSOLIDATE (merge into another table)
+   - CLARIFY (different purpose, both valid)
