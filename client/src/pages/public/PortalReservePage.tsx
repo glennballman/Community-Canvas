@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -397,40 +397,11 @@ function ConfirmationView({
 
 export default function PortalReservePage() {
   const params = useParams();
-  const [searchParams] = useSearchParams();
   const portalSlug = params.portalSlug as string;
   const assetIdParam = params.assetId as string | undefined;
   
-  const initialDates = useMemo(() => {
-    const startParam = searchParams.get('start');
-    const endParam = searchParams.get('end');
-    const partySizeParam = searchParams.get('partySize');
-    
-    let start: Date | undefined;
-    let end: Date | undefined;
-    
-    if (startParam) {
-      const parsed = new Date(startParam);
-      if (!isNaN(parsed.getTime())) {
-        start = parsed;
-      }
-    }
-    if (endParam) {
-      const parsed = new Date(endParam);
-      if (!isNaN(parsed.getTime())) {
-        end = parsed;
-      }
-    }
-    
-    return {
-      start: start || addDays(new Date(), 1),
-      end: end || addDays(new Date(), 2),
-      partySize: partySizeParam ? parseInt(partySizeParam, 10) || 0 : 0
-    };
-  }, [searchParams]);
-  
-  const [startDate, setStartDate] = useState<Date | undefined>(initialDates.start);
-  const [endDate, setEndDate] = useState<Date | undefined>(initialDates.end);
+  const [startDate, setStartDate] = useState<Date | undefined>(addDays(new Date(), 1));
+  const [endDate, setEndDate] = useState<Date | undefined>(addDays(new Date(), 2));
   const [selectedAssetId, setSelectedAssetId] = useState<string | undefined>(assetIdParam);
   const [selectedAssetName, setSelectedAssetName] = useState<string>('');
   const [showForm, setShowForm] = useState(false);

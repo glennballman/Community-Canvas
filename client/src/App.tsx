@@ -257,7 +257,6 @@ import TenantsPageApp from './pages/app/admin/TenantsPage';
 // Pages - Public
 import PresentationViewer from './pages/public/PresentationViewer';
 import PortalHomePage from './pages/public/PortalHomePage';
-import PortalSearchPage from './pages/public/PortalSearchPage';
 import PortalReservePage from './pages/public/PortalReservePage';
 import PortalOnboardingPage from './pages/public/PortalOnboardingPage';
 import TripPortalPage from './pages/public/TripPortalPage';
