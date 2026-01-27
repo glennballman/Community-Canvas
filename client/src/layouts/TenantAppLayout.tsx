@@ -74,7 +74,6 @@ export function TenantAppLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   const { 
-    user, 
     memberships, 
     currentTenant, 
     loading, 
@@ -83,7 +82,8 @@ export function TenantAppLayout(): React.ReactElement {
     switchTenant,
     impersonation,
   } = useTenant();
-  const { ready: authReady, navMode, token, refreshSession } = useAuth();
+  // Phase 2C-16: User from AuthContext (single identity authority)
+  const { user, ready: authReady, navMode, token, refreshSession } = useAuth();
   
   // FORENSIC: Top-of-render dump
   dbg('[TenantAppLayout/render]', {
@@ -294,7 +294,8 @@ export function TenantAppLayout(): React.ReactElement {
     isAuthenticated: !!user,
     hasTenant: !!currentTenant,
     hasPortal: false,
-    isPlatformAdmin: user?.is_platform_admin || false,
+    // Phase 2C-16: isPlatformAdmin camelCase (AuthContext)
+    isPlatformAdmin: user?.isPlatformAdmin || false,
     tenantRole: normalizeRole(currentTenant?.role),
     portalRole: undefined,
     founderNavEnabled: false, // Founder mode now has its own layout
@@ -696,10 +697,10 @@ export function TenantAppLayout(): React.ReactElement {
           </Link>
 
 
-          {/* Platform Admin Link (if admin) */}
-          {user.is_platform_admin && !impersonation.active && (
+          {/* Phase 2C-16: Platform Admin Link (if admin) - isPlatformAdmin camelCase */}
+          {user.isPlatformAdmin && !impersonation.active && (
             <Link
-              to="/admin"
+              to="/app/platform"
               data-testid="link-platform-admin"
               style={{
                 display: 'flex',
@@ -750,7 +751,7 @@ export function TenantAppLayout(): React.ReactElement {
                   fontSize: '14px',
                   fontWeight: 500,
                 }}>
-                  {(user.full_name || user.email)[0].toUpperCase()}
+                  {(user.displayName || user.email)[0].toUpperCase()}
                 </div>
                 {!sidebarCollapsed && (
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -761,7 +762,7 @@ export function TenantAppLayout(): React.ReactElement {
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                     }}>
-                      {user.full_name || 'User'}
+                      {user.displayName || 'User'}
                     </div>
                     <div style={{ 
                       fontSize: '12px', 

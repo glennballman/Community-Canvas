@@ -1,11 +1,15 @@
 /**
  * TENANT CONTEXT
  * 
- * Manages:
- * - Current user
+ * Phase 2C-16: Single Identity Authority
+ * 
+ * TenantContext manages TENANT-SCOPED state only:
  * - User's tenant memberships  
  * - Currently selected tenant
- * - Impersonation state
+ * - Impersonation state (for tenant context refresh)
+ * 
+ * IMPORTANT: User IDENTITY must come from AuthContext only.
+ * TenantContext does NOT own user identity.
  * 
  * Phase 2C-15B: Uses canonical ImpersonationState from types/session.ts
  */
@@ -30,12 +34,9 @@ import {
 // TYPES
 // ============================================================================
 
-export interface User {
-  id: string;
-  email: string;
-  full_name?: string;
-  is_platform_admin: boolean;
-}
+// Phase 2C-16: User type removed from TenantContext
+// User identity MUST come from AuthContext only
+// This prevents "two user authorities" bugs
 
 export interface TenantMembership {
   tenant_id: string;
@@ -50,19 +51,21 @@ export interface TenantMembership {
 export type { ImpersonationState } from '@/types/session';
 
 interface TenantContextValue {
-  // User
-  user: User | null;
+  // Phase 2C-16: user REMOVED - use AuthContext for identity
   
   // Tenants
   memberships: TenantMembership[];
   currentTenant: TenantMembership | null;
   
-  // Impersonation
+  // Impersonation (for tenant context, not identity)
   impersonation: ImpersonationState;
   
   // State
   loading: boolean;
   initialized: boolean;
+  
+  // Helpers
+  isCommunityOperator: boolean;
   
   // Actions
   switchTenant: (tenantId: string) => Promise<void>;
@@ -142,7 +145,7 @@ interface TenantProviderProps {
 }
 
 export function TenantProvider({ children }: TenantProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  // Phase 2C-16: user state REMOVED - use AuthContext for identity
   const [memberships, setMemberships] = useState<TenantMembership[]>([]);
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
   const [impersonation, setImpersonation] = useState<ImpersonationState>(defaultImpersonation);
@@ -157,7 +160,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
     try {
       const token = localStorage.getItem('cc_token');
       if (!token) {
-        setUser(null);
+        // Phase 2C-16: user state removed - only reset tenant-scoped state
         setMemberships([]);
         setCurrentTenantId(null);
         setImpersonation(defaultImpersonation);
@@ -175,8 +178,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       
       if (!response.ok) {
         if (response.status === 401) {
-          // Not authenticated
-          setUser(null);
+          // Not authenticated - reset tenant-scoped state only
           setMemberships([]);
           setCurrentTenantId(null);
           setImpersonation(defaultImpersonation);
@@ -186,7 +188,7 @@ export function TenantProvider({ children }: TenantProviderProps) {
       
       const data = await response.json();
       
-      setUser(data.user || null);
+      // Phase 2C-16: user state removed - we only update tenant-scoped data
       setMemberships(data.memberships || []);
       setCurrentTenantId(data.current_tenant_id || null);
       
@@ -218,18 +220,16 @@ export function TenantProvider({ children }: TenantProviderProps) {
       }
     } catch (error) {
       console.error('Failed to fetch context:', error);
-      setUser(null);
+      // Phase 2C-16: user state removed
     } finally {
       setLoading(false);
       setInitialized(true);
     }
   }, []);
 
-  // Use a ref to track user state for the interval check without triggering re-renders
-  const userRef = useRef(user);
-  useEffect(() => {
-    userRef.current = user;
-  }, [user]);
+  // Phase 2C-16: userRef removed - user identity comes from AuthContext
+  // Track if we've already fetched context
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     fetchContext();
@@ -237,12 +237,15 @@ export function TenantProvider({ children }: TenantProviderProps) {
     // Re-fetch when token changes (after auth completes)
     const checkToken = () => {
       const token = localStorage.getItem('cc_token');
-      if (token && !userRef.current) {
+      if (token && !hasFetchedRef.current) {
+        hasFetchedRef.current = true;
         fetchContext();
+      } else if (!token) {
+        hasFetchedRef.current = false;
       }
     };
     
-    // Poll for token every 500ms until we have a user
+    // Poll for token every 500ms until we've fetched
     const interval = setInterval(checkToken, 500);
     
     // Also listen for storage events (token changes from other tabs)
@@ -387,13 +390,18 @@ export function TenantProvider({ children }: TenantProviderProps) {
   // Value
   // --------------------------------------------------------------------------
 
+  // Phase 2C-16: Compute isCommunityOperator helper (tenant-scoped, not identity)
+  const isCommunityOperator = currentTenant?.tenant_type === 'community' && 
+    ['community_operator', 'community_admin', 'tenant_admin'].includes(currentTenant?.role || '');
+
   const value: TenantContextValue = {
-    user,
+    // Phase 2C-16: user REMOVED - use AuthContext for identity
     memberships,
     currentTenant,
     impersonation,
     loading,
     initialized,
+    isCommunityOperator,
     switchTenant,
     clearTenant,
     refreshContext,

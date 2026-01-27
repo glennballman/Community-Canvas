@@ -7,7 +7,7 @@
 
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,8 @@ import {
 } from 'lucide-react';
 
 export default function PlatformHomePage() {
-  const { user } = useTenant();
+  // Phase 2C-16: User from AuthContext (single identity authority)
+  const { user } = useAuth();
 
   // Fetch platform stats
   const { data: stats } = useQuery<{
@@ -33,7 +34,7 @@ export default function PlatformHomePage() {
     totalPortals: number;
   }>({
     queryKey: ['/api/platform/stats'],
-    enabled: !!user?.is_platform_admin,
+    enabled: !!user?.isPlatformAdmin,
     retry: 1,
   });
 

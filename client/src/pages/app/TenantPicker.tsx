@@ -16,6 +16,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTenant, TenantMembership } from '../../contexts/TenantContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { ExternalLink, Plus, Search } from 'lucide-react';
 
 // ============================================================================
@@ -35,7 +36,8 @@ const TYPE_ICONS: Record<string, string> = {
 
 export function TenantPicker(): React.ReactElement {
   const navigate = useNavigate();
-  const { user, memberships, switchTenant, impersonation } = useTenant();
+  const { memberships, switchTenant, impersonation } = useTenant();
+  const { user } = useAuth();
 
   // --------------------------------------------------------------------------
   // Handle manage click
@@ -307,14 +309,15 @@ export function TenantPicker(): React.ReactElement {
           <span style={{ fontWeight: 600 }}>Community Canvas</span>
         </div>
         <div style={styles.headerRight}>
-          {user?.is_platform_admin && !impersonation.active && (
-            <Link to="/admin" style={styles.adminLink}>
+          {/* Phase 2C-16: user from AuthContext, isPlatformAdmin camelCase */}
+          {user?.isPlatformAdmin && !impersonation.active && (
+            <Link to="/app/platform" style={styles.adminLink}>
               Platform Admin
             </Link>
           )}
           <div style={styles.userInfo}>
             <div style={styles.avatar}>
-              {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
+              {(user?.displayName || user?.email || 'U')[0].toUpperCase()}
             </div>
             <span style={{ fontSize: '14px', color: '#9ca3af' }}>
               {user?.email}

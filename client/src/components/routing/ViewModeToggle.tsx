@@ -6,11 +6,11 @@
  * Persists selection to localStorage.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, User, ChevronDown } from 'lucide-react';
 import { getViewMode, setViewMode, ViewMode } from './AppHomeRedirect';
-import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,11 +21,11 @@ import { Button } from '@/components/ui/button';
 
 export function ViewModeToggle(): React.ReactElement | null {
   const navigate = useNavigate();
-  const { user } = useTenant();
+  const { user } = useAuth();
   const [currentMode, setCurrentMode] = useState<ViewMode>(getViewMode);
 
-  // Only show for platform admins
-  if (!user?.is_platform_admin) {
+  // Phase 2C-16: Only show for platform admins (AuthContext, camelCase)
+  if (!user?.isPlatformAdmin) {
     return null;
   }
 

@@ -18,7 +18,8 @@ export function shortUser(u: any): { id: string; email: string; isPlatformAdmin:
   return {
     id: u.id?.slice?.(0, 8) || u.id,
     email: u.email,
-    isPlatformAdmin: !!u.is_platform_admin,
+    // Phase 2C-16: Support both formats (snake_case from API, camelCase from AuthContext)
+    isPlatformAdmin: !!(u.isPlatformAdmin ?? u.is_platform_admin),
   };
 }
 

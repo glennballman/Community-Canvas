@@ -1,0 +1,277 @@
+REPLIT PROMPT — Phase 2C-16 "Single Identity Authority (AuthContext) + TenantContext Tenant-Only"
+
+ROLE: Senior Platform Architect + Forensic Refactorer (safe cleanup)
+GOAL: Make it impossible to regress into "two user authorities."
+HARD RULE: Identity/user must come from AuthContext only. TenantContext must not own user identity.
+
+========================================================
+0) Non-Negotiables
+========================================================
+
+- Do not change impersonation model, layouts, or routing structure.
+- Do not change backend behavior.
+- Only cleanup client state authority and callers.
+- Maintain existing API calls (/api/me/context) but ensure one source of truth.
+
+========================================================
+PART A — Inventory (required before edits)
+========================================================
+
+Run ripgrep to find all reads/writes of TenantContext user:
+```bash
+rg "useTenant\\(\\)" client/src -n
+rg "\\buser\\b.*useTenant\\(" client/src -n
+rg "TenantContext.*user" client/src -n
+rg "is_platform_admin" client/src -n
+rg "setUser\\(" client/src/contexts/TenantContext.tsx -n
+rg "data\\.user" client/src/contexts/TenantContext.tsx -n
+```
+
+Also check for type imports that could cause silent mismatches:
+```bash
+rg "import.*User.*from.*TenantContext" client/src -n
+rg "TenantContext\.User" client/src -n
+```
+
+Output a short report (in chat) listing:
+
+1. Every file that reads `const { user } = useTenant()` (or equivalent)
+2. Whether that usage is "identity" vs "tenant-scoped UI"
+3. Any checks against `user.is_platform_admin`
+4. Any imports of the User type from TenantContext
+
+DO NOT EDIT ANYTHING until the report is produced.
+
+========================================================
+PART B — Remove identity authority from TenantContext
+========================================================
+FILE: client/src/contexts/TenantContext.tsx
+
+SAFETY CHECK BEFORE EDITING:
+Confirm in the Part A inventory that NO legitimate tenant-scoped user data exists 
+(e.g., "user's role within this tenant" or "user's permissions for this tenant").
+
+If found: flag for discussion, do not blindly remove.
+
+Based on forensic evidence, TenantContext.user was just duplicating AuthContext.user 
+with no tenant-specific enrichment, so removal should be safe. But verify first.
+
+B1) Deprecate TenantContext.user (do not keep two users)
+
+- Remove `user` from the TenantContext public value (context shape).
+- Remove `setUser(data.user || null)` and any user state entirely.
+- TenantContext should ONLY contain:
+  - currentTenant / tenant_id
+  - memberships (if truly tenant-scoped list is needed)
+  - current portal / circle context fields
+  - loading / initialized
+  - refreshContext() (still ok)
+
+If something truly needs the authenticated user: it must use useAuth().
+
+B2) Ensure TenantContext still refreshes tenant context correctly
+
+Keep the /api/me/context fetch for:
+- memberships
+- current_tenant_id
+- current portal/circle context
+
+...but ignore data.user in TenantContext completely.
+
+========================================================
+PART C — Update all call sites to use AuthContext for identity
+========================================================
+
+For every file found in PART A:
+
+C1) Replace identity reads
+
+Replace patterns like:
+```typescript
+const { user } = useTenant();
+```
+
+with:
+```typescript
+const { user } = useAuth();
+```
+
+C2) Replace snake_case admin checks
+
+Any:
+```typescript
+user.is_platform_admin
+```
+
+must become:
+```typescript
+user.isPlatformAdmin
+```
+
+because AuthContext owns identity normalization.
+
+C3) Fix type imports
+
+Any component importing the User type from TenantContext must be updated to use 
+AuthContext's User type (which uses camelCase: isPlatformAdmin).
+
+========================================================
+PART D — PlatformLayout must use AuthContext ONLY
+========================================================
+FILE: client/src/layouts/PlatformLayout.tsx
+
+D1) Replace source of user
+
+Change:
+```typescript
+const { user, loading, initialized } = useTenant();
+```
+
+to:
+```typescript
+const { user, ready: authReady, logout, impersonation } = useAuth();
+const { loading, initialized } = useTenant(); // keep only if needed for non-identity gating
+```
+
+D2) Admin check uses AuthContext
+
+Replace:
+```typescript
+if (!user.is_platform_admin) ...
+```
+
+with:
+```typescript
+if (!user?.isPlatformAdmin) ...
+```
+
+D3) Ensure early-return gates are coherent
+
+- If impersonation.active in PlatformLayout: keep redirect spinner logic (fine)
+- If !authReady show "Loading session…" (fine)
+- Never read TenantContext.user again
+
+========================================================
+PART E — Make impersonation start/stop refresh both contexts
+========================================================
+
+Even though identity is now AuthContext-only, refresh TenantContext on start/stop 
+to keep tenant-context UI consistent (memberships, current_tenant, etc.).
+
+FILES:
+- client/src/pages/app/platform/ImpersonationConsole.tsx (start)
+- client/src/components/ImpersonationBanner.tsx (stop)
+
+E1) Add TenantContext refresh call
+
+Import useTenant() and call refreshContext() after refreshSession():
+```typescript
+const { refreshContext } = useTenant();
+...
+await refreshSession();
+await refreshContext();
+```
+
+This is NOT identity authority — it's tenant context refresh for memberships/tenant data.
+
+========================================================
+PART F — Guardrails to prevent regression
+========================================================
+
+F1) Remove user from TenantContext type (compile-time guard)
+
+In client/src/contexts/TenantContext.tsx:
+
+Remove `user` from the exported context type/interface entirely.
+
+This makes it a TypeScript compile error if anyone tries to access TenantContext.user 
+in the future. This is the strongest possible guardrail.
+
+F2) Dev-only invariant warning
+
+Create a tiny helper in client/src/lib/assertSingleIdentity.ts:
+
+- In dev, warn if any component somehow tries to access TenantContext.user
+- This is a belt-and-suspenders check since the type guard should prevent it
+
+F3) Add a lint grep script (fast CI guard)
+
+Add scripts/no-tenantcontext-user.sh:
+```bash
+#!/bin/bash
+# Fail if TenantContext.user pattern found in client code
+
+if rg "useTenant.*user" client/src --quiet; then
+  echo "ERROR: Found useTenant() destructuring 'user' - use useAuth() instead"
+  exit 1
+fi
+
+if rg "is_platform_admin" client/src --quiet; then
+  echo "ERROR: Found snake_case is_platform_admin - use isPlatformAdmin from AuthContext"
+  exit 1
+fi
+
+echo "OK: No TenantContext user patterns found"
+exit 0
+```
+
+Wire into pnpm lint (or existing lint pipeline).
+
+========================================================
+PART G — Verification (must be shown in output)
+========================================================
+
+1) TypeScript + Lint must pass:
+```bash
+pnpm typecheck
+pnpm lint
+```
+
+2) Run the impersonation flow manually:
+   - Glenn platform → impersonate Mathew → land on /app/places
+   - Exit impersonation → return to /app/platform
+   - No blank screens at any step
+
+3) Confirm TenantContext.user is gone from codebase:
+```bash
+rg "TenantContext.*user" client/src -n
+# Should return: no matches
+
+rg "useTenant.*user" client/src -n  
+# Should return: no matches
+
+rg "is_platform_admin" client/src -n
+# Should return: no matches (client-side)
+```
+
+4) Confirm User type is only from AuthContext:
+```bash
+rg "import.*User.*from.*TenantContext" client/src -n
+# Should return: no matches
+```
+
+========================================================
+DELIVERABLES (must be shown in response)
+========================================================
+
+1. The PART A inventory report (before any edits)
+2. Confirmation of PART B safety check
+3. A summary of changes (files edited, lines changed)
+4. Output of all verification commands from PART G
+5. Confirmation that impersonation flow works end-to-end
+
+========================================================
+SUMMARY OF EXPECTED CHANGES
+========================================================
+
+| File | Change |
+|------|--------|
+| TenantContext.tsx | Remove user state, remove from context type |
+| PlatformLayout.tsx | Verify using AuthContext.user (already done, confirm) |
+| ImpersonationBanner.tsx | Verify refreshContext() call exists (already done, confirm) |
+| ImpersonationConsole.tsx | Verify refreshContext() call exists (already done, confirm) |
+| Any other files from inventory | Update to use useAuth() for identity |
+| scripts/no-tenantcontext-user.sh | New file (lint guard) |
+| client/src/lib/assertSingleIdentity.ts | New file (dev warning, optional) |
+
+This is cleanup only. No new architecture. No guessing.

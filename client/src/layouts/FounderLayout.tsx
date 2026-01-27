@@ -23,8 +23,8 @@ import { getFounderNavSections, FounderNavSection, FounderNavItem } from '../lib
 export function FounderLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading, initialized } = useTenant();
-  const { logout } = useAuth();
+  const { loading, initialized } = useTenant();
+  const { user, logout } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -146,7 +146,7 @@ export function FounderLayout(): React.ReactElement {
                 <User className="h-3.5 w-3.5 text-primary" />
               </div>
               {!sidebarCollapsed && (
-                <span className="truncate">{user?.full_name || user?.email || 'User'}</span>
+                <span className="truncate">{user?.displayName || user?.email || 'User'}</span>
               )}
             </button>
             

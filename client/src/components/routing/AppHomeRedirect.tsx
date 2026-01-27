@@ -50,8 +50,8 @@ export function setViewMode(mode: ViewMode): void {
 
 export function AppHomeRedirect(): React.ReactElement | null {
   const navigate = useNavigate();
-  const { user, currentTenant, loading, initialized } = useTenant();
-  const { impersonation } = useAuth();
+  const { currentTenant, loading, initialized } = useTenant();
+  const { user, impersonation } = useAuth();
   const hasRedirected = useRef(false);
 
   useEffect(() => {
@@ -73,8 +73,8 @@ export function AppHomeRedirect(): React.ReactElement | null {
       return;
     }
 
-    // Platform admin (not impersonating) - check view mode preference
-    if (user.is_platform_admin && !impersonation.active) {
+    // Phase 2C-16: Platform admin check uses AuthContext (isPlatformAdmin camelCase)
+    if (user.isPlatformAdmin && !impersonation.active) {
       hasRedirected.current = true;
       const viewMode = getViewMode();
       if (viewMode === 'founder') {

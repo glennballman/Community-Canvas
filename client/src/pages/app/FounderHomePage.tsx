@@ -7,6 +7,7 @@
 
 import { Link } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +32,9 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
 };
 
 export default function FounderHomePage() {
-  const { user, memberships } = useTenant();
+  // Phase 2C-16: User from AuthContext (single identity authority)
+  const { user } = useAuth();
+  const { memberships } = useTenant();
 
   const communities = memberships.filter(
     m => m.tenant_type === 'community' || m.tenant_type === 'government'
@@ -49,7 +52,7 @@ export default function FounderHomePage() {
             Founder Dashboard
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Welcome back, {user?.full_name || user?.email || 'Founder'}
+            Welcome back, {user?.displayName || user?.email || 'Founder'}
           </p>
         </div>
         <Badge variant="secondary" className="gap-1">

@@ -115,13 +115,14 @@ interface VerifyResult {
 }
 
 export default function SystemExplorerPage() {
-  const { currentTenant, impersonation, user } = useTenant();
+  // Phase 2C-16: User from AuthContext, tenant-scoped state from TenantContext
+  const { currentTenant, impersonation } = useTenant();
   const [selectedTable, setSelectedTable] = useState<string>('assets');
   const [tablePage, setTablePage] = useState(1);
   const [activeTab, setActiveTab] = useState('overview');
   
-  // SECURITY: Block access while impersonating
-  if (impersonation?.is_impersonating) {
+  // SECURITY: Block access while impersonating (Phase 2C-16: use .active instead of .is_impersonating)
+  if (impersonation?.active) {
     return (
       <div className="p-6 min-h-screen flex items-center justify-center bg-background" data-testid="page-system-explorer-blocked">
         <Card className="max-w-md">
