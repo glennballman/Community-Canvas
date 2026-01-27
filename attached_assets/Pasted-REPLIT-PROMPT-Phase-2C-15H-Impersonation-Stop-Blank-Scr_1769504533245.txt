@@ -1,0 +1,222 @@
+REPLIT PROMPT — Phase 2C-15H "Impersonation Stop Blank Screen — Deterministic Fix"
+
+ROLE: Senior Platform Architect
+GOAL:
+- End impersonation never produces blank screen.
+- PlatformLayout authorization is evaluated using the correct user source (AuthContext).
+- TenantContext is refreshed on impersonation start/stop to prevent stale user leakage.
+- No early returns ever render blank/empty — always show visible UI.
+CONSTRAINTS:
+- No new routes, no new layouts, no new modes.
+- Only fix the proven root cause based on forensic evidence.
+
+ROOT CAUSE (proven by forensic logs):
+- PlatformLayout uses TenantContext.user for admin check (line 46)
+- ImpersonationBanner.handleStop() calls refreshSession() (AuthContext) but NOT refreshContext() (TenantContext)
+- Result: After stop, AuthContext has Glenn, TenantContext still has Mathew
+- PlatformLayout checks TenantContext.user.is_platform_admin → false → blank screen
+
+========================================================
+PART A — Fix PlatformLayout to use AuthContext for admin check
+========================================================
+FILE: client/src/layouts/PlatformLayout.tsx
+
+CURRENT (broken):
+- Line 46: const { user, loading, initialized } = useTenant();
+- Line 162: if (!user.is_platform_admin) { navigate('/app'); return <></>; }
+
+PROBLEM:
+- Uses TenantContext.user which is stale after impersonation stop
+- Returns empty fragment <></> which renders as blank screen
+
+CHANGE:
+1) Use AuthContext user for platform admin gating (single source of truth)
+2) Never return empty/blank — always render visible UI
+
+EXACT EDITS:
+
+Step 1: Update hook destructuring (around line 46-47)
+
+REPLACE:
+  const { user, loading, initialized } = useTenant();
+  const { impersonation, hasTenantMemberships, ready: authReady, navMode, logout } = useAuth();
+
+WITH:
+  const { loading, initialized } = useTenant();
+  const { user: authUser, impersonation, hasTenantMemberships, ready: authReady, navMode, logout } = useAuth();
+
+Step 2: Update the admin check early return (around line 162-167)
+
+REPLACE:
+  if (!user.is_platform_admin) {
+    dbg('[PlatformLayout/early:notAdmin]', { pathname: location.pathname, user: shortUser(user) });
+    navigate('/app');
+    return <></>;
+  }
+
+WITH:
+  if (!authUser?.isPlatformAdmin) {
+    dbg('[PlatformLayout/early:notAdmin]', { pathname: location.pathname, user: shortUser(authUser) });
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Not authorized to view Platform.</div>
+      </div>
+    );
+  }
+
+IMPORTANT:
+- Remove the navigate('/app') call — it causes redirect loops
+- Return visible UI, never empty fragment
+- Use authUser.isPlatformAdmin (camelCase, from AuthContext)
+- Do NOT use TenantContext.user for platform authorization ever
+
+Step 3: Update all other references to `user` in PlatformLayout
+
+Search for any other uses of `user` in PlatformLayout that refer to identity/privileges.
+Replace with `authUser` where appropriate.
+
+If `user` is used for display purposes (e.g., showing name in header), those can use authUser as well.
+
+Step 4: Fix ALL other early returns to never be blank
+
+Check these branches and ensure they return VISIBLE UI, not empty fragments:
+
+a) Impersonation active check (lines ~107-116):
+   If it returns a spinner, that's fine. If it returns <></>, change to visible message.
+
+b) Loading/initialized/authReady check (lines ~119-128):
+   Should return a loading spinner — verify it does.
+
+c) No user check (lines ~130-138):
+   REPLACE any:
+     if (!user) { navigate(...); return <></>; }
+   WITH:
+     if (!authUser) {
+       return (
+         <div className="min-h-screen bg-background flex items-center justify-center">
+           <div className="text-sm text-muted-foreground">Loading session...</div>
+         </div>
+       );
+     }
+
+========================================================
+PART B — Refresh TenantContext on impersonation STOP
+========================================================
+FILE: client/src/components/ImpersonationBanner.tsx
+
+CURRENT (broken):
+- handleStop calls refreshSession() but NOT TenantContext.refreshContext()
+- TenantContext retains stale Mathew user after stop
+
+CHANGE:
+1) Import useTenant
+2) Call refreshContext() after refreshSession() and before navigate
+
+EXACT EDITS:
+
+Step 1: Add import at top of file (if not present):
+  import { useTenant } from '@/contexts/TenantContext';
+
+Step 2: Inside component, destructure refreshContext:
+  const { refreshContext } = useTenant();
+
+Step 3: In handleStop(), after refreshSession and before navigate:
+
+CURRENT:
+  const refreshed = await refreshSession();
+  dbg('[ImpersonationBanner/stop:afterRefresh]', {...});
+  navigate('/app/platform', { replace: true });
+
+CHANGE TO:
+  const refreshed = await refreshSession();
+  await refreshContext();
+  dbg('[ImpersonationBanner/stop:afterRefresh]', {...});
+  navigate('/app/platform', { replace: true });
+
+========================================================
+PART C — Refresh TenantContext on impersonation START
+========================================================
+FILE: client/src/pages/app/platform/ImpersonationConsole.tsx
+
+CURRENT:
+- Start handler calls refreshSession() but not refreshContext()
+
+CHANGE:
+1) Import useTenant
+2) Call refreshContext() after refreshSession() and before navigate
+
+EXACT EDITS:
+
+Step 1: Add import at top of file (if not present):
+  import { useTenant } from '@/contexts/TenantContext';
+
+Step 2: Inside component, destructure refreshContext:
+  const { refreshContext } = useTenant();
+
+Step 3: In the start impersonation handler, after refreshSession:
+
+CURRENT:
+  await refreshSession();
+  navigate('/app/places', { replace: true });
+
+CHANGE TO:
+  await refreshSession();
+  await refreshContext();
+  navigate('/app/places', { replace: true });
+
+========================================================
+PART D — Verification checklist (must pass ALL)
+========================================================
+
+1) Start impersonation:
+   - Click "Impersonate Mathew"
+   - Must land on /app/places
+   - Console log [AppRouterSwitch/render] shows user: mathew@...
+   - Console log [UserShellLayout/render] shows user: mathew@...
+   - NO blank screens
+
+2) Exit impersonation:
+   - Click "Exit Impersonation"
+   - Must land on /app/platform
+   - Console log [AppRouterSwitch/render] shows user: glenn@..., isPlatformAdmin: true
+   - Console log [PlatformLayout/render] shows user: glenn@..., isPlatformAdmin: true
+   - Console log [PlatformLayout/render:success] shows rendering: 'main layout'
+   - NO [PlatformLayout/early:notAdmin] log
+   - NO blank screen
+   - Platform UI renders correctly
+
+3) Refresh browser on /app/platform after exit:
+   - Still shows platform UI correctly
+   - No redirect loops
+   - No blank screens
+
+4) Edge case — non-admin tries to access /app/platform:
+   - Should see "Not authorized to view Platform." message
+   - NOT a blank screen
+   - NOT a redirect loop
+
+========================================================
+PART E — Keep instrumentation for verification
+========================================================
+
+Do NOT remove the [IMPERSONATION_DBG] instrumentation until all checks pass.
+
+After running the test, paste these log lines:
+- [ImpersonationBanner/stop:afterRefresh]
+- [AppRouterSwitch/render] (the one after navigate to /app/platform)
+- [PlatformLayout/render]
+- Whether [PlatformLayout/early:notAdmin] appears (it should NOT)
+- Whether [PlatformLayout/render:success] appears (it SHOULD)
+
+========================================================
+SUMMARY OF CHANGES
+========================================================
+
+| File | Change |
+|------|--------|
+| PlatformLayout.tsx | Use AuthContext.user for admin check, not TenantContext.user |
+| PlatformLayout.tsx | Never return empty fragment — always visible UI |
+| ImpersonationBanner.tsx | Add await refreshContext() after refreshSession() in stop handler |
+| ImpersonationConsole.tsx | Add await refreshContext() after refreshSession() in start handler |
+
+Total: ~15 lines changed across 3 files. No new architecture. No guessing.

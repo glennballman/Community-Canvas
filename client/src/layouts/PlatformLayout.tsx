@@ -43,8 +43,8 @@ let hasLoggedInvariantViolation = false;
 export function PlatformLayout(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading, initialized } = useTenant();
-  const { impersonation, hasTenantMemberships, ready: authReady, navMode, logout } = useAuth();
+  const { loading, initialized } = useTenant();
+  const { user: authUser, impersonation, hasTenantMemberships, ready: authReady, navMode, logout } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -61,7 +61,7 @@ export function PlatformLayout(): React.ReactElement {
     loading,
     initialized,
     impersonation: shortImp(impersonation),
-    user: shortUser(user),
+    user: shortUser(authUser),
   });
   
   // --------------------------------------------------------------------------
@@ -152,18 +152,24 @@ export function PlatformLayout(): React.ReactElement {
     );
   }
 
-  if (!user) {
+  if (!authUser) {
     // FORENSIC: Log early return
     dbg('[PlatformLayout/early:noUser]', { pathname: location.pathname });
-    navigate('/login', { state: { from: location.pathname } });
-    return <></>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading session...</div>
+      </div>
+    );
   }
 
-  if (!user.is_platform_admin) {
+  if (!authUser.isPlatformAdmin) {
     // FORENSIC: Log early return
-    dbg('[PlatformLayout/early:notAdmin]', { pathname: location.pathname, user: shortUser(user) });
-    navigate('/app');
-    return <></>;
+    dbg('[PlatformLayout/early:notAdmin]', { pathname: location.pathname, user: shortUser(authUser) });
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Not authorized to view Platform.</div>
+      </div>
+    );
   }
 
   const handleLogout = async () => {
@@ -252,7 +258,7 @@ export function PlatformLayout(): React.ReactElement {
                 <User className="h-3.5 w-3.5 text-primary" />
               </div>
               {!sidebarCollapsed && (
-                <span className="truncate">{user?.full_name || user?.email || 'User'}</span>
+                <span className="truncate">{authUser?.displayName || authUser?.email || 'User'}</span>
               )}
             </button>
             

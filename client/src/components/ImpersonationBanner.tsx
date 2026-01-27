@@ -12,11 +12,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTenant } from '../contexts/TenantContext';
 import { queryClient } from '@/lib/queryClient';
 import { dbg, shortImp } from '@/lib/debugImpersonation';
 
 export function ImpersonationBanner(): React.ReactElement | null {
   const { impersonation, refreshSession, token } = useAuth();
+  const { refreshContext } = useTenant();
   const navigate = useNavigate();
   const location = useLocation();
   const [stopping, setStopping] = useState(false);
@@ -110,6 +112,7 @@ export function ImpersonationBanner(): React.ReactElement | null {
       if (data.ok) {
         queryClient.clear();
         const refreshed = await refreshSession();
+        await refreshContext();
         
         // FORENSIC: Log after refreshSession
         dbg('[ImpersonationBanner/stop:afterRefresh]', {
