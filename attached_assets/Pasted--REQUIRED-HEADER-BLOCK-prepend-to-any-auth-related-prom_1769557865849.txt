@@ -1,0 +1,423 @@
+✅ REQUIRED HEADER BLOCK (prepend to any auth-related prompt)
+
+AUTH PROMPT HEADER — REQUIRED (do not edit, do not omit)
+You are operating under AUTH_CONSTITUTION.md. You must be fail-closed. You must not introduce parallel identity sources. You must not remove or weaken RLS. You must not implement “temporary” role checks or “MVP” shortcuts. You must not guess table/column names—inspect first and then implement exactly. If any required item is missing, you must stop and report with file paths + line numbers, not invent replacements.
+
+Non-negotiables:
+
+Single Identity Authority: user identity comes from AuthContext / server session → principal resolution. No other “user” state sources.
+
+Impersonation is actor substitution: principal_id (real actor) and effective_principal_id (acting actor) must be recorded and enforced.
+
+Authorization is capability + scope based: no ad-hoc strings.
+
+Fail-closed: unknown capability, unknown scope, unknown condition keys → deny.
+
+RLS remains final gate: app-layer checks are entry gates, not replacements.
+
+Audit everything: every auth decision logs to cc_auth_audit_log.
+
+No scope drift: all scope creation must be idempotent and race-safe.
+
+No breaking migrations: additive only (except already-approved removals like cc_principals.tenant_id).
+
+No role-text checks: cc_tenant_users.role TEXT must not be used for allow/deny.
+
+Tests required: Jobber roles enforcement tests must exist and pass.
+
+✅ REPLIT PROMPT — PROMPT-3 “Application-Layer Authorization Enforcement” (LOCKED)
+ROLE
+
+Senior Platform Architect + Forensic Debugger
+
+GOAL
+
+Implement the missing application layer for the Enterprise Authorization Framework:
+
+Deterministic principal resolution (principal_id + effective_principal_id)
+
+Deterministic scope resolution (platform → org → tenant → resource_type → resource)
+
+Central authorize() helper (capability + scope + conditions) fail-closed
+
+Audit logging for every auth decision
+
+Route-level gates (write paths first + platform admin paths)
+
+Jobber enforcement tests (Admin/Manager/Dispatcher/Worker/Limited Worker)
+
+CONSTRAINTS (ABSOLUTE)
+
+Do NOT weaken or remove any existing RLS policies.
+
+Do NOT add “temporary role checks” anywhere (no cc_tenant_users.role checks).
+
+Do NOT introduce new identity sources (no parallel “user” context on server).
+
+Fail-closed on unknown capability/scope/conditions.
+
+Additive-only migrations are allowed for:
+
+DB functions (has_capability / can_access_resource / resolve_scope helpers)
+
+Missing unique indexes required for idempotent scope creation
+
+No other schema redesign.
+
+PART 0 — INSPECT FIRST (NO CHANGES YET)
+
+Locate and paste (into your output) exact schema details (table + key columns) for:
+
+cc_principals (must contain user binding)
+
+cc_scopes
+
+cc_capabilities
+
+cc_roles
+
+cc_role_capabilities
+
+cc_principal_roles (or equivalent)
+
+cc_principal_capabilities (direct grants) (or equivalent)
+
+cc_resource_grants
+
+cc_auth_audit_log (must contain principal_id + effective_principal_id)
+
+Confirm whether the server already has any concept of:
+
+“current tenant” context
+
+impersonation session fields
+
+request context endpoints like /api/me/context
+
+If anything is missing, STOP and report with file paths + line numbers. Do not invent.
+
+After inspection, proceed with Parts 1–6.
+
+PART 1 — DB FUNCTIONS + IDPOTENT SCOPE CREATION (MIGRATION 0165)
+
+Create a new migration:
+
+server/db/migrations/0165_prompt3_app_layer_auth.sql
+
+This migration must implement:
+
+1A) Scope creation uniqueness (race-safe)
+
+Add unique indexes if missing (exactly as needed):
+
+Unique on (scope_type, scope_key) OR equivalent (use actual column names discovered)
+
+Unique on (parent_scope_id, scope_type, scope_key) only if your model requires parent uniqueness
+
+Requirement: scope upserts must not create duplicates under concurrency.
+
+1B) cc_has_capability(effective_principal_id, capability_code, scope_id, resource_id?, resource_type?) -> boolean
+
+Implement a SQL function (stable) that returns boolean:
+Evaluation order (fail-closed):
+
+capability exists? if not → false
+
+principal exists? if not → false
+
+scope exists? if not → false
+
+Evaluate grants in this priority:
+
+Direct principal capability grants (if table exists)
+
+Principal roles → role_capabilities
+
+Resource grants (if used for sharing)
+
+Evaluate:
+
+validity windows (valid_from/valid_until if present)
+
+revoked flags
+
+ownership semantics:
+
+If capability supports ownership filtering OR condition says own-only:
+
+“own” means resource.created_by_principal_id == effective_principal_id (use actual column or report missing)
+
+Condition evaluation:
+
+Unknown condition keys → false (hard fail-closed)
+
+Known keys initially supported (must match your spec):
+
+exclude_pricing (boolean)
+
+max_amount (numeric)
+
+own_resources_only (boolean)
+
+Return true if ANY grant path passes all checks.
+
+If ownership column(s) do not exist for key resources, do not invent columns in this prompt—report gaps explicitly.
+
+1C) cc_can_access_resource(effective_principal_id, capability_code, scope_id, resource_table, resource_id) -> boolean
+
+If resource-level checks are needed and feasible, implement a thin wrapper calling cc_has_capability plus optional ownership checks if resource table supports it.
+
+1D) Audit insertion helper
+
+Create SQL function:
+cc_auth_audit_log_insert(...) OR keep audit inserts in app layer, but if you create a function:
+
+Must accept: principal_id, effective_principal_id, capability_code, scope_id, decision, reason, route, method, resource_type, resource_id, tenant_id, org_id, metadata jsonb
+
+Must be safe (no throw on null metadata)
+
+PART 2 — SERVER: PRINCIPAL + SCOPE RESOLVER (SINGLE AUTHORITY)
+
+Create these server utilities:
+
+2A) server/auth/principal.ts
+
+Exports:
+
+resolvePrincipalFromSession(req) -> { principalId, effectivePrincipalId, isImpersonating, userId, effectiveUserId }
+Rules:
+
+principalId = principal for the real logged-in user
+
+effectivePrincipalId = principal for the impersonated user if impersonating, else principalId
+
+No caching across requests unless you scope to req only
+
+Must be deterministic
+
+2B) server/auth/scope.ts
+
+Exports:
+
+resolvePlatformScopeId()
+
+resolveOrganizationScopeId(orgId) (if org exists in path/context)
+
+resolveTenantScopeId(tenantId)
+
+resolveResourceTypeScopeId(tenantScopeId, resourceTypeCode)
+
+resolveResourceScopeId(resourceTypeScopeId, resourceId)
+All must be idempotent and use the unique indexes from migration 0165.
+Use DB transactions or UPSERT.
+
+2C) server/auth/context.ts middleware
+
+Attaches resolved values to req.auth:
+
+principalId
+
+effectivePrincipalId
+
+isImpersonating
+
+tenantId (from request context, route param, header, or existing tenant context logic)
+
+scopeId(s) when resolved
+
+Must run after session middleware but before routes.
+
+PART 3 — SERVER: AUTHORIZE() (FAIL-CLOSED) + AUDIT (ALWAYS)
+
+Create:
+
+3A) server/auth/authorize.ts
+
+Exports:
+
+authorize(req, capabilityCode, { tenantId, orgId, resourceType, resourceId, requireRls=true, metadata={} })
+Behavior:
+
+Resolve tenant scope, resource type scope, resource scope as applicable
+
+Call DB function cc_has_capability(effectivePrincipalId, capabilityCode, scopeId, resourceId, resourceType)
+
+Always write an audit log row to cc_auth_audit_log:
+
+principal_id = req.auth.principalId
+
+effective_principal_id = req.auth.effectivePrincipalId
+
+capability_code
+
+scope_id
+
+decision allow/deny
+
+reason string (explicit)
+
+route + method
+
+tenant_id/org_id/resource_type/resource_id when known
+
+If deny → throw a standard NotAuthorizedError with { capabilityCode, scopeId, reason }
+
+If allow → return { ok: true }
+
+Fail-closed requirements:
+
+Missing req.auth → deny
+
+Missing tenantId when capability is tenant-scoped → deny
+
+Unknown capability → deny
+
+Any DB error during authorization → deny + audit reason auth_db_error
+
+PART 4 — APPLY ROUTE GATES (WRITE PATHS FIRST + PLATFORM)
+
+You must not “sprinkle” checks inconsistently. Do these categories:
+
+4A) Platform admin routes
+
+All /api/admin/* and /api/platform/* must require:
+
+capability: platform.admin (or the exact capability code in your catalog)
+
+scope: platform scope
+AND must also ensure non-impersonated principal has platform admin rights if you have that concept as capability (capability-first still)
+
+4B) Tenant settings + team + machines
+
+Routes that change tenant config, team membership, machine configuration must require capabilities:
+
+tenant.settings.manage
+
+team.manage
+
+machines.manage
+(or exact codes in your catalog—use what exists)
+
+4C) Reservations / Jobs / Scheduling / Invoices / Quotes (write paths)
+
+All POST/PUT/DELETE must be gated:
+
+For example:
+
+Create reservation → reservations.create
+
+Update reservation → reservations.manage
+
+View pricing → quotes.pricing.view and/or invoices.view
+
+Edit schedule all → schedule.all.manage
+
+Limited worker only → schedule.own.view etc.
+
+If some endpoints don’t exist yet, gate what does exist; do not invent endpoints.
+
+Important: Reads can be gated later, but if there are high-risk reads (financials, PII), gate them now too.
+
+PART 5 — ENSURE /api/me/context USES EFFECTIVE PRINCIPAL
+
+Update /api/me/context (or equivalent) so that:
+
+membership lists are computed for the effective user (impersonated user if active)
+
+the response includes:
+
+principal_id
+
+effective_principal_id
+
+is_impersonating
+This prevents UI drift and future “stale context” failures.
+
+PART 6 — TESTS: JOBBER ROLE ENFORCEMENT (MANDATORY)
+
+Add integration tests (jest/supertest or whatever exists) covering:
+
+Create principals + roles for:
+
+tenant_admin
+
+operations_supervisor
+
+operations_full
+
+field_worker_full
+
+field_worker_limited
+
+Then assert:
+
+Limited Worker:
+
+✅ can schedule.own.view
+
+❌ cannot schedule.all.view
+
+❌ cannot quotes.pricing.view
+
+Worker:
+
+✅ can jobs.own.manage
+
+❌ cannot jobs.all.delete
+
+Dispatcher:
+
+✅ can schedule.all.manage
+
+❌ cannot tenant.settings.manage (unless your mapping says otherwise)
+
+Manager:
+
+✅ can invoices.view
+
+✅ can reports.view (if defined)
+
+❌ cannot platform.admin
+
+Admin:
+
+✅ can everything tenant-scoped
+
+❌ cannot platform unless also platform role exists
+
+Also test impersonation path:
+
+principal_id != effective_principal_id
+
+audit log records both
+
+Tests must fail if authorize() is bypassed.
+
+VERIFICATION CHECKLIST (MUST PRINT RESULTS)
+
+At the end, output:
+
+Migration applied success
+
+Unique indexes present
+
+DB functions callable with sample inputs
+
+Middleware attaches req.auth
+
+authorize() denies unknown capability
+
+Audit log rows created for allow and deny
+
+Jobber test suite passes
+
+IMPORTANT: NO WIGGLE ROOM RULE
+
+If any ambiguity exists in schema, you must:
+
+locate actual schema
+
+reference exact column names
+
+implement against those
+Do not “assume” or rename.

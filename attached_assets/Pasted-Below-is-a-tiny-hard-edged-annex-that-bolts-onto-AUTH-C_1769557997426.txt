@@ -1,0 +1,146 @@
+Below is a tiny, hard-edged annex that bolts onto AUTH_CONSTITUTION.md.
+It gives Replit zero interpretive freedom and forces evidence-based completion.
+
+You can paste this verbatim as:
+
+docs/AUTH_CONSTITUTION_PROMPT_3_ANNEX.md
+
+
+and require Replit to paste it back filled in with PASS/FAIL + file/line proof.
+
+AUTH_CONSTITUTION — PROMPT-3 ANNEX
+
+Application-Layer Authorization Enforcement
+
+MANDATORY COMPLETION CHECKLIST
+Replit must paste this annex back fully completed.
+Any ❌ FAIL blocks PROMPT-3 acceptance.
+
+A. Principal Resolution (Single Authority)
+
+Invariant: Exactly one principal resolver exists. No parallel identity sources.
+
+Check	PASS / FAIL	Evidence (file : line)
+resolvePrincipalFromSession() exists		
+Returns principal_id (real actor)		
+Returns effective_principal_id (impersonated actor)		
+Impersonation = actor substitution (not flags)		
+No other server code derives identity		
+B. Scope Resolution (Deterministic + Idempotent)
+
+Invariant: All authorization is evaluated against resolved scopes.
+
+Check	PASS / FAIL	Evidence (file : line)
+Platform scope resolver exists		
+Organization scope resolver exists		
+Tenant scope resolver exists		
+Resource-type scope resolver exists		
+Resource scope resolver exists		
+Scope creation is idempotent (unique index / upsert)		
+C. Capability Evaluation (Fail-Closed)
+
+Invariant: Unknown → deny. Conditions evaluated strictly.
+
+Check	PASS / FAIL	Evidence (file : line)
+cc_has_capability() DB function exists		
+Unknown capability → deny		
+Unknown scope → deny		
+Revoked / expired grants denied		
+Ownership checks enforced where required		
+Unknown condition key → hard fail		
+D. authorize() Helper (Single Gate)
+
+Invariant: All app-layer enforcement goes through authorize().
+
+Check	PASS / FAIL	Evidence (file : line)
+authorize() helper exists		
+Uses effective_principal_id		
+Resolves scopes before evaluation		
+Throws on deny (no silent false)		
+No route bypasses authorize()		
+E. Audit Logging (Non-Optional)
+
+Invariant: Every auth decision is recorded.
+
+Check	PASS / FAIL	Evidence (file : line)
+Audit row written on allow		
+Audit row written on deny		
+Stores principal_id		
+Stores effective_principal_id		
+Stores capability + scope		
+Stores route + method		
+F. RLS Relationship (Final Gate)
+
+Invariant: App-layer auth does not replace RLS.
+
+Check	PASS / FAIL	Evidence (file : line)
+All auth tables still have RLS enabled		
+authorize() runs before DB mutation		
+RLS still blocks unauthorized direct queries		
+G. Route Coverage (Minimum Required)
+
+Invariant: Write paths are protected first.
+
+Route Class	PASS / FAIL	Evidence (file : line)
+/api/platform/* gated		
+/api/admin/* gated		
+Tenant settings writes gated		
+Team / machine management gated		
+Reservations / jobs writes gated		
+Financial / pricing reads gated		
+H. /api/me/context Consistency
+
+Invariant: UI context reflects effective actor.
+
+Check	PASS / FAIL	Evidence (file : line)
+Uses effective principal		
+Returns principal_id		
+Returns effective_principal_id		
+Returns is_impersonating		
+I. Jobber Role Enforcement (Required Tests)
+
+Invariant: External role mappings actually work.
+
+Role	Enforced	Evidence (test file : line)
+Admin → tenant_admin		
+Manager → operations_supervisor		
+Dispatcher → operations_full		
+Worker → field_worker_full		
+Limited Worker → field_worker_limited		
+
+Required assertions:
+
+Limited Worker ❌ pricing, ❌ all-schedule
+
+Worker ❌ delete all jobs
+
+Dispatcher ❌ tenant settings
+
+Manager ❌ platform admin
+
+Admin ✅ all tenant-scoped
+
+J. Negative Proof (Fail-Closed Demonstrations)
+
+Invariant: The system must prove it can fail.
+
+Scenario	PASS / FAIL	Evidence
+Unknown capability denied		
+Missing scope denied		
+Condition key typo denied		
+authorize() bypass attempt fails		
+FINAL ATTESTATION (REQUIRED)
+
+I attest that:
+
+All checks above are PASS
+
+Evidence references exact file paths and line numbers
+
+No parallel authorization logic exists
+
+AUTH_CONSTITUTION.md is upheld without exception
+
+Signed: ____________________
+Date: ______________________
+Commit SHA: ________________
