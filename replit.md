@@ -37,7 +37,9 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Multi-Portal Foundation**: Supports one tenant operating multiple business brands, with portal-scoped data and context management.
 - **V3 App Shell (U1)**: Role-based layouts with three first-class app shells: PlatformLayout (`/app/platform/*`), FounderLayout (`/app/founder/*`), and TenantAppLayout (`/app/*`). View mode persisted in localStorage with key `cc_view_mode`.
 - **Authorization Constitution**: Defines non-negotiable authorization invariants including single identity authority via `cc_principals`/AuthContext, unified principals model, capability-first authorization, full scope hierarchy, RLS enforcement, and impersonation as actor substitution.
+- **Enterprise Authorization Framework v3.1**: 96 atomic capabilities across 19 domains, 12 system roles (including Jobber/Cloudbeds/Robotics mappings), 5-level scope hierarchy (Platform → Organization → Tenant → Resource Type → Resource), machine safety hard-fail enforcement.
 - **Canonical Systems**: `cc_n3_runs` for service runs, `cc_bids` for bids.
+- **Deprecated Systems**: `cc_service_runs` (V1), `cc_sr_service_runs` (V2), `cc_sr_contractor_bids` - marked with SQL COMMENT.
 - **Evidence Management**: Includes Defensive Record Bundles, Evidence Chain-of-Custody Engine, Insurance Claim Auto-Assembler, Legal Hold & Retention Policies, Offline/Low-Signal Evidence Queue, and Authority/Adjuster Read-Only Portals.
 - **N3 Service Run Monitor + Replan Engine**: Real-time service run monitoring with attention bundles and an evaluator.
 - **N3-CAL-01 Calendar Projections**: Read-only calendar views over `cc_n3_runs` for contractor, resident, and portal audiences.
