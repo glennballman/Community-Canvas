@@ -1,0 +1,214 @@
+I need a comprehensive audit to understand the BUSINESS PURPOSE of our work/quote/bid/contract/reservation systems. Not just row counts - I need to understand what each system is actually FOR.
+
+### Part 1: Work Orders - What Are They Really?
+```sql
+-- What's in cc_work_orders?
+\d cc_work_orders
+
+-- Sample data (if any)
+SELECT * FROM cc_work_orders LIMIT 5;
+
+-- What creates work orders? Check for triggers or related tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_name LIKE '%work_order%';
+
+-- Are work orders linked to anything?
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'cc_work_orders'
+ORDER BY ordinal_position;
+```
+
+### Part 2: Bids vs Estimates - What's the Difference?
+```sql
+-- cc_bids structure
+\d cc_bids
+
+-- cc_estimates structure  
+\d cc_estimates
+
+-- Sample bids (if any)
+SELECT * FROM cc_bids LIMIT 5;
+
+-- Sample estimates (if any)
+SELECT * FROM cc_estimates LIMIT 5;
+
+-- What do bids link to?
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'cc_bids'
+ORDER BY ordinal_position;
+
+-- What do estimates link to?
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'cc_estimates'
+ORDER BY ordinal_position;
+
+-- Are estimates versioned?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_name LIKE '%estimate%';
+```
+
+### Part 3: Contracts - What Are They?
+```sql
+-- cc_contracts structure
+\d cc_contracts
+
+-- Sample contracts
+SELECT * FROM cc_contracts LIMIT 5;
+
+-- What creates contracts? What do they link to?
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'cc_contracts'
+ORDER BY ordinal_position;
+
+-- Contract related tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' AND table_name LIKE '%contract%';
+```
+
+### Part 4: Reservations - The Full Picture
+```sql
+-- cc_reservations structure (key columns only)
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns 
+WHERE table_name = 'cc_reservations'
+ORDER BY ordinal_position;
+
+-- What are the reservation statuses?
+SELECT DISTINCT status, COUNT(*) FROM cc_reservations GROUP BY status;
+
+-- Are there group/pending reservation systems?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (table_name LIKE '%reservation%' OR table_name LIKE '%group%' OR table_name LIKE '%pending%');
+
+-- What links TO reservations?
+SELECT 
+    tc.table_name as referencing_table,
+    kcu.column_name as referencing_column
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY' 
+  AND ccu.table_name = 'cc_reservations';
+```
+
+### Part 5: Work Requests vs Projects - The Flow
+```sql
+-- cc_work_requests structure
+\d cc_work_requests
+
+-- cc_projects structure (already seen, but refresh)
+\d cc_projects
+
+-- How do work requests become projects?
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'cc_projects' AND column_name LIKE '%work_request%';
+
+-- Sample work request to project flow (if data exists)
+SELECT 
+    wr.id as work_request_id,
+    wr.status as wr_status,
+    p.id as project_id,
+    p.status as project_status,
+    p.source_work_request_id
+FROM cc_work_requests wr
+LEFT JOIN cc_projects p ON p.source_work_request_id = wr.id
+LIMIT 10;
+```
+
+### Part 6: Service Runs - Relationship to Reservations
+```sql
+-- How do N3 runs relate to reservations?
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'cc_n3_runs'
+ORDER BY ordinal_position;
+
+-- cc_reservations.service_run_id - what does it reference?
+SELECT 
+    r.id as reservation_id,
+    r.status,
+    r.service_run_id,
+    n.name as run_name,
+    n.status as run_status
+FROM cc_reservations r
+LEFT JOIN cc_n3_runs n ON r.service_run_id = n.id
+WHERE r.service_run_id IS NOT NULL
+LIMIT 10;
+
+-- Service run stakeholders - who are they?
+\d cc_service_run_stakeholders
+
+SELECT * FROM cc_service_run_stakeholders LIMIT 5;
+```
+
+### Part 7: Quote Drafts vs Estimates - Lifecycle
+```sql
+-- cc_quote_drafts structure
+\d cc_quote_drafts
+
+-- Sample quote drafts
+SELECT * FROM cc_quote_drafts LIMIT 5;
+
+-- Do quote drafts become estimates?
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'cc_estimates' AND column_name LIKE '%quote%';
+
+-- Or do quote drafts become projects directly?
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'cc_projects' AND column_name LIKE '%quote%';
+```
+
+### Part 8: The "Community" Question
+```sql
+-- What is a "community" in CC?
+\d cc_communities
+
+-- Sample communities
+SELECT id, name, slug FROM cc_communities LIMIT 10;
+
+-- What links to communities?
+SELECT 
+    tc.table_name as table_with_community_ref,
+    kcu.column_name as column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY' 
+  AND ccu.table_name = 'cc_communities';
+
+-- Do work_orders have community_id?
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'cc_work_orders' AND column_name LIKE '%community%';
+```
+
+### Output Request
+
+Create a comprehensive markdown document `business-logic-audit.md` that explains:
+
+1. **Work Orders**: What are they ACTUALLY for? Who creates them? What's the lifecycle?
+
+2. **Bids vs Estimates**: What's the business difference? When do you use each?
+
+3. **Contracts**: What are they? How do they relate to bids/estimates/projects?
+
+4. **Quote Drafts vs Estimates**: What's the lifecycle? Does one become the other?
+
+5. **Work Requests → Projects**: What's the flow? Are these actually different things or just status changes?
+
+6. **Service Runs → Reservations**: How are these related? What's a "stakeholder"?
+
+7. **Communities**: What IS a community in CC? Why would it "issue" work orders?
+
+8. **Recommendation**: After understanding the business logic, which of these are truly separate domains vs. lifecycle stages of the same thing?
+
+For each system, include:
+- Row counts
+- Sample data (sanitized)
+- Inbound/outbound relationships
+- Apparent business purpose
+- Whether it's actively used or speculative/future
