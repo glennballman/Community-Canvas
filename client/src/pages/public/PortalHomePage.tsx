@@ -103,9 +103,11 @@ function HeroSection({
 }) {
   const ctaHref = cta?.action === 'reserve' 
     ? `/p/${portalSlug}/reserve` 
+    : cta?.action === 'search'
+    ? `/p/${portalSlug}/search`
     : cta?.action === 'quote'
     ? `/p/${portalSlug}/quote`
-    : `/p/${portalSlug}`;
+    : `/p/${portalSlug}/search`;
 
   return (
     <section 
