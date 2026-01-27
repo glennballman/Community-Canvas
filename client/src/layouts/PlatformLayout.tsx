@@ -24,6 +24,7 @@ import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getPlatformNavSections } from '../lib/routes/platformNav';
+import { dbg, shortUser, shortImp } from '@/lib/debugImpersonation';
 
 // Throttle helper for forensic logs
 const throttleTimestamps: Record<string, number> = {};
@@ -52,6 +53,16 @@ export function PlatformLayout(): React.ReactElement {
   const hasRedirectedRef = useRef(false);
 
   const sections = getPlatformNavSections({ hasTenantMemberships });
+  
+  // FORENSIC: Top-of-render dump
+  dbg('[PlatformLayout/render]', {
+    pathname: location.pathname,
+    authReady,
+    loading,
+    initialized,
+    impersonation: shortImp(impersonation),
+    user: shortUser(user),
+  });
   
   // --------------------------------------------------------------------------
   // Phase 2C-15E: HARD INVARIANT - PlatformLayout must NEVER render during impersonation
@@ -105,6 +116,12 @@ export function PlatformLayout(): React.ReactElement {
   // Phase 2C-15E: If impersonation is active, show redirecting placeholder
   // (The useEffect above handles the actual navigation)
   if (impersonation.active) {
+    // FORENSIC: Log early return
+    dbg('[PlatformLayout/early:impersonating]', {
+      pathname: location.pathname,
+      impersonation: shortImp(impersonation),
+      authReady,
+    });
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
@@ -117,6 +134,14 @@ export function PlatformLayout(): React.ReactElement {
 
   // Wait for both tenant context and auth to be ready
   if (loading || !initialized || !authReady) {
+    // FORENSIC: Log early return
+    dbg('[PlatformLayout/early:notReadyOrLoading]', {
+      pathname: location.pathname,
+      loading,
+      initialized,
+      authReady,
+      impersonation: shortImp(impersonation),
+    });
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
@@ -128,11 +153,15 @@ export function PlatformLayout(): React.ReactElement {
   }
 
   if (!user) {
+    // FORENSIC: Log early return
+    dbg('[PlatformLayout/early:noUser]', { pathname: location.pathname });
     navigate('/login', { state: { from: location.pathname } });
     return <></>;
   }
 
   if (!user.is_platform_admin) {
+    // FORENSIC: Log early return
+    dbg('[PlatformLayout/early:notAdmin]', { pathname: location.pathname, user: shortUser(user) });
     navigate('/app');
     return <></>;
   }
@@ -144,6 +173,9 @@ export function PlatformLayout(): React.ReactElement {
   };
 
   const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
+
+  // FORENSIC: Log successful render
+  dbg('[PlatformLayout/render:success]', { rendering: 'main layout', pathname: location.pathname });
 
   return (
     <div className="flex h-screen bg-background" data-testid="platform-layout">

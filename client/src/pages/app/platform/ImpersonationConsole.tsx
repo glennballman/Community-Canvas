@@ -11,10 +11,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { queryClient } from '@/lib/queryClient';
+import { dbg, shortImp, safePath } from '@/lib/debugImpersonation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,6 +74,7 @@ interface ImpersonationStatus {
 
 export function ImpersonationConsole(): React.ReactElement {
   const navigate = useNavigate();
+  const location = useLocation();
   const { refreshSession, impersonation, token } = useAuth();
   const { refreshContext: refreshTenantContext } = useTenant();
   const [users, setUsers] = useState<SearchUser[]>([]);
@@ -164,6 +166,14 @@ export function ImpersonationConsole(): React.ReactElement {
     setStarting(userId);
     setError(null);
     
+    // FORENSIC: Log before fetch
+    dbg('[ImpersonationConsole/start:beforeFetch]', {
+      currentPath: location.pathname,
+      targetUserId: userId,
+      targetTenantId: tenantId || null,
+      impersonationBefore: shortImp(impersonation),
+    });
+    
     try {
       const response = await fetch('/api/admin/impersonation/start', {
         method: 'POST',
@@ -178,6 +188,12 @@ export function ImpersonationConsole(): React.ReactElement {
       
       const data = await response.json();
       
+      // FORENSIC: Log after fetch response
+      dbg('[ImpersonationConsole/start:afterFetch]', {
+        status: response.status,
+        ok: data.ok,
+      });
+      
       if (data.ok) {
         setShowOverlay(true);
         queryClient.clear();
@@ -188,11 +204,27 @@ export function ImpersonationConsole(): React.ReactElement {
         const refreshed = await refreshSession();
         await refreshTenantContext();
         
+        // FORENSIC: Log after refreshSession
+        dbg('[ImpersonationConsole/start:afterRefresh]', {
+          refreshed,
+          impersonationAfter: shortImp(impersonation),
+        });
+        
         if (refreshed) {
           await fetchStatus();
+          // FORENSIC: Log before navigate
+          dbg('[ImpersonationConsole/start:beforeNavigate]', {
+            from: location.pathname,
+            to: '/app/places',
+            replace: true,
+          });
           // Phase 2C-15H: Navigate to /app/places (user's normal home)
           // User sees TenantPicker exactly as the impersonated user would
           navigate('/app/places', { replace: true });
+          // FORENSIC: Log after navigate
+          dbg('[ImpersonationConsole/start:afterNavigate]', {
+            navigateCalled: true,
+          });
         } else {
           setError('Failed to refresh session after starting impersonation');
         }

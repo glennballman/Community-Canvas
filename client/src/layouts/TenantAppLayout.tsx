@@ -57,6 +57,7 @@ function throttledLog(key: string, ...args: unknown[]) {
 
 import { Mountain, Landmark, Briefcase as BriefcaseIcon, User as UserIcon, Building2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { dbg, shortUser, shortImp } from '@/lib/debugImpersonation';
 
 const TYPE_ICONS: Record<string, LucideIcon> = {
   community: Mountain,
@@ -78,10 +79,20 @@ export function TenantAppLayout(): React.ReactElement {
     currentTenant, 
     loading, 
     initialized,
+    // FORENSIC: Destructure impersonation from useTenant for logging
     switchTenant,
     impersonation,
   } = useTenant();
   const { ready: authReady, navMode, token, refreshSession } = useAuth();
+  
+  // FORENSIC: Top-of-render dump
+  dbg('[TenantAppLayout/render]', {
+    pathname: location.pathname,
+    authReady,
+    currentTenantId: currentTenant?.tenant_id || null,
+    impersonation: shortImp(impersonation),
+    user: shortUser(user),
+  });
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);

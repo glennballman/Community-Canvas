@@ -25,6 +25,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
+import { dbg, shortUser, shortImp } from '@/lib/debugImpersonation';
 
 // Throttle helper to prevent console spam
 const throttleTimestamps: Record<string, number> = {};
@@ -40,8 +41,19 @@ function throttledLog(key: string, ...args: unknown[]) {
 export function AppRouterSwitch() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { impersonation, ready: authReady, navMode, hasTenantMemberships } = useAuth();
+  const { impersonation, ready: authReady, navMode, hasTenantMemberships, user } = useAuth();
   const { currentTenant } = useTenant();
+  
+  // FORENSIC: Top-of-render dump
+  dbg('[AppRouterSwitch/render]', {
+    pathname: location.pathname,
+    authReady,
+    navMode,
+    hasTenantMemberships,
+    currentTenantId: currentTenant?.tenant_id || null,
+    impersonation: shortImp(impersonation),
+    user: shortUser(user),
+  });
   
   // Latch to ensure one-shot redirect
   const hasRedirectedRef = useRef(false);
@@ -81,6 +93,14 @@ export function AppRouterSwitch() {
 
     if (impersonation.active && (isPlatformPath || isFounderPath) && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
+      // FORENSIC: Log before redirect
+      dbg('[AppRouterSwitch/redirect:beforeNavigate]', {
+        from: location.pathname,
+        to: '/app/places',
+        reason: 'impersonation active - platform/founder routes blocked',
+        impersonation: shortImp(impersonation),
+        authReady,
+      });
       throttledLog(
         'AppRouterSwitch-redirect',
         '[AppRouterSwitch] Redirect fired:',

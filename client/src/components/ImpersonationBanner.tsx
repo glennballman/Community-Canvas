@@ -10,13 +10,15 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { queryClient } from '@/lib/queryClient';
+import { dbg, shortImp } from '@/lib/debugImpersonation';
 
 export function ImpersonationBanner(): React.ReactElement | null {
   const { impersonation, refreshSession, token } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [stopping, setStopping] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -75,6 +77,12 @@ export function ImpersonationBanner(): React.ReactElement | null {
     setStopping(true);
     setShowOverlay(true);
     
+    // FORENSIC: Log before fetch
+    dbg('[ImpersonationBanner/stop:beforeFetch]', {
+      currentPath: location.pathname,
+      impersonationBefore: shortImp(impersonation),
+    });
+    
     try {
       const response = await fetch('/api/admin/impersonation/stop', {
         method: 'POST',
@@ -83,6 +91,12 @@ export function ImpersonationBanner(): React.ReactElement | null {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
+      });
+
+      // FORENSIC: Log after fetch response
+      dbg('[ImpersonationBanner/stop:afterFetch]', {
+        status: response.status,
+        ok: response.ok,
       });
 
       if (!response.ok) {
@@ -96,8 +110,25 @@ export function ImpersonationBanner(): React.ReactElement | null {
       if (data.ok) {
         queryClient.clear();
         const refreshed = await refreshSession();
+        
+        // FORENSIC: Log after refreshSession
+        dbg('[ImpersonationBanner/stop:afterRefresh]', {
+          refreshed,
+          impersonationAfter: shortImp(impersonation),
+        });
+        
         if (refreshed) {
+          // FORENSIC: Log before navigate
+          dbg('[ImpersonationBanner/stop:beforeNavigate]', {
+            from: location.pathname,
+            to: '/app/platform',
+            replace: true,
+          });
           navigate('/app/platform', { replace: true });
+          // FORENSIC: Log after navigate
+          dbg('[ImpersonationBanner/stop:afterNavigate]', {
+            navigateCalled: true,
+          });
         }
       } else {
         console.error('Stop impersonation returned not ok:', data.error);

@@ -1,0 +1,182 @@
+REPLIT PROMPT — Impersonation Forensics Only (NO FIXES)
+
+ROLE: Forensic debugger.
+GOAL: Collect complete, actionable evidence for the impersonation + exit-impersonation blank screen bug.
+ABSOLUTE CONSTRAINT: DO NOT "fix" anything. DO NOT refactor. DO NOT change routing behavior. DO NOT change conditions.
+Only add logging/instrumentation and produce a single evidence markdown report with file/line references and captured logs.
+
+What we need to explain (two failures)
+
+1. Start impersonation: why do we sometimes land on the wrong screen (or see "choose tenant"/tenantless banner) instead of the "user view"?
+
+2. Exit impersonation: why do we get a blank/dark page at /app/platform even though URL changes?
+
+================================================================================
+PART A — Add a single shared debug logger
+================================================================================
+
+1) Create file
+
+Create: client/src/lib/debugImpersonation.ts
+
+Implement:
+
+A dbg(label: string, payload: Record<string, any>) function
+- Logs in one line to console (JSON string is fine)
+- Prefix all logs with "[IMPERSONATION_DBG]"
+
+Also export helpers:
+- now() timestamp
+- safePath() for pathname
+- shortUser(u) => {id,email,isPlatformAdmin} (or null)
+- shortImp(i) => {active, targetEmail, tenantId} (or null)
+
+No other functionality.
+
+================================================================================
+PART B — Instrument render + early returns (NO behavior changes)
+================================================================================
+
+2) AppRouterSwitch render-state dump
+
+File: client/src/components/routing/AppRouterSwitch.tsx
+
+At the top of the component body (right after hooks), add:
+
+dbg('[AppRouterSwitch/render]', { pathname, authReady, navMode, hasTenantMemberships, currentTenantId, impersonation: shortImp(impersonation), user: shortUser(user) })
+
+You may need to pull user from useAuth() if not currently destructured. Do so ONLY for logging.
+
+Also inside the existing redirect useEffect that blocks platform during impersonation, add:
+- a log when the effect runs
+- a log immediately before navigate(...) fires, including { from, to, reason }
+
+Do not change logic.
+
+3) PlatformLayout early-return tracing
+
+File: client/src/layouts/PlatformLayout.tsx
+
+For each early return branch Glenn identified:
+- impersonation.active gate
+- loading || !initialized || !authReady gate
+- no user gate
+- non-admin gate
+
+Add one dbg() immediately before returning, with a distinct label:
+- [PlatformLayout/early:impersonating]
+- [PlatformLayout/early:notReadyOrLoading]
+- [PlatformLayout/early:noUser]
+- [PlatformLayout/early:notAdmin]
+
+Also add a top-of-render log:
+
+dbg('[PlatformLayout/render]', { pathname, authReady, loading, initialized, impersonation: shortImp(impersonation), user: shortUser(user) })
+
+Also log what PlatformLayout ACTUALLY returns if it reaches the main JSX:
+
+dbg('[PlatformLayout/render:success]', { rendering: 'main layout' })
+
+Place this immediately before the final return statement (the one that returns the actual layout JSX, not any early returns).
+
+Do not modify the returns. Do not change UI. Only log.
+
+4) TenantAppLayout + UserShellLayout render-state dump
+
+Files:
+- client/src/layouts/TenantAppLayout.tsx
+- client/src/layouts/UserShellLayout.tsx
+
+Add top-of-render dbg logs with:
+- pathname
+- authReady (from auth context if available)
+- currentTenantId (if accessible)
+- impersonation summary
+- user summary
+
+No conditional changes.
+
+================================================================================
+PART C — Instrument navigation + handlers (NO behavior changes)
+================================================================================
+
+5) Find impersonation START handler
+
+Locate the component where POST /api/admin/impersonation/start is called (platform UI).
+
+Add logs:
+- before fetch
+- after fetch response (status + body.ok if easily accessible)
+- after refreshSession()
+- before and after navigate(...)
+
+Each log should include:
+- current URL (location.pathname)
+- target URL passed to navigate
+- replace flag if used
+- impersonation.active BEFORE and AFTER refreshSession (log both)
+
+Do not change endpoints, routes, or navigate targets. Only log.
+
+6) Find impersonation END handler ("Exit Impersonation")
+
+Locate the component for the yellow banner/button.
+
+Add logs:
+- before fetch /api/admin/impersonation/end
+- after response
+- after refreshSession()
+- before and after navigate(...)
+
+Same fields as above.
+
+Do not change navigate target. Only log.
+
+================================================================================
+PART D — Produce a single evidence report (mandatory)
+================================================================================
+
+7) Create report file
+
+Create: docs/debug/impersonation-evidence.md
+
+Fill it with:
+
+### 1. Instrumented files list
+
+For each file modified, list:
+- path
+- what logs were added
+- approximate line numbers (or "near top of component")
+
+### 2. Runtime capture instructions
+
+Write exact steps to reproduce:
+1. Start from /app/platform/impersonation
+2. Click "Impersonate Mathew"
+3. Note landing page + what's visible
+4. Click "Exit Impersonation"
+5. Note landing page + what's visible
+
+### 3. Paste raw console log output
+
+Include a section where Replit pastes the entire [IMPERSONATION_DBG] log stream for one run.
+
+### 4. Preliminary observations (NO FIXES)
+
+Only answer these questions using logs:
+- What URL are we on when blank screen happens?
+- Which layout(s) render at that moment (PlatformLayout/TenantAppLayout/UserShellLayout)?
+- Which PlatformLayout early-return branch fired last?
+- Did AppRouterSwitch redirect fire? If yes, from/to/reason.
+- What is impersonation.active and authReady during each render?
+
+IMPORTANT: Do not suggest fixes here. Observations only.
+
+================================================================================
+PART E — Stop
+================================================================================
+
+After implementing logs and report template, STOP. Do not make any further changes.
+
+If anything is unclear, your job is NOT to decide. Your job is to collect evidence so Glenn can paste logs back into ChatGPT + Claude for diagnosis.

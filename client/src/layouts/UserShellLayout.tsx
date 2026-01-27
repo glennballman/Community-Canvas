@@ -12,19 +12,32 @@
  * Child routes (like /app/places) render TenantPicker via Outlet.
  */
 
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin } from 'lucide-react';
 import { queryClient } from '@/lib/queryClient';
 import { useNavigate } from 'react-router-dom';
+import { dbg, shortUser, shortImp } from '@/lib/debugImpersonation';
 
 export function UserShellLayout() {
   const navigate = useNavigate();
-  const { impersonation, token, refreshSession, logout } = useAuth();
+  const location = useLocation();
+  const { impersonation, token, refreshSession, logout, user, ready: authReady } = useAuth();
+  const { currentTenant } = useTenant();
   const isImpersonating = impersonation?.active === true;
   const targetUser = impersonation?.target_user;
+  
+  // FORENSIC: Top-of-render dump
+  dbg('[UserShellLayout/render]', {
+    pathname: location.pathname,
+    authReady,
+    currentTenantId: currentTenant?.tenant_id || null,
+    impersonation: shortImp(impersonation),
+    user: shortUser(user),
+  });
 
   async function handleEndImpersonation() {
     try {
