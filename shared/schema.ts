@@ -1425,6 +1425,21 @@ export const ccPortals = pgTable('cc_portals', {
 export type Portal = typeof ccPortals.$inferSelect;
 export type InsertPortal = typeof ccPortals.$inferInsert;
 
+// Portal Listings - Disclosure substrate for portal-specific asset visibility
+export const ccPortalListings = pgTable('cc_portal_listings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  portalId: uuid('portal_id').notNull(),
+  assetId: uuid('asset_id').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  visibility: text('visibility').notNull().default('public'),
+  displayOrder: integer('display_order'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type PortalListing = typeof ccPortalListings.$inferSelect;
+export type InsertPortalListing = typeof ccPortalListings.$inferInsert;
+
 // ============ ZONES ============
 // First-class zones scoped to portals for organizing Work Requests and Properties
 export const ccZones = pgTable('cc_zones', {

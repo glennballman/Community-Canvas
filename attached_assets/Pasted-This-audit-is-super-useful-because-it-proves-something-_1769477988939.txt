@@ -1,0 +1,449 @@
+This audit is super useful, because it proves something critical:
+
+There is no existing universal disclosure substrate that links portal_id → asset_id with visibility/published semantics for inventory.
+
+cc_articles can model visibility, but it’s editorial and barely used.
+
+cc_portal_moments is portal-scoped but not asset-scoped and not for lodging/parking/moorage.
+
+cc_offers is empty.
+
+The only broadly relevant “visibility-like” control already on inventory is cc_assets.participation_mode, but that is not portal-scoped.
+
+So the “obvious missed step” is true: reservation engine never got a real disclosure listing substrate for assets. Without that substrate, it can’t be wired correctly.
+
+Now the decision:
+
+You have two choices, and only one is “correct” for Experience Bamfield
+✅ Correct for Truth vs Disclosure + multi-portal federation
+
+Implement Option D: cc_portal_listings (Disclosure Listing Layer) and wire the reservation engine to it.
+
+This gives you:
+
+portal-specific disclosure (West/East/Experience can have different disclosed sets)
+
+clean separation (Truth in cc_assets, Disclosure in listings)
+
+ability to implement scarcity bands later without exposing counts
+
+a real admin UI target (“manage listings + participation mode per listing”)
+
+⚠️ “Quick patch” (not sufficient for your platform)
+
+Option A (filter out inventory_hidden) is not Truth vs Disclosure in your sense. It:
+
+still leaks all tenant inventory to all tenant portals
+
+still has the asset_id leak for anything not hidden
+
+doesn’t give Experience Bamfield a curated/public inventory boundary
+
+breaks federation assumptions (the whole point is that disclosure is a deliberate surface)
+
+Option A is acceptable only as a temporary emergency patch if you needed to stop the worst leak today. But it won’t meet your stated requirement and will bite you again when you add micro-portals.
+
+Given your stated goals (Experience Bamfield + West/East micro portals + “massive Truth vs Disclosure”), the only sane move is Option D now.
+
+What needs to be done (rewritten as the exact build plan)
+Phase 1 — Create the missing disclosure listing substrate (DB + seed)
+1.1 Add table: cc_portal_listings
+
+Minimal columns (don’t overdesign now):
+
+id UUID PK
+
+portal_id UUID FK → cc_portals.id (required)
+
+asset_id UUID FK → cc_assets.id (nullable only if you later support facility-based listings, but for now make it NOT NULL to keep it clean)
+
+is_active boolean default true
+
+visibility text default 'public' (public|unlisted|hidden) — start with public/hidden if you want minimal
+
+created_at, updated_at
+
+unique (portal_id, asset_id)
+
+Reason: This becomes the canonical “disclosed inventory surface” per portal.
+
+1.2 Seed listings for Experience Bamfield safely
+
+Do not auto-list everything.
+Seed only the assets you intend to be public on Experience Bamfield.
+
+Because you likely don’t yet have a reliable “published” flag elsewhere, the safest default is:
+
+seed nothing (empty listings)
+
+then add listings intentionally
+
+But you probably want something to show immediately, so a safe compromise is:
+
+seed assets where participation_mode != 'inventory_hidden' AND (optionally) asset_type in (...)
+…but ONLY if you accept that this is “public by default”.
+
+My recommendation:
+
+seed only a small curated set for Experience Bamfield (you can choose IDs), or seed none and curate through an internal admin screen in Phase 4.
+
+Phase 2 — Wire V3.5 direct reserve endpoints to disclosure (backend)
+2.1 Harden public availability endpoint
+
+Update:
+GET /api/public/cc_portals/:slug/availability
+
+Replace “tenant → all assets” with:
+
+resolve portal by slug
+
+query:
+
+cc_portal_listings where portal_id = portal.id AND is_active=true AND visibility='public'
+
+join to cc_assets on asset_id
+
+apply current “truth availability” logic you already have (schedule conflicts etc.)
+
+ensure asset_id query param cannot bypass listings (must still be listed)
+
+This immediately enforces:
+
+portal scoping
+
+disclosure gating
+
+2.2 Harden public create reservation endpoint
+
+Update:
+POST /api/public/cc_portals/:slug/cc_reservations
+
+Before creating:
+
+verify (portal_id, asset_id) exists in cc_portal_listings and is public/active
+
+if not, return a generic public-safe error (don’t confirm existence)
+
+This closes the asset_id leak path completely.
+
+2.3 No-counts guard (public boundary)
+
+If/when you introduce scarcity bands and any aggregated counts:
+
+enforce “no counts” in the response payload (bands only)
+
+prevent any “3 left” style copy from being possible
+
+Even if you haven’t implemented scarcity yet, keep the guard ready so it can’t regress.
+
+Phase 3 — UI (reserve) uses disclosure-safe results
+
+Once endpoints are safe:
+
+PortalReservePage search results are now disclosure-safe without changing the page much.
+
+You can then add scarcity bands and participation-mode CTAs later.
+
+Phase 4 — Experience Bamfield Search page
+
+After Phase 2 is done:
+
+Add /p/:portalSlug/search (or whatever route you choose)
+
+It can reuse the same endpoint and/or components
+
+“Check Availability” CTA goes to /p/experience-bamfield/search
+
+Results “Reserve” routes into /p/:portalSlug/reserve/:assetId?start&end
+
+Phase 5 — Operator controls (so you’re not editing DB forever)
+
+Add an internal screen to manage cc_portal_listings:
+
+choose assets to disclose per portal
+
+set visibility (public/hidden)
+
+set active/inactive
+
+optionally set display order
+
+This is what completes the Truth vs Disclosure operational loop.
+
+The exact next Replit prompt you should run
+
+Since you asked to “rewrite everything that needs to be done,” the next action is implementation: create the table + wire endpoints.
+
+If you want, I’ll write it as REPLIT PROMPT C1 (DISCLOSURE LISTINGS + ENDPOINT HARDENING) in your strict style, with:
+
+additive-only migration
+
+no cart denylist
+
+proof bundle
+
+test steps
+
+Just say: “Write C1 prompt” and tell me whether you want:
+
+Seed none (most secure), or
+
+Seed from participation_mode != inventory_hidden (fastest but broader exposure)
+
+If you don’t answer, I’ll default to seed none because it’s the only choice that can’t accidentally leak inventory.
+
+Write C1 prompt. There is nothing in production, no customers, no data, no transactions, nothing live on the internet. There is nothing to disclose right now.
+REPLIT PROMPT — C1 DISCLOSURE LISTINGS + HARDEN V3.5 DIRECT RESERVE (SAFE BY DEFAULT, NO SEED DATA)
+
+ROLE: Senior Platform Architect + Disclosure/Security QA Gatekeeper (evidence-first)
+
+PURPOSE:
+Complete the missing Truth vs Disclosure wiring for the V3.5 direct reserve flow by introducing a canonical portal disclosure listing layer and enforcing it in the public reservation endpoints.
+
+This makes it safe to launch Experience Bamfield and future micro-portals without leaking Truth inventory.
+
+Context: There is nothing live, no customers, no production data, and nothing to disclose right now. Therefore:
+✅ Default state must disclose nothing (no seeding of public listings).
+
+HARD CONSTRAINTS (NON-NEGOTIABLE)
+
+NO CART — DO NOT TOUCH CART SYSTEM
+
+Do NOT import/reference/modify any of:
+
+server/services/cartService.ts
+
+/api/*cart* routes
+
+cc_reservation_carts* tables
+
+ReserveShell
+
+/reserve/:portalSlug/:offerSlug
+
+The only flow in scope is V3.5 direct reserve:
+
+/p/:portalSlug/reserve
+
+/p/:portalSlug/reserve/:assetId
+
+SAFE BY DEFAULT
+
+After this prompt, public availability must return ZERO results until assets are explicitly listed for a portal.
+
+No auto-disclosure based on tenant ownership.
+
+No auto-disclosure based on participation_mode.
+
+Additive-only migrations
+
+No destructive schema changes.
+
+No refactors beyond what is required.
+
+Terminology
+
+Use reserve / reservation (never “book/booking”) in UI and comments.
+
+Proof required
+
+Write proof files (see below).
+
+Include grep proof of “no cart touched”.
+
+PHASE 1 — DATABASE: Add the canonical disclosure listing substrate
+1) Create table: cc_portal_listings
+
+Add Drizzle schema + migration for a new table that explicitly controls what inventory is disclosed on each portal.
+
+Minimum columns (do not over-design):
+
+id UUID PK (default gen)
+
+portal_id UUID NOT NULL references cc_portals(id) on delete cascade
+
+asset_id UUID NOT NULL references cc_assets(id) on delete cascade
+
+is_active boolean NOT NULL default true
+
+visibility text NOT NULL default 'public' (allowed values: 'public', 'hidden'; keep minimal now)
+
+display_order integer nullable
+
+created_at timestamptz NOT NULL default now()
+
+updated_at timestamptz NOT NULL default now()
+
+Constraints:
+
+unique (portal_id, asset_id)
+
+index on portal_id
+
+index on asset_id
+
+IMPORTANT:
+Do not seed this table with any assets. Leave it empty.
+
+PHASE 2 — BACKEND: Harden public availability to use disclosure listings (no Truth leak)
+2) Update public availability endpoint
+
+Target route (confirmed by prior audits):
+server/routes/public-portal.ts — GET /cc_portals/:slug/availability (lines ~1166-1280)
+
+Replace current behavior
+
+Current behavior is unsafe: it returns all tenant assets with status='active' AND is_available=true.
+
+New required behavior
+
+Resolve portal by slug (already done).
+
+Query ONLY assets that are explicitly listed in cc_portal_listings for that portal, and visible:
+
+Required gating:
+
+cc_portal_listings.portal_id = portal.id
+
+cc_portal_listings.is_active = true
+
+cc_portal_listings.visibility = 'public'
+
+cc_assets.status = 'active'
+
+(Optional defense-in-depth) cc_assets.owner_tenant_id = portal.owning_tenant_id
+
+If an asset_id query param exists, it must STILL be subject to the same listing gate.
+
+i.e., you cannot fetch an asset unless it is listed for that portal.
+
+Availability computation (schedule conflicts etc.) should continue to work, but only for the listed subset.
+
+Expected result
+
+With empty cc_portal_listings, this endpoint returns an empty list for all portals.
+
+PHASE 3 — BACKEND: Harden public reservation creation (close assetId passthrough)
+3) Update create reservation endpoint
+
+Target route:
+POST /api/public/cc_portals/:slug/cc_reservations (in server/routes/public-portal.ts, lines ~1385-1530)
+
+New required behavior
+
+Before any reservation is created, verify disclosure eligibility:
+
+Look up a listing row:
+
+portal_id = portal.id
+
+asset_id = requested asset_id
+
+is_active = true
+
+visibility = 'public'
+
+If NOT found:
+
+return a safe error code (example):
+
+{ ok: false, error: "not_disclosed" }
+
+Do NOT leak whether the asset exists in Truth tables.
+
+Then proceed with existing conflict checks and inserts.
+
+PHASE 4 — ZERO-DISCLOSURE SAFE DEFAULT (no seeding)
+4) Confirm no seeding
+
+Do not insert anything into cc_portal_listings.
+
+Do not auto-list based on tenant ownership or participation_mode.
+
+Do not modify portal/site config to “fix” CTAs.
+
+This is strictly the disclosure substrate + endpoint enforcement.
+
+PHASE 5 — PROOF BUNDLE (REQUIRED FILE OUTPUTS)
+
+Create these files:
+
+5.1 proof/experiencebamfield/c1-disclosure-listings.md
+
+Must include:
+
+Migration summary (table + columns + constraints)
+
+Drizzle schema location
+
+Availability endpoint changes:
+
+file path + line ranges
+
+show the new query/join and gating conditions
+
+Reservation creation endpoint changes:
+
+file path + line ranges
+
+show the listing validation gate and safe error response
+
+Statement: “No seeding performed; disclosure defaults to none.”
+
+5.2 proof/experiencebamfield/c1-no-cart-regression.md
+
+Include the output of:
+
+rg -n "cartService|cc_reservation_cart|/api/.*cart|ReserveShell|/reserve/:" server/ client/
+
+…and explicitly state:
+
+“No cart routes/services/components were modified or referenced.”
+
+5.3 proof/experiencebamfield/c1-verification-steps.md
+
+Provide reproducible checks (curl or equivalent) showing:
+
+Availability returns empty with no listings:
+
+GET /api/public/cc_portals/experience-bamfield/availability?start=...&end=...
+
+Expect: empty results
+
+Reservation creation blocked without listing:
+
+POST /api/public/cc_portals/experience-bamfield/cc_reservations with a valid-looking asset_id
+
+Expect: not_disclosed
+
+(Optional) After manual insert, availability returns that one listed asset:
+
+Provide an example SQL INSERT that a developer can run manually (do not run it automatically)
+
+Then show expected availability includes that asset
+
+SUCCESS CRITERIA
+
+Public availability cannot leak Truth inventory; it only shows explicitly listed assets.
+
+Public reservation creation cannot reserve undisclosed assets.
+
+Default system state discloses nothing (safe for pre-launch).
+
+No cart system touched.
+
+Proof files created.
+
+IMPORTANT
+
+Stop after completing the above. Do NOT implement Search UI, CTA routing changes, scarcity bands, or any admin screens in this prompt.
+
+When Replit finishes, paste back:
+
+proof/experiencebamfield/c1-disclosure-listings.md
+
+proof/experiencebamfield/c1-no-cart-regression.md
+
+proof/experiencebamfield/c1-verification-steps.md
+
+Then I will write the next prompt:

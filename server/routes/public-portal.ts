@@ -1191,30 +1191,37 @@ router.get('/cc_portals/:slug/availability', async (req: Request, res: Response)
     }
     
     const portal = portalResult.rows[0];
-    const tenantId = portal.owning_tenant_id;
+    const portalId = portal.id;
     
-    // Get assets
+    // Get ONLY assets that are explicitly listed for this portal (disclosure-safe)
+    // Without a listing in cc_portal_listings, assets are NOT visible
     let assetsQuery = `
-      SELECT id, name, asset_type, schema_type, description, thumbnail_url
-      FROM cc_assets
-      WHERE owner_tenant_id = $1 
-        AND status = 'active'
-        AND is_available = true
+      SELECT a.id, a.name, a.asset_type, a.schema_type, a.description, a.thumbnail_url,
+             pl.display_order
+      FROM cc_portal_listings pl
+      JOIN cc_assets a ON a.id = pl.asset_id
+      WHERE pl.portal_id = $1
+        AND pl.is_active = true
+        AND pl.visibility = 'public'
+        AND a.status = 'active'
     `;
-    const params: any[] = [tenantId];
+    const params: any[] = [portalId];
     let paramIndex = 2;
     
     if (asset_type) {
-      assetsQuery += ` AND asset_type = $${paramIndex}`;
+      assetsQuery += ` AND a.asset_type = $${paramIndex}`;
       params.push(asset_type);
       paramIndex++;
     }
     
     if (asset_id) {
-      assetsQuery += ` AND id = $${paramIndex}::uuid`;
+      // Asset must STILL be listed to be returned (no bypass via asset_id param)
+      assetsQuery += ` AND a.id = $${paramIndex}::uuid`;
       params.push(asset_id);
       paramIndex++;
     }
+    
+    assetsQuery += ` ORDER BY pl.display_order NULLS LAST, a.name`;
     
     const assetsResult = await serviceQuery(assetsQuery, params);
     
@@ -1420,20 +1427,28 @@ router.post('/cc_portals/:slug/cc_reservations', async (req: Request, res: Respo
     }
     
     const portal = portalResult.rows[0];
+    const portalId = portal.id;
     const tenantId = portal.owning_tenant_id;
     
-    // Verify asset belongs to this tenant
-    const assetResult = await serviceQuery(`
-      SELECT id, name, asset_type, rate_daily, rate_hourly
-      FROM cc_assets
-      WHERE id = $1::uuid AND owner_tenant_id = $2 AND status = 'active'
-    `, [asset_id, tenantId]);
+    // DISCLOSURE GATE: Verify asset is explicitly listed for this portal
+    // This prevents reservation of undisclosed inventory via asset_id passthrough
+    const listingResult = await serviceQuery(`
+      SELECT pl.id, a.id as asset_id, a.name, a.asset_type, a.rate_daily, a.rate_hourly
+      FROM cc_portal_listings pl
+      JOIN cc_assets a ON a.id = pl.asset_id
+      WHERE pl.portal_id = $1
+        AND pl.asset_id = $2::uuid
+        AND pl.is_active = true
+        AND pl.visibility = 'public'
+        AND a.status = 'active'
+    `, [portalId, asset_id]);
     
-    if (assetResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Asset not found' });
+    if (listingResult.rows.length === 0) {
+      // Return safe error that doesn't confirm asset existence
+      return res.status(400).json({ success: false, error: 'not_disclosed' });
     }
     
-    const asset = assetResult.rows[0];
+    const asset = listingResult.rows[0];
     
     // Check for conflicts
     const conflictsResult = await serviceQuery(`
