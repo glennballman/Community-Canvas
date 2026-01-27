@@ -53,6 +53,7 @@ The application uses a modern web stack with React 18 (TypeScript, Vite) for the
 - **Coordination Circles**: Federated resource sharing between tenants.
 - **V3 App Shell (U1)**: Role-based layouts with three first-class app shells: PlatformLayout (`/app/platform/*`), FounderLayout (`/app/founder/*`), and TenantAppLayout (`/app/*`). Each has its own nav source of truth (PLATFORM_NAV, FOUNDER_NAV, V3_NAV). View mode persisted in localStorage with key `cc_view_mode`.
 - **Phase 2C-13.5 Impersonation Semantics**: Impersonation has two independent dimensions: (1) `acting_user` (impersonated user identity), (2) `tenant_context` (selected tenant - starts NULL). "Impersonate user" sets ONLY acting_user, NOT tenant_context. Tenant selection is explicit via `/app/select-tenant` page. AppRouterSwitch handles centralized redirect logic with auth readiness gating.
+- **Phase 2C-16 Single Identity Authority**: AuthContext is the single source of truth for user identity. TenantContext handles ONLY tenant-scoped state (memberships, currentTenant, impersonation, isCommunityOperator). User identity uses camelCase properties (isPlatformAdmin, displayName) from AuthContext.user. Guardrail script (`scripts/lint-identity-authority.sh`) prevents regressions.
 - **Defensive Record Bundles**: Immutable, owner-controlled evidence packages for legal/insurance defense.
 - **Evidence Chain-of-Custody Engine**: Tamper-evident evidence bundles with immutable manifests.
 - **Insurance Claim Auto-Assembler**: Carrier-agnostic claim dossiers generated from sealed evidence.
