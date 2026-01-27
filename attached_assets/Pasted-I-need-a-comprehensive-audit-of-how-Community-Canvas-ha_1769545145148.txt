@@ -1,0 +1,118 @@
+I need a comprehensive audit of how Community Canvas handles work orders, quotes, and invoices. Please examine the database schema and create a markdown document answering these questions.
+
+### Part 1: Service Runs Analysis
+```sql
+-- 1a. Show cc_service_runs structure
+\d cc_service_runs
+
+-- 1b. Show any related service run tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE '%service_run%'
+ORDER BY table_name;
+
+-- 1c. Show cc_sr_* tables (service run related?)
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE 'cc_sr_%'
+ORDER BY table_name;
+
+-- 1d. Describe each cc_sr_* table
+-- (run \d on each table found)
+```
+
+### Part 2: Projects Analysis
+```sql
+-- 2a. Show cc_projects structure
+\d cc_projects
+
+-- 2b. Show any project-related tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name LIKE '%project%'
+ORDER BY table_name;
+```
+
+### Part 3: Quote/Estimate Analysis
+```sql
+-- 3a. Search for quote-related tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (table_name LIKE '%quote%' OR table_name LIKE '%estimate%' OR table_name LIKE '%bid%')
+ORDER BY table_name;
+
+-- 3b. Describe each quote-related table found
+-- (run \d on each)
+
+-- 3c. Check cc_catalog_items for quote/estimate types
+SELECT DISTINCT item_type FROM cc_catalog_items;
+```
+
+### Part 4: Invoice/Billing Analysis
+```sql
+-- 4a. Search for invoice-related tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (table_name LIKE '%invoice%' OR table_name LIKE '%billing%' OR table_name LIKE '%charge%')
+ORDER BY table_name;
+
+-- 4b. Check wallet/ledger tables
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (table_name LIKE '%wallet%' OR table_name LIKE '%ledger%' OR table_name LIKE '%payment%' OR table_name LIKE '%transaction%')
+ORDER BY table_name;
+
+-- 4c. Describe each financial table found
+-- (run \d on key tables)
+```
+
+### Part 5: Work Assignment Flow
+```sql
+-- 5a. How do operators get assigned to work?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (table_name LIKE '%assign%' OR table_name LIKE '%dispatch%' OR table_name LIKE '%schedule%')
+ORDER BY table_name;
+
+-- 5b. Check cc_operators relationships
+\d cc_operators
+
+-- 5c. Any work request tables?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND (table_name LIKE '%work%' OR table_name LIKE '%request%' OR table_name LIKE '%order%')
+ORDER BY table_name;
+```
+
+### Part 6: Reservation vs Service Run Relationship
+```sql
+-- 6a. Do reservations link to service runs?
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'cc_reservations'
+ORDER BY ordinal_position;
+
+-- 6b. Do service runs link to reservations?
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'cc_service_runs'
+ORDER BY ordinal_position;
+```
+
+### Output Request
+
+Create a markdown document called `schema-audit-work-quotes-invoices.md` that includes:
+
+1. **Work Order Flow**: How does CC capture "a contractor gets dispatched to do work"? Which tables are involved?
+
+2. **Service Runs Purpose**: What exactly are `cc_service_runs` and `cc_sr_*` tables used for?
+
+3. **Projects Purpose**: What are `cc_projects` used for? How do they differ from service runs?
+
+4. **Quotes/Estimates**: Where do quotes live? Is there a quotes table or are they part of another system?
+
+5. **Invoices/Billing**: Where do invoices live? Are they in the wallet/ledger system or separate tables?
+
+6. **Recommended Capability Domains**: Based on this audit, what should the authorization framework's capability domains be named?
+
+Include the raw SQL output for each query so we can see the actual schema.
