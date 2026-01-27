@@ -1,0 +1,69 @@
+REPLIT PROMPT — Phase 2C-15 Forensic Evidence Pack (NO FIXES)
+
+ROLE: Forensic Debugger
+CONSTRAINT: DO NOT change behavior. DO NOT “minimally fix”. DO NOT refactor. Only collect evidence and paste it back.
+
+GOAL: Identify exactly why PlatformLayout sees stale Mathew after impersonation stop, while AppRouterSwitch sees Glenn; and why AuthContext sets Glenn.isPlatformAdmin=false despite /api/me/context returning true.
+
+===========================================================
+A) PlatformLayout: prove which context it uses for "user/admin"
+===========================================================
+1) Open file: client/src/layouts/PlatformLayout.tsx
+2) Paste the FULL import section and the first 60 lines of the component body.
+3) Specifically answer with exact code lines:
+   - Which hook(s) provide `user`? (useAuth? useTenant? something else?)
+   - Which variable is used for the "admin" check that triggers early:notAdmin?
+   - Which field name is checked? (user.isPlatformAdmin? user.is_platform_admin? something else?)
+4) Paste the exact early-return branch code for:
+   - impersonation.active redirect/spinner (lines ~107-116)
+   - loading/initialized/authReady spinner (lines ~119-128)
+   - no user / not admin branches (lines ~130-138)
+   Include the surrounding 10 lines for context.
+
+===========================================================
+B) AuthContext: prove why isPlatformAdmin becomes false
+===========================================================
+1) Open file: client/src/contexts/AuthContext.tsx
+2) Paste the EXACT code in refreshSession() that maps /api/me/context → setUser(...)
+   Include:
+   - the type/interface for User
+   - the mapping block that sets isPlatformAdmin
+   - the line(s) that parse `data.user` fields
+3) Answer explicitly:
+   - What server field name is returned? (is_platform_admin vs is_platform_admin? vs isPlatformAdmin?)
+   - Which one is AuthContext using?
+4) Search in AuthContext.tsx for every place that sets/overwrites `user` or `isPlatformAdmin`.
+   Paste those snippets (with file line numbers).
+
+===========================================================
+C) TenantContext: prove where its user comes from and why it can be stale
+===========================================================
+1) Open file: client/src/contexts/TenantContext.tsx
+2) Paste:
+   - state initialization for `user` (or equivalent)
+   - the function that fetches /api/me/context or /api/foundation/auth/whoami (whatever TenantContext uses)
+   - where it updates its internal user state
+3) Answer explicitly:
+   - Does TenantContext store a `user` separate from AuthContext? (yes/no)
+   - What triggers TenantContext refresh after refreshSession()?
+   - Is there a dependency chain where TenantContext lags behind AuthContext?
+
+===========================================================
+D) Impersonation STOP handler: prove ordering and whether stale closure exists
+===========================================================
+1) Open file: client/src/components/ImpersonationBanner.tsx
+2) Paste the STOP handler function body only.
+3) Confirm:
+   - Does it call refreshSession() from AuthContext?
+   - Does it call any TenantContext refresh function?
+   - Does it navigate before the auth state commit can be observed?
+
+===========================================================
+E) One-shot reproduction evidence (already instrumented)
+===========================================================
+No new tests needed. Just paste the 4 most relevant log lines already seen, confirming:
+- AppRouterSwitch sees Glenn
+- PlatformLayout sees Mathew
+- PlatformLayout takes early:notAdmin
+
+=============================
