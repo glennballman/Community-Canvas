@@ -290,18 +290,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         checkAuth();
     }, []);
 
-    useEffect(() => {
-        async function devAutoLogin() {
-            if (!token && !loading) {
-                console.log('Dev mode: Auto-logging in as platform admin...');
-                await login('glenn@envirogroupe.com', 'TestPass123!');
-            }
-        }
-        if (!token && !loading) {
-            devAutoLogin();
-        }
-    }, [loading, token]);
-
     async function login(email: string, password: string): Promise<boolean> {
         try {
             const res = await fetch('/api/foundation/auth/login', {
