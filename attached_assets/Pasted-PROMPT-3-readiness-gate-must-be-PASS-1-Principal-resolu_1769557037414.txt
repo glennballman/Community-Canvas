@@ -1,0 +1,153 @@
+PROMPT-3 readiness gate (must be PASS)
+1) Principal resolution is deterministic
+
+PASS criteria
+
+Every request has:
+
+principal_id (real actor)
+
+effective_principal_id (same as principal unless impersonating)
+
+There is exactly one resolver function used everywhere (middleware + tests), not ad-hoc lookups.
+
+Red flag
+
+Any route reads req.user + tries to “guess” principal.
+
+2) Scope resolution is deterministic and cached correctly
+
+PASS criteria
+
+There’s one scope resolver that:
+
+Finds tenant scope for tenant_id
+
+Creates resource_type/resource scopes only when needed
+
+Never creates duplicate scopes (unique constraints enforced)
+
+Red flag
+
+“On demand” scope creation without unique index / race protection.
+
+3) Grant evaluation is fail-closed (including conditions)
+
+PASS criteria
+
+Unknown capability_code → deny + audit
+
+Unknown condition keys → deny + audit (you said this is fixed—great)
+
+Expired grants → deny
+
+Revoked grants → deny
+
+Multiple matching grants → allow only if at least one passes all conditions
+
+Red flag
+
+Any “fallback allow” or “missing scope means allow”.
+
+4) RLS is still the final gate
+
+PASS criteria
+
+Capability allow ≠ data access guarantee
+
+Policies remain enabled on core tables
+
+App-layer checks are entry gates only
+
+Red flag
+
+Replit attempts to remove or “simplify” RLS policies in PROMPT-3.
+
+5) Legacy role strings are still non-authoritative
+
+PASS criteria
+
+No route/controller checks cc_tenant_users.role for allow/deny
+
+Guardrail script still passes
+
+Red flag
+
+“Temporary role check” to speed delivery.
+
+6) Audit log is complete and consistent
+
+PASS criteria
+
+Every auth decision logs:
+
+principal_id
+
+effective_principal_id
+
+capability_code
+
+scope_id
+
+decision + reason
+
+minimal request context (route, method, resource ids)
+
+Red flag
+
+Logging only on deny or only on allow.
+
+7) Jobber mappings aren’t just present—they’re enforceable
+
+You reported capabilities counts per Jobber role. Great. Now verify the one thing that matters:
+
+PASS criteria
+
+A “Limited Worker” principal cannot view “all schedule” or “pricing”
+
+A “Dispatcher” can manage everyone’s schedule
+
+A “Manager” can see financials/invoices but cannot do tenant settings if that’s the intended policy
+
+“Admin” can do everything in tenant scope
+
+Red flag
+
+The role-capability map exists but nothing in app layer uses it yet.
+
+What PROMPT-3 should be (and what it must NOT be)
+PROMPT-3 should implement:
+
+Request middleware that sets principal context (and effective principal context)
+
+A single authorize() helper:
+
+authorize(capability_code, scope_id, {resource_type, resource_id})
+
+Route-level gates on sensitive endpoints (write paths first)
+
+Audit logging on every decision
+
+Tests for:
+
+allow/deny for each Jobber role on at least 10 actions
+
+impersonation effective principal path
+
+unknown condition hard fail
+
+PROMPT-3 must NOT:
+
+Touch migrations again (unless a missing index/constraint is discovered)
+
+Modify RLS policies except to add required GUC wiring if it’s missing
+
+Add “temporary” fallback checks
+
+What I need from you (to avoid another 12-hour loop)
+
+Paste the diff or contents of 0164_prompt3a_constitutional_corrections.sql (or at least the key parts), plus:
+
+the current has_capability / can_access_resource function(s) if they already exist
+
+the guardrail script output (just the “PASS” lines is fine)
