@@ -97,7 +97,7 @@ export function ImpersonationBanner(): React.ReactElement | null {
         queryClient.clear();
         const refreshed = await refreshSession();
         if (refreshed) {
-          navigate('/app/platform/impersonation');
+          navigate('/app/platform', { replace: true });
         }
       } else {
         console.error('Stop impersonation returned not ok:', data.error);
