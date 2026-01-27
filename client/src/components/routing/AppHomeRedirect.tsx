@@ -1,18 +1,20 @@
 /**
- * APP HOME REDIRECT
+ * APP HOME REDIRECT (Phase 2C-15H)
  * 
- * Determines where to route users when they hit /app
- * Based on role and view mode preference.
+ * Determines where to route users when they hit /app (index route)
  * 
  * Priority:
- * 1. Platform Admin → /app/platform (or /app/founder if Founder mode)
- * 2. Has tenant memberships → /app/places (tenant picker)
- * 3. No access → /app/onboarding or access denied
+ * 1. If currentTenant exists → /app/dashboard
+ * 2. Platform Admin (no impersonation) → /app/platform (or /app/founder)
+ * 3. Everyone else → /app/places
+ * 
+ * No impersonation special-casing here - that's handled by AppRouterSwitch guard.
  */
 
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/contexts/TenantContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ============================================================================
 // VIEW MODE PERSISTENCE
@@ -48,7 +50,8 @@ export function setViewMode(mode: ViewMode): void {
 
 export function AppHomeRedirect(): React.ReactElement | null {
   const navigate = useNavigate();
-  const { user, memberships, loading, initialized } = useTenant();
+  const { user, currentTenant, loading, initialized } = useTenant();
+  const { impersonation } = useAuth();
   const hasRedirected = useRef(false);
 
   useEffect(() => {
@@ -63,8 +66,15 @@ export function AppHomeRedirect(): React.ReactElement | null {
       return;
     }
 
-    // Platform admin - check view mode preference
-    if (user.is_platform_admin) {
+    // Phase 2C-15H: If currentTenant exists, go to dashboard
+    if (currentTenant) {
+      hasRedirected.current = true;
+      navigate('/app/dashboard', { replace: true });
+      return;
+    }
+
+    // Platform admin (not impersonating) - check view mode preference
+    if (user.is_platform_admin && !impersonation.active) {
       hasRedirected.current = true;
       const viewMode = getViewMode();
       if (viewMode === 'founder') {
@@ -75,10 +85,10 @@ export function AppHomeRedirect(): React.ReactElement | null {
       return;
     }
 
-    // Has tenant memberships - go to places
+    // Everyone else (or impersonating) - go to places
     hasRedirected.current = true;
     navigate('/app/places', { replace: true });
-  }, [initialized, loading, user, navigate]);
+  }, [initialized, loading, user, currentTenant, impersonation.active, navigate]);
 
   // Show loading state while determining redirect
   return (

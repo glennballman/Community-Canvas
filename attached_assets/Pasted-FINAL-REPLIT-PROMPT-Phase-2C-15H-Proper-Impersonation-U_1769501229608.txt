@@ -1,0 +1,167 @@
+FINAL REPLIT PROMPT — Phase 2C-15H “Proper Impersonation (User sees what User sees)”
+
+ROLE: Senior Platform Architect
+GOAL:
+- Impersonate user → land on the impersonated user’s normal home (/app/places)
+- See exactly what that user sees (no special screens/cards)
+- End impersonation → return to platform (/app/platform)
+CONSTRAINTS:
+- No new layouts
+- No new modes
+- No new routes
+- Do NOT use /app/select-tenant
+- UserShellLayout must be a pure shell (chrome + Outlet only)
+- PlatformLayout / FounderLayout must NEVER render during impersonation
+
+============================================================
+PART A — ROUTE RESTRUCTURE (critical): /app/places must NOT be under TenantAppLayout
+============================================================
+FILE: client/src/App.tsx
+
+Move /app/places out of the TenantAppLayout route group and into a UserShellLayout group.
+
+TARGET SHAPE:
+
+<Route path="/app" element={<AppRouterSwitch />}>
+
+  <Route path="platform" element={<PlatformLayout />}>
+    ...
+  </Route>
+
+  <Route path="founder" element={<FounderLayout />}>
+    ...
+  </Route>
+
+  {/* USER SHELL routes (no tenant required) */}
+  <Route element={<UserShellLayout />}>
+    <Route path="places" element={<TenantPicker />} />
+    {/* (optional later) other personal routes like trips/applications */}
+  </Route>
+
+  {/* TENANT APP routes (tenant required) */}
+  <Route element={<TenantAppLayout />}>
+    <Route index element={<AppHomeRedirect />} />
+    <Route path="dashboard" element={<DashboardPage />} />
+    {/* ... ALL other tenant routes remain here ... */}
+  </Route>
+
+</Route>
+
+IMPORTANT:
+- Remove any existing /app/places route from inside TenantAppLayout.
+- Keep everything else tenant-scoped under TenantAppLayout.
+
+============================================================
+PART B — UserShellLayout must be PURE (delete built-in “Choose a Place” card/page)
+============================================================
+FILE: client/src/layouts/UserShellLayout.tsx
+
+Delete all embedded picker UI (Card with “Choose a Place” / membership list / isPlacesRoute logic).
+UserShellLayout becomes only:
+- header/chrome (including impersonation banner if you want)
+- <Outlet />
+
+TARGET STRUCTURE:
+
+export function UserShellLayout() {
+  const { impersonation } = useAuth();
+  const isImpersonating = impersonation?.active === true;
+
+  return (
+    <div className="min-h-screen bg-background" data-testid="user-shell-layout">
+      <header className="h-14 border-b bg-card flex items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">Community Canvas</span>
+        </div>
+        {isImpersonating && (<ImpersonationBanner />)}
+      </header>
+
+      <main className="max-w-5xl mx-auto py-6 px-4">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+============================================================
+PART C — AppRouterSwitch becomes guard-only (keep platform/founder block)
+============================================================
+FILE: client/src/components/routing/AppRouterSwitch.tsx
+
+1) Keep authReady gate at top (return a loading screen if !authReady).
+2) REMOVE any “return <UserShellLayout />” intercept logic.
+3) KEEP the centralized redirect guard, but update it:
+
+- block /app/platform/* AND /app/founder/* when impersonating
+- redirect target must be /app/places (user home)
+
+APPLY THIS EXACT EDIT to your current useEffect (lines 64-95):
+
+useEffect(() => {
+  if (!authReady) return;
+
+  const isPlatformPath = location.pathname.startsWith('/app/platform');
+  const isFounderPath = location.pathname.startsWith('/app/founder');
+
+  if (impersonation.active && (isPlatformPath || isFounderPath) && !hasRedirectedRef.current) {
+    hasRedirectedRef.current = true;
+    throttledLog(
+      'AppRouterSwitch-redirect',
+      '[AppRouterSwitch] Redirect fired:',
+      { from: location.pathname, to: '/app/places', reason: 'impersonation active - platform/founder routes blocked' }
+    );
+    navigate('/app/places', { replace: true });
+  }
+}, [authReady, impersonation.active, location.pathname, navigate]);
+
+4) AppRouterSwitch should end with: return <Outlet />;
+
+============================================================
+PART D — AppHomeRedirect: /app index should go to /app/places when no tenant
+============================================================
+FILE: client/src/pages/app/AppHomeRedirect.tsx (or wherever index redirect lives)
+
+Logic:
+- if currentTenant exists → navigate('/app/dashboard', { replace:true })
+- else → navigate('/app/places', { replace:true })
+
+No impersonation special-casing.
+
+============================================================
+PART E — Impersonation START handler: always land on /app/places
+============================================================
+FILE: wherever POST /api/admin/impersonation/start is called (platform UI)
+
+After successful start:
+  await refreshSession();
+  navigate('/app/places', { replace: true });
+
+============================================================
+PART F — Impersonation END handler: always land on /app/platform
+============================================================
+FILE: wherever POST /api/admin/impersonation/end is called (banner/button)
+
+After successful end:
+  await refreshSession();
+  localStorage.removeItem('cc_view_mode');
+  navigate('/app/platform', { replace: true });
+
+============================================================
+VERIFICATION
+============================================================
+1) Glenn clicks “Impersonate Mathew”
+Expected:
+- lands on /app/places
+- sees TenantPicker (“Your Places”) as Mathew would
+- NO centered “Choose a Place” card exists anywhere (deleted)
+- NO tenant nav shown (because /app/places is under UserShellLayout)
+
+2) Click “Manage” → /app/dashboard
+Expected:
+- TenantAppLayout shows tenant nav + dashboard
+
+3) Exit impersonation
+Expected:
+- /app/platform loads with PlatformLayout
+- no blank screen
+- refresh remains correct

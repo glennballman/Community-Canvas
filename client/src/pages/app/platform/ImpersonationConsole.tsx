@@ -190,9 +190,9 @@ export function ImpersonationConsole(): React.ReactElement {
         
         if (refreshed) {
           await fetchStatus();
-          // Phase 2C-15C: Always navigate to /app, never force /app/select-tenant
-          // AppRouterSwitch will render UserShellLayout if no tenant is set
-          navigate('/app');
+          // Phase 2C-15H: Navigate to /app/places (user's normal home)
+          // User sees TenantPicker exactly as the impersonated user would
+          navigate('/app/places', { replace: true });
         } else {
           setError('Failed to refresh session after starting impersonation');
         }

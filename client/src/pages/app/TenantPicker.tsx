@@ -307,7 +307,7 @@ export function TenantPicker(): React.ReactElement {
           <span style={{ fontWeight: 600 }}>Community Canvas</span>
         </div>
         <div style={styles.headerRight}>
-          {user?.is_platform_admin && !impersonation.is_impersonating && (
+          {user?.is_platform_admin && !impersonation.active && (
             <Link to="/admin" style={styles.adminLink}>
               Platform Admin
             </Link>
@@ -528,9 +528,9 @@ function TenantCard({ tenant, onManage }: TenantCardProps): React.ReactElement {
         >
           Manage
         </button>
-        {tenant.portal_slug && (
+        {tenant.tenant_slug && (
           <Link
-            to={`/c/${tenant.portal_slug}`}
+            to={`/c/${tenant.tenant_slug}`}
             target="_blank"
             style={{
               backgroundColor: 'rgba(255,255,255,0.1)',

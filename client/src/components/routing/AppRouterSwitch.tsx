@@ -25,7 +25,6 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
-import { UserShellLayout } from '@/layouts/UserShellLayout';
 
 // Throttle helper to prevent console spam
 const throttleTimestamps: Record<string, number> = {};
@@ -62,35 +61,32 @@ export function AppRouterSwitch() {
   }, [location.pathname, authReady, impersonation.active, navMode, currentTenant]);
 
   // --------------------------------------------------------------------------
-  // CENTRALIZED IMPERSONATION REDIRECT (Phase 2C-15E)
+  // CENTRALIZED IMPERSONATION REDIRECT (Phase 2C-15H)
   // 
   // INVARIANT: Impersonation has TWO independent dimensions:
   //   1) acting_user (impersonated user identity)
   //   2) tenant_context (selected tenant for operations)
   // 
   // HARD INVARIANT (P0):
-  //   If impersonation.active === true, /app/platform/* is FORBIDDEN.
-  //   PlatformLayout must NEVER render during impersonation.
+  //   If impersonation.active === true, /app/platform/* AND /app/founder/* are FORBIDDEN.
+  //   PlatformLayout and FounderLayout must NEVER render during impersonation.
   // 
-  // REMOVED: Forced redirect to /app/select-tenant
-  //   - UserShellLayout now handles tenant-less state gracefully
-  //   - User sees "Choose a Place" panel, not a forced redirect
+  // Redirect target: /app/places (user's normal home)
   // --------------------------------------------------------------------------
   useEffect(() => {
     if (!authReady) return;
-    
+
     const isPlatformPath = location.pathname.startsWith('/app/platform');
-    
-    // Phase 2C-15E: Impersonation BLOCKS all platform routes (regardless of tenant)
-    // PlatformLayout must NEVER render during impersonation
-    if (impersonation.active && isPlatformPath && !hasRedirectedRef.current) {
+    const isFounderPath = location.pathname.startsWith('/app/founder');
+
+    if (impersonation.active && (isPlatformPath || isFounderPath) && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
       throttledLog(
         'AppRouterSwitch-redirect',
         '[AppRouterSwitch] Redirect fired:',
-        { from: location.pathname, to: '/app', reason: 'impersonation active - platform routes blocked' }
+        { from: location.pathname, to: '/app/places', reason: 'impersonation active - platform/founder routes blocked' }
       );
-      navigate('/app', { replace: true });
+      navigate('/app/places', { replace: true });
     }
   }, [authReady, impersonation.active, location.pathname, navigate]);
 
@@ -106,33 +102,9 @@ export function AppRouterSwitch() {
     );
   }
 
-  // Phase 2C-15D: Routes that keep their specialized layouts even during impersonation
-  // Platform and Founder paths have their own dedicated layouts
-  const isPlatformPath = location.pathname.startsWith('/app/platform');
-  const isFounderPath = location.pathname.startsWith('/app/founder');
-  const isSelectTenantPath = location.pathname.startsWith('/app/select-tenant');
-  
-  // Phase 2C-15D: INVARIANT - When impersonating without tenant:
-  // - UserShellLayout renders for ALL /app/* routes (except platform/founder/select-tenant)
-  // - TenantAppLayout must NOT render (no tenant nav/modules)
-  // - /app/places now also uses UserShellLayout during impersonation without tenant
-  const shouldShowUserShell = 
-    impersonation.active && 
-    !currentTenant &&
-    !isPlatformPath &&
-    !isFounderPath &&
-    !isSelectTenantPath;
-  
-  if (shouldShowUserShell) {
-    throttledLog(
-      'AppRouterSwitch-usershell',
-      '[AppRouterSwitch] Rendering UserShellLayout:',
-      { pathname: location.pathname, reason: 'impersonation active without tenant' }
-    );
-    return <UserShellLayout />;
-  }
-
-  // Render children (Outlet will be used by parent Routes)
+  // Phase 2C-15H: Guard-only component
+  // Routes are defined in App.tsx - this component just provides the Outlet
+  // UserShellLayout is now a route element, not an intercept
   return <Outlet />;
 }
 

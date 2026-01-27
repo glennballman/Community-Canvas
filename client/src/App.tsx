@@ -32,6 +32,7 @@ import { DebugPanel } from './components/dev/DebugPanel';
 
 // Layouts
 import { TenantAppLayout } from './layouts/TenantAppLayout';
+import { UserShellLayout } from './layouts/UserShellLayout';
 import { PublicPortalLayout } from './layouts/PublicPortalLayout';
 import { PlatformLayout } from './layouts/PlatformLayout';
 import { FounderLayout } from './layouts/FounderLayout';
@@ -432,10 +433,14 @@ export default function App() {
                   <Route path="analytics" element={<FounderAnalyticsPage />} />
                 </Route>
 
+                {/* USER SHELL routes - no tenant required (Phase 2C-15H) */}
+                <Route element={<UserShellLayout />}>
+                  <Route path="places" element={<TenantPicker />} />
+                </Route>
+
                 {/* TENANT APP - /app/* (default) */}
                 <Route element={<TenantAppLayout />}>
                 <Route index element={<AppHomeRedirect />} />
-                <Route path="places" element={<TenantPicker />} />
                 <Route path="dashboard" element={<DashboardPage />} />
                 
                 {/* V3 Operations */}
