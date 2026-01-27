@@ -18,7 +18,7 @@
  */
 
 import { useState } from 'react';
-import { useNavigate, Outlet } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,6 +37,7 @@ interface TenantMembership {
 
 export function UserShellLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { impersonation, token, refreshSession, logout } = useAuth();
   const { memberships: tenantMemberships, loading } = useTenant();
   const [selecting, setSelecting] = useState<string | null>(null);
@@ -44,6 +45,9 @@ export function UserShellLayout() {
 
   const isImpersonating = impersonation.active;
   const targetUser = impersonation.target_user;
+  
+  // Phase 2C-15 FINAL FIX: Only show picker card on /app and /app/places
+  const isPlacesRoute = location.pathname === '/app' || location.pathname === '/app/places';
 
   async function handleEnterTenant(tenantId: string) {
     setSelecting(tenantId);
@@ -94,12 +98,15 @@ export function UserShellLayout() {
         });
         queryClient.clear();
         await refreshSession();
-        navigate('/app/platform');
+        // Phase 2C-15 FINAL FIX: Clear view mode and use replace to prevent back button issues
+        localStorage.removeItem('cc_view_mode');
+        navigate('/app/platform', { replace: true });
+        return;
       } catch (err) {
         console.error('Failed to stop impersonation:', err);
       }
     } else {
-      navigate('/app/platform');
+      navigate('/app/platform', { replace: true });
     }
   }
 
@@ -131,113 +138,116 @@ export function UserShellLayout() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="max-w-2xl mx-auto py-12 px-4">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center">
-                {isImpersonating ? (
-                  <User className="h-8 w-8 text-primary" />
-                ) : (
-                  <Building2 className="h-8 w-8 text-primary" />
-                )}
+      {/* Phase 2C-15 FINAL FIX: Only show picker card on /app and /app/places, otherwise render Outlet */}
+      {isPlacesRoute ? (
+        <main className="max-w-2xl mx-auto py-12 px-4">
+          <Card>
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  {isImpersonating ? (
+                    <User className="h-8 w-8 text-primary" />
+                  ) : (
+                    <Building2 className="h-8 w-8 text-primary" />
+                  )}
+                </div>
               </div>
-            </div>
-            <CardTitle data-testid="text-user-shell-title">
-              {isImpersonating ? 'Choose a Place' : 'Your Places'}
-            </CardTitle>
-            <CardDescription>
-              {isImpersonating 
-                ? `Select which organization to view as ${targetUser?.display_name || targetUser?.email}`
-                : 'Select an organization to continue'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-muted-foreground">Loading...</span>
-              </div>
-            ) : error ? (
-              <div className="text-center py-4">
-                <p className="text-destructive text-sm mb-4">{error}</p>
-              </div>
-            ) : memberships.length === 0 ? (
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground mb-2">No places yet</p>
-                <p className="text-sm text-muted-foreground">
-                  {isImpersonating 
-                    ? 'This user has no organization memberships.'
-                    : 'You don\'t have access to any organizations yet.'}
-                </p>
-                {isImpersonating && (
-                  <Button 
-                    variant="outline" 
-                    className="mt-4" 
-                    onClick={handleBackToPlatform}
-                    data-testid="button-back-to-platform"
-                  >
-                    Back to Platform
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  {memberships.map((m) => (
-                    <Button
-                      key={m.tenant_id}
-                      variant="outline"
-                      className="w-full justify-between h-auto py-3 px-4 hover-elevate"
-                      onClick={() => handleEnterTenant(m.tenant_id)}
-                      disabled={!!selecting}
-                      data-testid={`button-enter-tenant-${m.tenant_id}`}
+              <CardTitle data-testid="text-user-shell-title">
+                {isImpersonating ? 'Choose a Place' : 'Your Places'}
+              </CardTitle>
+              <CardDescription>
+                {isImpersonating 
+                  ? `Select which organization to view as ${targetUser?.display_name || targetUser?.email}`
+                  : 'Select an organization to continue'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading...</span>
+                </div>
+              ) : error ? (
+                <div className="text-center py-4">
+                  <p className="text-destructive text-sm mb-4">{error}</p>
+                </div>
+              ) : memberships.length === 0 ? (
+                <div className="text-center py-8">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground mb-2">No places yet</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isImpersonating 
+                      ? 'This user has no organization memberships.'
+                      : 'You don\'t have access to any organizations yet.'}
+                  </p>
+                  {isImpersonating && (
+                    <Button 
+                      variant="outline" 
+                      className="mt-4" 
+                      onClick={handleBackToPlatform}
+                      data-testid="button-back-to-platform"
                     >
-                      <div className="flex items-center gap-3">
-                        <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                        <div className="text-left">
-                          <div className="font-medium">{m.tenant_name}</div>
-                          {m.tenant_slug && (
-                            <div className="text-xs text-muted-foreground">/{m.tenant_slug}</div>
+                      Back to Platform
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {memberships.map((m) => (
+                      <Button
+                        key={m.tenant_id}
+                        variant="outline"
+                        className="w-full justify-between h-auto py-3 px-4 hover-elevate"
+                        onClick={() => handleEnterTenant(m.tenant_id)}
+                        disabled={!!selecting}
+                        data-testid={`button-enter-tenant-${m.tenant_id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          <div className="text-left">
+                            <div className="font-medium">{m.tenant_name}</div>
+                            {m.tenant_slug && (
+                              <div className="text-xs text-muted-foreground">/{m.tenant_slug}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="capitalize text-xs">
+                            {m.role.replace(/_/g, ' ')}
+                          </Badge>
+                          {selecting === m.tenant_id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="capitalize text-xs">
-                          {m.role.replace(/_/g, ' ')}
-                        </Badge>
-                        {selecting === m.tenant_id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-
-                {isImpersonating && (
-                  <div className="pt-4 border-t">
-                    <Button
-                      variant="ghost"
-                      className="w-full"
-                      onClick={handleBackToPlatform}
-                      data-testid="button-cancel-impersonation"
-                    >
-                      Cancel and return to Platform
-                    </Button>
+                      </Button>
+                    ))}
                   </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </main>
 
-      {/* Outlet for any nested routes */}
-      <Outlet />
+                  {isImpersonating && (
+                    <div className="pt-4 border-t">
+                      <Button
+                        variant="ghost"
+                        className="w-full"
+                        onClick={handleBackToPlatform}
+                        data-testid="button-cancel-impersonation"
+                      >
+                        Cancel and return to Platform
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+      ) : (
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      )}
     </div>
   );
 }

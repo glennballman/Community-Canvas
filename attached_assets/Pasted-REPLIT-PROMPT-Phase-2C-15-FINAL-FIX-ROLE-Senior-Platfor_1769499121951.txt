@@ -1,0 +1,128 @@
+REPLIT PROMPT — Phase 2C-15 FINAL FIX
+ROLE: Senior Platform Architect + Forensic Debugger
+GOAL: Fix (1) blank dark-blue screen after ending impersonation, and (2) “Choose a Place/Tenant” appearing like a modal over nav while impersonating.
+CONSTRAINTS:
+- No new layouts
+- No new impersonation modes
+- Do not redesign routing (AppRouterSwitch remains the authority for /app/*)
+- No auto-redirect to /app/select-tenant
+
+------------------------------------------------------------
+PART A — UserShellLayout: stop always rendering the “Choose a Place” card
+FILE: client/src/layouts/UserShellLayout.tsx
+
+Problem: UserShellLayout renders the picker Card ALWAYS + also renders <Outlet/>.
+This creates stacked UI that feels like a modal overlay.
+
+Fix: Gate the picker Card so it only renders on /app and /app/places. Otherwise render <Outlet/> instead of the Card.
+
+Steps:
+1) Add useLocation import.
+2) Add:
+   const location = useLocation();
+   const isPlacesRoute = location.pathname === '/app' || location.pathname === '/app/places';
+
+3) Replace the existing always-rendered <main> Card + trailing <Outlet/> with:
+
+   {isPlacesRoute ? (
+     <main className="max-w-2xl mx-auto py-12 px-4">
+       <Card>...existing picker card exactly as-is...</Card>
+     </main>
+   ) : (
+     <main className="max-w-5xl mx-auto py-6 px-4">
+       <Outlet />
+     </main>
+   )}
+
+4) IMPORTANT: Remove the trailing standalone <Outlet /> at the bottom (it must not double-render).
+
+Expected result:
+- When on /app or /app/places: you see the picker card (“Choose a Place” while impersonating, “Your Places” otherwise)
+- When on /app/dashboard or /app/ops/...: you DO NOT see the picker card; you only see the routed page content
+
+------------------------------------------------------------
+PART B — AppRouterSwitch: add authReady gate BEFORE any routing logic
+FILE: client/src/components/routing/AppRouterSwitch.tsx
+
+Add this immediately after hooks:
+  const { impersonation, ready: authReady, navMode, hasTenantMemberships } = useAuth();
+  const { currentTenant } = useTenant();
+
+Insert:
+
+if (!authReady) {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-sm text-muted-foreground">Loading…</div>
+    </div>
+  );
+}
+
+Do NOT run shouldShowUserShell or redirect logic until authReady=true.
+
+Expected result:
+- No transient blank/dark screen while auth state transitions.
+
+------------------------------------------------------------
+PART C — AuthContext.refreshSession(): make it atomic, always finalize ready
+FILE: client/src/contexts/AuthContext.tsx
+Function: refreshSession()
+
+Currently it returns false in multiple paths without clearing state and without forcing ready transitions.
+
+Patch:
+1) At start of refreshSession(): setReady(false)
+2) On NO token: setUser(null), setImpersonation(defaultImpersonation), setCCTenants([]), return false
+3) If fetch res not ok OR data.ok false OR catch: clear the same state then return false
+4) Add finally { setReady(true); } so ready always finalizes.
+
+Do NOT clear cc_token here (that would log the user out).
+We just want coherent state transitions.
+
+Expected result:
+- No half-updated renders where impersonation/user/memberships disagree.
+- AppRouterSwitch ready gate prevents layout mismatch.
+
+------------------------------------------------------------
+PART D — End impersonation handler: replace navigation + clear view mode
+FILE: client/src/layouts/UserShellLayout.tsx
+Function: handleBackToPlatform()
+
+Currently:
+  await fetch('/api/admin/impersonation/end', ...)
+  await refreshSession();
+  navigate('/app/platform');
+
+Patch:
+After refreshSession():
+  localStorage.removeItem('cc_view_mode');
+  navigate('/app/platform', { replace: true });
+  return;
+
+(Do NOT touch cc_token.)
+Use replace:true to prevent Back button returning to impersonation state.
+
+Expected result:
+- Ending impersonation never lands in blank screen.
+- Always returns to platform routes cleanly.
+
+------------------------------------------------------------
+VERIFICATION CHECKLIST
+1) Impersonate Mathew with no tenant:
+   - /api/me/context returns Mathew + memberships=1 + current_tenant_id=null
+   - UI shows UserShellLayout picker card as a PAGE (not overlay)
+   - No tenant sidebar/nav beneath it
+
+2) Click “Enter” on Woods End Landing:
+   - switchTenant called
+   - route goes to /app/dashboard
+   - tenant nav appears (TenantAppLayout)
+
+3) Click “Cancel and return to Platform”:
+   - POST /api/admin/impersonation/end
+   - refreshSession atomic completes
+   - navigate('/app/platform', { replace:true })
+   - platform nav appears (no blank dark-blue screen)
+
+4) Refresh browser after ending impersonation:
+   - remains in platform state, no blank screen.

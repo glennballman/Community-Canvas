@@ -85,16 +85,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const startMs = Date.now();
         const storedToken = localStorage.getItem('cc_token');
         
+        // Phase 2C-15 FINAL FIX: Mark not ready during refresh to prevent transient renders
+        setReady(false);
+        
         throttledLog('refreshSession-start', '[AuthContext] refreshSession: start', { hasToken: !!storedToken });
         
-        if (!storedToken) {
-            setImpersonation(defaultImpersonation);
-            setCCTenants([]);
-            throttledLog('refreshSession-no-token', '[AuthContext] refreshSession: no token, returning false');
-            return false;
-        }
-
         try {
+            if (!storedToken) {
+                // Phase 2C-15 FINAL FIX: Clear all state coherently when no token
+                setUser(null);
+                setImpersonation(defaultImpersonation);
+                setCCTenants([]);
+                throttledLog('refreshSession-no-token', '[AuthContext] refreshSession: no token, returning false');
+                return false;
+            }
             // PHASE 2C-15: Call /api/me/context as source of truth for user + memberships + impersonation
             const res = await fetch('/api/me/context', {
                 headers: { Authorization: `Bearer ${storedToken}` },
@@ -113,11 +117,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             if (!res.ok) {
                 console.warn('/api/me/context returned non-OK status:', res.status);
+                // Phase 2C-15 FINAL FIX: Clear state on failure
+                setUser(null);
+                setImpersonation(defaultImpersonation);
+                setCCTenants([]);
                 return false;
             }
             
             if (!contentType || !contentType.includes('application/json')) {
                 console.warn('/api/me/context returned non-JSON response');
+                // Phase 2C-15 FINAL FIX: Clear state on failure
+                setUser(null);
+                setImpersonation(defaultImpersonation);
+                setCCTenants([]);
                 return false;
             }
             
@@ -178,10 +190,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 });
                 return true;
             }
+            // Phase 2C-15 FINAL FIX: Clear state if data.ok is false
+            setUser(null);
+            setImpersonation(defaultImpersonation);
+            setCCTenants([]);
             return false;
         } catch (err) {
             console.error('Failed to refresh session:', err);
+            // Phase 2C-15 FINAL FIX: Clear state on error
+            setUser(null);
+            setImpersonation(defaultImpersonation);
+            setCCTenants([]);
             return false;
+        } finally {
+            // Phase 2C-15 FINAL FIX: Always finalize ready state to prevent stuck loading
+            setReady(true);
         }
     }, []);
 
