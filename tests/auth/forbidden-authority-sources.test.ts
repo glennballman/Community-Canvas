@@ -1,5 +1,6 @@
 /**
  * PROMPT-10: Forbidden Authority Sources Guard
+ * PROMPT-13: Identity Graph Lock + Forbidden Fallbacks
  * 
  * This test ensures no authorization decisions use forbidden sources.
  * Per AUTH_CONSTITUTION.md Section 11, platform admin authority MUST
@@ -11,6 +12,12 @@
  * PROMPT-10: All production files have been migrated to:
  * - Capability-based checks: `can(req, 'platform.configure')`
  * - Grant-based checks: `checkPlatformAdminGrant(userId)`
+ * 
+ * PROMPT-13 additions:
+ * - Forbid "bootstrap" fallback patterns
+ * - Forbid "if principal missing then treat as admin" patterns
+ * - Forbid direct cc_users.is_platform_admin reads for authorization
+ * - server/auth/principal.ts remains ONLY identity resolver
  * 
  * Only dev/test files and infrastructure files (type definitions, data reads) remain whitelisted.
  */
@@ -295,5 +302,188 @@ describe('Forbidden Authority Sources Guard', () => {
     
     // Verify whitelist is not growing - should be stable after PROMPT-10
     expect(allWhitelisted.length).toBeLessThanOrEqual(18);
+  });
+});
+
+// PROMPT-13: Identity Graph Lock + Forbidden Fallbacks
+describe('PROMPT-13: Forbidden Fallback Authority Patterns', () => {
+
+  test('no bootstrap admin fallback patterns in authorization code', () => {
+    // PROMPT-13: Detect patterns like "bootstrap", "seed admin", "initial admin"
+    // that might bypass principal-based authorization
+    const result = execSync(
+      'grep -rn -E "(bootstrap.*admin|initial.*admin|seed.*admin|default.*admin)" server/routes/ server/middleware/ server/auth/ --include="*.ts" 2>/dev/null || true',
+      { encoding: 'utf-8' }
+    );
+    
+    const lines = result.trim().split('\n').filter(Boolean);
+    const violations: string[] = [];
+    
+    // PROMPT-13: Whitelisted bootstrap files (legitimate initial setup infrastructure)
+    const WHITELISTED_BOOTSTRAP_FILES = [
+      'server/routes/internal.ts', // Platform bootstrap endpoint - creates first admin with proper grants
+    ];
+    
+    for (const line of lines) {
+      const filePath = line.split(':')[0];
+      
+      // Skip test files
+      if (filePath.endsWith('.test.ts')) continue;
+      
+      // Skip dev-* files (acceptable for development seeding)
+      if (filePath.includes('dev-')) continue;
+      
+      // Skip whitelisted bootstrap infrastructure files
+      if (WHITELISTED_BOOTSTRAP_FILES.some(w => filePath.includes(w.replace('server/', '')))) continue;
+      
+      // Skip comments that explain the concept
+      if (line.includes('// ') && !line.includes('if (') && !line.includes('if(')) continue;
+      
+      // Skip help text messages (not authorization logic)
+      if (line.includes('message:') && line.includes("'")) continue;
+      
+      violations.push(line);
+    }
+    
+    if (violations.length > 0) {
+      console.log('\n=== BOOTSTRAP ADMIN FALLBACK VIOLATIONS (PROMPT-13) ===');
+      violations.forEach(v => console.log(v));
+    }
+    
+    expect(violations.length).toBe(0);
+  });
+
+  test('no "if principal missing then treat as admin" fallback patterns', () => {
+    // PROMPT-13: Detect patterns that grant admin when principal is null/undefined
+    const result = execSync(
+      'grep -rn -E "(principal.*null|!principal|principal\\s*===?\\s*null|principalId\\s*===?\\s*null).*admin|(admin|authorize).*(!principal|principal.*null)" server/routes/ server/middleware/ server/auth/ --include="*.ts" 2>/dev/null || true',
+      { encoding: 'utf-8' }
+    );
+    
+    const lines = result.trim().split('\n').filter(Boolean);
+    const violations: string[] = [];
+    
+    for (const line of lines) {
+      const filePath = line.split(':')[0];
+      
+      // Skip test files
+      if (filePath.endsWith('.test.ts')) continue;
+      
+      // Skip comments
+      if (line.includes('// ') && !line.includes('if (')) continue;
+      
+      // Skip error handling patterns (returning 401/403 when principal missing is OK)
+      if (line.includes('401') || line.includes('403') || line.includes('return')) continue;
+      
+      violations.push(line);
+    }
+    
+    if (violations.length > 0) {
+      console.log('\n=== PRINCIPAL MISSING FALLBACK VIOLATIONS (PROMPT-13) ===');
+      violations.forEach(v => console.log(v));
+    }
+    
+    expect(violations.length).toBe(0);
+  });
+
+  test('principal.ts is the ONLY identity resolver', () => {
+    // PROMPT-13: server/auth/principal.ts must be the single source of identity resolution
+    const principalPath = path.join(process.cwd(), 'server/auth/principal.ts');
+    const content = fs.readFileSync(principalPath, 'utf-8');
+    
+    // Verify it exports resolvePrincipalFromSession as the single authority
+    expect(content).toContain('export async function resolvePrincipalFromSession');
+    expect(content).toContain('SINGLE AUTHORITY for identity');
+    
+    // Verify it documents the identity graph
+    expect(content).toContain('Identity Graph');
+    expect(content).toContain('cc_users');
+    expect(content).toContain('cc_individuals');
+    expect(content).toContain('cc_principals');
+    
+    // PROMPT-13: Verify it uses ensure_principal_for_user DB function
+    expect(content).toContain('ensure_principal_for_user');
+  });
+
+  test('no parallel identity resolvers exist', () => {
+    // PROMPT-13: Ensure no other files implement resolvePrincipal* functions
+    const result = execSync(
+      'grep -rn "function resolvePrincipal\\|async function resolvePrincipal\\|resolvePrincipal.*=.*async" server/ --include="*.ts" 2>/dev/null || true',
+      { encoding: 'utf-8' }
+    );
+    
+    const lines = result.trim().split('\n').filter(Boolean);
+    const nonPrincipalFiles = lines.filter(line => {
+      const filePath = line.split(':')[0];
+      return !filePath.includes('principal.ts') && !filePath.endsWith('.test.ts');
+    });
+    
+    if (nonPrincipalFiles.length > 0) {
+      console.log('\n=== PARALLEL IDENTITY RESOLVER VIOLATIONS (PROMPT-13) ===');
+      nonPrincipalFiles.forEach(v => console.log(v));
+    }
+    
+    expect(nonPrincipalFiles.length).toBe(0);
+  });
+
+  test('no authorization decisions from JWT claims alone', () => {
+    // PROMPT-13: Authorization must not come from JWT claims bypassing cc_grants
+    const result = execSync(
+      'grep -rn -E "(jwt|token|claim).*admin.*(if|\\?|&&)|(if|\\?|&&).*(jwt|token|claim).*admin" server/routes/ server/middleware/ --include="*.ts" 2>/dev/null || true',
+      { encoding: 'utf-8' }
+    );
+    
+    const lines = result.trim().split('\n').filter(Boolean);
+    const violations = lines.filter(line => {
+      const filePath = line.split(':')[0];
+      // Skip test files
+      if (filePath.endsWith('.test.ts')) return false;
+      // Skip comments
+      if (line.includes('// ') && !line.includes('if (')) return false;
+      // Skip the auth infrastructure that validates tokens (not authorizes)
+      if (filePath.includes('middleware/auth.ts')) return false;
+      return true;
+    });
+    
+    if (violations.length > 0) {
+      console.log('\n=== JWT CLAIM AUTHORIZATION VIOLATIONS (PROMPT-13) ===');
+      violations.forEach(v => console.log(v));
+    }
+    
+    expect(violations.length).toBe(0);
+  });
+
+  test('identity graph functions exist in database', async () => {
+    // PROMPT-13: Verify the ensure_principal_for_user and verify_identity_graph_integrity functions exist
+    // This test imports from the server module to verify DB functions
+    const { serviceQuery } = await import('../../server/db/tenantDb');
+    
+    const result = await serviceQuery(`
+      SELECT routine_name 
+      FROM information_schema.routines 
+      WHERE routine_name IN ('ensure_principal_for_user', 'ensure_individual_for_user', 'verify_identity_graph_integrity')
+        AND routine_schema = 'public'
+    `);
+    
+    const functionNames = result.rows.map((r: any) => r.routine_name);
+    
+    expect(functionNames).toContain('ensure_principal_for_user');
+    expect(functionNames).toContain('ensure_individual_for_user');
+    expect(functionNames).toContain('verify_identity_graph_integrity');
+  });
+
+  test('identity graph integrity check passes', async () => {
+    // PROMPT-13: Verify the identity graph FK constraints are correct
+    const { serviceQuery } = await import('../../server/db/tenantDb');
+    
+    const result = await serviceQuery(`SELECT * FROM verify_identity_graph_integrity()`);
+    
+    for (const row of result.rows) {
+      expect(row.check_passed).toBe(true);
+    }
+    
+    // Specifically verify cc_principals.user_id -> cc_individuals.id (not cc_users)
+    const fkCheck = result.rows.find((r: any) => r.check_name === 'cc_principals_user_id_fk_target');
+    expect(fkCheck?.detail).toContain('cc_individuals.id');
   });
 });

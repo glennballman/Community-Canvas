@@ -84,37 +84,20 @@ export async function resolvePrincipalFromSession(req: Request): Promise<Princip
  * Used during user creation or first login
  * 
  * PROMPT-7: First ensures cc_individuals record exists (required by FK constraint)
+ * PROMPT-13: Delegates to ensure_principal_for_user DB function for idempotent creation
+ * 
+ * Identity Graph (PROMPT-13):
+ * - cc_users: account record (email/login/profile)
+ * - cc_individuals: person record (name/contact/personhood)  
+ * - cc_principals: authorization actor record (user/service/machine)
+ * FK chain: cc_principals.user_id -> cc_individuals.id (NOT cc_users!)
  */
-export async function getOrCreatePrincipal(userId: string, displayName: string, email?: string): Promise<string> {
-  // First try to find existing principal
-  const existing = await serviceQuery(`
-    SELECT id FROM cc_principals WHERE user_id = $1 AND is_active = TRUE LIMIT 1
-  `, [userId]);
-  
-  if (existing.rows[0]) {
-    return existing.rows[0].id;
-  }
-  
-  // PROMPT-7: Ensure cc_individuals record exists before creating principal
-  // This satisfies the cc_principals_user_id_fkey FK constraint
-  await serviceQuery(`SELECT ensure_individual_for_user($1)`, [userId]);
-  
-  // Create new principal
+export async function getOrCreatePrincipal(userId: string, _displayName?: string, _email?: string): Promise<string> {
+  // PROMPT-13: Use the DB function which handles the full identity graph chain
+  // cc_users -> cc_individuals -> cc_principals
   const result = await serviceQuery(`
-    INSERT INTO cc_principals (principal_type, user_id, display_name, email)
-    VALUES ('user', $1, $2, $3)
-    ON CONFLICT DO NOTHING
-    RETURNING id
-  `, [userId, displayName, email]);
-  
-  if (result.rows[0]) {
-    return result.rows[0].id;
-  }
-  
-  // Race condition - re-fetch
-  const refetch = await serviceQuery(`
-    SELECT id FROM cc_principals WHERE user_id = $1 AND is_active = TRUE LIMIT 1
+    SELECT ensure_principal_for_user($1) as principal_id
   `, [userId]);
   
-  return refetch.rows[0]?.id || null;
+  return result.rows[0]?.principal_id || null;
 }
