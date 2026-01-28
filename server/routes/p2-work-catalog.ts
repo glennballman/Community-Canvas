@@ -12,9 +12,12 @@ import { Router } from 'express';
 import { pool } from '../db';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { can } from '../auth/authorize';
 
 const router = Router();
 
+// PROMPT-4: Capability-based tenant member check
+// Uses tenant.read capability instead of isPlatformAdmin boolean
 async function requireTenantMember(req: any, res: any): Promise<{ tenantId: string; userId: string; role: string } | null> {
   const userId = req.user?.id;
   if (!userId) {
@@ -34,12 +37,13 @@ async function requireTenantMember(req: any, res: any): Promise<{ tenantId: stri
   `, [tenantId, userId]);
   
   if (result.rows.length === 0) {
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
-    if (!isPlatformAdmin) {
+    // PROMPT-4: Check tenant.read capability instead of isPlatformAdmin
+    const hasCapability = await can(req, 'tenant.read');
+    if (!hasCapability) {
       res.status(403).json({ ok: false, error: 'Tenant membership required' });
       return null;
     }
-    // Platform admins get owner role
+    // Users with tenant.read capability get owner role for access
     return { tenantId, userId, role: 'owner' };
   }
   

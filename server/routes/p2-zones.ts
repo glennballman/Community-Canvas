@@ -8,9 +8,12 @@
 import { Router } from 'express';
 import { pool } from '../db';
 import { z } from 'zod';
+import { can } from '../auth/authorize';
 
 const router = Router();
 
+// PROMPT-4: Capability-based tenant admin check
+// Uses tenant.configure capability instead of isPlatformAdmin boolean
 async function requireTenantAdmin(req: any, res: any): Promise<{ tenantId: string; userId: string } | null> {
   const userId = req.user?.id;
   if (!userId) {
@@ -31,8 +34,9 @@ async function requireTenantAdmin(req: any, res: any): Promise<{ tenantId: strin
   `, [tenantId, userId]);
   
   if (result.rows.length === 0 || !['admin', 'owner'].includes(result.rows[0].role || '')) {
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
-    if (!isPlatformAdmin) {
+    // PROMPT-4: Check tenant.configure capability instead of isPlatformAdmin
+    const hasCapability = await can(req, 'tenant.configure');
+    if (!hasCapability) {
       res.status(403).json({ ok: false, error: 'Admin access required' });
       return null;
     }

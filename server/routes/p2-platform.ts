@@ -17,13 +17,17 @@ import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { serviceQuery } from '../db/tenantDb';
-import { authenticateToken, requirePlatformAdmin, AuthRequest } from './foundation';
+import { authenticateToken, AuthRequest } from './foundation';
+import { requireCapability } from '../auth/authorize';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const router = express.Router();
 
-router.use(authenticateToken, requirePlatformAdmin);
+// PROMPT-4: All platform routes require platform.configure capability
+// Replaces legacy requirePlatformAdmin middleware
+router.use(authenticateToken);
+router.use(requireCapability('platform.configure'));
 
 /**
  * GET /api/p2/platform/analytics/summary

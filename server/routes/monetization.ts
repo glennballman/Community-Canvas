@@ -16,30 +16,25 @@ import { z } from "zod";
 import monetization from "../lib/monetization/gating";
 import type { MonetizationEventType } from "../lib/monetization/gating";
 import { authenticateToken, optionalAuth, AuthRequest } from "../middleware/auth";
+import { can, requireCapability } from "../auth/authorize";
 
 const router = Router();
 
-// Middleware to extract and validate tenant ID from authenticated user
-// Security: tenant ID must come from user's JWT claims or verified session,
-// NOT from headers that could be spoofed
-function requireTenantContext(req: AuthRequest, res: Response, next: NextFunction) {
-  // Get tenant from user's JWT claims (set during authentication)
-  // The JWT should contain tenantId for tenant-scoped users
+// PROMPT-4: Capability-based tenant context check
+// Uses platform.configure capability instead of isPlatformAdmin boolean for cross-tenant access
+async function requireTenantContext(req: AuthRequest, res: Response, next: NextFunction) {
   const user = req.user as any;
   
   if (!user) {
     return res.status(401).json({ error: "Authentication required" });
   }
   
-  // Check for tenant ID in verified user context:
-  // 1. tenantId directly in JWT claims
-  // 2. From session/context set by prior middleware
   const tenantId = user.tenantId || (req as any).tenantId;
   
   if (!tenantId) {
-    // Platform admins querying for a specific tenant can pass it as a query param
-    // This is acceptable since platform admins have access to all tenants
-    if (user.isPlatformAdmin && req.query.tenantId) {
+    // PROMPT-4: Check platform.configure capability instead of isPlatformAdmin
+    const hasCapability = await can(req as any, 'platform.configure');
+    if (hasCapability && req.query.tenantId) {
       (req as any).tenantId = req.query.tenantId as string;
       return next();
     }
@@ -50,13 +45,9 @@ function requireTenantContext(req: AuthRequest, res: Response, next: NextFunctio
   next();
 }
 
-// Middleware to require platform admin
-function requirePlatformAdmin(req: AuthRequest, res: Response, next: NextFunction) {
-  if (!req.user?.isPlatformAdmin) {
-    return res.status(403).json({ error: "Platform admin access required" });
-  }
-  next();
-}
+// PROMPT-4: Replace isPlatformAdmin check with requireCapability middleware
+// This middleware is exported for use but the actual check is now capability-based
+const requirePlatformAdminCapability = requireCapability('platform.configure');
 
 // Valid event types for validation
 const VALID_EVENT_TYPES = [
@@ -182,7 +173,8 @@ const assignPlanSchema = z.object({
   effectiveTo: z.string().datetime().optional(),
 });
 
-router.post("/assign-plan", authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
+// PROMPT-4: Use capability-based middleware instead of legacy requirePlatformAdmin
+router.post("/assign-plan", authenticateToken, requirePlatformAdminCapability, async (req: AuthRequest, res: Response) => {
   try {
     const body = assignPlanSchema.parse(req.body);
     

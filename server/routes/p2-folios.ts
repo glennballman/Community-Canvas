@@ -15,9 +15,12 @@ import {
 } from '@shared/schema';
 import { eq, and, sql, desc, gte, lte, ilike, or, inArray } from 'drizzle-orm';
 import { getFolioSummary } from '../lib/ledger/folioLedger';
+import { can } from '../auth/authorize';
 
 const router = Router();
 
+// PROMPT-4: Capability-based tenant access check
+// Uses folios.read capability instead of isPlatformAdmin boolean
 async function requireTenantAccess(req: any, res: any): Promise<{ tenantId: string; userId: string } | null> {
   const userId = req.user?.id;
   if (!userId) {
@@ -40,8 +43,9 @@ async function requireTenantAccess(req: any, res: any): Promise<{ tenantId: stri
   });
   
   if (!membership) {
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
-    if (!isPlatformAdmin) {
+    // PROMPT-4: Check folios.read capability instead of isPlatformAdmin
+    const hasCapability = await can(req, 'folios.read');
+    if (!hasCapability) {
       res.status(403).json({ ok: false, error: 'Access denied' });
       return null;
     }

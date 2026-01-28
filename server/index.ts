@@ -16,6 +16,7 @@ import {
   resolveImpersonation, 
   blockPlatformStaffWithoutImpersonation 
 } from "./middleware/guards";
+import { authContextMiddleware } from "./auth/context";
 
 const app = express();
 const httpServer = createServer(app);
@@ -156,6 +157,11 @@ app.use(optionalAuth as any);
 
 app.use(tenantContext as any);
 app.use(attachTenantDb);
+
+// PROMPT-4: Auth context middleware - attaches principal context to req.auth
+// Must run AFTER session/auth/tenantContext, BEFORE route guards and API routes
+// Fail-closed: on resolution error, req.auth is null and authorize() will deny
+app.use(authContextMiddleware);
 
 // P0 HARDENING: Block service-key on tenant API routes
 // Service-key is NOT accepted on /api/* routes (except /api/internal, /api/jobs, /api/scm, /api/monetization, /api/drills)
