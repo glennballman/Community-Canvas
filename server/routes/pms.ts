@@ -26,7 +26,7 @@ import {
   createMaintenanceRequest, getMaintenanceRequest, searchMaintenanceRequests,
   updateMaintenanceStatus
 } from '../services/housekeepingService';
-import { authenticateToken, AuthRequest } from './foundation';
+import { authenticateToken } from './foundation';
 import { can } from '../auth/authorize';
 
 const router = Router();
