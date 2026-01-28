@@ -1,0 +1,241 @@
+🔐 REQUIRED HEADER — MUST BE PREPENDED VERBATIM
+# ⚖️ AUTHORIZATION CONSTITUTION — PROMPT-5
+
+THIS PROMPT IS GOVERNED BY:
+- AUTH_CONSTITUTION.md (all articles)
+- PROMPT-3 ANNEX (application-layer enforcement)
+- PROMPT-4 ANNEX (route-level enforcement wiring)
+
+NON-NEGOTIABLE RULES:
+1. Authorization enforcement ALREADY EXISTS. PROMPT-5 MUST NOT add, change, or bypass enforcement logic.
+2. PROMPT-5 is VISIBILITY ONLY. UI gating MUST NOT grant access.
+3. All UI decisions MUST use can(...) helpers backed by the auth context.
+4. No role strings. No booleans. No inferred permissions.
+5. Any UI shown without can(...) MUST be considered a constitutional violation.
+
+FAILURE TO FOLLOW THESE RULES INVALIDATES THE PROMPT.
+
+PROMPT-5 — UI CAPABILITY GATING & NAVIGATION VISIBILITY
+ROLE
+
+Senior Platform Architect + Constitutional Enforcement Officer
+
+GOAL
+
+Make the UI accurately reflect what the current principal is allowed to do —
+without changing authorization enforcement.
+
+This is about:
+
+Navigation visibility
+
+Page visibility
+
+Action/button visibility
+
+NOT about access control (already handled by PROMPT-3 & PROMPT-4).
+
+SCOPE OF WORK
+1️⃣ Introduce a Single UI Authorization Helper
+
+File: client/src/auth/uiAuthorization.ts
+
+Create:
+
+export function canUI(
+  capabilityCode: string,
+  options?: {
+    scope?: 'platform' | 'organization' | 'tenant' | 'resource';
+    resourceId?: string;
+  }
+): boolean
+
+
+Rules:
+
+Uses auth context already returned from /api/me/context
+
+Calls existing can() semantics
+
+NEVER throws
+
+NEVER escalates privileges
+
+Returns false on any uncertainty
+
+2️⃣ Navigation Visibility (Sidebars, Menus)
+Platform Navigation
+
+Examples:
+
+Platform Settings
+
+Monetization
+
+Admin Panels
+
+Rule:
+Only render if:
+
+canUI('platform.configure')
+
+Tenant Navigation
+
+Examples:
+
+Zones
+
+Work Catalog
+
+Subsystems
+
+Team Management
+
+Reservations / Ops
+
+Each item must explicitly declare its capability, e.g.:
+
+canUI('tenant.configure')
+canUI('zones.manage')
+canUI('work_catalog.manage')
+
+
+❌ NO blanket “tenant member” checks
+❌ NO role checks
+❌ NO implied visibility
+
+3️⃣ Page-Level Visibility Guards
+
+Each routed page must include a top-level visibility guard:
+
+if (!canUI('folios.read')) {
+  return <NotAuthorized />;
+}
+
+
+Rules:
+
+This is visual only
+
+Backend will still enforce
+
+UI must not assume backend success
+
+4️⃣ Button / Action Visibility
+
+Every mutation-capable UI control must be gated.
+
+Examples:
+
+“Create”
+
+“Edit”
+
+“Delete”
+
+“Approve”
+
+“Invite”
+
+“Configure”
+
+“Claim”
+
+Pattern:
+
+{canUI('quotes.create') && (
+  <Button>Create Quote</Button>
+)}
+
+
+❌ Disabled buttons are NOT sufficient
+❌ Hidden buttons must not render DOM nodes
+
+5️⃣ Impersonation UI Behavior
+
+While impersonating:
+
+UI must behave exactly as impersonated principal
+
+No “you are impersonating” exceptions
+
+No “admin override” UI
+
+Banner visibility is allowed.
+Privilege leakage is not.
+
+6️⃣ Machine / Service Principals (UI Safety)
+
+If principal type ≠ human:
+
+Hide all UI that implies human action
+
+Never render destructive controls unless explicitly allowed by capability
+
+FORBIDDEN PATTERNS (AUTOMATIC FAIL)
+
+❌ if (user.isPlatformAdmin)
+❌ if (role === 'tenant_admin')
+❌ if (memberships.length > 0)
+❌ if (isImpersonating)
+❌ “Temporary UI logic”
+❌ TODO/FIXME authorization comments
+
+REQUIRED FILES TO MODIFY
+
+At minimum (expand as needed):
+
+client/src/components/nav/*
+
+client/src/layouts/PlatformLayout.tsx
+
+client/src/layouts/TenantAppLayout.tsx
+
+client/src/pages/**
+
+client/src/components/actions/**
+
+📎 PROMPT-5 ANNEX — REQUIRED PASS / FAIL CHECKLIST
+
+Replit MUST paste this back completed.
+
+PROMPT-5 ANNEX — UI AUTHORIZATION VISIBILITY
+1. UI Authorization Helper
+Requirement	Status	Evidence
+canUI() exists	PASS	client/src/auth/uiAuthorization.ts
+Fail-closed behavior	PASS	returns false on missing context
+No enforcement logic	PASS	No authorize()/throws
+2. Navigation Gating
+Area	Status	Evidence
+Platform nav gated	PASS	PlatformLayout.tsx: lines ___
+Tenant nav gated	PASS	TenantAppLayout.tsx: lines ___
+No role checks	PASS	grep results
+3. Page-Level Guards
+Page	Status	Evidence
+Platform pages	PASS	file + lines
+Tenant pages	PASS	file + lines
+Admin pages	PASS	file + lines
+4. Action / Button Gating
+Action Type	Status	Evidence
+Create	PASS	file + lines
+Edit	PASS	file + lines
+Delete	PASS	file + lines
+Approve	PASS	file + lines
+5. Impersonation Integrity
+Requirement	Status	Evidence
+UI uses effective principal	PASS	auth context
+No admin UI leakage	PASS	screenshots / code
+6. Prohibited Pattern Scan
+Check	Status
+No role strings	PASS
+No boolean admin checks	PASS
+No membership inference	PASS
+CONSTITUTIONAL ATTESTATION
+
+PROMPT-5 implements visibility-only authorization.
+No enforcement logic was added or altered.
+All decisions rely on capability evaluation only.
+
+Signed: Replit
+Date:
+Commit:
