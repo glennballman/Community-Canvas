@@ -17,9 +17,12 @@ import {
 } from '@shared/schema';
 import { eq, and, sql, desc, ilike, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { can } from '../auth/authorize';
 
 const router = Router();
 
+// PROMPT-4: Capability-based tenant admin check
+// Uses tenant.configure capability instead of isPlatformAdmin boolean
 async function requireTenantAdmin(req: any, res: any): Promise<{ tenantId: string; userId: string } | null> {
   const userId = req.user?.id;
   if (!userId) {
@@ -42,8 +45,9 @@ async function requireTenantAdmin(req: any, res: any): Promise<{ tenantId: strin
   });
   
   if (!membership || !['admin', 'owner'].includes(membership.role || '')) {
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
-    if (!isPlatformAdmin) {
+    // PROMPT-4: Check tenant.configure capability instead of isPlatformAdmin
+    const hasCapability = await can(req, 'tenant.configure');
+    if (!hasCapability) {
       res.status(403).json({ ok: false, error: 'Admin access required' });
       return null;
     }
@@ -65,7 +69,8 @@ router.get('/portals', async (req: any, res) => {
     const auth = await requireTenantAdmin(req, res);
     if (!auth) return;
 
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
     const result = await pool.query(`
       SELECT id, slug, name, status, portal_type
@@ -73,7 +78,7 @@ router.get('/portals', async (req: any, res) => {
       WHERE owning_tenant_id = $1 OR $2 = true
       ORDER BY name ASC
       LIMIT 100
-    `, [auth.tenantId, isPlatformAdmin]);
+    `, [auth.tenantId, hasCrosstenantAccess]);
 
     const portals = result.rows.map((row: any) => ({
       id: row.id,
@@ -803,7 +808,8 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
     if (!auth) return;
 
     const { portalId } = req.params;
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
     // Get portal (verify tenant access)
     const portalResult = await pool.query(`
@@ -811,7 +817,7 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
       FROM cc_portals
       WHERE id = $1
         AND (owning_tenant_id = $2 OR $3 = true)
-    `, [portalId, auth.tenantId, isPlatformAdmin]);
+    `, [portalId, auth.tenantId, hasCrosstenantAccess]);
 
     if (portalResult.rows.length === 0) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
@@ -968,15 +974,16 @@ router.get('/portals/:portalId/qa', async (req: any, res) => {
 const TEST_PREFIX = '[TEST] ';
 
 /**
- * Helper: Verify portal access for seed operations
+ * PROMPT-4: Helper for portal access verification
+ * Uses hasCrosstenantAccess capability result instead of isPlatformAdmin boolean
  */
-async function verifyPortalAccess(portalId: string, tenantId: string, isPlatformAdmin: boolean) {
+async function verifyPortalAccess(portalId: string, tenantId: string, hasCrosstenantAccess: boolean) {
   const result = await pool.query(`
     SELECT id, slug, name, owning_tenant_id
     FROM cc_portals
     WHERE id = $1
       AND (owning_tenant_id = $2 OR $3 = true)
-  `, [portalId, tenantId, isPlatformAdmin]);
+  `, [portalId, tenantId, hasCrosstenantAccess]);
   return result.rows[0] || null;
 }
 
@@ -1016,9 +1023,10 @@ router.post('/portals/:portalId/qa/seed-campaign', async (req: any, res) => {
     if (!auth) return;
 
     const { portalId } = req.params;
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
-    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, hasCrosstenantAccess);
     if (!portal) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
     }
@@ -1071,9 +1079,10 @@ router.post('/portals/:portalId/qa/seed-job', async (req: any, res) => {
     if (!auth) return;
 
     const { portalId } = req.params;
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
-    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, hasCrosstenantAccess);
     if (!portal) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
     }
@@ -1155,9 +1164,10 @@ router.post('/portals/:portalId/qa/seed-proposal', async (req: any, res) => {
     if (!auth) return;
 
     const { portalId } = req.params;
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
-    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, hasCrosstenantAccess);
     if (!portal) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
     }
@@ -1239,9 +1249,10 @@ router.post('/portals/:portalId/qa/seed-trip', async (req: any, res) => {
     if (!auth) return;
 
     const { portalId } = req.params;
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
-    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, hasCrosstenantAccess);
     if (!portal) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
     }
@@ -1304,9 +1315,10 @@ router.post('/portals/:portalId/qa/seed-work-request', async (req: any, res) => 
     if (!auth) return;
 
     const { portalId } = req.params;
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
-    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, hasCrosstenantAccess);
     if (!portal) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
     }
@@ -1678,9 +1690,10 @@ router.post('/portals/:portalId/qa/status', async (req: any, res) => {
 
     const { portalId } = req.params;
     const { status } = req.body; // 'complete' | 'incomplete' | 'in_progress'
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
-    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, hasCrosstenantAccess);
     if (!portal) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
     }
@@ -1725,9 +1738,10 @@ router.get('/portals/:portalId/qa/status', async (req: any, res) => {
     if (!auth) return;
 
     const { portalId } = req.params;
-    const isPlatformAdmin = req.user?.isPlatformAdmin === true;
+    // PROMPT-4: Check tenant.configure capability for cross-tenant access
+    const hasCrosstenantAccess = await can(req, 'tenant.configure');
 
-    const portal = await verifyPortalAccess(portalId, auth.tenantId, isPlatformAdmin);
+    const portal = await verifyPortalAccess(portalId, auth.tenantId, hasCrosstenantAccess);
     if (!portal) {
       return res.status(404).json({ ok: false, error: 'Portal not found or access denied' });
     }
