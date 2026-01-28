@@ -1,0 +1,148 @@
+# REPLIT PROMPT — PROMPT-17A: PMS Authorization Lock (NO WIGGLE ROOM)
+
+## REQUIRED AUTH HEADER (MUST PREPEND — DO NOT EDIT)
+- You are operating under `AUTH_CONSTITUTION.md`. Every change must be constitutionally compliant.
+- **Fail-closed always.** Missing context / errors / unknowns MUST deny.
+- **Single identity authority:** request auth context comes only from `authContextMiddleware` and `resolvePrincipalFromSession()`. No parallel identity sources.
+- **Capability-first:** No role strings, no `isPlatformAdmin`, no legacy boolean gates.
+- **Impersonation is actor substitution:** evaluate using `effectivePrincipalId` (never the platform admin’s principal when impersonating).
+- **Scope is required:** all capability evaluation must resolve through the scope hierarchy (platform/org/tenant/resource-type/resource) as implemented in PROMPT-3/4.
+- **Change scope lock:** This prompt is **route-file only**. Do not change schema, migrations, shared helpers, or other route files.
+
+---
+
+## ROLE
+You are the Authorization Enforcement Engineer. You will implement **explicit capability enforcement** for PMS routes.
+
+## GOAL
+Close the single HIGH-risk gap found in `PROMPT-16-AUTH-COVERAGE.md` by adding explicit, fail-closed capability checks to **every PMS route** in:
+
+- `server/routes/pms.ts` (and ONLY this file)
+
+PMS must not be “portal-context protected only.” Every handler must have an explicit capability gate.
+
+---
+
+## NON-NEGOTIABLE CONSTRAINTS
+1. **ONLY modify:** `server/routes/pms.ts`
+2. **NO other files touched.** No refactors. No imports moved around except within this file. No shared helper creation outside this file.
+3. **NO new capability codes.** Use existing capabilities only:
+   - Read operations → `tenant.read`
+   - Mutating operations → `tenant.configure`
+4. **Use the existing auth system (PROMPT-3/4):**
+   - Authentication: use the existing token auth middleware used elsewhere in the app (e.g. `authenticateToken`), wired router-level.
+   - Capability checks: use `can(req, 'tenant.read')` / `can(req, 'tenant.configure')` from `server/auth/authorize.ts` (or `requireCapability` middleware if already imported in this file — but be consistent and fail-closed).
+5. **Fail-closed semantics:** if anything is missing/throws, access is denied (403).
+
+---
+
+## IMPLEMENTATION REQUIREMENTS (DO EXACTLY THIS)
+
+### A) Router-level authentication gate
+At the top-level PMS router (near router creation), add:
+
+- `router.use(authenticateToken);`
+
+This must apply to all PMS routes.
+
+### B) Per-route capability enforcement (EVERY ROUTE)
+For **every** route handler in `server/routes/pms.ts`:
+
+- If the route is **read-only** (GET that returns data): require `tenant.read`
+- If the route **mutates** (POST/PUT/PATCH/DELETE or GETs that trigger side-effects): require `tenant.configure`
+
+Pattern (example):
+
+```ts
+if (!(await can(req, 'tenant.read'))) {
+  return denyCapability(res, 'tenant.read');
+}
+C) Standardized denial helper (IN-FILE ONLY)
+Define a small helper inside server/routes/pms.ts only:
+
+denyCapability(res, capabilityCode) returns 403 with a stable payload, e.g.:
+
+json
+Copy code
+{
+  "error": "Forbidden",
+  "code": "NOT_AUTHORIZED",
+  "capability": "tenant.read",
+  "reason": "capability_not_granted"
+}
+No redirects. No HTML. JSON only.
+
+D) No accidental scope/identity bypass
+Do not compute permissions using user flags.
+
+Do not look at cc_users.is_platform_admin.
+
+Do not introduce fallbacks like “if principal missing then allow.”
+
+Do not implement custom permission resolution inside pms.ts. Use can().
+
+ACCEPTANCE CRITERIA (MUST ALL PASS)
+Every route in server/routes/pms.ts has an explicit capability check.
+
+All PMS routes are authenticated at router-level.
+
+No new capabilities added.
+
+No schema/migrations.
+
+Fail-closed confirmed (missing auth context denies).
+
+Only server/routes/pms.ts modified.
+
+REQUIRED DELIVERABLE: docs/PROMPT-17A-ANNEX.md
+Create a new annex file with PASS/FAIL evidence using this exact structure:
+
+Annex Sections
+A) Route Inventory Table
+
+List every PMS route (method + path) with required capability and evidence line number in pms.ts.
+
+B) Fail-Closed Confirmation
+
+Show the router-level auth gate line number.
+
+Show the per-route can() pattern.
+
+Show denyCapability helper line range.
+
+Briefly cite why fail-closed holds (because can() returns false on any error).
+
+C) Constitutional Compliance Checklist
+
+Single Identity Authority: PASS + evidence reference
+
+Capability-First: PASS + evidence
+
+Fail-Closed: PASS + evidence
+
+No Parallel Systems: PASS + evidence
+
+No Scope Expansion: PASS + evidence (“only pms.ts modified”)
+
+D) Summary Statistics
+
+total routes gated
+
+read vs configure counts
+
+files modified count (must be 1)
+
+db changes count (must be 0)
+
+E) Files Modified
+
+Must list ONLY server/routes/pms.ts
+
+FINAL RESPONSE REQUIREMENT (WHEN YOU’RE DONE)
+Paste back:
+
+A short diff-style summary of the changes (high-level, not full file)
+
+Confirmation that ONLY server/routes/pms.ts was modified
+
+The completed docs/PROMPT-17A-ANNEX.md contents
