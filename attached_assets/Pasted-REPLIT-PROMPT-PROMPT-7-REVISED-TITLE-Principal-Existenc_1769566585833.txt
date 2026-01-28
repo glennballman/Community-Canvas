@@ -1,0 +1,86 @@
+REPLIT PROMPT — PROMPT-7 (REVISED)
+TITLE: Principal Existence Repair + Platform Admin Bootstrap Capabilities (NO FALLBACK PATHS)
+
+AUTH HEADER (REQUIRED):
+- Read AUTH_CONSTITUTION.md before changes.
+- NO PARALLEL AUTH PATHS.
+- No “fallback” authorization using cc_users flags.
+- Authorization decisions MUST always flow through effective_principal_id + capabilities evaluation.
+
+GOAL:
+1) Ensure every session has a resolvable principal (and effective principal when impersonating).
+2) Add platform admin bootstrap capabilities WITHOUT introducing any alternate identity/authorization source.
+
+BACKGROUND:
+PROMPT-6 added /api/me/capabilities snapshots and UI gating.
+Replit observed principal lookup/creation fails due to cc_principals → cc_individuals FK constraint.
+This must be repaired. We will NOT bypass principals.
+
+NON-NEGOTIABLE INVARIANTS:
+- Authorization uses principal_id / effective_principal_id only.
+- Never accept a userId param for capabilities snapshot.
+- Never “if principal missing, check cc_users.is_platform_admin” to grant capabilities.
+- cc_users.is_platform_admin can be used ONLY to create/repair principal rows (data integrity), NOT for runtime auth evaluation.
+
+TASKS:
+
+A) FIX PRINCIPAL EXISTENCE (DATA INTEGRITY) — REQUIRED FIRST
+1. Identify the failing FK:
+   - Document the exact FK name, tables, and columns.
+   - Confirm whether principal creation requires a matching cc_individuals row for user principals.
+
+2. Implement ONE of these constitutionally-approved fixes (choose the correct one based on current schema intent; do NOT invent new systems):
+
+   Option A (Preferred if "individual" is the human identity table):
+   - Ensure that when a USER principal is created, the corresponding cc_individuals row exists.
+   - Add an idempotent “ensure_individual_for_user(user_id)” function or inline transactional logic.
+   - Backfill missing cc_individuals rows for existing users that lack them.
+   - Add uniqueness constraints so backfill is safe and repeatable.
+
+   Option B (If cc_individuals should NOT be required for all principals):
+   - Change the FK to be nullable or constrained only when principal.type = 'individual'.
+   - This must be done carefully and documented; no weakening of RLS or audit requirements.
+   - Must not break machine/service principals.
+
+3. Add an automated verification step:
+   - For each cc_users row, verify there exists exactly one user principal row in cc_principals.
+   - Fail the migration if principals cannot be ensured.
+
+B) PLATFORM ADMIN BOOTSTRAP CAPABILITIES — AFTER A IS FIXED
+1. Implement bootstrap capability union in ONE place only:
+   - server/auth/capabilities.ts
+   - During capability snapshot build for the effective principal, union these when the effective principal’s underlying user is platform admin:
+     - platform.read
+     - platform.configure
+     - platform.admin
+
+2. How to determine platform admin (without bypass):
+   - Resolve principal → linked user (via schema-approved relationship).
+   - If schema does not link principal to user today, add the minimal link needed as part of principal existence repair (A). Do NOT route around principals.
+
+3. Audit logging:
+   - Audit log must record capability source: "bootstrap"
+   - This is metadata on the decision record, not a second decision system.
+
+C) PROHIBITED CHANGES (HARD NO)
+- No snapshot function accepting userId.
+- No “fallback” capability grants from cc_users when principal missing.
+- No route-level boolean checks reintroduced.
+- No scattering bootstrap logic into routes or client.
+- No weakening of fail-closed behavior.
+
+DELIVERABLES:
+1. Migration(s) implementing principal existence repair + (if needed) backfill.
+2. Bootstrap capability union implementation in server/auth/capabilities.ts.
+3. docs/PROMPT-7-ANNEX.md with PASS/FAIL evidence including:
+   - FK root cause + exact constraint name
+   - Evidence principals now exist for all users
+   - Evidence bootstrap caps appear in /api/me/capabilities for platform admins
+   - Evidence NO userId parameter added anywhere
+   - Evidence no runtime fallback to cc_users flags exists
+
+SUCCESS CRITERIA:
+- Glenn can load /app/platform immediately after login
+- /api/me/capabilities includes platform.configure for Glenn
+- Impersonation uses effectivePrincipalId only
+- No parallel authorization paths introduced

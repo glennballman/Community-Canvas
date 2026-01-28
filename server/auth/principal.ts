@@ -82,6 +82,8 @@ export async function resolvePrincipalFromSession(req: Request): Promise<Princip
 /**
  * Get or create principal for a user
  * Used during user creation or first login
+ * 
+ * PROMPT-7: First ensures cc_individuals record exists (required by FK constraint)
  */
 export async function getOrCreatePrincipal(userId: string, displayName: string, email?: string): Promise<string> {
   // First try to find existing principal
@@ -92,6 +94,10 @@ export async function getOrCreatePrincipal(userId: string, displayName: string, 
   if (existing.rows[0]) {
     return existing.rows[0].id;
   }
+  
+  // PROMPT-7: Ensure cc_individuals record exists before creating principal
+  // This satisfies the cc_principals_user_id_fkey FK constraint
+  await serviceQuery(`SELECT ensure_individual_for_user($1)`, [userId]);
   
   // Create new principal
   const result = await serviceQuery(`
