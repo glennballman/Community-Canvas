@@ -238,3 +238,168 @@ export function requirePlatformAdmin() {
 export function requireTenantAdmin(tenantId?: string) {
   return requireCapability('tenant.manage', { tenantId });
 }
+
+/**
+ * PROMPT-11: Resource Access Helper Options
+ */
+export interface ResourceAccessOptions {
+  capabilityOwn: string;
+  capabilityAll: string;
+  resourceTable: string;
+  resourceId: string;
+  tenantId?: string;
+}
+
+/**
+ * PROMPT-11: Check resource access with own/all pattern
+ * Returns true if principal can access the resource via ownership OR all capability
+ */
+export async function canAccessResource(
+  req: Request,
+  options: ResourceAccessOptions
+): Promise<boolean> {
+  if (!hasAuthContext(req)) {
+    return false;
+  }
+  
+  const authReq = req as AuthenticatedRequest;
+  const { effectivePrincipalId, tenantId: contextTenantId } = authReq.auth;
+  const tenantId = options.tenantId || contextTenantId;
+  
+  if (!effectivePrincipalId || !tenantId) {
+    return false;
+  }
+  
+  try {
+    const scopeId = await resolveTenantScopeId(tenantId);
+    if (!scopeId) {
+      return false;
+    }
+    
+    const result = await serviceQuery(`
+      SELECT cc_can_access_resource($1, $2, $3, $4, $5) as allowed
+    `, [
+      effectivePrincipalId,
+      options.capabilityAll,
+      scopeId,
+      options.resourceTable,
+      options.resourceId,
+    ]);
+    
+    if (result.rows[0]?.allowed === true) {
+      await auditResourceAccess(req, options.capabilityAll, scopeId, 'allow', 'all_capability', options);
+      return true;
+    }
+    
+    const ownResult = await serviceQuery(`
+      SELECT cc_can_access_resource($1, $2, $3, $4, $5) as allowed
+    `, [
+      effectivePrincipalId,
+      options.capabilityOwn,
+      scopeId,
+      options.resourceTable,
+      options.resourceId,
+    ]);
+    
+    if (ownResult.rows[0]?.allowed === true) {
+      await auditResourceAccess(req, options.capabilityOwn, scopeId, 'allow', 'own_capability', options);
+      return true;
+    }
+    
+    await auditResourceAccess(req, options.capabilityOwn, scopeId, 'deny', 'no_access', options);
+    return false;
+  } catch (error) {
+    console.error('[canAccessResource] Error:', error);
+    return false;
+  }
+}
+
+/**
+ * PROMPT-11: Require resource access middleware
+ */
+export function requireResourceAccess(
+  getOptions: (req: Request) => ResourceAccessOptions | null
+) {
+  return async (req: Request, res: any, next: any) => {
+    const options = getOptions(req);
+    
+    if (!options) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        code: 'RESOURCE_NOT_SPECIFIED',
+      });
+    }
+    
+    const allowed = await canAccessResource(req, options);
+    
+    if (allowed) {
+      next();
+    } else {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'RESOURCE_ACCESS_DENIED',
+        resource: options.resourceTable,
+      });
+    }
+  };
+}
+
+/**
+ * PROMPT-11: Get resource owner principal ID for a specific resource
+ */
+export async function getResourceOwnerPrincipalId(
+  resourceTable: string,
+  resourceId: string
+): Promise<string | null> {
+  try {
+    const result = await serviceQuery(`
+      SELECT created_by_principal_id FROM ${resourceTable} WHERE id = $1
+    `, [resourceId]);
+    return result.rows[0]?.created_by_principal_id || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Audit resource access decision
+ */
+async function auditResourceAccess(
+  req: Request,
+  capabilityCode: string,
+  scopeId: string | null,
+  decision: 'allow' | 'deny',
+  reason: string,
+  options: ResourceAccessOptions
+): Promise<void> {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const principalId = authReq.auth?.principalId || null;
+    const effectivePrincipalId = authReq.auth?.effectivePrincipalId || null;
+    
+    await serviceQuery(`
+      SELECT cc_auth_audit_log_insert(
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+      )
+    `, [
+      principalId,
+      effectivePrincipalId,
+      capabilityCode,
+      scopeId,
+      decision,
+      reason,
+      req.originalUrl || req.url,
+      req.method,
+      options.resourceTable,
+      options.resourceId,
+      options.tenantId || authReq.auth?.tenantId || null,
+      null,
+      req.ip || null,
+      req.headers['user-agent'] || null,
+      (req as any).session?.id || null,
+      JSON.stringify({ resource_access: true }),
+    ]);
+  } catch (error) {
+    console.error('[auditResourceAccess] Failed:', error);
+  }
+}

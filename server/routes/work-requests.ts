@@ -23,38 +23,104 @@ import {
   clampWindowDays,
   type SimilarityKey 
 } from '../lib/coordination';
+import { can, canAccessResource, ResourceAccessOptions } from '../auth/authorize';
+import { AuthenticatedRequest } from '../auth/context';
 
 const router = Router();
 
-// Admin/owner guard for mutation endpoints
-function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
+/**
+ * PROMPT-11: Capability-based guard for work request mutations
+ * Replaces isPlatformAdmin with work_requests.update capability
+ */
+async function requireWorkRequestManage(req: Request, res: Response, next: NextFunction) {
   const tenantReq = req as TenantRequest;
-  const roles = tenantReq.ctx?.roles || [];
+  const tenantId = tenantReq.ctx?.tenant_id || undefined;
+  const authReq = req as AuthenticatedRequest;
+  const effectivePrincipalId = authReq.auth?.effectivePrincipalId;
   
-  const isAdminOrOwner = 
-    roles.includes('owner') || 
-    roles.includes('admin') || 
-    roles.includes('tenant_admin') ||
-    !!tenantReq.user?.isPlatformAdmin;
+  const canManageAll = await can(req, 'work_requests.update', { tenantId });
   
-  if (!isAdminOrOwner) {
-    return res.status(403).json({ 
-      error: 'Owner or admin access required',
-      code: 'ADMIN_REQUIRED'
-    });
+  if (canManageAll) {
+    (req as any).canManageAllWorkRequests = true;
+    return next();
   }
-  next();
+  
+  // PROMPT-11: Check own.update capability with resource-level ownership
+  const canManageOwn = await can(req, 'work_requests.own.update', { tenantId });
+  
+  if (canManageOwn && effectivePrincipalId) {
+    (req as any).canManageAllWorkRequests = false;
+    (req as any).workRequestOwnershipRequired = true;
+    return next();
+  }
+  
+  return res.status(403).json({ 
+    error: 'Work request management access required',
+    code: 'NOT_AUTHORIZED'
+  });
+}
+
+/**
+ * PROMPT-11: Resource-level access check for individual work requests
+ */
+function getWorkRequestAccessOptions(req: Request): ResourceAccessOptions | null {
+  const tenantReq = req as TenantRequest;
+  const resourceId = req.params.id;
+  
+  if (!resourceId) return null;
+  
+  return {
+    capabilityOwn: 'work_requests.own.update',
+    capabilityAll: 'work_requests.update',
+    resourceTable: 'cc_work_requests',
+    resourceId,
+    tenantId: tenantReq.ctx?.tenant_id || undefined,
+  };
 }
 
 // List work requests with optional status filter
+// PROMPT-11: Added work_requests.read capability check
 router.get('/', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
+  const tenantId = tenantReq.ctx?.tenant_id || undefined;
+  
+  const canReadAll = await can(req, 'work_requests.read', { tenantId });
+  const canReadOwn = await can(req, 'work_requests.own.read', { tenantId });
+  
+  if (!canReadAll && !canReadOwn) {
+    return res.status(403).json({ 
+      error: 'Work request read access required',
+      code: 'NOT_AUTHORIZED'
+    });
+  }
+  
+  (req as any).canReadAllWorkRequests = canReadAll;
+  
+  const authReq = req as AuthenticatedRequest;
+  const effectivePrincipalId = authReq.auth?.effectivePrincipalId;
+  
   try {
     const { status, search, limit = '50', offset = '0' } = req.query;
     const params: any[] = [];
     let paramIndex = 1;
     
     const whereClauses: string[] = [];
+    
+    // PROMPT-11: Apply ownership filter when principal only has own.read capability
+    if (!canReadAll && effectivePrincipalId) {
+      whereClauses.push(`(
+        wr.created_by_principal_id = $${paramIndex}
+        OR EXISTS (
+          SELECT 1 FROM cc_resource_grants rg
+          WHERE rg.resource_type = 'cc_work_requests'
+            AND rg.resource_id = wr.id
+            AND rg.grantee_principal_id = $${paramIndex}
+            AND (rg.expires_at IS NULL OR rg.expires_at > NOW())
+        )
+      )`);
+      params.push(effectivePrincipalId);
+      paramIndex++;
+    }
     
     if (status && status !== 'all') {
       whereClauses.push(`wr.status = $${paramIndex}::work_request_status`);
@@ -268,11 +334,25 @@ router.get('/coordination/zone-rollup', requireAuth, requireTenant, async (req: 
 });
 
 // Get single work request
+// PROMPT-11: Resource-level read check for individual work requests
 router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
+  const tenantId = tenantReq.ctx?.tenant_id || undefined;
+  const authReq = req as AuthenticatedRequest;
+  const effectivePrincipalId = authReq.auth?.effectivePrincipalId;
+  const { id } = req.params;
+  
+  const canReadAll = await can(req, 'work_requests.read', { tenantId });
+  const canReadOwn = await can(req, 'work_requests.own.read', { tenantId });
+  
+  if (!canReadAll && !canReadOwn) {
+    return res.status(403).json({ 
+      error: 'Work request read access required',
+      code: 'NOT_AUTHORIZED'
+    });
+  }
+  
   try {
-    const { id } = req.params;
-
     const result = await tenantReq.tenantQuery!(
       `SELECT 
         wr.*,
@@ -292,6 +372,27 @@ router.get('/:id', requireAuth, requireTenant, async (req: Request, res: Respons
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Work request not found' });
+    }
+    
+    // PROMPT-11: Ownership check when only own.read capability
+    if (!canReadAll && effectivePrincipalId) {
+      const ownerId = result.rows[0].created_by_principal_id;
+      if (ownerId !== effectivePrincipalId) {
+        const grantCheck = await tenantReq.tenantQuery!(
+          `SELECT 1 FROM cc_resource_grants 
+           WHERE resource_type = 'cc_work_requests' AND resource_id = $1
+             AND grantee_principal_id = $2
+             AND (expires_at IS NULL OR expires_at > NOW())`,
+          [id, effectivePrincipalId]
+        );
+        
+        if (grantCheck.rows.length === 0) {
+          return res.status(403).json({
+            error: 'Cannot read work requests you do not own',
+            code: 'NOT_AUTHORIZED'
+          });
+        }
+      }
     }
 
     const notesResult = await tenantReq.tenantQuery!(
@@ -506,10 +607,47 @@ router.post('/', requireAuth, requireTenant, async (req: Request, res: Response)
 });
 
 // Update work request
-router.put('/:id', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// PROMPT-11: Added requireWorkRequestManage guard with own/all enforcement
+router.put('/:id', requireAuth, requireTenant, requireWorkRequestManage, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
+  const authReq = req as AuthenticatedRequest;
+  const effectivePrincipalId = authReq.auth?.effectivePrincipalId;
+  
   try {
     const { id } = req.params;
+    
+    // PROMPT-11: If only own.update capability, verify ownership
+    if ((req as any).workRequestOwnershipRequired && effectivePrincipalId) {
+      const ownerCheck = await tenantReq.tenantQuery!(
+        `SELECT created_by_principal_id FROM cc_work_requests WHERE id = $1`,
+        [id]
+      );
+      
+      if (ownerCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Work request not found' });
+      }
+      
+      const ownerId = ownerCheck.rows[0].created_by_principal_id;
+      
+      // Check if principal owns or has explicit grant
+      if (ownerId !== effectivePrincipalId) {
+        const grantCheck = await tenantReq.tenantQuery!(
+          `SELECT 1 FROM cc_resource_grants 
+           WHERE resource_type = 'cc_work_requests' AND resource_id = $1
+             AND grantee_principal_id = $2
+             AND (expires_at IS NULL OR expires_at > NOW())`,
+          [id, effectivePrincipalId]
+        );
+        
+        if (grantCheck.rows.length === 0) {
+          return res.status(403).json({
+            error: 'Cannot update work requests you do not own',
+            code: 'NOT_AUTHORIZED'
+          });
+        }
+      }
+    }
+    
     const {
       contact_channel_value,
       contact_channel_type,
@@ -676,10 +814,45 @@ router.post('/:id/drop', requireAuth, requireTenant, async (req: Request, res: R
 });
 
 // Add note to work request
-router.post('/:id/notes', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// PROMPT-11: Added requireWorkRequestManage guard with own/all enforcement
+router.post('/:id/notes', requireAuth, requireTenant, requireWorkRequestManage, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
+  const authReq = req as AuthenticatedRequest;
+  const effectivePrincipalId = authReq.auth?.effectivePrincipalId;
+  
   try {
     const { id } = req.params;
+    
+    // PROMPT-11: Ownership check when only own.update capability
+    if ((req as any).workRequestOwnershipRequired && effectivePrincipalId) {
+      const ownerCheck = await tenantReq.tenantQuery!(
+        `SELECT created_by_principal_id FROM cc_work_requests WHERE id = $1`,
+        [id]
+      );
+      
+      if (ownerCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Work request not found' });
+      }
+      
+      const ownerId = ownerCheck.rows[0].created_by_principal_id;
+      if (ownerId !== effectivePrincipalId) {
+        const grantCheck = await tenantReq.tenantQuery!(
+          `SELECT 1 FROM cc_resource_grants 
+           WHERE resource_type = 'cc_work_requests' AND resource_id = $1
+             AND grantee_principal_id = $2
+             AND (expires_at IS NULL OR expires_at > NOW())`,
+          [id, effectivePrincipalId]
+        );
+        
+        if (grantCheck.rows.length === 0) {
+          return res.status(403).json({
+            error: 'Cannot add notes to work requests you do not own',
+            code: 'NOT_AUTHORIZED'
+          });
+        }
+      }
+    }
+    
     const actorId = tenantReq.ctx!.individual_id || '00000000-0000-0000-0000-000000000000';
     const { content } = req.body;
 
@@ -720,7 +893,8 @@ router.get('/:id/notes', requireAuth, requireTenant, async (req: Request, res: R
 });
 
 // Assign zone to work request
-router.put('/:id/zone', requireAuth, requireTenant, async (req: Request, res: Response) => {
+// PROMPT-11: Added requireWorkRequestManage guard with own/all enforcement
+router.put('/:id/zone', requireAuth, requireTenant, requireWorkRequestManage, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   try {
     const { id } = req.params;
@@ -1283,7 +1457,7 @@ router.put('/:id/coordination-intent', requireAuth, requireTenant, async (req: R
  * - 404: Maintenance request not found
  * - 400: Validation error
  */
-router.put('/maintenance/:id/coordination-opt-in', requireAuth, requireTenant, requireTenantAdminOrOwner, async (req: Request, res: Response) => {
+router.put('/maintenance/:id/coordination-opt-in', requireAuth, requireTenant, requireWorkRequestManage, async (req: Request, res: Response) => {
   const tenantReq = req as TenantRequest;
   const { id } = req.params;
   const { coordination_opt_in, note } = req.body;

@@ -1163,6 +1163,8 @@ export const cc_reservation_carts = pgTable('cc_reservation_carts', {
   entryPoint: varchar('entry_point', { length: 255 }),
   notes: text('notes'),
   
+  createdByPrincipalId: uuid('created_by_principal_id'),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -7177,6 +7179,7 @@ export const ccN3Runs = pgTable("cc_n3_runs", {
   portalId: uuid("portal_id"),
   zoneId: uuid("zone_id").references(() => ccZones.id, { onDelete: "set null" }),
   metadata: jsonb("metadata").default({}),
+  createdByPrincipalId: uuid("created_by_principal_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({

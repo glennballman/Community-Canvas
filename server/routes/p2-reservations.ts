@@ -1,5 +1,8 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { pool } from "../db";
+import { can, canAccessResource, ResourceAccessOptions } from "../auth/authorize";
+import { requireAuth, requireTenant } from '../middleware/guards';
+import type { TenantRequest } from '../middleware/tenantContext';
 
 export const p2ReservationsRouter = Router();
 
@@ -7,9 +10,66 @@ function getTenantId(req: any): string | null {
   return req.session?.tenantId || req.headers['x-tenant-id'] as string || null;
 }
 
+/**
+ * PROMPT-11: Capability-based guard for reservation read access
+ */
+async function requireReservationRead(req: Request, res: Response, next: NextFunction) {
+  const tenantReq = req as TenantRequest;
+  const tenantId = getTenantId(req) || undefined;
+  
+  const canReadAll = await can(req, 'reservations.read', { tenantId });
+  const canReadOwn = await can(req, 'reservations.own.read', { tenantId });
+  
+  if (canReadAll || canReadOwn) {
+    (req as any).canReadAllReservations = canReadAll;
+    return next();
+  }
+  
+  return res.status(403).json({ 
+    error: 'Reservation access required',
+    code: 'NOT_AUTHORIZED'
+  });
+}
+
+/**
+ * PROMPT-11: Check if user can access a specific reservation
+ */
+async function canAccessReservation(req: Request, reservationId: string): Promise<boolean> {
+  const tenantId = getTenantId(req) || undefined;
+  
+  return canAccessResource(req, {
+    capabilityOwn: 'reservations.own.read',
+    capabilityAll: 'reservations.read',
+    resourceTable: 'cc_pms_reservations',
+    resourceId: reservationId,
+    tenantId,
+  });
+}
+
+/**
+ * PROMPT-11: Capability-based guard for reservation mutations
+ */
+async function requireReservationManage(req: Request, res: Response, next: NextFunction) {
+  const tenantReq = req as TenantRequest;
+  const tenantId = getTenantId(req) || undefined;
+  
+  const canManage = await can(req, 'reservations.update', { tenantId });
+  const canCheckIn = await can(req, 'reservations.checkin', { tenantId });
+  
+  if (canManage || canCheckIn) {
+    return next();
+  }
+  
+  return res.status(403).json({ 
+    error: 'Reservation management access required',
+    code: 'NOT_AUTHORIZED'
+  });
+}
+
 // GET /api/p2/reservations - List reservations with filters
 // NOTE: Tenant scoping via portal relationship. cc_pms_reservations uses portal_id, not tenant_id directly.
-p2ReservationsRouter.get("/", async (req, res) => {
+// PROMPT-11: Added requireReservationRead guard for capability enforcement
+p2ReservationsRouter.get("/", requireAuth, requireTenant, requireReservationRead, async (req, res) => {
   try {
     const tenantId = getTenantId(req);
     const {
@@ -134,7 +194,8 @@ p2ReservationsRouter.get("/", async (req, res) => {
 });
 
 // POST /api/p2/reservations/:id/check-in
-p2ReservationsRouter.post("/:id/check-in", async (req, res) => {
+// PROMPT-11: Added requireReservationManage guard for capability enforcement
+p2ReservationsRouter.post("/:id/check-in", requireAuth, requireTenant, requireReservationManage, async (req, res) => {
   try {
     const tenantId = getTenantId(req);
     const { id } = req.params;
