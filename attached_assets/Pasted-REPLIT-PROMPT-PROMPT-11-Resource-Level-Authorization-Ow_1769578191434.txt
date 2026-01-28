@@ -1,0 +1,109 @@
+REPLIT PROMPT — PROMPT-11: Resource-Level Authorization + Ownership Enforcement (Own/All becomes real)
+
+# 🔒 AUTH GOVERNANCE HEADER — MUST READ AND OBEY (NO EXCEPTIONS)
+
+You are implementing changes under AUTH_CONSTITUTION.md.
+This work is CONSTITUTIONAL: fail-closed, no parallel auth paths, no fallback authorities.
+
+NON-NEGOTIABLES:
+
+1) Identity authority is cc_principals (effective_principal_id for impersonation). No direct cc_users/flags/JWT-based authority.
+2) Enforcement authority is server/auth/authorize.ts + DB functions (cc_has_capability, cc_can_access_resource, etc).
+3) UI gating is visibility-only and must use /api/me/capabilities snapshot; it must fail-closed on unknowns.
+4) Any “temporary” bypass, bootstrap shortcut, or fallback path is forbidden unless explicitly allowed by AUTH_CONSTITUTION.md.
+5) Every prompt must output a PASS/FAIL annex with file paths + line numbers, in the same evidence style as prior annexes.
+
+DELIVERABLES REQUIRED:
+
+- Code changes
+- Tests
+- docs/PROMPT-<N>-ANNEX.md with PASS/FAIL evidence (paths + line numbers)
+- No regressions: `npm test` must pass (allow explicit SKIPs only when documented as dependency-missing)
+
+If anything is ambiguous, STOP and ask Glenn. Do not guess.
+
+OBJECTIVE
+We already have schema, capability catalog, audit logging, scope ancestry, and UI snapshot.
+Now we must make resource-level access deterministic and enforced:
+
+- Implement row-level/resource-level authorization using principal ownership + explicit resource grants.
+- Enforce own/all capabilities on real V3.5 routes for:
+  1) cc_reservations (use “reserve/reservation” language)
+  2) cc_work_requests
+  3) Any existing “projects/jobs” entity already present (do not invent new product areas; wire what exists)
+
+CONSTITUTIONAL RULES
+
+- Fail-closed always.
+- No fallback “platform admin” shortcuts.
+- effective_principal_id is always used for enforcement and audit logs.
+- Resource-level checks must be performed server-side via authorize()/can()/requireCapability() and DB checks.
+- UI remains visibility-only; do not rely on UI for security.
+
+SCOPE
+A) DATABASE — Migration 0168_prompt11_resource_access.sql
+
+1) Ensure cc_resource_grants exists and is used (if already exists, do NOT recreate; extend additive-only)
+   - Must support: principal_id, scope_id, resource_table, resource_id, capability_code (optional), valid_from, valid_until, created_at, created_by_principal_id
+   - RLS enabled and policies consistent with existing auth tables.
+2) Create/extend DB function: cc_can_access_resource(...) so it can evaluate:
+   - Ownership model: resource.created_by_principal_id == effective_principal_id => allow when capability supports ownership
+   - Explicit grants: cc_resource_grants for that principal/scope/resource => allow
+   - Scope ancestry: resource scope must be descendant of the requested scope
+   - Time-bounded grants respected
+   - Unknown conditions: hard-fail if safety-critical; otherwise deny (per AUTH_CONSTITUTION.md §8/§8a)
+3) Add helper DB function(s) if needed:
+   - get_or_create_resource_scope(tenant_scope_id, resource_type_code, resource_id) idempotent
+   - Must include uniqueness constraints (fail if duplicates)
+
+B) SERVER — Enforcement wiring (no new architecture)
+
+1) Update server/auth/scope.ts:
+   - Add resource scope resolver helpers used by authorize() calls for reservations/work_requests/projects
+2) Update server/auth/authorize.ts:
+   - Add helper: requireResourceAccess({ capabilityOwn, capabilityAll, resolveResource, resolveScope }) pattern OR equivalent.
+   - Must log allow/deny to cc_auth_audit_log (already exists).
+3) Update real routes:
+   - Reservations: any route that reads/updates a reservation must enforce:
+     - jobs/reservations own/all semantics via capabilities:
+       - reservations.own.view / reservations.all.view
+       - reservations.own.manage / reservations.all.manage
+   - Work Requests: enforce:
+     - work_requests.own.view / work_requests.all.view
+     - work_requests.own.manage / work_requests.all.manage
+   - Projects/Jobs: enforce analogous own/all patterns already present in capability catalog.
+     IMPORTANT: Do not add “TODO”; actually wire the checks.
+
+C) DATA MODEL — Ownership fields
+
+- Ensure these tables have created_by_principal_id (UUID) and it is populated on create:
+  - cc_reservations
+  - cc_work_requests
+  - whichever “project/job” table exists
+    If any are missing: add columns via migration (additive-only), backfill existing rows deterministically:
+  - If there is an existing created_by user id, map to principal
+  - Otherwise set to NULL and deny “own” access unless explicit grants exist (fail-closed)
+
+D) TESTS — Must be real
+Create tests/auth/resource-access.test.ts covering:
+
+1) A principal with reservations.own.view sees only their created reservations
+2) A principal with reservations.all.view sees all tenant reservations
+3) A principal with only own.manage cannot modify someone else’s reservation
+4) Explicit cc_resource_grants grants access even without ownership
+5) Deny on missing scopes / missing resources (fail-closed)
+6) Audit log written on allow and deny
+
+E) ANNEX
+Create docs/PROMPT-11-ANNEX.md with PASS/FAIL evidence lines for:
+
+- DB migration + function(s) + uniqueness constraints
+- Route enforcement call sites (file path + line numbers)
+- Tests (file path + line numbers)
+- Proof that effective_principal_id is used in all checks
+
+ACCEPTANCE CRITERIA
+
+- Platform Admin can view platform pages AND tenant resource pages without regressions.
+- “Own vs All” is enforced server-side and test-proven.
+- No new forbidden authority sources; tests still pass.
