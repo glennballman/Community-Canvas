@@ -21,6 +21,11 @@ import { authenticateToken, AuthRequest } from './foundation';
 import { requireCapability } from '../auth/authorize';
 import * as fs from 'fs';
 import * as path from 'path';
+import { 
+  getExternalMappingPreview, 
+  listExternalSystems, 
+  listMappingsForSystem 
+} from '../auth/externalMappings';
 
 const router = express.Router();
 
@@ -1301,6 +1306,110 @@ router.get('/tenants/search', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error searching tenants:', error);
     res.status(500).json({ error: 'Failed to search tenants' });
+  }
+});
+
+/**
+ * PROMPT-15: External Role Mapping Preview Endpoint
+ * 
+ * POST /api/p2/platform/external-mappings/preview
+ * 
+ * For QA and ingestion pipelines to preview how external roles map to internal roles.
+ * Fail-closed: returns error if mapping not found, never assigns defaults.
+ * 
+ * Request body:
+ * - external_system: string (e.g., 'jobber', 'cloudbeds', 'robotics')
+ * - external_role_code: string (e.g., 'admin', 'manager', 'worker')
+ * 
+ * Response:
+ * - ok: boolean
+ * - externalSystem: string
+ * - externalRoleCode: string
+ * - mappedRoleCode: string | null
+ * - mappedRoleName: string | null
+ * - capabilities: string[]
+ * - error?: string
+ * - generatedAt: string (ISO timestamp)
+ */
+router.post('/external-mappings/preview', async (req: AuthRequest, res: Response) => {
+  try {
+    const { external_system, external_role_code } = req.body;
+    
+    if (!external_system || typeof external_system !== 'string') {
+      return res.status(400).json({
+        ok: false,
+        error: 'external_system is required and must be a string'
+      });
+    }
+    
+    if (!external_role_code || typeof external_role_code !== 'string') {
+      return res.status(400).json({
+        ok: false,
+        error: 'external_role_code is required and must be a string'
+      });
+    }
+
+    const preview = await getExternalMappingPreview(external_system, external_role_code);
+    
+    if (!preview.ok) {
+      return res.status(404).json(preview);
+    }
+    
+    res.json(preview);
+  } catch (error) {
+    console.error('Error getting external mapping preview:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to get external mapping preview',
+      generatedAt: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * GET /api/p2/platform/external-mappings/systems
+ * 
+ * List all supported external systems.
+ */
+router.get('/external-mappings/systems', async (req: AuthRequest, res: Response) => {
+  try {
+    const systems = await listExternalSystems();
+    res.json({
+      ok: true,
+      systems,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error listing external systems:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to list external systems'
+    });
+  }
+});
+
+/**
+ * GET /api/p2/platform/external-mappings/systems/:system
+ * 
+ * List all mappings for a specific external system.
+ */
+router.get('/external-mappings/systems/:system', async (req: AuthRequest, res: Response) => {
+  try {
+    const { system } = req.params;
+    const mappings = await listMappingsForSystem(system);
+    
+    res.json({
+      ok: true,
+      system,
+      mappings,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error listing mappings for system:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to list mappings for system'
+    });
   }
 });
 
