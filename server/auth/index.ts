@@ -38,3 +38,10 @@ export {
   type AuthorizeOptions,
   type AuthorizeResult,
 } from './authorize';
+
+// Capability Snapshot (PROMPT-6)
+export {
+  getCapabilitySnapshot,
+  hasCapability,
+  type CapabilitySnapshot,
+} from './capabilities';

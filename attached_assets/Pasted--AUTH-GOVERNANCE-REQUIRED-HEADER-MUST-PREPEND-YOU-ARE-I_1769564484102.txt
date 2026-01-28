@@ -1,0 +1,57 @@
+# AUTH GOVERNANCE REQUIRED HEADER (MUST PREPEND)
+
+YOU ARE IMPLEMENTING AUTHORIZATION IN COMMUNITY CANVAS V3.5 UNDER AUTH_CONSTITUTION.md.
+
+NON-NEGOTIABLES:
+1) SINGLE IDENTITY AUTHORITY: identity resolved ONLY via server/auth/principal.ts resolvePrincipalFromSession().
+2) CAPABILITY-FIRST: ALL permission decisions use capability codes (NO roles, NO isPlatformAdmin booleans).
+3) IMPERSONATION = ACTOR SUBSTITUTION: authorization evaluates effective_principal_id; principal_id is for audit only.
+4) FAIL-CLOSED: uncertainty denies. Unknown capability codes DENY. Unknown condition keys HARD-FAIL.
+5) NO PARALLEL AUTH SYSTEMS: do NOT introduce alternate evaluators or shortcuts.
+6) UI NEVER AUTHORIZES: UI only reflects authoritative capability facts; backend always enforces.
+7) ANNEX REQUIRED: You MUST return a PROMPT-6 ANNEX with PASS/FAIL + file paths + line numbers.
+
+IF ANYTHING IS AMBIGUOUS, IMPLEMENT THE STRICTER (DENY / FAIL-CLOSED) INTERPRETATION.
+
+---
+
+# PROMPT-6 — Authoritative Capability Snapshot + Exact UI Gating
+
+## OBJECTIVE
+Eliminate UI authorization approximation introduced in PROMPT-5 and replace it with an **authoritative capability snapshot** derived from the canonical authorization engine (PROMPT-3 / PROMPT-4).
+
+After this prompt:
+- UI visibility must be driven ONLY by capability facts evaluated for effective_principal_id
+- No role strings, booleans, or “best-effort” inference may remain
+- Impersonation must immediately change UI visibility correctly
+
+---
+
+## A) SERVER — AUTHORITATIVE CAPABILITY SNAPSHOT ENDPOINT
+
+### Create endpoint:
+GET /api/me/capabilities
+
+### Locked response shape (DO NOT CHANGE):
+```json
+{
+  "ok": true,
+  "principal_id": "uuid",
+  "effective_principal_id": "uuid",
+  "context": {
+    "platform_scope_id": "uuid",
+    "organization_scope_id": "uuid|null",
+    "tenant_scope_id": "uuid|null",
+    "tenant_id": "uuid|null",
+    "organization_id": "uuid|null"
+  },
+  "capabilities": {
+    "platform": ["capability.code"],
+    "organization": ["capability.code"],
+    "tenant": ["capability.code"],
+    "resource_types": {
+      "reservations": ["capability.code"],
+      "jobs": ["capability.code"]
+    }
+  }
+}

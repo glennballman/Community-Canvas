@@ -3,7 +3,8 @@ import { serviceQuery } from '../db/tenantDb';
 import { authenticateToken, AuthRequest } from './foundation';
 import { 
   resolvePrincipalFromSession, 
-  getOrCreatePrincipal 
+  getOrCreatePrincipal,
+  getCapabilitySnapshot 
 } from '../auth';
 
 const router = express.Router();
@@ -238,6 +239,67 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
   } catch (error) {
     console.error('Error fetching user context:', error);
     res.status(500).json({ error: 'Failed to fetch user context' });
+  }
+});
+
+/**
+ * GET /api/me/capabilities
+ * 
+ * PROMPT-6: Authoritative Capability Snapshot
+ * Returns the current effective principal's capabilities at all scope levels.
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for UI capability gating.
+ * UI visibility must be driven ONLY by capability facts in this response.
+ * 
+ * AUTH_CONSTITUTION.md compliance:
+ * - Uses effective_principal_id (impersonation = actor substitution)
+ * - Evaluates capabilities at platform, org, tenant, and resource-type scopes
+ * - Fail-closed: returns empty capabilities on any error
+ */
+router.get('/me/capabilities', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const session = (req as any).session;
+    
+    // Resolve principal context (single authority)
+    const principalContext = await resolvePrincipalFromSession(req);
+    
+    // Get current tenant from session or query param
+    const currentTenantId = req.query.tenant_id as string || session?.current_tenant_id || null;
+    
+    // Get current organization (if any - currently not implemented in session)
+    const currentOrgId = req.query.organization_id as string || null;
+    
+    // Get capability snapshot for effective principal
+    const snapshot = await getCapabilitySnapshot(
+      principalContext.principalId,
+      principalContext.effectivePrincipalId,
+      currentTenantId,
+      currentOrgId
+    );
+    
+    res.json(snapshot);
+    
+  } catch (error) {
+    console.error('Error fetching capabilities:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to fetch capabilities',
+      principal_id: null,
+      effective_principal_id: null,
+      context: {
+        platform_scope_id: '00000000-0000-0000-0000-000000000001',
+        organization_scope_id: null,
+        tenant_scope_id: null,
+        tenant_id: null,
+        organization_id: null,
+      },
+      capabilities: {
+        platform: [],
+        organization: [],
+        tenant: [],
+        resource_types: {},
+      },
+    });
   }
 });
 
