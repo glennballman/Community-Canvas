@@ -56,7 +56,8 @@ export function PlatformLayout(): React.ReactElement {
   // Latch to prevent redirect loops
   const hasRedirectedRef = useRef(false);
 
-  const sections = getPlatformNavSections({ hasTenantMemberships });
+  // PROMPT-5: Pass canUI function for capability-based visibility checks
+  const sections = getPlatformNavSections({ hasTenantMemberships, canUI });
   
   // FORENSIC: Top-of-render dump
   dbg('[PlatformLayout/render]', {
