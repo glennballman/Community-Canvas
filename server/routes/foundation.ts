@@ -694,12 +694,20 @@ router.get('/stats', authenticateToken, requirePlatformAdmin, async (req: AuthRe
                 (SELECT COUNT(*) FROM cc_tenants WHERE tenant_type = 'business') as business_tenants,
                 (SELECT COUNT(*) FROM cc_tenants WHERE tenant_type = 'property') as property_tenants,
                 (SELECT COUNT(*) FROM cc_tenants WHERE tenant_type = 'individual') as individual_tenants,
-                (SELECT COUNT(*) FROM cc_tenant_users) as total_memberships
+                (SELECT COUNT(*) FROM cc_tenant_users) as total_memberships,
+                (SELECT COUNT(*) FROM cc_portals) as total_portals
         `);
 
+        const row = stats.rows[0];
+        
+        // Return both nested format (for legacy) and flat camelCase format (for PlatformHomePage)
         res.json({
             success: true,
-            stats: stats.rows[0]
+            stats: row,
+            // Flat camelCase format for PlatformHomePage
+            totalTenants: parseInt(row.total_tenants) || 0,
+            totalUsers: parseInt(row.total_users) || 0,
+            totalPortals: parseInt(row.total_portals) || 0
         });
 
     } catch (error: any) {
