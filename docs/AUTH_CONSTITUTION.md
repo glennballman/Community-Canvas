@@ -185,6 +185,35 @@ WHERE p.user_id = $user_id
 
 ---
 
+## 12. Identity Tables (PROMPT-13)
+
+The identity model consists of three distinct tables with specific purposes:
+
+| Table | Purpose | Auth Role |
+|-------|---------|-----------|
+| `cc_users` | Authentication account (email, password, session) | Session holder only |
+| `cc_individuals` | Person profile (name, contact info) | Profile data only |
+| `cc_principals` | Authorization actor (human/service/machine) | ALL auth decisions |
+
+**FK Chain:** `cc_principals.user_id` → `cc_individuals.id` (NOT `cc_users.id`)
+
+**Rules:**
+1. `cc_users` is NOT an authorization source - ever
+2. `cc_users.is_platform_admin` is FORBIDDEN for authorization (use grants)
+3. `cc_individuals` is the canonical person profile for humans
+4. `cc_principals` is the canonical actor for authorization checks
+5. Session maps: `session.user_id` → `principal (type='individual')` → `individual profile`
+6. If principal missing: create idempotently AFTER ensuring individual exists
+7. No capability computation without principal context - fail closed and log
+
+❌ Forbidden:
+- Reading `cc_users.is_platform_admin` for authorization
+- Computing capabilities without a principal
+- Accepting userId as substitute for principalId
+- Bootstrap/fallback admin logic outside internal setup endpoints
+
+---
+
 ## Terminology Lock
 
 | Term | Correct Usage | Forbidden |

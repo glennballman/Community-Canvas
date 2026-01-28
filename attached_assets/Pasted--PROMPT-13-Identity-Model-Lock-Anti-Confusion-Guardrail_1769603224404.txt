@@ -1,0 +1,81 @@
+# PROMPT-13 — “Identity Model Lock + Anti-Confusion Guardrails”
+
+**Goal:** Stop the cc_users / cc_individuals / cc_principals confusion permanently, so Replit never “re-invents” bootstrap logic again.
+
+# AUTH PROMPT HEADER (REQUIRED — DO NOT OMIT)
+
+You are operating under AUTH_CONSTITUTION.md (governance is law).
+You MUST:
+1) Be fail-closed. No fallbacks to legacy flags, JWT claims, or “best effort” auth.
+2) Use Single Identity Authority: resolvePrincipalFromSession() and effective_principal_id.
+3) Use capability-first authorization: requireCapability()/authorize()/cc_has_capability().
+4) Log ALL allow + deny decisions to cc_auth_audit_log with principal_id + effective_principal_id.
+5) Provide an Annex checklist with PASS/FAIL and EVIDENCE (file paths + line numbers) for every requirement in this prompt.
+6) If anything is ambiguous, you MUST search the repo and cite exact file paths/lines—do not guess.
+7) You may not reduce scope. No MVP. No “manual only”. No deferrals unless explicitly stated as an allowed deferral.
+
+Before you claim “COMPLETE”, you MUST paste back:
+- The Annex (PASS/FAIL + evidence)
+- Test output (or explicit SKIP reasons tied to missing dependencies)
+- Any migrations (full filenames)
+
+## PROMPT-13: Identity Model Lock + Anti-Confusion Guardrails (NO SCOPE REDUCTION)
+
+### Problem
+We have three concepts that Replit keeps conflating:
+- cc_users = authentication accounts (session holder)
+- cc_individuals = person profile (human identity record)
+- cc_principals = authorization actor (human/service/machine) used for permissions
+
+Recent regressions happened because implementers tried to “fallback” to cc_users.is_platform_admin or tried to compute capabilities without a principal.
+
+### Non-negotiable design (LOCK THIS)
+1) cc_users is NOT an authorization source. Ever.
+2) cc_users.is_platform_admin is forbidden for auth (PROMPT-8/10 already moved authority to grants).
+3) cc_individuals is the canonical *person profile* for humans.
+4) cc_principals is the canonical *actor* for authorization checks.
+5) A session always maps: session.user_id -> principal (type='individual') -> individual profile.
+6) If principal missing: create principal (idempotent) AFTER ensuring individual exists.
+7) No capability snapshot “fallback” is allowed. If identity cannot resolve, return empty caps (deny) and log.
+
+### Required Work
+A) Create a single canonical “identity resolution” flow and ban all others:
+- Server: enforce that ONLY resolvePrincipalFromSession() creates/resolves principal.
+- If any route or helper tries to compute capabilities or platform-admin status via cc_users, remove it.
+
+B) Enforce a strict 1:1 mapping for humans:
+- Ensure cc_individuals.id == cc_users.id for humans (you already backfilled + trigger; now lock it with constraints / verification).
+- Add a verification migration that asserts:
+  - every cc_users row has cc_individuals row with same id
+  - every principal of type 'individual' references an existing cc_individuals row
+  - principal.user_id (or equivalent FK) MUST refer to the individual identity (not some other table)
+  - FAIL migration if any assertion fails (no silent pass)
+
+C) Add “Forbidden Identity Sources” guardrail tests:
+- Expand/adjust forbidden-authority-sources.test.ts (or create a new test) to hard-fail on:
+  - any reads of cc_users.is_platform_admin outside data display
+  - any new “bootstrap admin” logic in server/auth/capabilities.ts that checks cc_users directly
+  - any capability evaluation that accepts optional userId as a substitute for principalId
+- Whitelist must be explicit and minimal and documented.
+
+D) Documentation:
+- Create docs/IDENTITY_MODEL.md that states the above mapping in 10 lines max.
+- Update AUTH_CONSTITUTION.md with an explicit “Identity Tables” article:
+  - cc_users = auth account only
+  - cc_individuals = profile only
+  - cc_principals = auth actor only
+  - “No capability computation without principal context” rule
+
+### Acceptance Criteria (must be proven in Annex)
+1) There is exactly one code path that resolves principal from session.
+2) No auth code reads cc_users.is_platform_admin.
+3) No code accepts “userId fallback” to compute capabilities.
+4) A failing identity resolution results in deny + audit log entry (not allow).
+5) Tests pass (or SKIPs explicitly justified).
+
+### Output Required
+- Migration filename(s)
+- Files changed list
+- docs/IDENTITY_MODEL.md
+- Annex with PASS/FAIL + evidence (file paths + line numbers)
+- Test run output

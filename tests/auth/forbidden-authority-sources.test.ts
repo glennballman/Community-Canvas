@@ -486,4 +486,53 @@ describe('PROMPT-13: Forbidden Fallback Authority Patterns', () => {
     const fkCheck = result.rows.find((r: any) => r.check_name === 'cc_principals_user_id_fk_target');
     expect(fkCheck?.detail).toContain('cc_individuals.id');
   });
+
+  test('no userId fallback for capability computation', () => {
+    // PROMPT-13: Capabilities must require principalId, not accept userId as substitute
+    const result = execSync(
+      'grep -rn -E "getCapabilities.*userId|hasCapability.*userId|cc_has_capability.*user_id" server/auth/ --include="*.ts" 2>/dev/null || true',
+      { encoding: 'utf-8' }
+    );
+    
+    const lines = result.trim().split('\n').filter(Boolean);
+    const violations = lines.filter(line => {
+      const filePath = line.split(':')[0];
+      // Skip test files
+      if (filePath.endsWith('.test.ts')) return false;
+      // Skip comments
+      if (line.includes('// ')) return false;
+      return true;
+    });
+    
+    if (violations.length > 0) {
+      console.log('\n=== USER_ID CAPABILITY FALLBACK VIOLATIONS (PROMPT-13) ===');
+      violations.forEach(v => console.log(v));
+    }
+    
+    expect(violations.length).toBe(0);
+  });
+
+  test('AUTH_CONSTITUTION.md documents identity tables', () => {
+    // PROMPT-13: Verify AUTH_CONSTITUTION.md has Identity Tables section
+    const content = fs.readFileSync('docs/AUTH_CONSTITUTION.md', 'utf-8');
+    
+    expect(content).toContain('## 12. Identity Tables');
+    expect(content).toContain('cc_users');
+    expect(content).toContain('cc_individuals');
+    expect(content).toContain('cc_principals');
+    expect(content).toContain('Session holder only');
+    expect(content).toContain('Profile data only');
+    expect(content).toContain('ALL auth decisions');
+  });
+
+  test('docs/IDENTITY_MODEL.md exists and documents the model', () => {
+    // PROMPT-13: Verify IDENTITY_MODEL.md exists with correct content
+    const content = fs.readFileSync('docs/IDENTITY_MODEL.md', 'utf-8');
+    
+    expect(content).toContain('cc_users');
+    expect(content).toContain('cc_individuals');
+    expect(content).toContain('cc_principals');
+    expect(content).toContain('Session holder only');
+    expect(content).toContain('use grants');
+  });
 });
