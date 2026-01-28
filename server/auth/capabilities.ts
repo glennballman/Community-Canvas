@@ -80,6 +80,9 @@ async function getCapabilitiesAtScope(
 /**
  * Get all capabilities for a principal across all scopes (platform, org, tenant)
  * Returns comprehensive capability snapshot for UI gating
+ * 
+ * FAIL-CLOSED: Always returns locked response shape, even on errors.
+ * On any error, returns ok:false with empty capabilities.
  */
 export async function getCapabilitySnapshot(
   principalId: string | null,
@@ -87,12 +90,15 @@ export async function getCapabilitySnapshot(
   tenantId: string | null,
   organizationId: string | null = null
 ): Promise<CapabilitySnapshot> {
-  const emptySnapshot: CapabilitySnapshot = {
-    ok: true,
+  const platformScopeId = resolvePlatformScopeId();
+  
+  // Fail-closed empty snapshot (used on any error or missing principal)
+  const failClosedSnapshot: CapabilitySnapshot = {
+    ok: false,
     principal_id: principalId,
     effective_principal_id: effectivePrincipalId,
     context: {
-      platform_scope_id: resolvePlatformScopeId(),
+      platform_scope_id: platformScopeId,
       organization_scope_id: null,
       tenant_scope_id: null,
       tenant_id: tenantId,
@@ -106,79 +112,85 @@ export async function getCapabilitySnapshot(
     },
   };
   
+  // No effective principal = empty capabilities (not an error, but no access)
   if (!effectivePrincipalId) {
-    return emptySnapshot;
+    return { ...failClosedSnapshot, ok: true };
   }
   
-  const platformScopeId = resolvePlatformScopeId();
-  
-  // Get platform-level capabilities
-  const platformCaps = await getCapabilitiesAtScope(effectivePrincipalId, platformScopeId);
-  
-  // Get organization-level capabilities (if organization context exists)
-  let orgCaps: string[] = [];
-  let orgScopeId: string | null = null;
-  
-  if (organizationId && effectivePrincipalId) {
-    const orgScopeResult = await serviceQuery(`
-      SELECT id FROM cc_scopes 
-      WHERE scope_type = 'organization' AND organization_id = $1
-    `, [organizationId]);
+  try {
+    // Get platform-level capabilities
+    const platformCaps = await getCapabilitiesAtScope(effectivePrincipalId, platformScopeId);
     
-    if (orgScopeResult.rows[0]) {
-      const foundOrgScopeId: string = orgScopeResult.rows[0].id;
-      orgScopeId = foundOrgScopeId;
-      orgCaps = await getCapabilitiesAtScope(effectivePrincipalId, foundOrgScopeId);
-    }
-  }
-  
-  // Get tenant-level capabilities (if tenant context exists)
-  let tenantCaps: string[] = [];
-  let tenantScopeId: string | null = null;
-  
-  if (tenantId) {
-    tenantScopeId = await resolveTenantScopeId(tenantId);
-    if (tenantScopeId) {
-      tenantCaps = await getCapabilitiesAtScope(effectivePrincipalId, tenantScopeId);
-    }
-  }
-  
-  // Get resource-type level capabilities (for common resource types in current tenant)
-  const resourceTypeCaps: Record<string, string[]> = {};
-  
-  if (tenantId) {
-    // Query all resource-type scopes under this tenant
-    const resourceTypeScopesResult = await serviceQuery(`
-      SELECT id, resource_type FROM cc_scopes 
-      WHERE scope_type = 'resource_type' AND tenant_id = $1
-    `, [tenantId]);
+    // Get organization-level capabilities (if organization context exists)
+    let orgCaps: string[] = [];
+    let orgScopeId: string | null = null;
     
-    for (const row of resourceTypeScopesResult.rows) {
-      const caps = await getCapabilitiesAtScope(effectivePrincipalId, row.id);
-      if (caps.length > 0) {
-        resourceTypeCaps[row.resource_type] = caps;
+    if (organizationId && effectivePrincipalId) {
+      const orgScopeResult = await serviceQuery(`
+        SELECT id FROM cc_scopes 
+        WHERE scope_type = 'organization' AND organization_id = $1
+      `, [organizationId]);
+      
+      if (orgScopeResult.rows[0]) {
+        const foundOrgScopeId: string = orgScopeResult.rows[0].id;
+        orgScopeId = foundOrgScopeId;
+        orgCaps = await getCapabilitiesAtScope(effectivePrincipalId, foundOrgScopeId);
       }
     }
+    
+    // Get tenant-level capabilities (if tenant context exists)
+    let tenantCaps: string[] = [];
+    let tenantScopeId: string | null = null;
+    
+    if (tenantId) {
+      tenantScopeId = await resolveTenantScopeId(tenantId);
+      if (tenantScopeId) {
+        tenantCaps = await getCapabilitiesAtScope(effectivePrincipalId, tenantScopeId);
+      }
+    }
+    
+    // Get resource-type level capabilities (for common resource types in current tenant)
+    // NOTE: Resource-level (individual resource) capabilities are not yet implemented
+    const resourceTypeCaps: Record<string, string[]> = {};
+    
+    if (tenantId) {
+      // Query all resource-type scopes under this tenant
+      const resourceTypeScopesResult = await serviceQuery(`
+        SELECT id, resource_type FROM cc_scopes 
+        WHERE scope_type = 'resource_type' AND tenant_id = $1
+      `, [tenantId]);
+      
+      for (const row of resourceTypeScopesResult.rows) {
+        const caps = await getCapabilitiesAtScope(effectivePrincipalId, row.id);
+        if (caps.length > 0) {
+          resourceTypeCaps[row.resource_type] = caps;
+        }
+      }
+    }
+    
+    return {
+      ok: true,
+      principal_id: principalId,
+      effective_principal_id: effectivePrincipalId,
+      context: {
+        platform_scope_id: platformScopeId,
+        organization_scope_id: orgScopeId,
+        tenant_scope_id: tenantScopeId,
+        tenant_id: tenantId,
+        organization_id: organizationId,
+      },
+      capabilities: {
+        platform: platformCaps,
+        organization: orgCaps,
+        tenant: tenantCaps,
+        resource_types: resourceTypeCaps,
+      },
+    };
+  } catch (error) {
+    // FAIL-CLOSED: Any error returns empty capabilities
+    console.error('[getCapabilitySnapshot] Error evaluating capabilities, returning fail-closed:', error);
+    return failClosedSnapshot;
   }
-  
-  return {
-    ok: true,
-    principal_id: principalId,
-    effective_principal_id: effectivePrincipalId,
-    context: {
-      platform_scope_id: platformScopeId,
-      organization_scope_id: orgScopeId,
-      tenant_scope_id: tenantScopeId,
-      tenant_id: tenantId,
-      organization_id: organizationId,
-    },
-    capabilities: {
-      platform: platformCaps,
-      organization: orgCaps,
-      tenant: tenantCaps,
-      resource_types: resourceTypeCaps,
-    },
-  };
 }
 
 /**

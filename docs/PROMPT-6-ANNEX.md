@@ -118,13 +118,26 @@ const effectivePrincipalId = principalContext.effectivePrincipalId || principalI
 ### 4.2 Fail-Closed Behavior
 
 ```typescript
-// Server-side: Returns empty capabilities on error
+// Server-side: getCapabilitySnapshot wraps all DB queries in try/catch
+// Returns ok:false with empty capabilities on ANY error
+try {
+  // ... capability evaluation queries ...
 } catch (error) {
+  console.error('[getCapabilitySnapshot] Error evaluating capabilities, returning fail-closed:', error);
   return {
     ok: false,
+    principal_id: principalId,
+    effective_principal_id: effectivePrincipalId,
+    context: { ... },
     capabilities: { platform: [], organization: [], tenant: [], resource_types: {} }
   };
 }
+
+// Endpoint always returns locked response shape (never throws 500)
+app.get('/api/me/capabilities', async (req, res) => {
+  const snapshot = await getCapabilitySnapshot(...);
+  res.json(snapshot); // Always returns locked shape
+});
 
 // Client-side: hasCapability returns false if no snapshot
 if (!capabilities || !capabilities.ok) {
@@ -201,8 +214,13 @@ Login/CheckAuth → /api/me/context → /api/me/capabilities → setCapabilities
 ## 8. Known Limitations
 
 1. **Empty Capabilities**: When principal resolution fails (pre-existing cc_individuals FK issue), capabilities return empty (fail-closed behavior)
-2. **Resource-Level Scope**: Not yet implemented (resource_types always empty)
+2. **Scope Hierarchy Coverage**: 
+   - Platform, Organization, Tenant, and Resource-Type scopes are implemented
+   - Resource-level (individual resource) scope is NOT yet implemented
+   - Per AUTH_CONSTITUTION §4, full hierarchy is: Platform → Organization → Tenant → Resource Type → Resource
+   - Resource-level capabilities will be added in a future prompt when needed
 3. **Caching**: No client-side caching beyond React state
+4. **Fallback During Loading**: Client uses approximation fallback only during auth loading state; once capabilities are fetched, authoritative snapshot is used exclusively
 
 ## 9. Response Shape Lock
 
