@@ -115,6 +115,31 @@ MUST hard-fail authorization if requirements are not met.
 
 Authorization MUST be fail-closed. Distinguish between:
 
+### Canonical 403 Response Shape
+
+All authorization denials MUST return this exact JSON structure:
+
+```json
+{
+  "error": "Forbidden",
+  "code": "NOT_AUTHORIZED",
+  "capability": "<capability_code>",
+  "reason": "<denial_reason>"
+}
+```
+
+**Valid reason codes:**
+- `missing_auth_context` — No auth context on request
+- `no_effective_principal` — Principal could not be resolved
+- `no_scope_resolved` — Scope hierarchy could not determine target scope
+- `scope_not_found` — Target scope does not exist
+- `capability_not_granted` — Principal lacks required capability at scope
+- `auth_db_error` — Database error during authorization (fail-closed)
+
+**Reference implementation:** `server/auth/authorize.ts` `requireCapability()` middleware (lines 216–221).
+
+---
+
 **Unknown condition keys** (e.g., unrecognized JSON condition properties):
 - MUST hard-fail (throw/deny immediately)
 - Safety-critical; cannot assume meaning
