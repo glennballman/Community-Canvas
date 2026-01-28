@@ -1,6 +1,10 @@
 import express, { Response, Request } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { authenticateToken, AuthRequest } from './foundation';
+import { 
+  resolvePrincipalFromSession, 
+  getOrCreatePrincipal 
+} from '../auth';
 
 const router = express.Router();
 
@@ -56,6 +60,19 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
     }
     
     const user = userResult.rows[0];
+    
+    // PROMPT-3: Resolve principal context (single authority for identity)
+    const principalContext = await resolvePrincipalFromSession(req);
+    
+    // Ensure principal exists for current user (auto-create if missing)
+    let principalId = principalContext.principalId;
+    if (!principalId && realUserId) {
+      principalId = await getOrCreatePrincipal(
+        realUserId, 
+        user.full_name || 'User',
+        user.email
+      );
+    }
     
     // Get memberships for EFFECTIVE user (impersonated if active, real otherwise)
     const membershipsResult = await serviceQuery(`
@@ -174,6 +191,9 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
     
     res.json({
       ok: true,
+      // PROMPT-3: Add principal_id and effective_principal_id (AUTH_CONSTITUTION.md §3.1)
+      principal_id: principalId,
+      effective_principal_id: principalContext.effectivePrincipalId || principalId,
       user: {
         id: user.id,
         email: user.email,
