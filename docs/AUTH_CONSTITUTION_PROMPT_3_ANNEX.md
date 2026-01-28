@@ -83,10 +83,10 @@
 ### 9. Tests
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Fail-closed behavior tests | **PASS** | `tests/auth/jobber-role-mapping.test.ts:130-167` 3 tests pass |
-| Audit logging test | **PASS** | `tests/auth/jobber-role-mapping.test.ts:170-200` |
-| Platform scope test | **PASS** | `tests/auth/jobber-role-mapping.test.ts:203-215` |
-| Jobber role mapping tests | **SKIP** | Awaiting PROMPT-2 schema (cc_external_system_role_mappings) |
+| Fail-closed behavior tests | **PASS** | `tests/auth/core-enforcement.test.ts:11-47` 3 tests pass |
+| Audit logging test | **PASS** | `tests/auth/core-enforcement.test.ts:49-88` |
+| Platform scope test | **PASS** | `tests/auth/core-enforcement.test.ts:90-101` |
+| Jobber role mapping tests | **SKIP** | `tests/auth/jobber-mapping.test.ts` - Awaiting PROMPT-2 schema (cc_external_system_role_mappings) |
 
 ---
 
@@ -99,7 +99,8 @@
 | §3 Capability-First Authorization | **PASS** | `cc_has_capability()` checks capability grants only |
 | §4 Scope Hierarchy | **PASS** | Full 5-level hierarchy in `server/auth/scope.ts` |
 | §7 Impersonation as Actor Substitution | **PASS** | `effectivePrincipalId` replaces acting principal |
-| §8 Machine Safety Hard-Fail | **PASS** | `cc_has_capability` returns false on unknown conditions |
+| §8 Machine Safety Hard-Fail | **PASS** | `cc_has_capability` hard-fails on unknown condition keys |
+| §8a Fail-Closed Semantics | **PASS** | Unknown caps deny; middleware errors → null context → deny |
 | §9 No Parallel Systems | **PASS** | Single auth module, no legacy paths |
 
 ---
@@ -115,7 +116,8 @@
 | `server/auth/authorize.ts` | Created | Fail-closed authorization + audit |
 | `server/auth/index.ts` | Created | Module barrel export |
 | `server/routes/user-context.ts` | Modified | Added principal_id, effective_principal_id |
-| `tests/auth/jobber-role-mapping.test.ts` | Created | Authorization enforcement tests |
+| `tests/auth/core-enforcement.test.ts` | Created | PROMPT-3 core enforcement tests (fail-closed, audit, scope) |
+| `tests/auth/jobber-mapping.test.ts` | Created | External system role mapping tests (PROMPT-2 dependency) |
 | `replit.md` | Modified | Documented PROMPT-3 implementation |
 
 ---

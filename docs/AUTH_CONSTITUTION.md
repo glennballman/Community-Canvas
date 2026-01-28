@@ -111,6 +111,30 @@ MUST hard-fail authorization if requirements are not met.
 
 ---
 
+## 8a. Fail-Closed Semantics
+
+Authorization MUST be fail-closed. Distinguish between:
+
+**Unknown condition keys** (e.g., unrecognized JSON condition properties):
+- MUST hard-fail (throw/deny immediately)
+- Safety-critical; cannot assume meaning
+
+**Unknown capability codes** (e.g., `cc_has_capability('nonexistent.cap')`):
+- MUST deny access (return false)
+- Fail-closed, but not a safety hard-fail
+
+**Middleware resolution errors** (e.g., session lookup failure, DB timeout):
+- MUST NOT permit access
+- MUST result in deny through the normal authorize path
+- Middleware may set null context; authorize() MUST deny on null context
+
+❌ Forbidden:
+- Permitting access on resolution error
+- "Optimizing" middleware to bypass authorize() on error
+- Assuming unknown conditions are safe to ignore
+
+---
+
 ## 9. No Parallel Systems
 
 There may never be two authorization systems active at once.
