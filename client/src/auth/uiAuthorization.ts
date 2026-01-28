@@ -4,16 +4,26 @@
  * Provides visibility-only capability checks for UI gating.
  * This does NOT enforce authorization - backend always enforces via PROMPT-3/4.
  * 
+ * ARCHITECTURAL CONSTRAINT:
+ * Full capability evaluation is server-side only. This module provides
+ * "best-effort approximation" for UI hints using available client context:
+ * - isPlatformAdmin flag from /api/me/context
+ * - Current tenant membership and role
+ * 
+ * This approximation is acceptable because:
+ * 1. UI gating is VISIBILITY-ONLY, not authorization
+ * 2. Backend always enforces via requireCapability() (PROMPT-3/4)
+ * 3. Users may see UI they can't use, but never bypass backend
+ * 
+ * FUTURE: When /api/me/capabilities endpoint is available, replace
+ * approximation logic with explicit capability list lookup.
+ * 
  * AUTH_CONSTITUTION.md compliance:
  * - Uses auth context from /api/me/context (single identity authority)
  * - Returns false on any uncertainty (fail-closed)
  * - Never throws errors
  * - Never escalates privileges
- * 
- * FORBIDDEN PATTERNS:
- * - Role string checks (use capabilities only)
- * - Boolean admin checks (use canUI('platform.configure'))
- * - Membership inference (use explicit capabilities)
+ * - Impersonation: uses isPlatformAdmin which reflects effective principal
  */
 
 import { useAuth } from '@/contexts/AuthContext';

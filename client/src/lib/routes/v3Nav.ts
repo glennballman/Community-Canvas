@@ -291,16 +291,14 @@ function isItemVisible(item: NavItem, ctx: NavFilterContext): boolean {
     return false;
   }
   
-  // PROMPT-5: Capability-based visibility check (preferred over role checks)
+  // PROMPT-5: Capability-based visibility check (PREFERRED over role checks)
+  // When requiredCapability is set, it takes precedence and skips legacy checks
   if (item.requiredCapability && ctx.canUI) {
-    if (!ctx.canUI(item.requiredCapability)) {
-      return false;
-    }
-    // If capability check passes, skip legacy role checks
-    return true;
+    return ctx.canUI(item.requiredCapability);
   }
   
-  // Legacy role-based checks (for backwards compatibility)
+  // DEPRECATED: Legacy role-based checks - kept for items without requiredCapability
+  // All new items should use requiredCapability instead
   if (item.platformAdminOnly && !ctx.isPlatformAdmin) {
     return false;
   }
@@ -342,16 +340,14 @@ function isSectionVisible(section: NavSection, ctx: NavFilterContext): boolean {
     return false;
   }
   
-  // PROMPT-5: Capability-based visibility check (preferred over role checks)
+  // PROMPT-5: Capability-based visibility check (PREFERRED over role checks)
+  // When requiredCapability is set, it takes precedence and skips legacy checks
   if (section.requiredCapability && ctx.canUI) {
-    if (!ctx.canUI(section.requiredCapability)) {
-      return false;
-    }
-    // If capability check passes, skip legacy role checks
-    return true;
+    return ctx.canUI(section.requiredCapability);
   }
   
-  // Legacy role-based checks (for backwards compatibility)
+  // DEPRECATED: Legacy role-based checks - kept for sections without requiredCapability
+  // All new sections should use requiredCapability instead
   if (section.platformAdminOnly && !ctx.isPlatformAdmin) {
     return false;
   }
