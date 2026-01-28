@@ -281,7 +281,10 @@ router.get('/me/capabilities', authenticateToken, async (req: AuthRequest, res: 
     
   } catch (error) {
     console.error('Error fetching capabilities:', error);
+    // PROMPT-14: Versioned fail-closed response shape
     res.status(500).json({
+      version: "1",
+      generatedAt: new Date().toISOString(),
       ok: false,
       error: 'Failed to fetch capabilities',
       principal_id: null,

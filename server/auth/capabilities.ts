@@ -124,7 +124,16 @@ async function logBootstrapCapabilities(
   }
 }
 
+/**
+ * PROMPT-14: Authoritative Capability Snapshot Response Shape
+ * This interface is LOCKED - changes require explicit versioning.
+ * Client code may depend on this exact structure.
+ */
 export interface CapabilitySnapshot {
+  /** PROMPT-14: Response version for client compatibility */
+  version: "1";
+  /** PROMPT-14: ISO timestamp when snapshot was generated */
+  generatedAt: string;
   ok: boolean;
   principal_id: string | null;
   effective_principal_id: string | null;
@@ -198,11 +207,93 @@ async function getCapabilitiesAtScope(
 }
 
 /**
+ * PROMPT-14: Log successful snapshot generation to audit log
+ * Records allow decisions for audit trail and compliance
+ */
+async function logSnapshotSuccess(
+  principalId: string | null,
+  effectivePrincipalId: string | null,
+  capabilityCount: number
+): Promise<void> {
+  try {
+    await serviceQuery(`
+      INSERT INTO cc_auth_audit_log (
+        principal_id, 
+        effective_principal_id,
+        action, 
+        resource_type, 
+        resource_id,
+        scope_id,
+        decision,
+        metadata
+      ) VALUES (
+        $1,
+        $2,
+        'capability_snapshot_success',
+        'snapshot',
+        NULL,
+        (SELECT id FROM cc_scopes WHERE scope_type = 'platform' LIMIT 1),
+        'allow',
+        jsonb_build_object(
+          'capability_count', $3,
+          'timestamp', NOW()::TEXT
+        )
+      )
+    `, [principalId, effectivePrincipalId, capabilityCount]);
+  } catch (logError) {
+    // Don't fail snapshot if audit logging fails
+    console.error('[logSnapshotSuccess] Failed to log snapshot success:', logError);
+  }
+}
+
+/**
+ * PROMPT-14: Log snapshot generation failure to audit log
+ * Records deny-by-empty decisions for debugging and compliance
+ */
+async function logSnapshotFailure(
+  principalId: string | null,
+  effectivePrincipalId: string | null,
+  reason: string,
+  errorDetails?: string
+): Promise<void> {
+  try {
+    await serviceQuery(`
+      INSERT INTO cc_auth_audit_log (
+        principal_id, 
+        effective_principal_id,
+        action, 
+        resource_type, 
+        resource_id,
+        scope_id,
+        decision,
+        metadata
+      ) VALUES (
+        $1,
+        $2,
+        'capability_snapshot_failure',
+        'snapshot',
+        NULL,
+        (SELECT id FROM cc_scopes WHERE scope_type = 'platform' LIMIT 1),
+        'deny',
+        jsonb_build_object(
+          'reason', $3,
+          'error', $4,
+          'timestamp', NOW()::TEXT
+        )
+      )
+    `, [principalId, effectivePrincipalId, reason, errorDetails || null]);
+  } catch (logError) {
+    console.error('[logSnapshotFailure] Failed to log snapshot failure:', logError);
+  }
+}
+
+/**
  * Get all capabilities for a principal across all scopes (platform, org, tenant)
  * Returns comprehensive capability snapshot for UI gating
  * 
+ * PROMPT-14: Response shape is LOCKED with explicit versioning.
  * FAIL-CLOSED: Always returns locked response shape, even on errors.
- * On any error, returns ok:false with empty capabilities.
+ * On any error, returns ok:false with empty capabilities AND logs audit event.
  * 
  * PROMPT-7: Bootstrap capabilities are applied for platform admins
  * via principal → user link. NO userId parameter - principals must exist.
@@ -214,9 +305,12 @@ export async function getCapabilitySnapshot(
   organizationId: string | null = null
 ): Promise<CapabilitySnapshot> {
   const platformScopeId = resolvePlatformScopeId();
+  const generatedAt = new Date().toISOString();
   
-  // Fail-closed empty snapshot (used on any error or missing principal)
+  // PROMPT-14: Fail-closed empty snapshot with versioned response shape
   const failClosedSnapshot: CapabilitySnapshot = {
+    version: "1",
+    generatedAt,
     ok: false,
     principal_id: principalId,
     effective_principal_id: effectivePrincipalId,
@@ -235,8 +329,10 @@ export async function getCapabilitySnapshot(
     },
   };
   
-  // No effective principal = empty capabilities (not an error, but no access)
+  // No effective principal = empty capabilities (not an error, but deny-by-empty)
   if (!effectivePrincipalId) {
+    // PROMPT-14: Log deny-by-empty for missing principal
+    await logSnapshotFailure(principalId, null, 'no_effective_principal');
     return { ...failClosedSnapshot, ok: true };
   }
   
@@ -303,7 +399,13 @@ export async function getCapabilitySnapshot(
       await logBootstrapCapabilities(effectivePrincipalId, bootstrap.platform, tenantId);
     }
     
+    // PROMPT-14: Log successful snapshot generation for audit trail
+    await logSnapshotSuccess(principalId, effectivePrincipalId, platformCaps.length + orgCaps.length + tenantCaps.length);
+    
+    // PROMPT-14: Return versioned response shape
     return {
+      version: "1",
+      generatedAt,
       ok: true,
       principal_id: principalId,
       effective_principal_id: effectivePrincipalId,
@@ -326,9 +428,15 @@ export async function getCapabilitySnapshot(
         bootstrap_capabilities: bootstrap.platform,
       },
     };
-  } catch (error) {
-    // FAIL-CLOSED: Any error returns empty capabilities
+  } catch (error: any) {
+    // PROMPT-14: FAIL-CLOSED - Any error returns empty capabilities AND logs audit event
     console.error('[getCapabilitySnapshot] Error evaluating capabilities, returning fail-closed:', error);
+    await logSnapshotFailure(
+      principalId, 
+      effectivePrincipalId, 
+      'evaluation_error', 
+      error?.message || 'Unknown error'
+    );
     return failClosedSnapshot;
   }
 }

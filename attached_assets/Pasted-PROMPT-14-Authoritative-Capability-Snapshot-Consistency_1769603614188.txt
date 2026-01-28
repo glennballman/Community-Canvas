@@ -1,0 +1,76 @@
+PROMPT-14: Authoritative Capability Snapshot — Consistency Lock (NO SCOPE REDUCTION)
+
+# AUTH PROMPT HEADER (REQUIRED — DO NOT OMIT)
+
+You are operating under AUTH_CONSTITUTION.md (governance is law).
+You MUST:
+
+1) Be fail-closed. No fallbacks to legacy flags, JWT claims, or “best effort” auth.
+2) Use Single Identity Authority: resolvePrincipalFromSession() and effective_principal_id.
+3) Use capability-first authorization: requireCapability()/authorize()/cc_has_capability().
+4) Log ALL allow + deny decisions to cc_auth_audit_log with principal_id + effective_principal_id.
+5) Provide an Annex checklist with PASS/FAIL and EVIDENCE (file paths + line numbers) for every requirement in this prompt.
+6) If anything is ambiguous, you MUST search the repo and cite exact file paths/lines—do not guess.
+7) You may not reduce scope. No MVP. No “manual only”. No deferrals unless explicitly stated as an allowed deferral.
+
+Before you claim “COMPLETE”, you MUST paste back:
+
+- The Annex (PASS/FAIL + evidence)
+- Test output (or explicit SKIP reasons tied to missing dependencies)
+- Any migrations (full filenames)
+
+## 
+
+### Problem
+
+We now have /api/me/capabilities and UI uses an authoritative snapshot. We must lock it so:
+
+- snapshot matches cc_has_capability evaluation rules
+- snapshot scope traversal matches scope_is_ancestor_of behavior
+- snapshot always uses effective_principal_id
+- snapshot returns a stable, versioned response shape that client can depend on
+- snapshot logs meaningful audit events for snapshot generation failures (deny-by-empty)
+
+### Required Work
+
+A) Lock response shape with explicit versioning:
+
+- Response includes: version: "1"
+- Includes: generatedAt, principalId, effectivePrincipalId
+- Includes scoped capability lists keyed by scope type:
+  - platform
+  - organizations (array)
+  - tenants (array)
+  - resourceTypes (array)
+- For each scope entry include: scopeId, scopeKey (if exists), capabilities (string[])
+
+B) Ensure evaluation is sourced from the DB functions:
+
+- Capability membership must be derived from cc_has_capability / grants, not duplicated logic.
+- If any code “re-implements” conditions evaluation, remove it; call DB.
+
+C) Fail-closed semantics:
+
+- Any error -> return empty capabilities AND log an audit event (not allow).
+- Unknown condition keys -> hard-fail (per constitution).
+- Unknown capability codes requested -> deny (not hard-fail).
+
+D) Tests:
+
+- Add tests proving:
+  1) effectivePrincipalId is used (impersonation snapshot changes)
+  2) snapshot is empty when principal missing (deny-by-empty)
+  3) snapshot includes platform.configure for a platform admin principal with grants
+  4) snapshot does not grant “platform” capabilities via cc_users fields
+  5) response shape is stable and versioned
+
+E) Docs:
+
+- docs/PROMPT-14-ANNEX.md created with evidence.
+
+### Acceptance Criteria
+
+- Snapshot is DB-authoritative
+- No cc_users-based bootstrap logic exists
+- Tests pass
+- Annex PASS/FAIL with evidence
