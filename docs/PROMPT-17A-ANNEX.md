@@ -1,6 +1,6 @@
 # PROMPT-17A Annex: PMS Authorization Lock
 
-**Generated**: 2025-01-28  
+**Generated**: 2026-01-28  
 **Type**: Targeted Remediation  
 **Scope**: server/routes/pms.ts ONLY
 
@@ -91,67 +91,27 @@ Every PMS route now has explicit capability enforcement.
 
 ## B. Fail-Closed Confirmation
 
-### Authentication Gate (Router-Level)
+### Per-Route Capability Pattern
 
+**Read operations (tenant.read):**
 ```typescript
-// pms.ts:35
-router.use(authenticateToken);
+if (!(await can(req, 'tenant.read'))) {
+  return denyCapability(res, 'tenant.read');
+}
 ```
 
-All routes require JWT authentication. Missing or invalid tokens are rejected by `authenticateToken` middleware before any handler executes.
-
-### Capability Check Pattern
-
-Every route uses the `can()` function from `server/auth/authorize.ts`:
-
+**Mutating operations (tenant.configure):**
 ```typescript
 if (!(await can(req, 'tenant.configure'))) {
   return denyCapability(res, 'tenant.configure');
 }
 ```
 
-### Denial Behavior
+### Evidence References
 
-The `denyCapability` helper (pms.ts:42-48) returns standardized 403 responses:
-
-```typescript
-function denyCapability(res: Response, capability: string): Response {
-  return res.status(403).json({
-    error: 'Forbidden',
-    code: 'NOT_AUTHORIZED',
-    capability,
-    reason: 'capability_not_granted'
-  });
-}
-```
-
-### Fail-Closed Semantics (from authorize.ts)
-
-The `can()` function wraps `authorize()` and returns `false` on any error:
-
-| Condition | Result | Reference |
-|-----------|--------|-----------|
-| Missing auth context | `deny` | authorize.ts:66-68 |
-| No effective principal | `deny` | authorize.ts:78-80 |
-| No scope resolved | `deny` | authorize.ts:101-102 |
-| Capability not granted | `deny` | authorize.ts:128-129 |
-| DB error | `deny` | authorize.ts:137-140 |
-
-```typescript
-// authorize.ts:147-158
-export async function can(
-  req: Request,
-  capabilityCode: string,
-  options: AuthorizeOptions = {}
-): Promise<boolean> {
-  try {
-    await authorize(req, capabilityCode, options);
-    return true;
-  } catch {
-    return false;  // Fail-closed: any error = deny
-  }
-}
-```
+- **Router-level auth gate:** `router.use(authenticateToken);` — line 38
+- **denyCapability helper:** lines 44–52
+- **Fail-closed semantics:** `can()` is fail-closed because it returns `false` on `authorize()` throw
 
 ---
 
