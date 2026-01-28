@@ -16,7 +16,7 @@ import { can } from '../auth/authorize';
 const router = Router();
 
 // PROMPT-4: Capability-based tenant member check
-// Uses tenant.read capability instead of isPlatformAdmin boolean
+// Uses tenant.configure capability for least-privilege (matches owner/admin requirement)
 async function requireTenantMember(req: any, res: any): Promise<{ tenantId: string; userId: string; role: string } | null> {
   const userId = req.user?.id;
   if (!userId) {
@@ -36,8 +36,8 @@ async function requireTenantMember(req: any, res: any): Promise<{ tenantId: stri
   `, [tenantId, userId]);
   
   if (result.rows.length === 0) {
-    // PROMPT-4: Check tenant.read capability instead of isPlatformAdmin
-    const hasCapability = await can(req, 'tenant.read');
+    // PROMPT-4: Check tenant.configure capability instead of isPlatformAdmin
+    const hasCapability = await can(req, 'tenant.configure');
     if (!hasCapability) {
       res.status(403).json({ ok: false, error: 'Tenant membership required' });
       return null;
