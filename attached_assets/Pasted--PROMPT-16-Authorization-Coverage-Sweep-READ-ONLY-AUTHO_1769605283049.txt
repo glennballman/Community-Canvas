@@ -1,0 +1,217 @@
+🛑 PROMPT-16 — Authorization Coverage Sweep (READ-ONLY)
+AUTHORITY NOTICE (MANDATORY — DO NOT IGNORE)
+
+This prompt MUST comply with AUTH_CONSTITUTION.md.
+
+You are NOT allowed to:
+
+Introduce new authority sources
+
+Add fallback or bootstrap logic
+
+Modify authorization behavior
+
+Add or modify database tables
+
+Add or modify capabilities, grants, scopes, or roles
+
+Read from cc_users for authorization
+
+Bypass authorize(), requireCapability(), can(), or cc_has_capability()
+
+If any requirement cannot be satisfied without violating the constitution, you MUST STOP and report it explicitly.
+
+This prompt is READ-ONLY.
+No code changes are permitted.
+
+PURPOSE
+
+Perform a full authorization coverage sweep across the application to ensure:
+
+Every server route is explicitly gated
+
+Every UI surface is intentionally visible or hidden
+
+No implicit, accidental, or legacy access paths remain
+
+This is a verification + evidence exercise only.
+
+SCOPE
+INCLUDED
+
+server/routes/**
+
+server/middleware/**
+
+server/auth/**
+
+client/src/pages/**
+
+client/src/components/**
+
+Navigation configs (platformNav.ts, v3Nav.ts, etc.)
+
+EXCLUDED
+
+Tests (already validated)
+
+Database migrations
+
+External integrations beyond mapping verification
+
+REQUIRED OUTPUTS
+
+You must produce three artifacts:
+
+1️⃣ Server Route Authorization Matrix
+
+Create a table covering EVERY server route, with no omissions.
+
+For each route, list:
+
+File	Method	Path	Authorization Mechanism	Capability	Scope	Notes
+
+Authorization Mechanism must be one of:
+
+requireCapability(...)
+
+authorize(...)
+
+can(...)
+
+Explicitly Public (documented)
+
+Service-only (documented)
+
+❌ “Implicit”, “inherited”, or “admin-only” are NOT acceptable.
+
+If a route is public, you must cite:
+
+File
+
+Line number
+
+Comment or documentation explaining why it is public
+
+2️⃣ UI Surface Authorization Matrix
+
+Create a table covering EVERY major UI surface:
+
+Pages
+
+client/src/pages/**
+
+Navigation
+
+Platform nav
+
+Tenant nav
+
+Sub-nav / action menus
+
+Components
+
+Buttons
+
+Modals
+
+Actions that trigger mutations
+
+For each surface:
+
+UI Surface	File	Gating Mechanism	Required Capability	Notes
+
+Gating mechanism must be one of:
+
+<RequireCapability />
+
+useCanUI(...)
+
+GatedButton
+
+Explicitly ungated (documented + justified)
+
+⚠️ If any page or action relies solely on backend denial, it must be flagged.
+
+3️⃣ Coverage Gaps & Risk Report
+
+If ANY of the following exist, you must list them explicitly:
+
+Routes with no explicit authorization
+
+UI elements visible without capability checks
+
+Mismatches between backend enforcement and UI visibility
+
+Legacy patterns that are technically unreachable but still present
+
+Assumptions that rely on “only admins can reach this”
+
+For each gap:
+
+Gap Type	Location	Risk Level	Recommendation
+
+Risk Level must be one of:
+
+LOW (cosmetic / unreachable)
+
+MEDIUM (confusing / misleading)
+
+HIGH (potential privilege exposure)
+
+CONSTITUTIONAL CHECKPOINT
+
+Before declaring completion, you MUST explicitly confirm:
+
+❌ No authorization logic was modified
+
+❌ No new authority sources were introduced
+
+❌ No fallback logic was added
+
+✅ All findings are observational only
+
+REQUIRED DELIVERABLE
+
+Create:
+
+docs/PROMPT-16-AUTH-COVERAGE.md
+
+
+Containing:
+
+Server Route Authorization Matrix
+
+UI Surface Authorization Matrix
+
+Coverage Gaps & Risk Report
+
+Constitutional Compliance Statement
+
+SUCCESS CRITERIA
+
+PROMPT-16 is ONLY complete when:
+
+Every route and surface is accounted for
+
+Every access path has an explicit authorization story
+
+Any gaps are documented, not “assumed safe”
+
+No code changes were made
+
+FINAL INSTRUCTION
+
+If at any point you are unsure whether something is authorized:
+
+DO NOT FIX IT.
+DO NOT GUESS.
+DOCUMENT IT.
+
+When complete, respond only with:
+
+Path to docs/PROMPT-16-AUTH-COVERAGE.md
+
+A short summary of findings
+
+Explicit confirmation that no code was changed
