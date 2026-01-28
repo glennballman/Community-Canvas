@@ -1,4 +1,12 @@
-import { Router } from 'express';
+/**
+ * PMS Routes - Property Management System
+ * PROMPT-17A: Authorization Lock
+ * 
+ * All routes require authentication and explicit capability enforcement.
+ * - Read operations: tenant.read
+ * - Mutating operations: tenant.configure
+ */
+import { Router, Request, Response } from 'express';
 import {
   createProperty, getProperties, getProperty, getPropertyBySlug,
   createUnit, getUnit, updateUnitStatus,
@@ -18,12 +26,37 @@ import {
   createMaintenanceRequest, getMaintenanceRequest, searchMaintenanceRequests,
   updateMaintenanceStatus
 } from '../services/housekeepingService';
+import { authenticateToken, AuthRequest } from './foundation';
+import { can } from '../auth/authorize';
 
 const router = Router();
 
+/**
+ * PROMPT-17A: Router-level authentication gate
+ * All PMS routes require authentication
+ */
+router.use(authenticateToken);
+
+/**
+ * PROMPT-17A: Capability denial helper
+ * Returns 403 with standardized error format
+ */
+function denyCapability(res: Response, capability: string): Response {
+  return res.status(403).json({
+    error: 'Forbidden',
+    code: 'NOT_AUTHORIZED',
+    capability,
+    reason: 'capability_not_granted'
+  });
+}
+
 // ============ PROPERTY ENDPOINTS ============
 
-router.post('/portals/:slug/properties', async (req, res) => {
+router.post('/portals/:slug/properties', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug } = req.params;
   const b = req.body || {};
   
@@ -61,7 +94,11 @@ router.post('/portals/:slug/properties', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/properties', async (req, res) => {
+router.get('/portals/:slug/properties', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug } = req.params;
   const { type, status, q } = req.query;
   
@@ -79,7 +116,11 @@ router.get('/portals/:slug/properties', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/properties/by-slug/:propertySlug', async (req, res) => {
+router.get('/portals/:slug/properties/by-slug/:propertySlug', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, propertySlug } = req.params;
   
   try {
@@ -94,7 +135,11 @@ router.get('/portals/:slug/properties/by-slug/:propertySlug', async (req, res) =
   }
 });
 
-router.get('/portals/:slug/properties/:id', async (req, res) => {
+router.get('/portals/:slug/properties/:id', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, id } = req.params;
   
   try {
@@ -111,7 +156,11 @@ router.get('/portals/:slug/properties/:id', async (req, res) => {
 
 // ============ UNIT ENDPOINTS ============
 
-router.post('/portals/:slug/properties/:propertyId/units', async (req, res) => {
+router.post('/portals/:slug/properties/:propertyId/units', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, propertyId } = req.params;
   const b = req.body || {};
   
@@ -143,7 +192,11 @@ router.post('/portals/:slug/properties/:propertyId/units', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/units/:id', async (req, res) => {
+router.get('/portals/:slug/units/:id', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, id } = req.params;
   
   try {
@@ -158,7 +211,11 @@ router.get('/portals/:slug/units/:id', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/units/:id/status', async (req, res) => {
+router.post('/portals/:slug/units/:id/status', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const { status, cleanStatus } = req.body || {};
   
@@ -177,7 +234,11 @@ router.post('/portals/:slug/units/:id/status', async (req, res) => {
 
 // ============ AVAILABILITY ============
 
-router.get('/portals/:slug/availability', async (req, res) => {
+router.get('/portals/:slug/availability', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug } = req.params;
   const { property, unit, checkIn, checkOut, guests } = req.query;
   
@@ -203,7 +264,11 @@ router.get('/portals/:slug/availability', async (req, res) => {
 
 // ============ RESERVATION ENDPOINTS ============
 
-router.post('/portals/:slug/reservations', async (req, res) => {
+router.post('/portals/:slug/reservations', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug } = req.params;
   const b = req.body || {};
   
@@ -239,7 +304,11 @@ router.post('/portals/:slug/reservations', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/reservations', async (req, res) => {
+router.get('/portals/:slug/reservations', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug } = req.params;
   const { property, unit, status, from, to, email, limit } = req.query;
   
@@ -261,7 +330,11 @@ router.get('/portals/:slug/reservations', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/reservations/by-confirmation/:number', async (req, res) => {
+router.get('/portals/:slug/reservations/by-confirmation/:number', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, number } = req.params;
   
   try {
@@ -276,7 +349,11 @@ router.get('/portals/:slug/reservations/by-confirmation/:number', async (req, re
   }
 });
 
-router.get('/portals/:slug/reservations/:id', async (req, res) => {
+router.get('/portals/:slug/reservations/:id', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, id } = req.params;
   
   try {
@@ -291,7 +368,11 @@ router.get('/portals/:slug/reservations/:id', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/reservations/:id/confirm', async (req, res) => {
+router.post('/portals/:slug/reservations/:id/confirm', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   try {
     const reservation = await confirmReservation(slug, id);
@@ -301,7 +382,11 @@ router.post('/portals/:slug/reservations/:id/confirm', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/reservations/:id/check-in', async (req, res) => {
+router.post('/portals/:slug/reservations/:id/check-in', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const { arrivalTime } = req.body || {};
   try {
@@ -312,7 +397,11 @@ router.post('/portals/:slug/reservations/:id/check-in', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/reservations/:id/check-out', async (req, res) => {
+router.post('/portals/:slug/reservations/:id/check-out', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   try {
     const reservation = await checkOutGuest(slug, id);
@@ -322,7 +411,11 @@ router.post('/portals/:slug/reservations/:id/check-out', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/reservations/:id/cancel', async (req, res) => {
+router.post('/portals/:slug/reservations/:id/cancel', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const { reason } = req.body || {};
   try {
@@ -335,7 +428,11 @@ router.post('/portals/:slug/reservations/:id/cancel', async (req, res) => {
 
 // ============ CALENDAR ENDPOINTS ============
 
-router.get('/portals/:slug/units/:unitId/calendar', async (req, res) => {
+router.get('/portals/:slug/units/:unitId/calendar', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, unitId } = req.params;
   const { startDate, endDate } = req.query;
   
@@ -360,7 +457,11 @@ router.get('/portals/:slug/units/:unitId/calendar', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/units/:unitId/block', async (req, res) => {
+router.post('/portals/:slug/units/:unitId/block', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, unitId } = req.params;
   const { startDate, endDate, availability, reason, blockedBy } = req.body || {};
   
@@ -385,7 +486,11 @@ router.post('/portals/:slug/units/:unitId/block', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/units/:unitId/unblock', async (req, res) => {
+router.post('/portals/:slug/units/:unitId/unblock', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, unitId } = req.params;
   const { startDate, endDate } = req.body || {};
   
@@ -407,7 +512,11 @@ router.post('/portals/:slug/units/:unitId/unblock', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/reservations/:id/sync-calendar', async (req, res) => {
+router.post('/portals/:slug/reservations/:id/sync-calendar', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { id } = req.params;
   try {
     await syncReservationToCalendar(id);
@@ -418,7 +527,11 @@ router.post('/portals/:slug/reservations/:id/sync-calendar', async (req, res) =>
   }
 });
 
-router.get('/portals/:slug/properties/:propertyId/calendar', async (req, res) => {
+router.get('/portals/:slug/properties/:propertyId/calendar', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, propertyId } = req.params;
   const { startDate, endDate } = req.query;
   
@@ -442,7 +555,11 @@ router.get('/portals/:slug/properties/:propertyId/calendar', async (req, res) =>
 
 // ============ SEASONAL RULES ENDPOINTS ============
 
-router.get('/portals/:slug/seasonal-rules', async (req, res) => {
+router.get('/portals/:slug/seasonal-rules', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug } = req.params;
   const { propertyId } = req.query;
   
@@ -455,7 +572,11 @@ router.get('/portals/:slug/seasonal-rules', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/seasonal-rules', async (req, res) => {
+router.post('/portals/:slug/seasonal-rules', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug } = req.params;
   const b = req.body || {};
   
@@ -487,7 +608,11 @@ router.post('/portals/:slug/seasonal-rules', async (req, res) => {
   }
 });
 
-router.patch('/portals/:slug/seasonal-rules/:ruleId', async (req, res) => {
+router.patch('/portals/:slug/seasonal-rules/:ruleId', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, ruleId } = req.params;
   const b = req.body || {};
   
@@ -500,7 +625,11 @@ router.patch('/portals/:slug/seasonal-rules/:ruleId', async (req, res) => {
   }
 });
 
-router.delete('/portals/:slug/seasonal-rules/:ruleId', async (req, res) => {
+router.delete('/portals/:slug/seasonal-rules/:ruleId', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, ruleId } = req.params;
   
   try {
@@ -514,7 +643,11 @@ router.delete('/portals/:slug/seasonal-rules/:ruleId', async (req, res) => {
 
 // ============ HOUSEKEEPING ENDPOINTS ============
 
-router.post('/portals/:slug/housekeeping', async (req, res) => {
+router.post('/portals/:slug/housekeeping', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug } = req.params;
   const b = req.body || {};
   
@@ -548,7 +681,11 @@ router.post('/portals/:slug/housekeeping', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/housekeeping', async (req, res) => {
+router.get('/portals/:slug/housekeeping', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug } = req.params;
   const { property, unit, status, assignedTo, from, to, limit } = req.query;
   
@@ -570,7 +707,11 @@ router.get('/portals/:slug/housekeeping', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/housekeeping/:id', async (req, res) => {
+router.get('/portals/:slug/housekeeping/:id', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, id } = req.params;
   
   try {
@@ -585,7 +726,11 @@ router.get('/portals/:slug/housekeeping/:id', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/housekeeping/:id/assign', async (req, res) => {
+router.post('/portals/:slug/housekeeping/:id/assign', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const { assignedTo, team } = req.body || {};
   
@@ -601,7 +746,11 @@ router.post('/portals/:slug/housekeeping/:id/assign', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/housekeeping/:id/start', async (req, res) => {
+router.post('/portals/:slug/housekeeping/:id/start', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   try {
     const task = await startTask(slug, id);
@@ -611,7 +760,11 @@ router.post('/portals/:slug/housekeeping/:id/start', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/housekeeping/:id/checklist', async (req, res) => {
+router.post('/portals/:slug/housekeeping/:id/checklist', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const { checklist } = req.body || {};
   
@@ -627,7 +780,11 @@ router.post('/portals/:slug/housekeeping/:id/checklist', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/housekeeping/:id/complete', async (req, res) => {
+router.post('/portals/:slug/housekeeping/:id/complete', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const { actualMinutes, suppliesUsed, notes, issuesFound, maintenanceNeeded } = req.body || {};
   
@@ -645,7 +802,11 @@ router.post('/portals/:slug/housekeeping/:id/complete', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/housekeeping/:id/inspect', async (req, res) => {
+router.post('/portals/:slug/housekeeping/:id/inspect', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const { passed, inspectedBy, notes, photos } = req.body || {};
   
@@ -663,7 +824,11 @@ router.post('/portals/:slug/housekeeping/:id/inspect', async (req, res) => {
 
 // ============ MAINTENANCE ENDPOINTS ============
 
-router.post('/portals/:slug/maintenance', async (req, res) => {
+router.post('/portals/:slug/maintenance', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug } = req.params;
   const b = req.body || {};
   
@@ -696,7 +861,11 @@ router.post('/portals/:slug/maintenance', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/maintenance', async (req, res) => {
+router.get('/portals/:slug/maintenance', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug } = req.params;
   const { property, unit, category, status, priority, assignedTo, limit } = req.query;
   
@@ -718,7 +887,11 @@ router.get('/portals/:slug/maintenance', async (req, res) => {
   }
 });
 
-router.get('/portals/:slug/maintenance/:id', async (req, res) => {
+router.get('/portals/:slug/maintenance/:id', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.read'))) {
+    return denyCapability(res, 'tenant.read');
+  }
+
   const { slug, id } = req.params;
   
   try {
@@ -733,7 +906,11 @@ router.get('/portals/:slug/maintenance/:id', async (req, res) => {
   }
 });
 
-router.post('/portals/:slug/maintenance/:id/status', async (req, res) => {
+router.post('/portals/:slug/maintenance/:id/status', async (req: Request, res: Response) => {
+  if (!(await can(req, 'tenant.configure'))) {
+    return denyCapability(res, 'tenant.configure');
+  }
+
   const { slug, id } = req.params;
   const b = req.body || {};
   

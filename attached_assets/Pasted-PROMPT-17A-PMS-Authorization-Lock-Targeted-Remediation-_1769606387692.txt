@@ -1,0 +1,235 @@
+PROMPT-17A — PMS Authorization Lock (Targeted Remediation)
+ROLE
+
+You are operating under the AUTH_CONSTITUTION.md and all prior PROMPTs (1–16).
+This prompt is remedial, not exploratory.
+
+You MUST:
+
+Make only the changes explicitly listed
+
+Preserve all existing behavior except where authorization is missing
+
+Add no fallback logic
+
+Add no new authority sources
+
+Add no new capability domains unless explicitly instructed
+
+CONTEXT
+
+PROMPT-16 identified one HIGH-RISK authorization gap:
+
+server/routes/pms.ts
+
+
+Current state:
+
+PMS routes rely on portal / tenant context only
+
+No explicit capability checks
+
+This is operational authority, not passive read access
+
+This is constitutionally unacceptable.
+
+PROMPT-17A exists solely to:
+
+Add explicit, fail-closed capability enforcement to PMS routes
+without refactoring, redesign, or expanding scope.
+
+HARD CONSTRAINTS (NON-NEGOTIABLE)
+
+Single File Scope
+
+You may modify ONLY:
+
+server/routes/pms.ts
+
+
+No shared helpers
+
+No refactors elsewhere
+
+No Schema Changes
+
+Use existing capabilities only
+
+Do NOT add new tables, migrations, or capability codes
+
+Fail-Closed Only
+
+Missing auth context → deny
+
+Missing capability → deny
+
+Errors → deny
+
+No “best effort” logic
+
+No Role Checks
+
+❌ No role names
+
+❌ No isPlatformAdmin
+
+❌ No tenant_admin shortcuts
+
+✅ Capabilities only
+
+No Behavior Changes
+
+Route behavior must remain identical for authorized principals
+
+Only unauthorized access is affected
+
+REQUIRED CAPABILITY MAPPING
+
+Apply explicit capability gates as follows:
+
+PMS Route Authorization Rules
+Route Type	Required Capability
+PMS read / list / view	tenant.read
+PMS create / update	tenant.configure
+PMS delete / destructive	tenant.configure
+
+If a route performs mixed behavior, use the highest required capability.
+
+IMPLEMENTATION REQUIREMENTS
+1. Import Authorization Helpers
+
+At top of server/routes/pms.ts, import from the canonical source:
+
+import { requireCapability, can } from '@/server/auth/authorize';
+
+
+Do not re-implement helpers.
+
+2. Apply Route-Level Guards
+
+You MUST ensure that every exported route in pms.ts has one of:
+
+requireCapability(...) middleware
+OR
+
+An inline can(req, ...) check with explicit denial
+
+Example (middleware form — preferred):
+
+router.get(
+  '/',
+  requireCapability('tenant.read'),
+  handler
+);
+
+
+Example (inline form — only if middleware cannot be applied):
+
+if (!(await can(req, 'tenant.configure'))) {
+  throw new NotAuthorizedError('tenant.configure required');
+}
+
+3. No Silent Access
+
+Forbidden patterns (DO NOT USE):
+
+Relying on tenant context alone
+
+Assuming portal implies authorization
+
+“This route is only reachable by admins” logic
+
+UI-only gating assumptions
+
+VERIFICATION REQUIREMENTS
+
+You MUST provide documented evidence, not assertions.
+
+Create:
+
+docs/PROMPT-17A-ANNEX.md
+
+Annex MUST Contain:
+A. Route Inventory
+
+For each PMS route:
+
+HTTP method
+
+Path
+
+Capability enforced
+
+Line number evidence
+
+Example table:
+
+Method	Path	Capability	Evidence
+GET	/pms	tenant.read	pms.ts:42
+POST	/pms	tenant.configure	pms.ts:88
+B. Fail-Closed Confirmation
+
+Explicitly state and show evidence that:
+
+Missing auth context → denied
+
+Missing capability → denied
+
+Errors → denied
+
+Reference:
+
+authorize.ts
+
+No new logic added
+
+C. Constitutional Compliance Checklist
+Article	Status	Evidence
+Single Identity Authority	PASS	No new identity sources
+Capability-First	PASS	All routes gated
+Fail-Closed	PASS	No fallback logic
+No Parallel Systems	PASS	No role checks
+No Scope Expansion	PASS	Single file modified
+FORBIDDEN ACTIONS
+
+You MUST NOT:
+
+Add new capability codes
+
+Introduce “temporary” checks
+
+Create shared helpers
+
+Modify unrelated routes
+
+Touch UI
+
+Touch database schema
+
+“Prepare for future PMS roles”
+
+This is remediation only.
+
+SUCCESS CRITERIA
+
+PROMPT-17A is complete ONLY IF:
+
+All PMS routes have explicit capability enforcement
+
+Unauthorized access is denied deterministically
+
+Authorized behavior is unchanged
+
+Annex evidence is complete
+
+No other files were modified
+
+FINAL INSTRUCTION
+
+If you encounter ambiguity:
+
+STOP.
+Document the ambiguity in the annex.
+Do not invent policy.
+
+END OF PROMPT-17A
