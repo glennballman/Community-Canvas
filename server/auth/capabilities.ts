@@ -28,10 +28,11 @@ const PLATFORM_ADMIN_BOOTSTRAP_CAPABILITIES = [
 /**
  * PROMPT-7: Check if effective principal is a platform administrator
  * Queries cc_principals -> cc_users to get is_platform_admin flag
+ * Falls back to direct cc_users lookup if principal doesn't exist
  */
 async function isPlatformAdminPrincipal(effectivePrincipalId: string): Promise<boolean> {
   try {
-    // cc_principals.user_id -> cc_users.id where is_platform_admin = true
+    // First try: cc_principals.user_id -> cc_users.id where is_platform_admin = true
     const result = await serviceQuery(`
       SELECT u.is_platform_admin 
       FROM cc_principals p
@@ -39,10 +40,36 @@ async function isPlatformAdminPrincipal(effectivePrincipalId: string): Promise<b
       WHERE p.id = $1
     `, [effectivePrincipalId]);
     
-    return result.rows[0]?.is_platform_admin === true;
+    if (result.rows[0]) {
+      return result.rows[0].is_platform_admin === true;
+    }
+    
+    // Fallback: Check if effectivePrincipalId is actually a user_id
+    // This handles the case where principal record doesn't exist yet
+    const fallbackResult = await serviceQuery(`
+      SELECT is_platform_admin FROM cc_users WHERE id = $1
+    `, [effectivePrincipalId]);
+    
+    return fallbackResult.rows[0]?.is_platform_admin === true;
   } catch (error) {
     // Fail-closed: if we can't determine, assume not admin
     console.error('[isPlatformAdminPrincipal] Error checking platform admin status:', error);
+    return false;
+  }
+}
+
+/**
+ * PROMPT-7: Check if a user ID belongs to a platform administrator
+ * Direct lookup on cc_users (for use when principal doesn't exist)
+ */
+export async function isPlatformAdminUser(userId: string): Promise<boolean> {
+  try {
+    const result = await serviceQuery(`
+      SELECT is_platform_admin FROM cc_users WHERE id = $1
+    `, [userId]);
+    return result.rows[0]?.is_platform_admin === true;
+  } catch (error) {
+    console.error('[isPlatformAdminUser] Error checking platform admin status:', error);
     return false;
   }
 }
@@ -191,12 +218,16 @@ async function getCapabilitiesAtScope(
  * 
  * FAIL-CLOSED: Always returns locked response shape, even on errors.
  * On any error, returns ok:false with empty capabilities.
+ * 
+ * PROMPT-7: If effectivePrincipalId is null but userId is provided,
+ * still checks bootstrap capabilities using the userId directly.
  */
 export async function getCapabilitySnapshot(
   principalId: string | null,
   effectivePrincipalId: string | null,
   tenantId: string | null,
-  organizationId: string | null = null
+  organizationId: string | null = null,
+  userId: string | null = null
 ): Promise<CapabilitySnapshot> {
   const platformScopeId = resolvePlatformScopeId();
   
