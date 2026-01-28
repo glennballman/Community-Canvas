@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getPlatformNavSections } from '../lib/routes/platformNav';
 import { dbg, shortUser, shortImp } from '@/lib/debugImpersonation';
+import { useCanUI } from '@/auth/uiAuthorization';
 
 // Throttle helper for forensic logs
 const throttleTimestamps: Record<string, number> = {};
@@ -45,6 +46,9 @@ export function PlatformLayout(): React.ReactElement {
   const location = useLocation();
   const { loading, initialized } = useTenant();
   const { user: authUser, impersonation, hasTenantMemberships, ready: authReady, navMode, logout } = useAuth();
+  
+  // PROMPT-5: Use canUI for capability-based visibility checks
+  const canUI = useCanUI();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -162,7 +166,9 @@ export function PlatformLayout(): React.ReactElement {
     );
   }
 
-  if (!authUser.isPlatformAdmin) {
+  // PROMPT-5: Use canUI('platform.configure') for visibility check
+  // This is visibility-only - backend always enforces via PROMPT-3/4
+  if (!canUI('platform.configure')) {
     // FORENSIC: Log early return
     dbg('[PlatformLayout/early:notAdmin]', { pathname: location.pathname, user: shortUser(authUser) });
     return (

@@ -56,6 +56,8 @@ export interface NavItem {
   portalRolesAny?: string[];
   participantOnly?: boolean;
   hiddenInProduction?: boolean;
+  /** PROMPT-5: Capability code required for visibility */
+  requiredCapability?: string;
 }
 
 export interface NavSection {
@@ -69,6 +71,8 @@ export interface NavSection {
   portalRolesAny?: string[];
   participantOnly?: boolean;
   hiddenInProduction?: boolean;
+  /** PROMPT-5: Capability code required for visibility */
+  requiredCapability?: string;
 }
 
 /**
@@ -191,27 +195,29 @@ export const V3_NAV: NavSection[] = [
     title: 'Admin',
     requiresTenant: true,
     tenantRolesAny: ['tenant_owner', 'tenant_admin'],
+    requiredCapability: 'tenant.configure', // PROMPT-5: Capability-based gating
     items: [
-      { icon: Settings, label: 'Admin Home', href: '/app/admin', testId: 'nav-admin', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: UserCog, label: 'Roles', href: '/app/admin/roles', testId: 'nav-roles', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: Settings, label: 'Settings', href: '/app/admin/settings', testId: 'nav-settings', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: Handshake, label: 'Negotiation Policies', href: '/app/settings/negotiation-policies', testId: 'nav-negotiation-policies', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: FileSearch, label: 'Negotiation Audit', href: '/app/settings/negotiation-audit', testId: 'nav-negotiation-audit', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: ShieldCheck, label: 'Proof Verification', href: '/app/settings/proof-verification', testId: 'nav-proof-verification', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: Wallet, label: 'Folios', href: '/app/admin/folios', testId: 'nav-folios', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: BarChart3, label: 'Usage', href: '/app/admin/usage', testId: 'nav-usage', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: ShieldCheck, label: 'Certifications', href: '/app/admin/certifications', testId: 'nav-certifications', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
-      { icon: Building2, label: 'Operator', href: '/app/operator', testId: 'nav-operator', tenantRolesAny: ['tenant_owner', 'tenant_admin', 'operator'] },
-      { icon: Building2, label: 'Portals', href: '/app/admin/portals', testId: 'nav-portals', tenantRolesAny: ['tenant_owner', 'tenant_admin'] },
+      { icon: Settings, label: 'Admin Home', href: '/app/admin', testId: 'nav-admin', requiredCapability: 'tenant.configure' },
+      { icon: UserCog, label: 'Roles', href: '/app/admin/roles', testId: 'nav-roles', requiredCapability: 'roles.manage' },
+      { icon: Settings, label: 'Settings', href: '/app/admin/settings', testId: 'nav-settings', requiredCapability: 'settings.manage' },
+      { icon: Handshake, label: 'Negotiation Policies', href: '/app/settings/negotiation-policies', testId: 'nav-negotiation-policies', requiredCapability: 'tenant.configure' },
+      { icon: FileSearch, label: 'Negotiation Audit', href: '/app/settings/negotiation-audit', testId: 'nav-negotiation-audit', requiredCapability: 'tenant.configure' },
+      { icon: ShieldCheck, label: 'Proof Verification', href: '/app/settings/proof-verification', testId: 'nav-proof-verification', requiredCapability: 'tenant.configure' },
+      { icon: Wallet, label: 'Folios', href: '/app/admin/folios', testId: 'nav-folios', requiredCapability: 'folios.read' },
+      { icon: BarChart3, label: 'Usage', href: '/app/admin/usage', testId: 'nav-usage', requiredCapability: 'tenant.configure' },
+      { icon: ShieldCheck, label: 'Certifications', href: '/app/admin/certifications', testId: 'nav-certifications', requiredCapability: 'tenant.configure' },
+      { icon: Building2, label: 'Operator', href: '/app/operator', testId: 'nav-operator', requiredCapability: 'operations.read' },
+      { icon: Building2, label: 'Portals', href: '/app/admin/portals', testId: 'nav-portals', requiredCapability: 'portals.configure' },
     ],
   },
   {
     title: 'Platform',
     platformAdminOnly: true,
+    requiredCapability: 'platform.configure', // PROMPT-5: Capability-based gating
     items: [
-      { icon: Building2, label: 'All Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants', platformAdminOnly: true },
-      { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics', platformAdminOnly: true },
-      { icon: Search, label: 'System Explorer', href: '/app/platform/system-explorer', testId: 'nav-system-explorer', platformAdminOnly: true },
+      { icon: Building2, label: 'All Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants', requiredCapability: 'platform.manage_tenants' },
+      { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics', requiredCapability: 'platform.analytics' },
+      { icon: Search, label: 'System Explorer', href: '/app/platform/system-explorer', testId: 'nav-system-explorer', requiredCapability: 'platform.configure' },
     ],
   },
   {
@@ -248,6 +254,8 @@ export interface NavFilterContext {
   tenantRole?: string;
   portalRole?: string;
   founderNavEnabled?: boolean;
+  /** PROMPT-5: Capability checker function from useCanUI() */
+  canUI?: (capability: string) => boolean;
 }
 
 /**
@@ -261,6 +269,7 @@ function hasAnyRole(userRole: string | undefined, allowedRoles: string[] | undef
 
 /**
  * Check if an item should be visible based on context
+ * PROMPT-5: Updated to support capability-based visibility checks
  */
 function isItemVisible(item: NavItem, ctx: NavFilterContext): boolean {
   // Founder nav shows more items, but still respects tenant requirements
@@ -282,6 +291,16 @@ function isItemVisible(item: NavItem, ctx: NavFilterContext): boolean {
     return false;
   }
   
+  // PROMPT-5: Capability-based visibility check (preferred over role checks)
+  if (item.requiredCapability && ctx.canUI) {
+    if (!ctx.canUI(item.requiredCapability)) {
+      return false;
+    }
+    // If capability check passes, skip legacy role checks
+    return true;
+  }
+  
+  // Legacy role-based checks (for backwards compatibility)
   if (item.platformAdminOnly && !ctx.isPlatformAdmin) {
     return false;
   }
@@ -307,6 +326,7 @@ function isItemVisible(item: NavItem, ctx: NavFilterContext): boolean {
 
 /**
  * Check if a section should be visible based on context
+ * PROMPT-5: Updated to support capability-based visibility checks
  */
 function isSectionVisible(section: NavSection, ctx: NavFilterContext): boolean {
   // Founder nav shows more sections, but still respects tenant requirements
@@ -322,6 +342,16 @@ function isSectionVisible(section: NavSection, ctx: NavFilterContext): boolean {
     return false;
   }
   
+  // PROMPT-5: Capability-based visibility check (preferred over role checks)
+  if (section.requiredCapability && ctx.canUI) {
+    if (!ctx.canUI(section.requiredCapability)) {
+      return false;
+    }
+    // If capability check passes, skip legacy role checks
+    return true;
+  }
+  
+  // Legacy role-based checks (for backwards compatibility)
   if (section.platformAdminOnly && !ctx.isPlatformAdmin) {
     return false;
   }

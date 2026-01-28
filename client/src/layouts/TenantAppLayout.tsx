@@ -39,6 +39,7 @@ import { PortalSelector } from '../components/PortalSelector';
 import { ContextIndicator } from '../components/context/ContextIndicator';
 import { ViewModeToggle } from '../components/routing/ViewModeToggle';
 import { getFilteredNavSections, NavSection, NavItem } from '../lib/routes/v3Nav';
+import { useCanUI } from '@/auth/uiAuthorization';
 
 // Throttle helper for forensic logs
 const throttleTimestamps: Record<string, number> = {};
@@ -84,6 +85,9 @@ export function TenantAppLayout(): React.ReactElement {
   } = useTenant();
   // Phase 2C-16: User from AuthContext (single identity authority)
   const { user, ready: authReady, navMode, token, refreshSession } = useAuth();
+  
+  // PROMPT-5: Use canUI for capability-based visibility checks
+  const canUI = useCanUI();
   
   // FORENSIC: Top-of-render dump
   dbg('[TenantAppLayout/render]', {
@@ -290,6 +294,7 @@ export function TenantAppLayout(): React.ReactElement {
     return role;
   }
 
+  // PROMPT-5: Pass canUI function for capability-based visibility checks
   const navSections = getFilteredNavSections({
     isAuthenticated: !!user,
     hasTenant: !!currentTenant,
@@ -299,6 +304,7 @@ export function TenantAppLayout(): React.ReactElement {
     tenantRole: normalizeRole(currentTenant?.role),
     portalRole: undefined,
     founderNavEnabled: false, // Founder mode now has its own layout
+    canUI, // PROMPT-5: Capability checker for visibility gating
   });
 
   // --------------------------------------------------------------------------
