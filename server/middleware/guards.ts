@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'cc-dev-secret-change-in-prod';
 interface JWTPayload {
   userId: string;
   email: string;
-  isPlatformAdmin: boolean;
+  isPlatformAdmin: boolean;  // LEGACY/DISPLAY ONLY - NOT used for authorization (PROMPT-8)
   activeTenantId?: string;
 }
 
@@ -109,9 +109,12 @@ export const requireTenant: RequestHandler = (req: Request, res: Response, next:
 };
 
 /**
- * Session-based platform admin check.
- * Requires user to be authenticated AND have is_platform_admin = true in cc_users.
- * Uses the same session auth as the rest of the app (not JWT).
+ * PROMPT-8: Session-based platform admin check via principal grants.
+ * 
+ * CONSTITUTIONAL: Platform admin status is determined ONLY via cc_grants.
+ * cc_users.is_platform_admin is NON-AUTHORITATIVE (legacy/data-only).
+ * 
+ * Requires user to be authenticated AND have platform_admin role grant at platform scope.
  */
 export const requirePlatformAdmin: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
   const tenantReq = req as TenantRequest;
@@ -129,24 +132,23 @@ export const requirePlatformAdmin: RequestHandler = async (req: Request, res: Re
   }
   
   try {
-    // Import pool dynamically to avoid circular dependency
-    const { pool } = await import('../db');
-    
-    // Check if user is platform admin in cc_users
-    const result = await pool.query(
-      'SELECT is_platform_admin FROM cc_users WHERE id = $1',
-      [userId]
-    );
+    // PROMPT-8: Check for platform_admin role grant at platform scope via principal
+    const result = await serviceQuery(`
+      SELECT 1 
+      FROM cc_principals p
+      JOIN cc_grants g ON g.principal_id = p.id
+      WHERE p.user_id = $1
+        AND p.is_active = TRUE
+        AND g.role_id = '10000000-0000-0000-0000-000000000001'::UUID  -- platform_admin role
+        AND g.scope_id = '00000000-0000-0000-0000-000000000001'::UUID  -- platform scope
+        AND g.is_active = TRUE
+        AND g.revoked_at IS NULL
+        AND g.valid_from <= NOW()
+        AND (g.valid_until IS NULL OR g.valid_until > NOW())
+      LIMIT 1
+    `, [userId]);
     
     if (result.rows.length === 0) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'User not found',
-        code: 'USER_NOT_FOUND'
-      });
-    }
-    
-    if (!result.rows[0].is_platform_admin) {
       return res.status(403).json({ 
         success: false, 
         error: 'Platform admin access required',
@@ -155,9 +157,10 @@ export const requirePlatformAdmin: RequestHandler = async (req: Request, res: Re
     }
     
     // Set user info on request for downstream handlers
+    // Note: isPlatformAdmin is set for backwards compatibility with UI display
     (req as any).platformUser = {
       id: userId,
-      isPlatformAdmin: true
+      isPlatformAdmin: true  // DISPLAY ONLY - auth already verified via grants
     };
     
     next();

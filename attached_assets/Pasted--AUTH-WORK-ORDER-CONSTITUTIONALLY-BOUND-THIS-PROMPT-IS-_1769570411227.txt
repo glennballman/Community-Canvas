@@ -1,0 +1,117 @@
+# ⚖️ AUTH WORK ORDER — CONSTITUTIONALLY BOUND
+
+THIS PROMPT IS GOVERNED BY: `AUTH_CONSTITUTION.md`
+
+By proceeding, you (the implementer) explicitly agree to ALL of the following:
+
+## 1) Constitutional Supremacy
+- `AUTH_CONSTITUTION.md` is the highest authority.
+- If this prompt conflicts with the constitution, the constitution wins.
+- If you are unsure whether something conflicts, you MUST STOP and ask for clarification — do NOT implement.
+
+## 2) No Architecture Drift
+You are FORBIDDEN to:
+- Invent new auth models, "modes," "shortcuts," or parallel permission systems
+- Use `user_id`, `machine_id`, `service_id`, `delegate_id` or `cc_users.is_platform_admin` as enforcement sources
+- Use `cc_tenant_users.role` as enforcement
+- Replace RLS with capability checks (capability checks gate entry; RLS is final)
+- Add UI-based permission enforcement (UI may hide, server must enforce)
+
+## 3) Fail-Closed
+- Unknown principal → deny
+- Unknown capability → deny
+- Unknown condition key → hard fail
+- Any error path must deny and must be audited
+
+---
+
+# PROMPT-8 — Delete `cc_users.is_platform_admin` Authority (Migrate to Principal Grants)
+
+## Goal
+`cc_users.is_platform_admin` must become **NON-AUTHORITATIVE** (data-only / legacy) and must not be used for:
+- bootstrap capabilities
+- gating platform routes
+- UI visibility
+- any authorization decision
+
+Instead:
+- Platform admin status must be represented **only** via principal grants (role/capability) at **platform scope**.
+
+We will:
+1) Backfill platform admin grants onto principals for any user currently flagged platform admin (one-time migration).
+2) Update server bootstrap logic to rely only on principal grants (no cc_users flags).
+3) Add hard guardrails that fail CI/build if `is_platform_admin` is used for authorization anywhere.
+4) (Optional but recommended) Make the column read-only at DB-level to prevent future reliance.
+
+---
+
+## Tasks (Do ALL)
+
+### TASK A — Migration: backfill “platform admin” as grants (authoritative)
+Create a new migration:
+`server/db/migrations/0166_prompt8_platform_admin_grants.sql`
+
+Requirements:
+- Find the canonical platform scope id (the singleton; use existing getter or query).
+- Ensure a **system role** exists that corresponds to platform administration.
+  - Use the existing system role (likely `tenant_admin` is NOT correct). Use whatever PROMPT-2 seeded for platform admin (e.g. `platform_admin`), OR if the schema uses capabilities directly, then grant the set of platform capabilities that correspond to “platform admin”.
+- For every user where `cc_users.is_platform_admin = true`:
+  - Ensure the user has a principal (`getOrCreatePrincipal` pattern; do NOT bypass principal lifecycle).
+  - Grant the platform-admin role/capabilities at **platform scope** to that principal.
+- Idempotent: re-running migration must not duplicate grants.
+- Log: Insert one audit row per principal granted with `source='migration'` and `reason='platform_admin_backfill_from_legacy_flag'`.
+
+### TASK B — Remove all auth usage of `is_platform_admin`
+- Search the repo for:
+  - `is_platform_admin`
+  - `isPlatformAdmin`
+- Allowed:
+  - Display-only in profile/admin UI (non-authoritative), clearly labeled legacy/info.
+- Forbidden:
+  - Any conditional that gates access, routes, capabilities, nav, or bootstrap.
+- Update any bootstrap capability logic so it ONLY uses:
+  - `resolvePrincipalFromSession()`
+  - `cc_has_capability(...)`
+  - roles/capabilities/grants
+- If a platform admin cannot be authorized due to missing grants, the system must deny (fail-closed) and the fix is to add grants, NOT to fallback.
+
+### TASK C — Add guardrail script: “ban legacy platform-admin authority”
+Create:
+`scripts/lint-no-platform-admin-flag.sh`
+
+It must fail (exit 1) if any of the following patterns exist outside explicitly allowed files/locations:
+- server-side auth enforcement paths using `is_platform_admin` or `isPlatformAdmin`
+- route guards using `isPlatformAdmin`
+- UI gating using `isPlatformAdmin` (except possibly rendering a badge)
+
+Also add this script to package.json / CI / whatever lint runner you already use so it runs by default.
+
+### TASK D — DB-level protection (optional but preferred)
+If safe with current schema:
+- Add a trigger to prevent updates to `cc_users.is_platform_admin` after migration 0166 is applied.
+- If you cannot safely make it read-only, then:
+  - Add a COMMENT on the column stating it is non-authoritative and forbidden for auth.
+
+### TASK E — Documentation
+Create:
+`docs/PROMPT-8-ANNEX.md`
+
+Use PASS/FAIL evidence style with file paths + line numbers and include:
+- proof that platform admin authorization now derives from principal grants
+- proof that no fallback exists
+- grep outputs confirming no prohibited usage
+- SQL evidence that each platform admin user principal has platform-scope grant(s)
+
+---
+
+## Verification (MUST RUN and paste results)
+1) SQL: show principals with platform admin grants
+```sql
+-- Replace names with actual table/column names from your schema
+SELECT u.email, p.id as principal_id, s.id as platform_scope_id, r.code as role_code
+FROM cc_users u
+JOIN cc_principals p ON p.user_id = u.id
+JOIN cc_grants g ON g.principal_id = p.id
+JOIN cc_scopes s ON s.id = g.scope_id
+JOIN cc_roles r ON r.id = g.role_id
+WHERE u.is_platform_admin = true;

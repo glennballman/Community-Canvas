@@ -1,14 +1,15 @@
 /**
  * PROMPT-6: Authoritative Capability Snapshot
  * PROMPT-7: Platform Admin Bootstrap Capability Enforcement
+ * PROMPT-8: Platform Admin Authority via Principal Grants (NOT cc_users.is_platform_admin)
  * AUTH_CONSTITUTION.md governs; single authority for capability facts
  * 
  * Provides capability evaluation for effective_principal_id at all scope levels.
  * This is the ONLY source of truth for UI capability visibility.
  * 
- * CONSTITUTIONAL INVARIANT (PROMPT-7):
- * Platform administrators MUST always have platform-level capabilities.
- * This is enforced via bootstrap rules BEFORE DB capability evaluation.
+ * CONSTITUTIONAL INVARIANT (PROMPT-8):
+ * Platform admin status is determined ONLY via cc_grants at platform scope.
+ * cc_users.is_platform_admin is NON-AUTHORITATIVE (legacy/data-only).
  */
 
 import { serviceQuery } from '../db/tenantDb';
@@ -26,23 +27,31 @@ const PLATFORM_ADMIN_BOOTSTRAP_CAPABILITIES = [
 ] as const;
 
 /**
- * PROMPT-7: Check if effective principal is a platform administrator
- * Queries cc_principals -> cc_users to get is_platform_admin flag
+ * PROMPT-8: Check if effective principal is a platform administrator
+ * Queries cc_grants for platform_admin role at platform scope.
  * 
- * CONSTITUTIONAL: NO FALLBACK PATHS. Principal must exist.
- * If principal doesn't exist, returns false (fail-closed).
+ * CONSTITUTIONAL: Platform admin status is determined ONLY via grants.
+ * cc_users.is_platform_admin is NON-AUTHORITATIVE (legacy/data-only).
+ * 
+ * NO FALLBACK PATHS. If grant doesn't exist, returns false (fail-closed).
  */
 async function isPlatformAdminPrincipal(effectivePrincipalId: string): Promise<boolean> {
   try {
-    // cc_principals.user_id -> cc_users.id where is_platform_admin = true
+    // Check for platform_admin role grant at platform scope
     const result = await serviceQuery(`
-      SELECT u.is_platform_admin 
-      FROM cc_principals p
-      JOIN cc_users u ON p.user_id = u.id
-      WHERE p.id = $1
+      SELECT 1 
+      FROM cc_grants g
+      WHERE g.principal_id = $1
+        AND g.role_id = '10000000-0000-0000-0000-000000000001'::UUID  -- platform_admin role
+        AND g.scope_id = '00000000-0000-0000-0000-000000000001'::UUID  -- platform scope
+        AND g.is_active = TRUE
+        AND g.revoked_at IS NULL
+        AND g.valid_from <= NOW()
+        AND (g.valid_until IS NULL OR g.valid_until > NOW())
+      LIMIT 1
     `, [effectivePrincipalId]);
     
-    return result.rows[0]?.is_platform_admin === true;
+    return result.rows.length > 0;
   } catch (error) {
     // Fail-closed: if we can't determine, assume not admin
     console.error('[isPlatformAdminPrincipal] Error checking platform admin status:', error);
