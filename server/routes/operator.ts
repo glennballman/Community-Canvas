@@ -1,6 +1,7 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { serviceQuery } from '../db/tenantDb';
 import { authenticateToken, AuthRequest } from './foundation';
+import { can } from '../auth/authorize';
 import { 
   createIncident, 
   dispatchTow, 
@@ -38,7 +39,59 @@ import { logOperatorEvent, OperatorActionKey } from '../lib/operator/audit';
 
 const router = express.Router();
 
-router.get('/availability', authenticateToken, async (req: AuthRequest, res: Response) => {
+/**
+ * PROMPT-17B: Canonical 403 deny helper (AUTH_CONSTITUTION §8a)
+ */
+function denyCapability(res: Response, capability: string): Response {
+  return res.status(403).json({
+    error: 'Forbidden',
+    code: 'NOT_AUTHORIZED',
+    capability,
+    reason: 'capability_not_granted',
+  });
+}
+
+// ============================================================================
+// PUBLIC TEST ROUTES (defined BEFORE router-level auth)
+// ============================================================================
+
+router.get('/incidents/test/lifecycle', async (_req, res: Response) => {
+  try {
+    const result = await testIncidentLifecycle();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Test incident lifecycle error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+router.get('/dashboard/availability/test', async (_req, res: Response) => {
+  try {
+    const result = await testOperatorAvailability();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Test availability error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+router.get('/credentials/test', async (_req, res: Response) => {
+  try {
+    const result = await testAccessCredentials();
+    res.json(result);
+  } catch (error: any) {
+    console.error('Test credentials error:', error);
+    res.status(500).json({ success: false, error: String(error) });
+  }
+});
+
+// PROMPT-17B: Router-level authentication gate (after public test routes)
+router.use(authenticateToken);
+
+router.get('/availability', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+  
   try {
     const { 
       tenant_id, 
@@ -154,7 +207,10 @@ router.get('/availability', authenticateToken, async (req: AuthRequest, res: Res
   }
 });
 
-router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/hold-request', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+  
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -272,7 +328,10 @@ router.post('/hold-request', authenticateToken, async (req: AuthRequest, res: Re
   }
 });
 
-router.post('/call-log', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/call-log', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+  
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -382,7 +441,10 @@ async function verifyTenantAccess(userId: string, tenantId: string): Promise<{ a
   return { allowed: true, tenantType: result.rows[0].tenant_type };
 }
 
-router.post('/incidents', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/incidents', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+  
   try {
     const userId = req.user?.userId;
     const { tenant_id, incident_type, severity, location_label, latitude, longitude, facility_id, narrative, reporter_name, reporter_contact } = req.body;
@@ -421,7 +483,10 @@ router.post('/incidents', authenticateToken, async (req: AuthRequest, res: Respo
   }
 });
 
-router.get('/incidents', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/incidents', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   try {
     const userId = req.user?.userId;
     const { tenant_id } = req.query;
@@ -447,7 +512,10 @@ router.get('/incidents', authenticateToken, async (req: AuthRequest, res: Respon
   }
 });
 
-router.get('/incidents/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/incidents/:id', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -471,7 +539,10 @@ router.get('/incidents/:id', authenticateToken, async (req: AuthRequest, res: Re
   }
 });
 
-router.post('/incidents/:id/dispatch', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/incidents/:id/dispatch', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -497,7 +568,10 @@ router.post('/incidents/:id/dispatch', authenticateToken, async (req: AuthReques
   }
 });
 
-router.post('/incidents/:id/resolve', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/incidents/:id/resolve', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -527,21 +601,14 @@ router.post('/incidents/:id/resolve', authenticateToken, async (req: AuthRequest
   }
 });
 
-router.get('/incidents/test/lifecycle', async (_req, res: Response) => {
-  try {
-    const result = await testIncidentLifecycle();
-    res.json(result);
-  } catch (error: any) {
-    console.error('Test incident lifecycle error:', error);
-    res.status(500).json({ success: false, error: String(error) });
-  }
-});
-
 // ============================================================================
 // DASHBOARD AVAILABILITY ROUTES
 // ============================================================================
 
-router.get('/dashboard/availability', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/dashboard/availability', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -585,7 +652,10 @@ router.get('/dashboard/availability', authenticateToken, async (req: AuthRequest
   }
 });
 
-router.post('/reservations/bundle', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/reservations/bundle', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -680,21 +750,14 @@ router.post('/reservations/bundle', authenticateToken, async (req: AuthRequest, 
   }
 });
 
-router.get('/dashboard/availability/test', async (_req, res: Response) => {
-  try {
-    const result = await testOperatorAvailability();
-    res.json(result);
-  } catch (error: any) {
-    console.error('Test availability error:', error);
-    res.status(500).json({ success: false, error: String(error) });
-  }
-});
-
 // ============================================================================
 // Access Credentials Routes
 // ============================================================================
 
-router.post('/credentials/validate', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/credentials/validate', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -758,7 +821,10 @@ router.post('/credentials/validate', authenticateToken, async (req: AuthRequest,
   }
 });
 
-router.post('/credentials/:id/revoke', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/credentials/:id/revoke', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -785,7 +851,10 @@ router.post('/credentials/:id/revoke', authenticateToken, async (req: AuthReques
   }
 });
 
-router.post('/credentials/:id/extend', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/credentials/:id/extend', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -816,7 +885,10 @@ router.post('/credentials/:id/extend', authenticateToken, async (req: AuthReques
   }
 });
 
-router.get('/reservations/:id/credentials', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/reservations/:id/credentials', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -840,16 +912,6 @@ router.get('/reservations/:id/credentials', authenticateToken, async (req: AuthR
   } catch (error: any) {
     console.error('Get credentials error:', error);
     res.status(500).json({ success: false, error: 'Failed to get credentials' });
-  }
-});
-
-router.get('/credentials/test', async (_req, res: Response) => {
-  try {
-    const result = await testAccessCredentials();
-    res.json(result);
-  } catch (error: any) {
-    console.error('Test credentials error:', error);
-    res.status(500).json({ success: false, error: String(error) });
   }
 });
 
@@ -925,7 +987,10 @@ async function withP2OperatorRole(
 }
 
 // Emergency Ops
-router.post('/p2/emergency/runs/start', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/emergency/runs/start', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const subjectId = randomUUID();
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_start', 'emergency_run', subjectId, async (ctx) => {
     const { scenario_type, title, notes } = req.body;
@@ -944,7 +1009,10 @@ router.post('/p2/emergency/runs/start', authenticateToken, async (req: AuthReque
   });
 });
 
-router.post('/p2/emergency/runs/:id/resolve', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/emergency/runs/:id/resolve', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_resolve', 'emergency_run', id, async (ctx) => {
     const { resolution_notes } = req.body;
@@ -959,7 +1027,10 @@ router.post('/p2/emergency/runs/:id/resolve', authenticateToken, async (req: Aut
   });
 });
 
-router.post('/p2/emergency/runs/:id/grant-scope', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/emergency/runs/:id/grant-scope', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_grant_scope', 'emergency_run', id, async (ctx) => {
     const { scope_type, target_id, expires_at } = req.body;
@@ -978,7 +1049,10 @@ router.post('/p2/emergency/runs/:id/grant-scope', authenticateToken, async (req:
   });
 });
 
-router.post('/p2/emergency/runs/:id/revoke-scope', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/emergency/runs/:id/revoke-scope', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_revoke_scope', 'emergency_run', id, async (ctx) => {
     const { grant_id } = req.body;
@@ -993,7 +1067,10 @@ router.post('/p2/emergency/runs/:id/revoke-scope', authenticateToken, async (req
   });
 });
 
-router.post('/p2/emergency/runs/:id/export-playbook', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/emergency/runs/:id/export-playbook', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_export_playbook', 'emergency_run', id, async (ctx) => {
     const runResult = await db.execute(sql`
@@ -1018,7 +1095,10 @@ router.post('/p2/emergency/runs/:id/export-playbook', authenticateToken, async (
   });
 });
 
-router.post('/p2/emergency/runs/:id/generate-record-pack', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/emergency/runs/:id/generate-record-pack', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_generate_record_pack', 'emergency_run', id, async (ctx) => {
     const bundleId = randomUUID();
@@ -1037,7 +1117,10 @@ router.post('/p2/emergency/runs/:id/generate-record-pack', authenticateToken, as
   });
 });
 
-router.post('/p2/emergency/runs/:id/share-authority', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/emergency/runs/:id/share-authority', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_share_authority', 'emergency_run', id, async (ctx) => {
     const { authority_type, authority_email, scope, expires_at } = req.body;
@@ -1058,7 +1141,10 @@ router.post('/p2/emergency/runs/:id/share-authority', authenticateToken, async (
   });
 });
 
-router.get('/p2/emergency/runs/:id/dashboard', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/p2/emergency/runs/:id/dashboard', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'emergency_operator', 'run_dashboard_view', 'emergency_run', id, async (ctx) => {
     const runResult = await db.execute(sql`
@@ -1087,7 +1173,10 @@ router.get('/p2/emergency/runs/:id/dashboard', authenticateToken, async (req: Au
 });
 
 // Insurance Ops
-router.post('/p2/insurance/claims/:id/assemble', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/insurance/claims/:id/assemble', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'insurance_operator', 'claim_assemble', 'insurance_claim', id, async (ctx) => {
     const dossierId = randomUUID();
@@ -1108,7 +1197,10 @@ router.post('/p2/insurance/claims/:id/assemble', authenticateToken, async (req: 
   });
 });
 
-router.post('/p2/insurance/dossiers/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/insurance/dossiers/:id/export', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'insurance_operator', 'dossier_export', 'claim_dossier', id, async (ctx) => {
     const dossierResult = await db.execute(sql`
@@ -1129,7 +1221,10 @@ router.post('/p2/insurance/dossiers/:id/export', authenticateToken, async (req: 
   });
 });
 
-router.post('/p2/insurance/dossiers/:id/share-authority', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/insurance/dossiers/:id/share-authority', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'insurance_operator', 'dossier_share_authority', 'claim_dossier', id, async (ctx) => {
     const { adjuster_email, scope, expires_at } = req.body;
@@ -1151,7 +1246,10 @@ router.post('/p2/insurance/dossiers/:id/share-authority', authenticateToken, asy
 });
 
 // Legal Ops
-router.post('/p2/legal/holds', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/legal/holds', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const holdId = randomUUID();
   return withP2OperatorRole(req, res, 'legal_operator', 'hold_create', 'legal_hold', holdId, async (ctx) => {
     const { hold_type, title, reason, matter_reference } = req.body;
@@ -1169,7 +1267,10 @@ router.post('/p2/legal/holds', authenticateToken, async (req: AuthRequest, res: 
   });
 });
 
-router.post('/p2/legal/holds/:id/targets', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/legal/holds/:id/targets', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'legal_operator', 'hold_add_target', 'legal_hold', id, async (ctx) => {
     const { target_type, target_id, custodian_name, custodian_email } = req.body;
@@ -1189,7 +1290,10 @@ router.post('/p2/legal/holds/:id/targets', authenticateToken, async (req: AuthRe
   });
 });
 
-router.post('/p2/legal/holds/:id/release', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/legal/holds/:id/release', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'legal_operator', 'hold_release', 'legal_hold', id, async (ctx) => {
     const { release_reason } = req.body;
@@ -1205,7 +1309,10 @@ router.post('/p2/legal/holds/:id/release', authenticateToken, async (req: AuthRe
 });
 
 // Dispute Ops
-router.post('/p2/disputes/:id/assemble-defense-pack', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/disputes/:id/assemble-defense-pack', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'legal_operator', 'dispute_assemble_defense_pack', 'dispute', id, async (ctx) => {
     const packId = randomUUID();
@@ -1226,7 +1333,10 @@ router.post('/p2/disputes/:id/assemble-defense-pack', authenticateToken, async (
   });
 });
 
-router.post('/p2/defense-packs/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/defense-packs/:id/export', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'legal_operator', 'defense_pack_export', 'defense_pack', id, async (ctx) => {
     const packResult = await db.execute(sql`
@@ -1247,7 +1357,10 @@ router.post('/p2/defense-packs/:id/export', authenticateToken, async (req: AuthR
   });
 });
 
-router.post('/p2/defense-packs/:id/share-authority', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/defense-packs/:id/share-authority', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   const { id } = req.params;
   return withP2OperatorRole(req, res, 'legal_operator', 'defense_pack_share_authority', 'defense_pack', id, async (ctx) => {
     const { authority_email, scope, expires_at } = req.body;
@@ -1269,7 +1382,10 @@ router.post('/p2/defense-packs/:id/share-authority', authenticateToken, async (r
 });
 
 // Role Management (for platform operators)
-router.get('/p2/roles', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/p2/roles', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   try {
     const ctx = await getP2OperatorContext(req);
     await requireOperatorRole('platform_operator', ctx);
@@ -1284,7 +1400,10 @@ router.get('/p2/roles', authenticateToken, async (req: AuthRequest, res: Respons
   }
 });
 
-router.post('/p2/roles/assign', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/p2/roles/assign', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.configure for mutating operations)
+  if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
   try {
     const ctx = await getP2OperatorContext(req);
     await requireOperatorRole('platform_operator', ctx);
@@ -1333,7 +1452,10 @@ router.post('/p2/roles/assign', authenticateToken, async (req: AuthRequest, res:
   }
 });
 
-router.get('/p2/events', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/p2/events', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   try {
     const ctx = await getP2OperatorContext(req);
     await requireOperatorRole('platform_operator', ctx);
@@ -1358,7 +1480,10 @@ router.get('/p2/events', authenticateToken, async (req: AuthRequest, res: Respon
  * P2.15 Monetization Usage - Get event counts for a period
  * Returns counts only (no dollar amounts) for the Usage Summary UI
  */
-router.get('/p2/monetization/usage', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/p2/monetization/usage', async (req: AuthRequest, res: Response) => {
+  // PROMPT-17B: Capability gate (tenant.read for read operations)
+  if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
   try {
     const ctx = await getP2OperatorContext(req);
     // Any authenticated tenant member can view usage - no special role required

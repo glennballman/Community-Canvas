@@ -26,10 +26,27 @@ import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { ccAiIngestions, ccContractorProfiles, ccContractorFleet, ccContractorTools, ccContractorJobsites, ccContractorCustomers, ccContractorOpportunities, ccContractorPhotoBundles } from '@shared/schema';
 import { authenticateToken } from '../middleware/auth';
+import { can } from '../auth/authorize';
 import { classifyUploads, autoLinkClassifiedUploads, type MediaItem, type ClassifiedIngestion } from '../services/contractorUploadClassifier';
 import { inferOpportunities, storeOpportunities } from '../services/contractorRouteOpportunityEngine';
 
 const router = Router();
+
+// PROMPT-17B: Router-level authentication gate
+router.use(authenticateToken);
+
+/**
+ * PROMPT-17B: Canonical 403 deny helper (AUTH_CONSTITUTION §8a)
+ * Uses service_runs.own.* capabilities for contractor self-service operations
+ */
+function denyCapability(res: Response, capability: string): Response {
+  return res.status(403).json({
+    error: 'Forbidden',
+    code: 'NOT_AUTHORIZED',
+    capability,
+    reason: 'capability_not_granted',
+  });
+}
 
 // Configure multer for media uploads
 const uploadDir = path.join(process.cwd(), 'uploads', 'ingestions');
@@ -91,7 +108,10 @@ async function getContractorProfile(userId: string, portalId: string) {
  * - context_hint: 'onboarding' | 'job' | 'fleet' | 'unknown' (optional)
  * - auto_link: boolean (optional, defaults to true) - auto-create fleet/tool/jobsite records
  */
-router.post('/', authenticateToken, upload.array('media', 10), async (req: Request, res: Response) => {
+router.post('/', upload.array('media', 10), async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -166,7 +186,10 @@ router.post('/', authenticateToken, upload.array('media', 10), async (req: Reque
  * GET /api/contractor/ingestions/:id
  * Get a single ingestion record (scoped to contractor)
  */
-router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.read for contractor read operations)
+  if (!(await can(req, 'service_runs.own.read'))) return denyCapability(res, 'service_runs.own.read');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -212,7 +235,10 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
  * POST /api/contractor/ingestions/:id/confirm
  * Confirm an ingestion (human approves AI proposal)
  */
-router.post('/:id/confirm', authenticateToken, async (req: Request, res: Response) => {
+router.post('/:id/confirm', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -280,7 +306,10 @@ router.post('/:id/confirm', authenticateToken, async (req: Request, res: Respons
  * POST /api/contractor/ingestions/:id/discard
  * Discard an ingestion
  */
-router.post('/:id/discard', authenticateToken, async (req: Request, res: Response) => {
+router.post('/:id/discard', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -343,7 +372,10 @@ router.post('/:id/discard', authenticateToken, async (req: Request, res: Respons
  * GET /api/contractor/ingestions
  * List ingestions for current contractor
  */
-router.get('/', authenticateToken, async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.read for contractor read operations)
+  if (!(await can(req, 'service_runs.own.read'))) return denyCapability(res, 'service_runs.own.read');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -398,7 +430,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
  * GET /api/contractor/ingestions/fleet
  * List all fleet assets for current contractor
  */
-router.get('/fleet', authenticateToken, async (req: Request, res: Response) => {
+router.get('/fleet', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.read for contractor read operations)
+  if (!(await can(req, 'service_runs.own.read'))) return denyCapability(res, 'service_runs.own.read');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -430,7 +465,10 @@ router.get('/fleet', authenticateToken, async (req: Request, res: Response) => {
  * POST /api/contractor/ingestions/fleet/:id/confirm
  * Confirm a fleet asset with optional updates
  */
-router.post('/fleet/:id/confirm', authenticateToken, async (req: Request, res: Response) => {
+router.post('/fleet/:id/confirm', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -477,7 +515,10 @@ router.post('/fleet/:id/confirm', authenticateToken, async (req: Request, res: R
  * GET /api/contractor/ingestions/jobsites
  * List all jobsites for current contractor
  */
-router.get('/jobsites', authenticateToken, async (req: Request, res: Response) => {
+router.get('/jobsites', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.read for contractor read operations)
+  if (!(await can(req, 'service_runs.own.read'))) return denyCapability(res, 'service_runs.own.read');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -509,7 +550,10 @@ router.get('/jobsites', authenticateToken, async (req: Request, res: Response) =
  * POST /api/contractor/ingestions/jobsites/:id/confirm
  * Confirm a jobsite with optional address updates
  */
-router.post('/jobsites/:id/confirm', authenticateToken, async (req: Request, res: Response) => {
+router.post('/jobsites/:id/confirm', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -556,7 +600,10 @@ router.post('/jobsites/:id/confirm', authenticateToken, async (req: Request, res
  * GET /api/contractor/ingestions/opportunities
  * Get pending opportunities for current contractor
  */
-router.get('/opportunities', authenticateToken, async (req: Request, res: Response) => {
+router.get('/opportunities', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.read for contractor read operations)
+  if (!(await can(req, 'service_runs.own.read'))) return denyCapability(res, 'service_runs.own.read');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -589,7 +636,10 @@ router.get('/opportunities', authenticateToken, async (req: Request, res: Respon
  * POST /api/contractor/ingestions/opportunities/infer
  * Trigger opportunity inference for current contractor
  */
-router.post('/opportunities/infer', authenticateToken, async (req: Request, res: Response) => {
+router.post('/opportunities/infer', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -627,7 +677,10 @@ router.post('/opportunities/infer', authenticateToken, async (req: Request, res:
  * POST /api/contractor/ingestions/opportunities/:id/respond
  * Accept or dismiss an opportunity
  */
-router.post('/opportunities/:id/respond', authenticateToken, async (req: Request, res: Response) => {
+router.post('/opportunities/:id/respond', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -677,7 +730,10 @@ router.post('/opportunities/:id/respond', authenticateToken, async (req: Request
  * GET /api/contractor/ingestions/customers
  * List draft customers for current contractor
  */
-router.get('/customers', authenticateToken, async (req: Request, res: Response) => {
+router.get('/customers', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.read for contractor read operations)
+  if (!(await can(req, 'service_runs.own.read'))) return denyCapability(res, 'service_runs.own.read');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -709,7 +765,10 @@ router.get('/customers', authenticateToken, async (req: Request, res: Response) 
  * POST /api/contractor/ingestions/customers/:id/confirm
  * Confirm a draft customer with optional updates
  */
-router.post('/customers/:id/confirm', authenticateToken, async (req: Request, res: Response) => {
+router.post('/customers/:id/confirm', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;
@@ -759,7 +818,10 @@ router.post('/customers/:id/confirm', authenticateToken, async (req: Request, re
  * This accepts the proposed message and creates the actual conversation.
  * Privacy-first: User must explicitly accept to create the thread.
  */
-router.post('/:ingestionId/create-thread', authenticateToken, async (req: Request, res: Response) => {
+router.post('/:ingestionId/create-thread', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+  
   try {
     const userId = (req as any).user?.userId;
     const portalId = req.headers['x-portal-id'] as string;

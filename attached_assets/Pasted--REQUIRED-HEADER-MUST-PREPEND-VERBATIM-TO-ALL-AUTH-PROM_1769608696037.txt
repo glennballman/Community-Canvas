@@ -1,0 +1,176 @@
+# ✅ REQUIRED HEADER (MUST PREPEND VERBATIM TO ALL AUTH PROMPTS)
+# AUTH GOVERNANCE — COMMUNITY CANVAS V3.5
+#
+# You are Replit acting as an implementation agent under the AUTH_CONSTITUTION.md.
+# Non-negotiables:
+# 1) SINGLE IDENTITY AUTHORITY: only req.auth + effectivePrincipalId. No cc_users, no JWT isPlatformAdmin, no parallel identity sources.
+# 2) CAPABILITY-FIRST: Every non-public route must have an explicit capability gate (can/authorize/requireCapability) unless explicitly declared PUBLIC in-route with documented intent.
+# 3) FAIL-CLOSED: Any error/unknown/uncertainty => deny.
+# 4) NO NEW AUTH SYSTEMS: Do not invent new patterns. Use server/auth/* and canonical helpers.
+# 5) NO WIGGLE ROOM: Gates must be the FIRST executable statement in each handler (after param extraction is okay; before any DB/service calls).
+# 6) CANONICAL 403 SHAPE (AUTH_CONSTITUTION §8a):
+#    { "error":"Forbidden","code":"NOT_AUTHORIZED","capability":"<capability_code>","reason":"capability_not_granted" }
+# 7) EVIDENCE REQUIRED: You must produce docs/PROMPT-17B-ANNEX.md with PASS/FAIL + file paths + line numbers.
+#
+# PROMPT ID: PROMPT-17B
+# TITLE: Operator + Contractor Routes Authorization Lock (No Auth-Only Routes)
+# DATE: 2026-01-28
+# SCOPE: Application-layer route enforcement ONLY (no schema changes)
+# ===============================================
+
+## PROMPT-17B: Operator + Contractor Routes Authorization Lock (No Auth-Only Routes)
+
+### Context
+PROMPT-16 identified **MEDIUM risk** gaps:
+- “Operator routes use auth-only without capability checks”
+- “Contractor routes use auth-only (may be intentional for user-scoped access)”
+
+PROMPT-17A locked PMS routes by adding explicit capability gates.  
+PROMPT-17B must do the same for **Operator** and **Contractor** routes so enforcement cannot be “kind of” done.
+
+### Hard Constraints
+- **NO database migrations**.
+- **NO new capability codes**. Use only existing codes already in `cc_capabilities`.
+- **NO reliance on legacy flags** (`isPlatformAdmin`, `cc_users.is_platform_admin`, JWT claims, etc.).
+- **NO broad refactors**. Targeted edits to route files + minimal shared helper usage.
+- **All authorization decisions remain fail-closed**.
+
+---
+
+## A) Inventory (MUST DO FIRST)
+1) Identify and list the “Operator routes” and “Contractor routes” files from the current codebase.
+   - Use the PROMPT-16 coverage doc as guidance, but verify in repo.
+2) For each file, enumerate all routes (method + path).
+3) For each route, record current auth style:
+   - Public / Service-only / Auth-only / Capability-gated
+4) Output this inventory into the annex as **Table A1** before making changes.
+
+**Definition:**
+- **Auth-only** means it checks only `authenticateToken`, session existence, portal context, tenant context, etc., but **no** `can()/authorize()/requireCapability()` call.
+- **Capability-gated** means there is an explicit capability check for every route path.
+
+---
+
+## B) Required Fix: Add Explicit Capability Gates Everywhere
+### 1) Operator Route Files
+For *every* operator route:
+- Add router-level `router.use(authenticateToken)` if missing.
+- Add explicit capability enforcement:
+  - Read-only endpoints => `tenant.read`
+  - Mutating endpoints => `tenant.configure`
+- Where a route is clearly “platform-level operator/admin”, use `platform.configure` (only if the route is actually platform-scoped, not tenant-scoped).
+
+**NO WIGGLE ROOM rule:**
+- The capability check must be the **first executable statement** in the handler body (before any service calls).
+
+### 2) Contractor Route Files
+Contractor routes may have “own-scoped” semantics. Enforce **explicit capability gates** using existing own/all capability patterns already seeded (from PROMPT-11 / PROMPT-2):
+- If the route returns contractor’s own records: require `*.own.read` (or the closest existing own-read capability for that resource).
+- If the route mutates contractor’s own records: require `*.own.manage` or `*.own.update` (whatever exists).
+- If the route is “all within tenant” (dispatcher-style): require `*.read` / `*.manage` or `tenant.read` / `tenant.configure` as appropriate.
+
+**Important:**
+- If a perfect capability does not exist, **do not create one**.
+- Instead:
+  1) Query `cc_capabilities` for the nearest appropriate code in that domain (document the query + result in annex).
+  2) Use the closest existing capability and document the mapping decision.
+
+---
+
+## C) Canonical Deny Helper (Per File)
+In each modified route file, define (or reuse if already present) an in-file helper:
+
+```ts
+function denyCapability(res: Response, capability: string): Response {
+  return res.status(403).json({
+    error: 'Forbidden',
+    code: 'NOT_AUTHORIZED',
+    capability,
+    reason: 'capability_not_granted',
+  });
+}
+Then use it consistently:
+
+For read routes: if (!(await can(req, 'tenant.read'))) return denyCapability(res, 'tenant.read');
+
+For write routes: if (!(await can(req, 'tenant.configure'))) return denyCapability(res, 'tenant.configure');
+
+If a file already uses requireCapability() middleware, that’s acceptable only if:
+
+It results in the same canonical 403 shape, and
+
+It applies to every route, and
+
+It is not bypassable.
+
+D) Regression Guardrails (MANDATORY TEST)
+Add a test that ensures these specific files cannot regress back to auth-only.
+
+Create:
+
+tests/auth/forbidden-auth-only-operator-contractor.test.ts
+
+Behavior:
+
+It scans only the target operator + contractor route files (explicit file list).
+
+For each file, it asserts one of:
+
+every route handler includes await can(req, or uses requireCapability( OR
+
+there is a router-level router.use(requireCapability(...)) that clearly gates all routes
+
+If it detects a route handler without any capability check pattern, the test fails and prints the file + an approximate line number marker.
+
+This test is governance: it prevents “we forgot to gate this one route”.
+
+E) Deliverable: docs/PROMPT-17B-ANNEX.md (PASS/FAIL Evidence)
+Create docs/PROMPT-17B-ANNEX.md with:
+
+Section 1 — Target File List
+Explicit list of modified files (operator + contractor).
+
+Must be complete.
+
+Section 2 — Route Inventory Table (Before/After)
+For each modified file:
+
+Method | Path | Before (auth-only/capability) | After (capability code) | Evidence (file:line)
+
+Section 3 — No Wiggle Room Proof
+For each route file:
+
+Show evidence line numbers:
+
+router-level authenticateToken present
+
+denyCapability helper present
+
+first statement in each handler is a capability gate
+
+Section 4 — Capability Selection Evidence (if any ambiguity)
+If you had to pick “closest capability”:
+
+Include the SQL query used (as text in annex)
+
+Include the returned capability codes
+
+State which one you chose and why
+
+Section 5 — Regression Test Evidence
+File path + key assertions line numbers.
+
+Test run output summary (passed).
+
+F) Completion Criteria (Must Paste Back)
+When done, paste back:
+
+A concise summary of what files changed and why.
+
+The full content of docs/PROMPT-17B-ANNEX.md.
+
+The names of operator + contractor route files that are now fully capability-gated.
+
+Test output showing the new regression test passing.
+
+DO NOT proceed to any other prompt work until PROMPT-17B annex shows PASS for every requirement.

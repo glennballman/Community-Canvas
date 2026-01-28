@@ -15,6 +15,7 @@ import {
   ccContractorProfiles,
 } from '@shared/schema';
 import { authenticateToken } from '../middleware/auth';
+import { can } from '../auth/authorize';
 import { reverseGeocode, forwardGeocode, GeoCandidate } from '../services/geocodeService';
 import { 
   resolveGeoToBusinessGraph, 
@@ -25,6 +26,22 @@ import {
 } from '../services/addressResolutionEngine';
 
 const router = Router();
+
+// PROMPT-17B: Router-level authentication gate
+router.use(authenticateToken);
+
+/**
+ * PROMPT-17B: Canonical 403 deny helper (AUTH_CONSTITUTION §8a)
+ * Uses service_runs.own.* capabilities for contractor self-service operations
+ */
+function denyCapability(res: Response, capability: string): Response {
+  return res.status(403).json({
+    error: 'Forbidden',
+    code: 'NOT_AUTHORIZED',
+    capability,
+    reason: 'capability_not_granted',
+  });
+}
 
 /**
  * Helper to get contractor profile for current user
@@ -47,7 +64,10 @@ async function getContractorProfile(userId: string, tenantId: string) {
  * - Matches against contractor's business graph
  * - Returns candidates, matches, and proposals
  */
-router.post('/resolve', authenticateToken, async (req: Request, res: Response) => {
+router.post('/resolve', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+
   try {
     const userId = (req as any).user?.userId;
     const tenantId = req.headers['x-tenant-id'] as string;
@@ -200,7 +220,10 @@ router.post('/resolve', authenticateToken, async (req: Request, res: Response) =
  * 1. Entity link: Links a candidate to a customer/jobsite/work_request (requires entity_type + entity_id)
  * 2. Candidate acceptance: Marks a candidate as accepted without linking (only candidate_id)
  */
-router.post('/confirm', authenticateToken, async (req: Request, res: Response) => {
+router.post('/confirm', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+
   try {
     const userId = (req as any).user?.userId;
     const tenantId = req.headers['x-tenant-id'] as string;
@@ -318,7 +341,10 @@ router.post('/confirm', authenticateToken, async (req: Request, res: Response) =
  * Deny a geo candidate.
  * The candidate is marked as denied but not deleted (for learning).
  */
-router.post('/deny', authenticateToken, async (req: Request, res: Response) => {
+router.post('/deny', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+
   try {
     const userId = (req as any).user?.userId;
     const tenantId = req.headers['x-tenant-id'] as string;
@@ -355,7 +381,10 @@ router.post('/deny', authenticateToken, async (req: Request, res: Response) => {
  * Forward geocode an address query.
  * Used for manual address search in UI.
  */
-router.post('/search', authenticateToken, async (req: Request, res: Response) => {
+router.post('/search', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.update for contractor mutating operations)
+  if (!(await can(req, 'service_runs.own.update'))) return denyCapability(res, 'service_runs.own.update');
+
   try {
     const { query, country_code } = req.body;
     
@@ -387,7 +416,10 @@ router.post('/search', authenticateToken, async (req: Request, res: Response) =>
  * 
  * Get candidates for an ingestion or photo bundle.
  */
-router.get('/candidates', authenticateToken, async (req: Request, res: Response) => {
+router.get('/candidates', async (req: Request, res: Response) => {
+  // PROMPT-17B: Capability gate (service_runs.own.read for contractor read operations)
+  if (!(await can(req, 'service_runs.own.read'))) return denyCapability(res, 'service_runs.own.read');
+
   try {
     const userId = (req as any).user?.userId;
     const tenantId = req.headers['x-tenant-id'] as string;
