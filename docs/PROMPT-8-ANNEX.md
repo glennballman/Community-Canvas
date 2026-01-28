@@ -93,6 +93,7 @@ CREATE TRIGGER trg_warn_platform_admin_modification
 | `server/db/migrations/0166_prompt8_platform_admin_grants.sql` | NEW - Backfill grants, add column comment and warning trigger |
 | `server/auth/capabilities.ts` | Updated `isPlatformAdminPrincipal()` to use grants |
 | `server/middleware/guards.ts` | Updated `requirePlatformAdmin` to use grants |
+| `server/routes/foundation.ts` | Added `checkPlatformAdminGrant()` helper, updated `requirePlatformAdmin` guard to use grants, updated login/whoami/me/me-context endpoints |
 | `scripts/lint-no-platform-admin-flag.sh` | NEW - Guardrail script |
 
 ## Constitutional Compliance

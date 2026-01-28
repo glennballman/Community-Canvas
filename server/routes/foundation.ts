@@ -7,6 +7,29 @@ const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cc-dev-secret-change-in-prod';
 
+/**
+ * PROMPT-8: Check if user has platform_admin role grant at platform scope
+ * This is the ONLY authoritative source for platform admin status.
+ * cc_users.is_platform_admin is NON-AUTHORITATIVE (legacy/data-only).
+ */
+async function checkPlatformAdminGrant(userId: string): Promise<boolean> {
+    const result = await serviceQuery(`
+        SELECT 1 
+        FROM cc_principals p
+        JOIN cc_grants g ON g.principal_id = p.id
+        WHERE p.user_id = $1
+          AND p.is_active = TRUE
+          AND g.role_id = '10000000-0000-0000-0000-000000000001'::UUID
+          AND g.scope_id = '00000000-0000-0000-0000-000000000001'::UUID
+          AND g.is_active = TRUE
+          AND g.revoked_at IS NULL
+          AND g.valid_from <= NOW()
+          AND (g.valid_until IS NULL OR g.valid_until > NOW())
+        LIMIT 1
+    `, [userId]);
+    return result.rows.length > 0;
+}
+
 interface JWTPayload {
     userId: string;
     email: string;
@@ -41,8 +64,18 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     }
 }
 
-export function requirePlatformAdmin(req: AuthRequest, res: Response, next: NextFunction) {
-    if (!req.user?.isPlatformAdmin) {
+/**
+ * PROMPT-8: Platform admin authorization via grants
+ * Checks cc_grants for platform_admin role at platform scope
+ */
+export async function requirePlatformAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+    if (!req.user?.userId) {
+        return res.status(403).json({ success: false, error: 'Authentication required' });
+    }
+    
+    // PROMPT-8: Check grants, not JWT
+    const isPlatformAdmin = await checkPlatformAdminGrant(req.user.userId);
+    if (!isPlatformAdmin) {
         return res.status(403).json({ success: false, error: 'Platform admin access required' });
     }
     next();
@@ -130,10 +163,13 @@ router.post('/auth/login', async (req: Request, res: Response) => {
             ORDER BY t.tenant_type, t.name
         `, [user.id]);
 
+        // PROMPT-8: Check platform admin via grants, NOT is_platform_admin flag
+        const isPlatformAdmin = await checkPlatformAdminGrant(user.id);
+
         const payload: JWTPayload = {
             userId: user.id,
             email: user.email,
-            isPlatformAdmin: user.is_platform_admin
+            isPlatformAdmin  // PROMPT-8: From grants, not flag
         };
 
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
@@ -153,7 +189,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
                 lastName: user.family_name,
                 displayName: user.display_name || `${user.given_name} ${user.family_name}`,
                 avatarUrl: user.avatar_url,
-                isPlatformAdmin: user.is_platform_admin
+                isPlatformAdmin  // PROMPT-8: From grants, not flag
             },
             tenants: tenantsResult.rows.map(t => ({
                 id: t.id,
@@ -208,8 +244,7 @@ router.post('/auth/logout', authenticateToken, async (req: AuthRequest, res: Res
 router.get('/auth/whoami', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const userResult = await serviceQuery(`
-            SELECT id, email, given_name, family_name, display_name, avatar_url, 
-                   is_platform_admin, status
+            SELECT id, email, given_name, family_name, display_name, avatar_url, status
             FROM cc_users WHERE id = $1
         `, [req.user!.userId]);
 
@@ -218,6 +253,9 @@ router.get('/auth/whoami', authenticateToken, async (req: AuthRequest, res: Resp
         }
 
         const user = userResult.rows[0];
+        
+        // PROMPT-8: Check platform admin via grants
+        const isPlatformAdmin = await checkPlatformAdminGrant(user.id);
         
         const session = (req as any).session;
         const impersonation = session?.impersonation;
@@ -229,7 +267,7 @@ router.get('/auth/whoami', authenticateToken, async (req: AuthRequest, res: Resp
                 id: user.id,
                 email: user.email,
                 displayName: user.display_name || `${user.given_name} ${user.family_name}`,
-                isPlatformAdmin: user.is_platform_admin
+                isPlatformAdmin  // PROMPT-8: From grants, not flag
             },
             impersonation: isImpersonating ? {
                 active: true,
@@ -264,7 +302,7 @@ router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response
     try {
         const userResult = await serviceQuery(`
             SELECT id, email, given_name, family_name, display_name, avatar_url, 
-                   is_platform_admin, status, last_login_at
+                   status, last_login_at
             FROM cc_users WHERE id = $1
         `, [req.user!.userId]);
 
@@ -273,6 +311,9 @@ router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response
         }
 
         const user = userResult.rows[0];
+        
+        // PROMPT-8: Check platform admin via grants
+        const isPlatformAdmin = await checkPlatformAdminGrant(user.id);
 
         const tenantsResult = await serviceQuery(`
             SELECT t.id, t.name, t.slug, t.tenant_type, tu.role, tu.title
@@ -291,7 +332,7 @@ router.get('/auth/me', authenticateToken, async (req: AuthRequest, res: Response
                 lastName: user.family_name,
                 displayName: user.display_name || `${user.given_name} ${user.family_name}`,
                 avatarUrl: user.avatar_url,
-                isPlatformAdmin: user.is_platform_admin,
+                isPlatformAdmin,  // PROMPT-8: From grants, not flag
                 status: user.status,
                 lastLoginAt: user.last_login_at
             },
@@ -732,7 +773,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         const userId = req.user?.userId;
 
         const userResult = await serviceQuery(
-            'SELECT id, email, given_name, family_name, display_name, is_platform_admin FROM cc_users WHERE id = $1',
+            'SELECT id, email, given_name, family_name, display_name FROM cc_users WHERE id = $1',
             [userId]
         );
 
@@ -741,6 +782,9 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
         }
 
         const user = userResult.rows[0];
+        
+        // PROMPT-8: Check platform admin via grants
+        const isPlatformAdmin = await checkPlatformAdminGrant(user.id);
 
         const membershipsResult = await serviceQuery(`
             SELECT 
@@ -764,7 +808,7 @@ router.get('/me/context', authenticateToken, async (req: AuthRequest, res: Respo
                 id: user.id,
                 email: user.email,
                 full_name: user.display_name || `${user.given_name} ${user.family_name}`,
-                is_platform_admin: user.is_platform_admin
+                is_platform_admin: isPlatformAdmin  // PROMPT-8: From grants, not flag
             },
             memberships: membershipsResult.rows.map(m => ({
                 tenant_id: m.tenant_id,
