@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { serviceQuery, withServiceTransaction } from '../db/tenantDb';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { requireCapability } from '../auth/authorize';
 
 const router = express.Router();
 
@@ -688,7 +689,12 @@ router.get('/roles', async (req: Request, res: Response) => {
     }
 });
 
-router.get('/stats', authenticateToken, requirePlatformAdmin, async (req: AuthRequest, res: Response) => {
+/**
+ * PROMPT-12: Platform stats endpoint
+ * Uses requireCapability('platform.configure') for capability-based authorization
+ * Queries canonical tables: cc_users, cc_tenants, cc_tenant_users, cc_portals
+ */
+router.get('/stats', authenticateToken, requireCapability('platform.configure'), async (req: AuthRequest, res: Response) => {
     try {
         const stats = await serviceQuery(`
             SELECT

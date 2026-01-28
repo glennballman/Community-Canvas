@@ -219,6 +219,10 @@ export async function registerRoutes(
 
   // Register multi-tenant foundation routes
   app.use('/api/foundation', foundationRouter);
+  
+  // PROMPT-12: Also mount at /api/platform for PlatformHomePage client compatibility
+  // The stats endpoint uses requireCapability('platform.configure')
+  app.use('/api/platform', foundationRouter);
 
   // Register vehicles/trailers/fleets routes
   app.use('/api/vehicles', vehiclesRouter);

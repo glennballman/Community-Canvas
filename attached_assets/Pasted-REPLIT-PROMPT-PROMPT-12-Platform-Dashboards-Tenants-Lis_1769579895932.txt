@@ -1,0 +1,46 @@
+REPLIT PROMPT — PROMPT-12: Platform Dashboards + Tenants List Truth Source (No Wrong Tables)
+
+{PASTE THE REQUIRED AUTH GOVERNANCE HEADER HERE}
+
+OBJECTIVE
+Platform Admin UI must show correct stats and load tenant lists reliably.
+We must eliminate “wrong table” reads caused by legacy endpoints/models after auth refactors.
+
+SCOPE
+A) SERVER — Platform stats + tenants list
+1) Audit the following endpoints and their backing queries:
+   - GET /api/platform/stats
+   - GET /api/platform/tenants (or whatever current route backs “All Tenants”)
+   - Any “platform users count / portals count” endpoints
+2) For each:
+   - Ensure requireCapability('platform.configure') or the exact intended capability is applied (no boolean admin checks).
+   - Ensure queries read from the canonical V3.5 tables (cc_tenants, cc_portals, cc_users if still canonical for auth/account data, etc).
+   - If legacy tables are still being queried, update to canonical tables.
+3) Response shapes must be locked and match UI expectations (camelCase, not nested snake_case).
+4) Add audit logging on denies via authorize middleware (already exists).
+
+B) CLIENT — Platform pages
+1) Identify Platform Admin page(s) that show counts and tenant lists.
+2) Ensure:
+   - They call the correct endpoints
+   - They render real values (0 vs “-”)
+   - Fail-closed renders NotAuthorized only when capabilities deny, not on shape mismatch.
+
+C) TESTS
+Create tests/platform/platform-stats.test.ts:
+- platform.configure principal gets 200 and correct shape
+- non-authorized principal gets 403/deny with audit log entry
+Create tests/platform/platform-tenants.test.ts:
+- platform.configure principal gets list shape (even if empty) and no “Failed to load tenants”
+
+D) ANNEX
+Create docs/PROMPT-12-ANNEX.md with PASS/FAIL evidence:
+- Endpoint query sources (which tables)
+- Capability gates (file+line)
+- UI call sites (file+line)
+- Tests (file+line)
+
+ACCEPTANCE CRITERIA
+- Platform Admin page shows numbers (even if zero) and never “-” due to shape mismatch.
+- “All Tenants” loads successfully and never shows “Failed to load tenants” when authorized.
+- Unauthorized users see NotAuthorized with audit log entry.
