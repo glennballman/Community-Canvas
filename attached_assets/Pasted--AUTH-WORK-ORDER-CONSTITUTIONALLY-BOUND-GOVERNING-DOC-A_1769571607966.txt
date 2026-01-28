@@ -1,0 +1,111 @@
+# ⚖️ AUTH WORK ORDER — CONSTITUTIONALLY BOUND
+
+GOVERNING DOC: AUTH_CONSTITUTION.md (highest authority)
+
+You MUST comply with:
+- Single Identity Authority: resolvePrincipalFromSession() only
+- Capability-first server enforcement (never UI-only)
+- Fail-closed semantics
+- No parallel auth systems
+- RLS remains final gate (do not disable RLS globally)
+
+You are FORBIDDEN to:
+- Reintroduce cc_users flags as authority (PROMPT-8 removed that)
+- Add “fallback” admin checks
+- Bypass authorize() for any platform route
+- Query deprecated tables
+
+---
+
+# PROMPT-9 — Platform Dashboards: Service Context + Correct Table Reads (Fix “Failed to load tenants”)
+
+## Objective
+Fix Platform pages showing missing/failed data (e.g. /app/platform/tenants “Failed to load tenants”) by ensuring platform-wide reads execute in the approved SERVICE RLS context, while still being capability-gated.
+
+## Non-negotiables
+1) Platform routes must remain capability gated (requireCapability / authorize).
+2) DB reads for platform-wide lists must run inside SERVICE context so RLS policies permit platform-wide visibility without selecting a tenant.
+3) Do not disable RLS. Do not add “temporary bypass”. Use the sanctioned service-context pattern.
+
+---
+
+## TASK A — Add a single DB helper: withServiceContext()
+Create: `server/db/serviceContext.ts`
+
+Export:
+- `withServiceContext<T>(fn: (tx) => Promise<T>): Promise<T>`
+
+Requirements:
+- Runs a single transaction.
+- Inside tx, set the RLS context to SERVICE:
+  - `SELECT set_config('app.tenant_id', '__SERVICE__', true);`
+  - If your RLS relies on other GUCs already used in the codebase, set them too, but do NOT invent new ones.
+- Executes `fn(tx)` and returns the result.
+- No swallowing errors.
+
+---
+
+## TASK B — Identify the failing endpoints and wire service context
+Find the API handlers called by these platform pages:
+- Platform → All Tenants (/app/platform/tenants)
+- Platform → All Users (/app/platform/users)
+- Platform → Portals (if present)
+- Platform cards on /app/platform home (stats)
+
+For each platform-wide LIST endpoint:
+1) Keep capability enforcement (requireCapability/can/authorize) EXACTLY as-is.
+2) Wrap only the DB query portion in:
+   `return await withServiceContext(async (tx) => { ...query using tx... })`
+
+IMPORTANT:
+- Ensure the queries hit the canonical tables and not deprecated ones.
+- If the endpoint currently uses a “tenant-scoped query helper,” do NOT reuse it for platform lists unless it supports service context.
+
+---
+
+## TASK C — Add “why failed” instrumentation for the tenants endpoint
+Add a narrow log (server-side) for the tenants list endpoint only:
+- route path
+- principal_id + effective_principal_id
+- capability required (platform.configure or platform.read)
+- decision allow/deny
+- if DB error: log error name/message
+
+Do not spam logs elsewhere.
+
+---
+
+## TASK D — Documentation (PASS/FAIL evidence)
+Create: `docs/PROMPT-9-ANNEX.md`
+
+Must include:
+- withServiceContext() file path + line range
+- Each updated endpoint file path + line range showing service context usage
+- Proof that /app/platform/tenants loads (screenshots ok) OR API response examples
+- If previously failing, include old error and new behavior
+- Confirm RLS still enabled (SQL snippet below)
+
+---
+
+## Verification (MUST RUN and paste outputs)
+1) Browser: load `/app/platform/tenants`
+- Must NOT show “Failed to load tenants”
+- If there are 0 tenants, it must show “0” cleanly (not error)
+
+2) Paste server log line from the tenants endpoint for a successful request.
+
+3) SQL: confirm RLS still enabled
+```sql
+SELECT relname, relrowsecurity
+FROM pg_class
+WHERE relname IN (
+  'cc_users','cc_individuals','cc_tenants','cc_portals',
+  'cc_scopes','cc_grants','cc_roles','cc_role_capabilities','cc_principals'
+);
+Return:
+
+docs/PROMPT-9-ANNEX.md
+
+the list of endpoints updated
+
+verification outputs
