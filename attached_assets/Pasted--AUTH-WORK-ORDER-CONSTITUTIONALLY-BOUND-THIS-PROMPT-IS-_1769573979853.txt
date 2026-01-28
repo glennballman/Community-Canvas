@@ -1,0 +1,98 @@
+# ⚖️ AUTH WORK ORDER — CONSTITUTIONALLY BOUND
+
+THIS PROMPT IS GOVERNED BY: `AUTH_CONSTITUTION.md`
+
+ACK: AUTH_CONSTITUTION.md governs; proceeding without drift.
+
+You are implementing PROMPT-9B.
+
+## Goal (2 regressions)
+1) Platform left-nav items are missing (visibility gating regression).
+2) Platform dashboards / tenants admin surfaces show incorrect data and/or “Failed to load tenants”.
+
+You MUST fix both with:
+- No new auth models
+- No fallbacks to `cc_users.is_platform_admin`
+- No “best effort” permission approximations once `/api/me/capabilities` is available
+- Fail-closed semantics preserved (unknown capability/condition => deny)
+
+## Non-Negotiable Constraints
+A) UI gating is visibility-only; server remains authoritative (PROMPT-3/4).
+B) UI capability gating MUST use `/api/me/capabilities` snapshot when present (PROMPT-6). Do NOT re-introduce legacy heuristics except during the “loading snapshot” window.
+C) Do NOT change the locked `/api/me/capabilities` response shape (additive-only is allowed only with a new annex + versioned type updates, but avoid it here).
+D) No direct role string checks; no `tenant_user.role` for enforcement; no `cc_users.is_platform_admin` for authority.
+E) Keep principals/grants/capabilities as the only auth truth.
+
+## Step 0 — Reproduce & Capture Evidence (MANDATORY)
+Using Platform Admin account:
+1) Open `/app/platform` and capture which nav items are missing (expected: All Tenants, All Users, Impersonation, Analytics, System Explorer, Data Management, Platform Settings).
+2) Open `/app/platform/tenants` and capture network + server logs for the tenants API call:
+   - Request URL + status code + response body
+   - Any server console error (stack trace)
+3) Call `GET /api/me/capabilities` and paste the JSON response into `docs/PROMPT-9B-RAW-EVIDENCE.md`.
+
+If `/api/me/capabilities` shows `ok:false` or empty platform capabilities for a confirmed platform admin, treat that as a root cause (capability snapshot evaluation bug).
+
+## Step 1 — Fix Platform Nav Visibility Regression (UI)
+You MUST identify why platform nav is hidden.
+
+Likely failure modes (investigate, do not guess):
+- `PlatformLayout` gating uses `canUI('platform.configure')`, but the capability snapshot does not include `platform.configure`.
+- `v3Nav.ts` / `platformNav.ts` uses `requiredCapability` values that do not exist in seeded capability codes (typos, renamed codes).
+- AuthContext `capabilities` state never hydrates, or is overwritten to null, forcing deny.
+
+Actions:
+1) In `client/src/layouts/PlatformLayout.tsx` and `client/src/lib/routes/platformNav.ts` / `client/src/lib/routes/v3Nav.ts`,
+   ensure every `requiredCapability` string EXACTLY matches a real capability code seeded in DB.
+2) Ensure `useCanUI()`:
+   - returns DENY only when snapshot is present and capability absent, OR snapshot is absent due to loading.
+   - does NOT “stick” in loading state after fetch completes.
+3) Ensure `AuthContext` correctly refreshes capabilities on login + session refresh.
+
+Acceptance:
+- Platform Admin sees full platform nav immediately after capability snapshot fetch completes.
+- No UI shows platform items to users lacking platform capabilities.
+
+## Step 2 — Fix Platform Dashboards Data Regression (Server/API)
+You MUST restore correct data to platform dashboards without bypassing authorization.
+
+Actions:
+1) Identify all platform dashboard API endpoints used by:
+   - Platform home counts cards (tenants/users/portals/system health)
+   - Platform tenants list
+2) For each endpoint, ensure:
+   - It uses `authorize()/can()/requireCapability()` (PROMPT-3/4 patterns)
+   - It requires the correct capability code (likely `platform.configure` OR more specific platform.* codes if they exist)
+3) Confirm those capability codes are actually included in the platform admin’s capability snapshot:
+   - If missing due to grants not resolving through scope inheritance, fix the query/joins (server/auth/capabilities.ts) but DO NOT add fallback authority.
+   - You may add targeted tests for capability snapshot to prevent regression.
+
+Acceptance:
+- `/app/platform` renders correct counts (even if zeros, it must be accurate and not failing).
+- `/app/platform/tenants` loads list with HTTP 200 and shows rows (or empty state) without “Failed to load tenants”.
+
+## Step 3 — Guardrails (No Regressions)
+Add a lint/guard that prevents re-introducing forbidden authority sources:
+- Block usage of `is_platform_admin` in any auth decision code path.
+- Block direct checks like `if (user.isPlatformAdmin)` outside display-only areas.
+
+You may extend the existing lint scripts with a PROMPT-9B-specific grep, but keep it deterministic.
+
+## Deliverables
+1) Code fixes (UI + server) committed.
+2) `docs/PROMPT-9B-ANNEX.md` with PASS/FAIL table and Evidence (file paths + line numbers) for:
+   - Platform nav visibility restored (where and why)
+   - Tenants/dashboard endpoints load correctly
+   - Capability snapshot includes expected platform caps for platform admins
+   - No forbidden authority sources reintroduced
+3) Tests:
+   - Add/extend at least 1 test ensuring platform admin capability snapshot contains `platform.configure` at platform scope.
+   - Add/extend at least 1 test ensuring platform tenants endpoint returns 200 for platform admin and 403 for non-admin.
+
+## STOP CONDITIONS
+STOP and ask if:
+- You feel tempted to “temporarily” use `cc_users.is_platform_admin` or legacy role strings for authorization.
+- You cannot prove which capability code gates which route/page.
+- You cannot provide line-number evidence in the annex.
+
+Return only when all acceptance criteria are met AND the annex is complete.
