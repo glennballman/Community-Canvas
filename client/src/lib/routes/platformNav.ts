@@ -59,10 +59,11 @@ export const PLATFORM_NAV: PlatformNavSection[] = [
     title: 'Platform',
     requiredCapability: 'platform.configure', // PROMPT-5: Section-level capability
     items: [
-      { icon: Building2, label: 'All Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants', requiredCapability: 'platform.manage_tenants' },
-      { icon: Users, label: 'All Users', href: '/app/platform/users', testId: 'nav-platform-users', requiredCapability: 'platform.manage_users' },
-      { icon: UserCheck, label: 'Impersonation', href: '/app/platform/impersonation', testId: 'nav-platform-impersonation', requiredCapability: 'platform.impersonate' },
-      { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics', requiredCapability: 'platform.analytics' },
+      // PROMPT-9B: Use actual seeded capability codes from cc_capabilities
+      { icon: Building2, label: 'All Tenants', href: '/app/platform/tenants', testId: 'nav-platform-tenants', requiredCapability: 'platform.configure' },
+      { icon: Users, label: 'All Users', href: '/app/platform/users', testId: 'nav-platform-users', requiredCapability: 'platform.users.manage' },
+      { icon: UserCheck, label: 'Impersonation', href: '/app/platform/impersonation', testId: 'nav-platform-impersonation', requiredCapability: 'impersonation.start' },
+      { icon: BarChart3, label: 'Analytics', href: '/app/platform/analytics', testId: 'nav-platform-analytics', requiredCapability: 'analytics.view' },
       { icon: Search, label: 'System Explorer', href: '/app/platform/system-explorer', testId: 'nav-system-explorer', requiredCapability: 'platform.configure' },
       { icon: Database, label: 'Data Management', href: '/app/platform/data-management', testId: 'nav-data-mgmt', requiredCapability: 'platform.configure' },
       { icon: Settings, label: 'Platform Settings', href: '/app/platform/settings', testId: 'nav-platform-settings', requiredCapability: 'platform.configure' },

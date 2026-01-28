@@ -37,15 +37,17 @@ export interface CanUIOptions {
 
 /**
  * Platform capability codes that require platform admin
+ * PROMPT-9B: Must match actual seeded capability codes in cc_capabilities
  */
 const PLATFORM_CAPABILITIES = [
   'platform.configure',
-  'platform.admin',
-  'platform.read',
-  'platform.manage_tenants',
-  'platform.manage_users',
-  'platform.impersonate',
-  'platform.analytics',
+  'platform.users.manage',
+  'impersonation.start',
+  'impersonation.end',
+  'analytics.view',
+  'analytics.export',
+  'audit.view',
+  'audit.export',
 ];
 
 /**
