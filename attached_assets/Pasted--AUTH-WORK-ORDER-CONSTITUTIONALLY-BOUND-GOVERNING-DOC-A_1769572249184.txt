@@ -1,0 +1,119 @@
+# ⚖️ AUTH WORK ORDER — CONSTITUTIONALLY BOUND
+
+GOVERNING DOC: AUTH_CONSTITUTION.md (highest authority)
+
+You MUST comply with:
+- Fail-closed semantics
+- Capability-first enforcement
+- Scope hierarchy semantics MUST be correct
+- RLS stays enabled
+- Do NOT implement “fallbacks” to cc_users or legacy flags
+- Do NOT change prompt scope beyond the tasks below
+
+You are FORBIDDEN to:
+- Add new auth concepts
+- “Work around” missing functions by loosening checks
+- Disable RLS or bypass authorize()
+- Modify PROMPT-9 logic beyond making the missing function exist
+
+---
+
+# PROMPT-9A — Create missing database function `scope_is_ancestor_of(uuid, uuid)` (Required by PROMPT-3/6)
+
+## Evidence / Trigger
+The platform dashboards and capability snapshot fail due to:
+- ERROR: function scope_is_ancestor_of(uuid, uuid) does not exist
+
+This is NOT a UI bug and NOT a service-context issue.
+This is a missing DB function required for scope hierarchy traversal.
+
+---
+
+## TASK A — Locate callers and confirm expected semantics
+1) Search for `scope_is_ancestor_of(` usage in:
+- server/db/migrations/*
+- server/auth/*
+- server/auth/capabilities.ts (if exists)
+- any SQL functions (cc_has_capability / cc_can_access_resource / scope resolver)
+
+2) Write down in the annex:
+- the file paths + line numbers of each caller
+- what the caller expects the function to mean
+
+Expected meaning (do not debate unless code contradicts):
+`scope_is_ancestor_of(ancestor_scope_id, descendant_scope_id) -> boolean`
+TRUE if ancestor is the same as descendant OR ancestor is in the parent chain of descendant.
+
+---
+
+## TASK B — Implement `scope_is_ancestor_of` in a new migration
+Create a new migration:
+`server/db/migrations/0167_prompt9a_scope_is_ancestor_of.sql` (or next number in sequence)
+
+Implementation requirements:
+1) Signature EXACT:
+`scope_is_ancestor_of(p_ancestor UUID, p_descendant UUID) RETURNS BOOLEAN`
+
+2) Must be SAFE and fast:
+- Use a recursive CTE walking `cc_scopes.parent_scope_id`
+- Stop on null parent
+- Hard cap recursion depth (e.g., 50) to avoid cycles; treat cycle as FALSE (fail-closed)
+
+3) Must be FAIL-CLOSED:
+- If either scope id does not exist -> return FALSE
+- If recursion detects a cycle -> return FALSE
+
+4) Must not weaken any other checks:
+- Do not change cc_has_capability semantics in this prompt
+- Do not add fallbacks
+
+Example structure (you must adapt to actual cc_scopes columns):
+- Confirm cc_scopes has `id` and `parent_scope_id`
+- Recursive walk upward from descendant to root, checking if any id == ancestor
+
+---
+
+## TASK C — Add minimal DB-level verification inside the migration
+Inside the migration, add a DO $$ block that:
+- Creates a tiny temporary scope chain (or uses existing scopes if safe)
+- Asserts:
+  - scope_is_ancestor_of(A,A) = true
+  - scope_is_ancestor_of(A,B) = true where A is parent of B
+  - scope_is_ancestor_of(B,A) = false
+- If any assertion fails, raise exception and fail migration
+
+IMPORTANT:
+- Do not mutate production seed data; if you create test scopes, clean them up in the same migration transaction.
+
+---
+
+## TASK D — Add a small automated test
+Add a test file:
+`tests/auth/scope-ancestry.test.ts`
+
+Test requirements:
+- Insert 3 scopes in a transaction (platform -> tenant -> resourceType) or use factory helpers if they exist
+- Call the DB function via sql query and assert outputs
+- Cleanup after test
+
+This test MUST NOT be skipped.
+
+---
+
+## TASK E — Documentation (Annex)
+Create:
+`docs/PROMPT-9A-ANNEX.md`
+
+PASS/FAIL evidence style, including:
+- Migration file path + exact function definition line range
+- All callers (paths + line ranges)
+- Test file path + line ranges
+- Test run output snippet showing PASS
+- Confirmation that platform page now loads (at least tenants list endpoint returns 200)
+
+---
+
+## Verification (MUST paste)
+1) Paste the migration file contents (or link/path + confirm applied)
+2) Paste output from running the new test
+3) Paste docs/PROMPT-9A-ANNEX.md
