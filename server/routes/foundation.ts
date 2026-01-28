@@ -108,18 +108,22 @@ export async function loadTenantContext(req: AuthRequest, res: Response, next: N
                 role: result.rows[0].role,
                 permissions: result.rows[0].permissions
             };
-        } else if (req.user.isPlatformAdmin) {
-            const tenantResult = await serviceQuery(
-                'SELECT id, tenant_type FROM cc_tenants WHERE id = $1',
-                [tenantId]
-            );
-            if (tenantResult.rows.length > 0) {
-                req.tenantContext = {
-                    tenantId: tenantResult.rows[0].id,
-                    tenantType: tenantResult.rows[0].tenant_type,
-                    role: 'platform_admin',
-                    permissions: { all: true }
-                };
+        } else {
+            // PROMPT-9B: Use grant-based check, not JWT claim
+            const isPlatformAdminViaGrant = await checkPlatformAdminGrant(req.user.userId);
+            if (isPlatformAdminViaGrant) {
+                const tenantResult = await serviceQuery(
+                    'SELECT id, tenant_type FROM cc_tenants WHERE id = $1',
+                    [tenantId]
+                );
+                if (tenantResult.rows.length > 0) {
+                    req.tenantContext = {
+                        tenantId: tenantResult.rows[0].id,
+                        tenantType: tenantResult.rows[0].tenant_type,
+                        role: 'platform_admin',
+                        permissions: { all: true }
+                    };
+                }
             }
         }
     } catch (err) {

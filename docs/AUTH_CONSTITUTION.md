@@ -161,6 +161,30 @@ If a conflict exists, **AUTH_CONSTITUTION.md wins**.
 
 ---
 
+## 11. Platform Admin Authority (PROMPT-8)
+
+Platform admin authority is determined **ONLY** via:
+- `cc_grants` at platform scope (`00000000-0000-0000-0000-000000000001`)
+- Platform admin role (`10000000-0000-0000-0000-000000000001`)
+
+❌ Forbidden as authoritative sources:
+- `cc_users.is_platform_admin` flag (data-only, non-authoritative)
+- JWT `isPlatformAdmin` claim (cache/hint only, non-authoritative)
+- Hardcoded admin user lists
+
+The only valid authorization check is:
+```sql
+SELECT 1 FROM cc_principals p
+JOIN cc_grants g ON g.principal_id = p.id
+WHERE p.user_id = $user_id
+  AND g.role_id = '10000000-0000-0000-0000-000000000001'
+  AND g.scope_id = '00000000-0000-0000-0000-000000000001'
+  AND g.is_active = TRUE
+  AND g.revoked_at IS NULL
+```
+
+---
+
 ## Terminology Lock
 
 | Term | Correct Usage | Forbidden |
