@@ -23,11 +23,11 @@ import {
 } from '@shared/schema';
 import { authenticateToken } from '../middleware/auth';
 import crypto from 'crypto';
+import { can } from '../auth/authorize';
 
 interface AuthUser {
   userId: string;
   email: string;
-  isPlatformAdmin: boolean;
 }
 
 const router = Router();
@@ -38,11 +38,12 @@ router.use(authenticateToken);
 /**
  * Helper: Verify workspace access
  * User must be workspace owner OR platform admin
+ * PROMPT-10: Uses capability check instead of isPlatformAdmin flag
  */
 async function verifyWorkspaceAccess(
+  req: Request,
   workspaceId: string, 
-  userId: string, 
-  isPlatformAdmin: boolean
+  userId: string
 ): Promise<{ ok: boolean; workspace?: any; error?: string }> {
   const workspace = await db.query.ccOnboardingWorkspaces.findFirst({
     where: eq(ccOnboardingWorkspaces.id, workspaceId)
@@ -56,7 +57,10 @@ async function verifyWorkspaceAccess(
     return { ok: false, error: 'Workspace not claimed' };
   }
   
-  if (workspace.claimedUserId !== userId && !isPlatformAdmin) {
+  // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+  const hasPlatformCapability = await can(req, 'platform.configure');
+  
+  if (workspace.claimedUserId !== userId && !hasPlatformCapability) {
     return { ok: false, error: 'Not authorized to access this workspace' };
   }
   
@@ -78,7 +82,7 @@ router.get('/results', async (req: Request, res: Response) => {
     let workspace: any;
     
     if (workspaceId && typeof workspaceId === 'string') {
-      const access = await verifyWorkspaceAccess(workspaceId, user.userId, user.isPlatformAdmin);
+      const access = await verifyWorkspaceAccess(req, workspaceId, user.userId);
       if (!access.ok) {
         return res.status(403).json({ ok: false, error: access.error });
       }
@@ -96,8 +100,11 @@ router.get('/results', async (req: Request, res: Response) => {
         return res.status(400).json({ ok: false, error: 'Workspace not claimed' });
       }
       
+      // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+      const hasPlatformCapability = await can(req, 'platform.configure');
+      
       // Verify ownership or platform admin
-      if (workspace.claimedUserId !== user.userId && !user.isPlatformAdmin) {
+      if (workspace.claimedUserId !== user.userId && !hasPlatformCapability) {
         return res.status(403).json({ ok: false, error: 'Not authorized' });
       }
       
@@ -108,7 +115,7 @@ router.get('/results', async (req: Request, res: Response) => {
           WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
         `, [workspace.claimedTenantId, user.userId]);
         
-        if (membershipCheck.rows.length === 0 && !user.isPlatformAdmin) {
+        if (membershipCheck.rows.length === 0 && !hasPlatformCapability) {
           return res.status(403).json({ ok: false, error: 'Not authorized for this tenant' });
         }
       }
@@ -254,7 +261,7 @@ router.post('/ensure-thread', async (req: Request, res: Response) => {
     }
     
     // Verify access
-    const access = await verifyWorkspaceAccess(workspaceId, user.userId, user.isPlatformAdmin);
+    const access = await verifyWorkspaceAccess(req, workspaceId, user.userId);
     if (!access.ok) {
       return res.status(403).json({ ok: false, error: access.error });
     }
@@ -339,7 +346,7 @@ router.post('/post-summary', async (req: Request, res: Response) => {
     }
     
     // Verify access
-    const access = await verifyWorkspaceAccess(workspaceId, user.userId, user.isPlatformAdmin);
+    const access = await verifyWorkspaceAccess(req, workspaceId, user.userId);
     if (!access.ok) {
       return res.status(403).json({ ok: false, error: access.error });
     }
@@ -422,7 +429,7 @@ router.patch('/workspaces/:workspaceId/intent', async (req: Request, res: Respon
     }
     
     // Verify access
-    const access = await verifyWorkspaceAccess(workspaceId, user.userId, user.isPlatformAdmin);
+    const access = await verifyWorkspaceAccess(req, workspaceId, user.userId);
     if (!access.ok) {
       return res.status(403).json({ ok: false, error: access.error });
     }

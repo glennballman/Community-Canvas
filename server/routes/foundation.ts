@@ -570,7 +570,9 @@ router.get('/tenants', authenticateToken, async (req: AuthRequest, res: Response
         const params: any[] = [];
         let paramCount = 0;
 
-        if (!req.user!.isPlatformAdmin) {
+        // PROMPT-10: Use grant-based check instead of isPlatformAdmin flag
+        const hasPlatformGrant = await checkPlatformAdminGrant(req.user!.userId);
+        if (!hasPlatformGrant) {
             paramCount++;
             query += ` AND t.id IN (SELECT tenant_id FROM cc_tenant_users WHERE user_id = $${paramCount} AND status = 'active')`;
             params.push(req.user!.userId);
@@ -613,7 +615,9 @@ router.get('/tenants/:id', authenticateToken, loadTenantContext, async (req: Aut
     try {
         const { id } = req.params;
 
-        if (!req.user!.isPlatformAdmin && !req.tenantContext) {
+        // PROMPT-10: Use grant-based check instead of isPlatformAdmin flag
+        const hasPlatformGrant = await checkPlatformAdminGrant(req.user!.userId);
+        if (!hasPlatformGrant && !req.tenantContext) {
             return res.status(403).json({ success: false, error: 'Access denied' });
         }
 
@@ -642,11 +646,13 @@ router.get('/tenants/:id', authenticateToken, loadTenantContext, async (req: Aut
             ORDER BY tu.role, u.given_name
         `, [id]);
 
+        // PROMPT-10: Use grant-based check instead of isPlatformAdmin flag
+        const hasPlatformGrantForRole = await checkPlatformAdminGrant(req.user!.userId);
         res.json({
             success: true,
             tenant: tenantResult.rows[0],
             members: membersResult.rows,
-            currentUserRole: req.tenantContext?.role || (req.user!.isPlatformAdmin ? 'platform_admin' : null)
+            currentUserRole: req.tenantContext?.role || (hasPlatformGrantForRole ? 'platform_admin' : null)
         });
 
     } catch (error: any) {
@@ -739,7 +745,9 @@ router.post('/me/switch-tenant', authenticateToken, async (req: AuthRequest, res
         `, [userId, tenant_id]);
 
         if (membershipResult.rows.length === 0) {
-            if (req.user?.isPlatformAdmin) {
+            // PROMPT-10: Use grant-based check instead of isPlatformAdmin flag
+            const hasPlatformGrantForSwitch = await checkPlatformAdminGrant(req.user!.userId);
+            if (hasPlatformGrantForSwitch) {
                 const tenantResult = await serviceQuery(
                     'SELECT id, name, slug, tenant_type FROM cc_tenants WHERE id = $1 AND status = $2',
                     [tenant_id, 'active']

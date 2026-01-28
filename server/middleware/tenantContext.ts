@@ -3,6 +3,7 @@ import { Session } from 'express-session';
 import { pool } from '../db';
 import { ActorContext, serviceQuery } from '../db/tenantDb';
 import { hashImpersonationToken, isPepperAvailable } from '../lib/impersonationPepper';
+import { can } from '../auth/authorize';
 
 interface SessionData extends Session {
   userId?: string;
@@ -251,7 +252,9 @@ export async function tenantContext(req: TenantRequest, res: Response, next: Nex
     if (req.user?.id) {
       req.ctx.individual_id = req.user.id;
       
-      if (req.user.isPlatformAdmin || req.user.userType === 'admin') {
+      // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+      const hasPlatformCapability = await can(req, 'platform.configure');
+      if (hasPlatformCapability || req.user.userType === 'admin') {
         req.ctx.roles = ['admin'];
       } else if (req.user.userType) {
         req.ctx.roles = [req.user.userType];

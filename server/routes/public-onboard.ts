@@ -24,6 +24,7 @@ import { eq, desc, and, gte, sql, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { getR2UploadUrl, getR2PublicUrl, isR2Configured } from '../lib/media/r2Storage';
 import { generateTokens, optionalAuth, authenticateToken, AuthRequest } from '../middleware/auth';
+import { can } from '../auth/authorize';
 
 const router = express.Router();
 
@@ -763,8 +764,11 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
       return res.status(410).json({ ok: false, error: 'expired' });
     }
     
+    // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+    const hasPlatformCapability = await can(req, 'platform.configure');
+    
     // Verify ownership
-    if (workspace.claimedUserId !== userId && !req.user!.isPlatformAdmin) {
+    if (workspace.claimedUserId !== userId && !hasPlatformCapability) {
       return res.status(403).json({ ok: false, error: 'Not authorized to promote this workspace' });
     }
     
@@ -781,7 +785,7 @@ router.post('/workspaces/:token/promote', authenticateToken, async (req: AuthReq
       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'
     `, [tenantId, userId]);
     
-    if (membershipCheck.rows.length === 0 && !req.user!.isPlatformAdmin) {
+    if (membershipCheck.rows.length === 0 && !hasPlatformCapability) {
       return res.status(403).json({ ok: false, error: 'You must be a member of this tenant' });
     }
     

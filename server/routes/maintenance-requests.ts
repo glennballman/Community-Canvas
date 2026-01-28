@@ -9,21 +9,28 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, requireTenant } from '../middleware/guards';
 import { TenantRequest } from '../middleware/tenantContext';
+import { can } from '../auth/authorize';
 
 const router = Router();
 
-// Admin/owner guard for mutation endpoints
-function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
+/**
+ * Admin/owner guard for mutation endpoints
+ * PROMPT-10: Uses capability check instead of isPlatformAdmin flag
+ */
+async function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
   const tenantReq = req as TenantRequest;
   const roles = tenantReq.ctx?.roles || [];
   
-  const isAdminOrOwner = 
+  // Check tenant roles first
+  const hasTenantAdminRole = 
     roles.includes('owner') || 
     roles.includes('admin') || 
-    roles.includes('tenant_admin') ||
-    !!tenantReq.user?.isPlatformAdmin;
+    roles.includes('tenant_admin');
   
-  if (!isAdminOrOwner) {
+  // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+  const hasPlatformCapability = await can(req, 'platform.configure');
+  
+  if (!hasTenantAdminRole && !hasPlatformCapability) {
     return res.status(403).json({ 
       error: 'Owner or admin access required',
       code: 'ADMIN_REQUIRED'

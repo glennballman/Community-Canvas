@@ -40,22 +40,27 @@ import { computeZonePricingEstimate, ZonePricingModifiers } from '@shared/zonePr
 import { requireAuth, requireTenant } from '../middleware/guards';
 import type { TenantRequest } from '../middleware/tenantContext';
 import { resolveDefaultZoneIdForPortal, isZoneValidForPortal } from '../lib/n3-zone-defaults';
+import { can } from '../auth/authorize';
 
 /**
  * Owner/Admin gate for zone-sensitive N3 routes
  * Only tenant owners, admins, or platform admins can access pricing modifiers and assign zones
+ * PROMPT-10: Uses capability check instead of isPlatformAdmin flag
  */
-function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
+async function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFunction) {
   const tenantReq = req as TenantRequest;
   const roles = tenantReq.ctx?.roles || [];
   
-  const isAdminOrOwner = 
+  // Check tenant roles first
+  const hasTenantAdminRole = 
     roles.includes('owner') || 
     roles.includes('admin') || 
-    roles.includes('tenant_admin') ||
-    !!tenantReq.user?.isPlatformAdmin;
+    roles.includes('tenant_admin');
   
-  if (!isAdminOrOwner) {
+  // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+  const hasPlatformCapability = await can(req, 'platform.configure');
+  
+  if (!hasTenantAdminRole && !hasPlatformCapability) {
     return res.status(403).json({ 
       error: 'Owner or admin access required',
       code: 'ADMIN_REQUIRED'
@@ -66,15 +71,20 @@ function requireTenantAdminOrOwner(req: Request, res: Response, next: NextFuncti
 
 /**
  * Check if requester has admin/owner privileges (for conditional data exposure)
+ * PROMPT-10: Uses capability check instead of isPlatformAdmin flag
  */
-function isAdminOrOwner(req: TenantRequest): boolean {
+async function isAdminOrOwner(req: TenantRequest): Promise<boolean> {
   const roles = req.ctx?.roles || [];
-  return (
+  const hasTenantAdminRole = (
     roles.includes('owner') || 
     roles.includes('admin') || 
-    roles.includes('tenant_admin') ||
-    !!req.user?.isPlatformAdmin
+    roles.includes('tenant_admin')
   );
+  
+  if (hasTenantAdminRole) return true;
+  
+  // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+  return await can(req, 'platform.configure');
 }
 import { 
   evaluateServiceRun, 
@@ -423,7 +433,7 @@ n3Router.get('/runs/:runId/monitor', requireAuth, requireTenant, async (req, res
       return res.status(404).json({ error: 'Run not found' });
     }
 
-    const canSeePricing = isAdminOrOwner(tenantReq);
+    const canSeePricing = await isAdminOrOwner(tenantReq);
 
     const segments = await db.query.ccN3Segments.findMany({
       where: eq(ccN3Segments.runId, runId),
@@ -1347,12 +1357,13 @@ n3Router.get('/health', async (_req, res) => {
 
 /**
  * GET /api/n3/status - Get monitor status (protected: platform admin only)
+ * PROMPT-10: Uses capability check instead of isPlatformAdmin flag
  */
 n3Router.get('/status', requireAuth, async (req, res) => {
-  const tenantReq = req as TenantRequest;
-  const isPlatformAdmin = tenantReq.user?.isPlatformAdmin === true;
+  // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+  const hasPlatformCapability = await can(req, 'platform.configure');
   
-  if (!isPlatformAdmin) {
+  if (!hasPlatformCapability) {
     return res.status(403).json({ error: 'Platform admin access required' });
   }
   
@@ -1369,10 +1380,10 @@ const TRIGGER_CYCLE_COOLDOWN_MS = 60000; // 60 seconds
 
 n3Router.post('/trigger-cycle', requireAuth, async (req, res) => {
   try {
-    const tenantReq = req as TenantRequest;
-    const isPlatformAdmin = tenantReq.user?.isPlatformAdmin === true;
+    // PROMPT-10: Use capability check instead of isPlatformAdmin flag
+    const hasPlatformCapability = await can(req, 'platform.configure');
     
-    if (!isPlatformAdmin) {
+    if (!hasPlatformCapability) {
       return res.status(403).json({ error: 'Platform admin access required' });
     }
     
@@ -3047,18 +3058,23 @@ function computePayloadHash(payload: object): string {
  * For now, allows admin/owner or platform admin access.
  * Future: Add mTLS, service tokens, or internal execution role checks.
  */
-function requireExecutionConsumer(req: Request, res: Response, next: NextFunction) {
+/**
+ * PROMPT-10: Uses capability check instead of isPlatformAdmin flag
+ */
+async function requireExecutionConsumer(req: Request, res: Response, next: NextFunction) {
   const tenantReq = req as TenantRequest;
   const roles = tenantReq.ctx?.roles || [];
   
-  // Allow admin/owner (for testing/verification) or platform admin
-  const hasAccess = 
+  // Check tenant roles first
+  const hasTenantAdminRole = 
     roles.includes('owner') || 
     roles.includes('admin') || 
-    roles.includes('tenant_admin') ||
-    !!tenantReq.user?.isPlatformAdmin;
+    roles.includes('tenant_admin');
   
-  if (!hasAccess) {
+  // PROMPT-10: Use capability check instead of isPlatformAdmin flag  
+  const hasPlatformCapability = await can(req, 'platform.configure');
+  
+  if (!hasTenantAdminRole && !hasPlatformCapability) {
     return res.status(403).json({ 
       error: 'Execution consumer access required',
       code: 'CONSUMER_ACCESS_REQUIRED'
