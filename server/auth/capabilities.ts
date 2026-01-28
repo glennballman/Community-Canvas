@@ -1,13 +1,116 @@
 /**
  * PROMPT-6: Authoritative Capability Snapshot
+ * PROMPT-7: Platform Admin Bootstrap Capability Enforcement
  * AUTH_CONSTITUTION.md governs; single authority for capability facts
  * 
  * Provides capability evaluation for effective_principal_id at all scope levels.
  * This is the ONLY source of truth for UI capability visibility.
+ * 
+ * CONSTITUTIONAL INVARIANT (PROMPT-7):
+ * Platform administrators MUST always have platform-level capabilities.
+ * This is enforced via bootstrap rules BEFORE DB capability evaluation.
  */
 
 import { serviceQuery } from '../db/tenantDb';
 import { resolvePlatformScopeId, resolveTenantScopeId } from './scope';
+
+/**
+ * PROMPT-7: Bootstrap capabilities for platform administrators
+ * These are CONSTITUTIONAL capabilities that bypass DB evaluation.
+ * A platform admin MUST always be able to access the platform.
+ */
+const PLATFORM_ADMIN_BOOTSTRAP_CAPABILITIES = [
+  'platform.configure',
+  'platform.read',
+  'platform.admin',
+] as const;
+
+/**
+ * PROMPT-7: Check if effective principal is a platform administrator
+ * Queries cc_principals -> cc_users to get is_platform_admin flag
+ */
+async function isPlatformAdminPrincipal(effectivePrincipalId: string): Promise<boolean> {
+  try {
+    // cc_principals.user_id -> cc_users.id where is_platform_admin = true
+    const result = await serviceQuery(`
+      SELECT u.is_platform_admin 
+      FROM cc_principals p
+      JOIN cc_users u ON p.user_id = u.id
+      WHERE p.id = $1
+    `, [effectivePrincipalId]);
+    
+    return result.rows[0]?.is_platform_admin === true;
+  } catch (error) {
+    // Fail-closed: if we can't determine, assume not admin
+    console.error('[isPlatformAdminPrincipal] Error checking platform admin status:', error);
+    return false;
+  }
+}
+
+/**
+ * PROMPT-7: Get bootstrap capabilities for effective principal
+ * Returns platform admin capabilities if principal is a platform admin.
+ * This is a constitutional override, not a role mapping.
+ */
+async function getBootstrapCapabilities(
+  effectivePrincipalId: string
+): Promise<{ platform: string[]; source: 'bootstrap' | 'none' }> {
+  const isAdmin = await isPlatformAdminPrincipal(effectivePrincipalId);
+  
+  if (isAdmin) {
+    console.log('[getBootstrapCapabilities] Platform admin detected, applying bootstrap capabilities', {
+      effectivePrincipalId,
+      capabilities: PLATFORM_ADMIN_BOOTSTRAP_CAPABILITIES,
+    });
+    return {
+      platform: [...PLATFORM_ADMIN_BOOTSTRAP_CAPABILITIES],
+      source: 'bootstrap',
+    };
+  }
+  
+  return { platform: [], source: 'none' };
+}
+
+/**
+ * PROMPT-7: Audit log bootstrap capability application
+ * Records that capabilities were granted via bootstrap rule, not DB grants
+ */
+async function logBootstrapCapabilities(
+  effectivePrincipalId: string,
+  capabilities: string[],
+  tenantId: string | null
+): Promise<void> {
+  try {
+    // Insert audit record with source = 'bootstrap'
+    await serviceQuery(`
+      INSERT INTO cc_auth_audit_log (
+        principal_id, 
+        action, 
+        resource_type, 
+        resource_id,
+        scope_id,
+        decision,
+        metadata
+      ) VALUES (
+        $1,
+        'capability_bootstrap',
+        'platform',
+        NULL,
+        (SELECT id FROM cc_scopes WHERE scope_type = 'platform' LIMIT 1),
+        'allow',
+        jsonb_build_object(
+          'source', 'bootstrap',
+          'capabilities', $2::jsonb,
+          'tenant_id', $3,
+          'reason', 'platform_admin_constitutional_rule'
+        )
+      )
+    `, [effectivePrincipalId, JSON.stringify(capabilities), tenantId]);
+  } catch (error) {
+    // Don't fail capability evaluation if audit logging fails
+    console.error('[logBootstrapCapabilities] Failed to log bootstrap capabilities:', error);
+  }
+}
 
 export interface CapabilitySnapshot {
   ok: boolean;
@@ -25,6 +128,11 @@ export interface CapabilitySnapshot {
     organization: string[];
     tenant: string[];
     resource_types: Record<string, string[]>;
+  };
+  /** PROMPT-7: Metadata about capability sources for audit logging */
+  _meta?: {
+    bootstrap_applied: boolean;
+    bootstrap_capabilities: string[];
   };
 }
 
@@ -118,8 +226,15 @@ export async function getCapabilitySnapshot(
   }
   
   try {
-    // Get platform-level capabilities
-    const platformCaps = await getCapabilitiesAtScope(effectivePrincipalId, platformScopeId);
+    // PROMPT-7: Get bootstrap capabilities BEFORE DB evaluation
+    // This is a constitutional override for platform administrators
+    const bootstrap = await getBootstrapCapabilities(effectivePrincipalId);
+    
+    // Get platform-level capabilities from DB
+    const dbPlatformCaps = await getCapabilitiesAtScope(effectivePrincipalId, platformScopeId);
+    
+    // Merge bootstrap + DB capabilities (deduplicated)
+    const platformCaps = Array.from(new Set([...bootstrap.platform, ...dbPlatformCaps]));
     
     // Get organization-level capabilities (if organization context exists)
     let orgCaps: string[] = [];
@@ -168,6 +283,11 @@ export async function getCapabilitySnapshot(
       }
     }
     
+    // PROMPT-7: Audit log if bootstrap capabilities were applied
+    if (bootstrap.source === 'bootstrap') {
+      await logBootstrapCapabilities(effectivePrincipalId, bootstrap.platform, tenantId);
+    }
+    
     return {
       ok: true,
       principal_id: principalId,
@@ -184,6 +304,11 @@ export async function getCapabilitySnapshot(
         organization: orgCaps,
         tenant: tenantCaps,
         resource_types: resourceTypeCaps,
+      },
+      // PROMPT-7: Include metadata about bootstrap capabilities
+      _meta: {
+        bootstrap_applied: bootstrap.source === 'bootstrap',
+        bootstrap_capabilities: bootstrap.platform,
       },
     };
   } catch (error) {

@@ -1,0 +1,72 @@
+REPLIT PROMPT — PROMPT-7
+TITLE: Platform Admin Bootstrap Capability Enforcement
+
+ROLE:
+You are operating under AUTH_CONSTITUTION.md.
+This prompt is NON-NEGOTIABLE and MUST be implemented exactly.
+
+GOAL:
+Ensure that platform administrators are never locked out of the Platform UI
+in a capability-only authorization system.
+
+BACKGROUND:
+PROMPT-4 and PROMPT-5 correctly removed boolean admin checks.
+PROMPT-6 introduced authoritative capability snapshots.
+However, no bootstrap rule guarantees that platform administrators
+possess platform-level capabilities.
+
+This violates the constitutional invariant:
+“A platform admin must always be able to access the platform.”
+
+TASKS (ALL REQUIRED):
+
+1. BOOTSTRAP GRANT RULE (SERVER-SIDE)
+   Implement a hard bootstrap rule in capability resolution:
+
+   - If principal.is_platform_admin = true
+   - Then effective capabilities MUST include:
+     - platform.configure
+     - platform.read
+     - platform.admin
+   - This MUST occur before DB capability evaluation
+   - This MUST apply to both real principals and effectivePrincipalId during impersonation
+
+   This is a constitutional override, not a role mapping.
+
+2. IMPLEMENT LOCATION
+   Apply this logic in ONE place only:
+   server/auth/capabilities.ts
+
+   Acceptable pattern:
+   - resolveCapabilitiesForPrincipal()
+   - prepend or union bootstrap capabilities
+   - DO NOT scatter checks across routes or UI
+
+3. UI CONSISTENCY
+   Ensure /api/me/capabilities reflects bootstrap capabilities
+   so PlatformLayout visibility gating passes.
+
+4. FAIL-CLOSED PRESERVED
+   - Non-platform admins must NOT receive these capabilities
+   - Unknown capability codes still deny
+   - Unknown condition keys still hard-fail
+
+5. AUDIT LOGGING
+   - Audit log MUST record that capability source = "bootstrap"
+   - Add source metadata, do NOT skip logging
+
+6. NO ROLE MUTATION
+   - DO NOT modify cc_roles
+   - DO NOT add implicit DB grants
+   - This is a runtime constitutional rule only
+
+DELIVERABLES:
+- Code changes
+- docs/PROMPT-7-ANNEX.md with PASS/FAIL checklist
+- Evidence with file paths + line numbers
+
+SUCCESS CRITERIA:
+- Glenn (platform admin) can access /app/platform
+- Impersonation still evaluates effectivePrincipalId
+- No boolean admin checks reintroduced
+- AUTH_CONSTITUTION remains unviolated
