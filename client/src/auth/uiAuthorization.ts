@@ -1,29 +1,29 @@
 /**
- * PROMPT-5: UI Authorization Helper
+ * PROMPT-5 → PROMPT-6: UI Authorization Helper
  * 
  * Provides visibility-only capability checks for UI gating.
  * This does NOT enforce authorization - backend always enforces via PROMPT-3/4.
  * 
- * ARCHITECTURAL CONSTRAINT:
- * Full capability evaluation is server-side only. This module provides
- * "best-effort approximation" for UI hints using available client context:
- * - isPlatformAdmin flag from /api/me/context
- * - Current tenant membership and role
+ * PROMPT-6 UPGRADE:
+ * This module now uses the authoritative capability snapshot from /api/me/capabilities
+ * as the SINGLE SOURCE OF TRUTH for UI visibility gating. The old approximation
+ * logic is retained as a fallback during the transition period.
  * 
- * This approximation is acceptable because:
- * 1. UI gating is VISIBILITY-ONLY, not authorization
- * 2. Backend always enforces via requireCapability() (PROMPT-3/4)
- * 3. Users may see UI they can't use, but never bypass backend
+ * When capabilities snapshot is available:
+ * - Uses explicit capability list lookup (authoritative)
+ * - Respects scope hierarchy (platform → organization → tenant)
+ * - Immediately reflects impersonation changes
  * 
- * FUTURE: When /api/me/capabilities endpoint is available, replace
- * approximation logic with explicit capability list lookup.
+ * When capabilities snapshot is NOT available (fallback):
+ * - Uses best-effort approximation based on role/admin flags
+ * - This should only occur during auth loading state
  * 
  * AUTH_CONSTITUTION.md compliance:
- * - Uses auth context from /api/me/context (single identity authority)
+ * - Uses capabilities from /api/me/capabilities (single source of truth)
  * - Returns false on any uncertainty (fail-closed)
  * - Never throws errors
  * - Never escalates privileges
- * - Impersonation: uses isPlatformAdmin which reflects effective principal
+ * - Impersonation: uses effective_principal_id capabilities
  */
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,12 +106,15 @@ const TENANT_WRITE_CAPABILITIES = [
  * Hook-based capability check for React components
  * Returns a function that checks if the current principal has a capability
  * 
+ * PROMPT-6 UPGRADE: Now uses authoritative capability snapshot when available.
+ * Falls back to approximation logic only during auth loading states.
+ * 
  * Usage:
  * const canUI = useCanUI();
  * if (canUI('platform.configure')) { ... }
  */
 export function useCanUI() {
-  const { user, isPlatformAdmin, impersonation } = useAuth();
+  const { user, isPlatformAdmin, capabilities, hasCapability } = useAuth();
   const tenantContext = useTenant();
   
   return function canUI(capabilityCode: string, options: CanUIOptions = {}): boolean {
@@ -119,6 +122,26 @@ export function useCanUI() {
     if (!user) {
       return false;
     }
+    
+    // PROMPT-6: Use authoritative capability snapshot if available
+    if (capabilities && capabilities.ok) {
+      // Determine which scope to check
+      if (options.scope === 'platform') {
+        return hasCapability(capabilityCode, 'platform');
+      }
+      if (options.scope === 'organization') {
+        return hasCapability(capabilityCode, 'organization');
+      }
+      if (options.scope === 'tenant') {
+        return hasCapability(capabilityCode, 'tenant');
+      }
+      
+      // No scope specified - check all scopes (respects inheritance)
+      return hasCapability(capabilityCode);
+    }
+    
+    // FALLBACK: Approximation logic for when capabilities not yet loaded
+    // This should only occur during initial auth loading
     
     // When impersonating, use the impersonated principal's permissions
     // The isPlatformAdmin flag is already based on effective user from /api/me/context

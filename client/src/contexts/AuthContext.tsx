@@ -45,6 +45,29 @@ interface ImpersonationState {
     expires_at: string | null;
 }
 
+/**
+ * PROMPT-6: Capability Snapshot
+ * Authoritative source of truth for UI capability gating.
+ */
+export interface CapabilitySnapshot {
+    ok: boolean;
+    principal_id: string | null;
+    effective_principal_id: string | null;
+    context: {
+        platform_scope_id: string | null;
+        organization_scope_id: string | null;
+        tenant_scope_id: string | null;
+        tenant_id: string | null;
+        organization_id: string | null;
+    };
+    capabilities: {
+        platform: string[];
+        organization: string[];
+        tenant: string[];
+        resource_types: Record<string, string[]>;
+    };
+}
+
 export type NavMode = 'platform_only' | 'tenant' | 'impersonating';
 
 interface AuthContextType {
@@ -61,6 +84,10 @@ interface AuthContextType {
     impersonation: ImpersonationState;
     navMode: NavMode;
     hasTenantMemberships: boolean;
+    // PROMPT-6: Authoritative capability snapshot
+    capabilities: CapabilitySnapshot | null;
+    hasCapability: (capabilityCode: string, scope?: 'platform' | 'organization' | 'tenant') => boolean;
+    refreshCapabilities: () => Promise<void>;
 }
 
 const defaultImpersonation: ImpersonationState = {
@@ -73,6 +100,25 @@ const defaultImpersonation: ImpersonationState = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const defaultCapabilities: CapabilitySnapshot = {
+    ok: false,
+    principal_id: null,
+    effective_principal_id: null,
+    context: {
+        platform_scope_id: null,
+        organization_scope_id: null,
+        tenant_scope_id: null,
+        tenant_id: null,
+        organization_id: null,
+    },
+    capabilities: {
+        platform: [],
+        organization: [],
+        tenant: [],
+        resource_types: {},
+    },
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [ccTenants, setCCTenants] = useState<CCTenant[]>([]);
@@ -80,6 +126,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [ready, setReady] = useState(false); // True once initial auth check completes
     const [impersonation, setImpersonation] = useState<ImpersonationState>(defaultImpersonation);
+    const [capabilities, setCapabilities] = useState<CapabilitySnapshot | null>(null);
+    
+    /**
+     * PROMPT-6: Fetch authoritative capability snapshot
+     * This is the SINGLE SOURCE OF TRUTH for UI capability gating.
+     */
+    const refreshCapabilities = useCallback(async () => {
+        const storedToken = localStorage.getItem('cc_token');
+        if (!storedToken) {
+            setCapabilities(null);
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/me/capabilities', {
+                headers: { Authorization: `Bearer ${storedToken}` },
+                credentials: 'include',
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.ok) {
+                    setCapabilities(data);
+                    if (process.env.NODE_ENV === 'development') {
+                        console.debug('[AuthContext] capabilities refreshed', {
+                            platformCaps: data.capabilities?.platform?.length || 0,
+                            tenantCaps: data.capabilities?.tenant?.length || 0,
+                        });
+                    }
+                } else {
+                    setCapabilities(defaultCapabilities);
+                }
+            } else {
+                console.warn('[AuthContext] Failed to fetch capabilities:', res.status);
+                setCapabilities(defaultCapabilities);
+            }
+        } catch (err) {
+            console.error('[AuthContext] Error fetching capabilities:', err);
+            setCapabilities(defaultCapabilities);
+        }
+    }, []);
+    
+    /**
+     * PROMPT-6: Check if effective principal has a capability
+     * Uses the authoritative capability snapshot (not approximation).
+     */
+    const hasCapability = useCallback((capabilityCode: string, scope?: 'platform' | 'organization' | 'tenant'): boolean => {
+        // Fail-closed: no snapshot means no access
+        if (!capabilities || !capabilities.ok) {
+            return false;
+        }
+        
+        const caps = capabilities.capabilities;
+        
+        // If scope is specified, check only that scope
+        if (scope === 'platform') {
+            return caps.platform.includes(capabilityCode);
+        }
+        if (scope === 'organization') {
+            return caps.organization.includes(capabilityCode);
+        }
+        if (scope === 'tenant') {
+            return caps.tenant.includes(capabilityCode);
+        }
+        
+        // No scope specified - check all scopes (higher scopes inherit to lower)
+        // Platform → Organization → Tenant hierarchy
+        return caps.platform.includes(capabilityCode) ||
+               caps.organization.includes(capabilityCode) ||
+               caps.tenant.includes(capabilityCode);
+    }, [capabilities]);
 
     const refreshSession = useCallback(async (): Promise<boolean> => {
         const startMs = Date.now();
@@ -188,12 +305,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     membershipsCount: memberships.length,
                     durationMs,
                 });
+                
+                // PROMPT-6: Fetch authoritative capability snapshot
+                await refreshCapabilities();
+                
                 return true;
             }
             // Phase 2C-15 FINAL FIX: Clear state if data.ok is false
             setUser(null);
             setImpersonation(defaultImpersonation);
             setCCTenants([]);
+            setCapabilities(null);
             return false;
         } catch (err) {
             console.error('Failed to refresh session:', err);
@@ -201,12 +323,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
             setImpersonation(defaultImpersonation);
             setCCTenants([]);
+            setCapabilities(null);
             return false;
         } finally {
             // Phase 2C-15 FINAL FIX: Always finalize ready state to prevent stuck loading
             setReady(true);
         }
-    }, []);
+    }, [refreshCapabilities]);
 
     useEffect(() => {
         async function checkAuth() {
@@ -270,6 +393,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                     impersonationActive: impersonationData.active || false,
                                 });
                             }
+                            
+                            // PROMPT-6: Fetch capability snapshot after auth hydration
+                            await refreshCapabilities();
                         } else {
                             localStorage.removeItem('cc_token');
                             setToken(null);
@@ -288,7 +414,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         }
         checkAuth();
-    }, []);
+    }, [refreshCapabilities]);
 
     async function login(email: string, password: string): Promise<boolean> {
         try {
@@ -347,11 +473,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                             role: impersonationData.role || null,
                             expires_at: impersonationData.expires_at || null,
                         });
+                        
+                        // PROMPT-6: Fetch capability snapshot after login
+                        await refreshCapabilities();
                     }
                 } else {
                     // Fallback to login response data
                     setUser(data.user);
                     setCCTenants(data.tenants || []);
+                    // PROMPT-6: Still try to fetch capabilities even with fallback
+                    await refreshCapabilities();
                 }
                 
                 return true;
@@ -389,6 +520,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setCCTenants([]);
         setImpersonation(defaultImpersonation);
+        setCapabilities(null); // PROMPT-6: Clear capabilities on logout
         setReady(false);
         queryClient.clear();
         
@@ -420,6 +552,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             impersonation,
             navMode,
             hasTenantMemberships,
+            // PROMPT-6: Authoritative capability snapshot
+            capabilities,
+            hasCapability,
+            refreshCapabilities,
         }}>
             {children}
         </AuthContext.Provider>
