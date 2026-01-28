@@ -1,0 +1,63 @@
+[AUTH GOV HEADER — REQUIRED]
+You MUST comply with AUTH_CONSTITUTION.md.
+You MUST operate fail-closed.
+You MUST NOT introduce “fallback authority” (JWT claims, cc_users.is_platform_admin, TenantContext.user, ad-hoc string checks).
+You MUST NOT create parallel authorization helpers.
+All server access control MUST go through server/auth/authorize.ts (authorize/can/requireCapability) + DB functions.
+All UI gating MUST remain visibility-only and MUST use authoritative /api/me/capabilities snapshot (no local inference beyond loading fallback).
+Every change MUST be evidenced in a new Annex doc with PASS/FAIL + file paths + line numbers.
+If you encounter an error, you MUST deny access (fail-closed) and log it to cc_auth_audit_log via the existing insert function.
+
+TITLE: PROMPT-10 — Purge Forbidden Authority Sources (JWT flags, legacy booleans, ad-hoc checks)
+
+GOAL
+Eliminate remaining platform-admin / privileged checks that still rely on:
+- JWT isPlatformAdmin / is_platform_admin
+- cc_users.is_platform_admin
+- any “admin-only” hardcoded booleans
+- string-matching “not authorized” checks
+and replace them with capability checks using server/auth/authorize.ts.
+
+SCOPE (DO NOT TRIM)
+A) Replace forbidden server-side patterns everywhere they still exist:
+- server/routes/** (including n3.ts, onboarding.ts, any platform routes)
+- server/middleware/**
+- server/auth/** (if any remain)
+B) For each replaced check, select the correct capability code:
+- platform.configure for platform admin / platform management
+- tenant.configure for tenant administration where appropriate
+- folios.read / folios.write where applicable
+- (use existing capability catalog; do NOT invent new codes unless absolutely missing—if missing, add via additive migration and document)
+
+C) Strengthen Guardrails
+1) Extend/adjust the forbidden-authority-sources test so it FAILS CI on any newly introduced forbidden pattern.
+2) The test MUST scan:
+- server/routes
+- server/middleware
+- server/auth
+- client auth/context/hooks (only for identity authority violations)
+3) The test MUST list violations with file path + line number in output.
+
+D) Verify Behavior
+- Platform Admin (Glenn) can access /app/platform and all platform pages solely based on platform.configure grant/capability.
+- Non-platform principals cannot access platform routes.
+- Impersonation uses effective_principal_id for evaluation and audit logging.
+
+DELIVERABLES
+1) Code updates replacing all remaining forbidden checks with requireCapability/can/authorize
+2) Any needed additive migration ONLY if a required capability is missing (prefer not)
+3) Updated/expanded guardrail test
+4) docs/PROMPT-10-ANNEX.md with PASS/FAIL evidence:
+   - each replaced file: old pattern removed, new capability check shown (file + lines)
+   - guardrail test proves no forbidden patterns remain
+
+HARD RULES
+- No partial conversions.
+- No “temporary TODO” allowances.
+- No new parallel guard middleware.
+
+STOP CONDITION
+If you cannot map an old check to an existing capability code, you MUST:
+1) propose the capability code addition in an additive migration,
+2) wire it into the relevant system role mapping,
+3) document the change in the Annex.
